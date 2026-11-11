@@ -239,13 +239,14 @@ nonisolated struct NativeExportArtifactPlan: Equatable, Sendable {
         pin: AppleExportEnginePin
     ) throws {
         guard schema == Self.schema else { throw ValidationError.invalidSchema }
-        guard artifactPlanVersion == pin.artifactPlanVersion else {
+        guard artifactPlanVersion == pin.artifactPlanVersion,
+              artifactPlanVersion == (pin.isWakeDate ? AppleExportEnginePin.wakeDateHandoffVersion : 1) else {
             throw ValidationError.incompatibleArtifactPlanVersion
         }
         guard Self.isValidOperationID(requestID) else { throw ValidationError.invalidRequestID }
         guard Self.isValidOperationID(sessionID) else { throw ValidationError.invalidSessionID }
         guard profile == pin.coreProfile,
-              Self.profileIdentifier(profile) == pin.profile else {
+              pin.profile == "apple_health_data_v7" || pin.profile == AppleExportEnginePin.profileID || pin.hasExplicitWakeDateContracts else {
             throw ValidationError.invalidProfile
         }
         guard artifacts.count <= 4_096 else { throw ValidationError.tooManyArtifacts }
@@ -340,10 +341,13 @@ nonisolated struct NativeExportArtifactPlan: Equatable, Sendable {
 
     private static func profileIdentifier(_ profile: CoreMetricRegistryProfile) -> String {
         switch profile {
+        case .appleHealthDataV7: "apple_health_data_v7"
         case .appleHealthDataV8: "apple_health_data_v8"
         case .appleHealthDataV10: "apple_health_data_v10"
         case .androidFrozenV4: "android_frozen_v4"
         case .androidAnalyticalV5: "android_analytical_v5"
+        case .appleHealthDataV11: "apple_health_data_v11"
+        case .androidSleepV6: "android_sleep_v6"
         }
     }
 

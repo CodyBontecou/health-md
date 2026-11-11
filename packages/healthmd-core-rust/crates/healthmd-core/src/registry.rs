@@ -6,21 +6,32 @@ use std::sync::OnceLock;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::{CoreError, REGISTRY_SHA256, REGISTRY_VERSION};
+use crate::{
+    CoreError, REGISTRY_SHA256, REGISTRY_VERSION, SLEEP_REGISTRY_SHA256, SLEEP_REGISTRY_VERSION,
+    WORKOUT_RANGE_REGISTRY_SHA256, WORKOUT_RANGE_REGISTRY_VERSION,
+};
 
 const REGISTRY_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v1.json");
+const SLEEP_REGISTRY_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v2.json");
+
+const WORKOUT_RANGE_REGISTRY_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v3.json");
 
 /// Closed set of shipped output profiles represented by registry metadata.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MetricRegistryProfile {
+    /// Historical Apple `healthmd.health_data` v7, with its original authority.
+    AppleHealthDataV7,
     /// Apple `healthmd.health_data` v8.
     AppleHealthDataV8,
     /// Android byte-frozen iOS-compatible v4.
     AndroidFrozenV4,
     /// Android additive analytical v5.
     AndroidAnalyticalV5,
-    /// Apple v10: unchanged primary metrics, independently versioned WHOOP v2.
+    /// Apple wake-date daily v11, explicitly requested from registry v2.
+    AppleHealthDataV11,
+    /// Android wake-date daily v6, explicitly requested from registry v2.
+    AndroidSleepV6,
     AppleHealthDataV10,
 }
 
@@ -29,10 +40,26 @@ impl MetricRegistryProfile {
     #[must_use]
     pub const fn id(self) -> &'static str {
         match self {
+            Self::AppleHealthDataV7 => "apple_health_data_v7",
             Self::AppleHealthDataV8 => "apple_health_data_v8",
+            Self::AppleHealthDataV10 => "apple_health_data_v10",
             Self::AndroidFrozenV4 => "android_frozen_v4",
             Self::AndroidAnalyticalV5 => "android_analytical_v5",
-            Self::AppleHealthDataV10 => "apple_health_data_v10",
+            Self::AppleHealthDataV11 => "apple_health_data_v11",
+            Self::AndroidSleepV6 => "android_sleep_v6",
+        }
+    }
+
+    /// The immutable inventory containing this profile; never inferred from latest build info.
+    #[must_use]
+    pub const fn registry_version(self) -> u32 {
+        match self {
+            Self::AppleHealthDataV10
+            | Self::AppleHealthDataV7
+            | Self::AppleHealthDataV8
+            | Self::AndroidFrozenV4
+            | Self::AndroidAnalyticalV5 => REGISTRY_VERSION,
+            Self::AppleHealthDataV11 | Self::AndroidSleepV6 => SLEEP_REGISTRY_VERSION,
         }
     }
 }
@@ -309,6 +336,8 @@ struct UnavailableRow {
 }
 
 static REGISTRY: OnceLock<Result<RegistryDocument, CoreError>> = OnceLock::new();
+static SLEEP_REGISTRY: OnceLock<Result<RegistryDocument, CoreError>> = OnceLock::new();
+static WORKOUT_RANGE_REGISTRY: OnceLock<Result<RegistryDocument, CoreError>> = OnceLock::new();
 
 /// Load, validate, and project one complete registry profile.
 ///
@@ -320,50 +349,70 @@ pub fn metric_registry_snapshot(
     profile: MetricRegistryProfile,
     expected_registry_version: u32,
 ) -> Result<MetricRegistrySnapshot, CoreError> {
-    if expected_registry_version != REGISTRY_VERSION {
-        return Err(CoreError::UnsupportedRegistryVersion);
-    }
-    let hash = if profile == MetricRegistryProfile::AppleHealthDataV10 {
-        &apple_v10_profile()?.registry_sha256
+    let hash = if profile == MetricRegistryProfile::AppleHealthDataV7 {
+        crate::authority::HISTORICAL_REGISTRY_SHA256
     } else {
-        REGISTRY_SHA256
+        registry_hash(expected_registry_version)?
     };
     metric_registry_snapshot_at_authority(profile, expected_registry_version, hash)
 }
 
-/// Project only an exact, explicitly retained authority; never upgrade its digest.
+/// Return only the exact retained profile/version/hash authority.
 ///
 /// # Errors
-/// Unknown digests, profiles, versions, or corrupt embedded authorities fail closed.
+/// Unknown or incompatible authorities reject without selecting a current fallback.
 pub fn metric_registry_snapshot_at_authority(
     profile: MetricRegistryProfile,
     expected_registry_version: u32,
     registry_sha256: &str,
 ) -> Result<MetricRegistrySnapshot, CoreError> {
-    if expected_registry_version != REGISTRY_VERSION {
+    if expected_registry_version != profile.registry_version()
+        && !(expected_registry_version == WORKOUT_RANGE_REGISTRY_VERSION
+            && matches!(
+                profile,
+                MetricRegistryProfile::AppleHealthDataV11 | MetricRegistryProfile::AndroidSleepV6
+            ))
+    {
         return Err(CoreError::UnsupportedRegistryVersion);
     }
-    let bytes = crate::authority::registry_bytes(registry_sha256, profile.id())?;
-    if format!("{:x}", Sha256::digest(bytes)) != registry_sha256 {
-        return Err(CoreError::InvalidRegistry);
-    }
-    let document = decode_and_validate(bytes, false)?;
-    let mut snapshot = if profile == MetricRegistryProfile::AppleHealthDataV10 {
+    if profile == MetricRegistryProfile::AppleHealthDataV10 {
         let extension = apple_v10_profile()?;
-        let mut value = project_snapshot(&document, MetricRegistryProfile::AppleHealthDataV8)?;
-        value.profile_id.clone_from(&extension.profile_id);
-        value
+        let mut snapshot = metric_registry_snapshot_at_authority(
+            MetricRegistryProfile::AppleHealthDataV8,
+            expected_registry_version,
+            registry_sha256,
+        )?;
+        snapshot.profile_id.clone_from(&extension.profile_id);
+        snapshot
             .public_profile_id
             .clone_from(&extension.public_profile_id);
-        value.public_schema.clone_from(&extension.public_schema);
-        value.public_schema_version = extension.public_schema_version;
-        value.profile_revision = extension.profile_revision;
-        value
-    } else {
-        project_snapshot(&document, profile)?
-    };
+        snapshot.public_schema.clone_from(&extension.public_schema);
+        snapshot.public_schema_version = extension.public_schema_version;
+        return Ok(snapshot);
+    }
+    let bytes = crate::authority::registry_bytes(registry_sha256, profile.id())?;
+    let document = decode_and_validate_version(bytes, false, expected_registry_version)?;
+    let mut snapshot = project_snapshot(&document, profile)?;
     registry_sha256.clone_into(&mut snapshot.registry_sha256);
     Ok(snapshot)
+}
+
+fn registry_document(version: u32) -> Result<&'static RegistryDocument, CoreError> {
+    let result = match version {
+        REGISTRY_VERSION => REGISTRY.get_or_init(|| decode_and_validate(REGISTRY_BYTES, true)),
+        SLEEP_REGISTRY_VERSION => SLEEP_REGISTRY.get_or_init(|| {
+            decode_and_validate_version(SLEEP_REGISTRY_BYTES, true, SLEEP_REGISTRY_VERSION)
+        }),
+        WORKOUT_RANGE_REGISTRY_VERSION => WORKOUT_RANGE_REGISTRY.get_or_init(|| {
+            decode_and_validate_version(
+                WORKOUT_RANGE_REGISTRY_BYTES,
+                true,
+                WORKOUT_RANGE_REGISTRY_VERSION,
+            )
+        }),
+        _ => return Err(CoreError::UnsupportedRegistryVersion),
+    };
+    result.as_ref().map_err(|error| *error)
 }
 
 #[derive(Deserialize)]
@@ -400,7 +449,7 @@ fn apple_v10_profile() -> Result<&'static AppleV10Profile, CoreError> {
                 || extension.public_profile_id != "apple-v10"
                 || extension.public_schema != "healthmd.health_data"
                 || extension.public_schema_version != 10
-                || extension.registry_sha256 != crate::authority::HISTORICAL_REGISTRY_SHA256
+                || extension.registry_sha256 != REGISTRY_SHA256
                 || extension.registry_version != REGISTRY_VERSION
                 || extension.whoop_schema_version != 2
             {
@@ -418,10 +467,18 @@ fn apple_v10_profile() -> Result<&'static AppleV10Profile, CoreError> {
 ///
 /// Returns [`CoreError::InvalidRegistry`] when any registry invariant fails.
 pub fn validate_embedded_registry() -> Result<(u32, u32, u32), CoreError> {
-    let document = REGISTRY
-        .get_or_init(|| decode_and_validate(REGISTRY_BYTES, true))
-        .as_ref()
-        .map_err(|error| *error)?;
+    inventory_counts(registry_document(REGISTRY_VERSION)?)
+}
+
+/// Validate the independently versioned wake-date inventory without changing historical pins.
+///
+/// # Errors
+/// Returns a static registry failure if any successor hash/schema/mapping invariant fails.
+pub fn validate_sleep_registry() -> Result<(u32, u32, u32), CoreError> {
+    inventory_counts(registry_document(SLEEP_REGISTRY_VERSION)?)
+}
+
+fn inventory_counts(document: &RegistryDocument) -> Result<(u32, u32, u32), CoreError> {
     let apple = document
         .metrics
         .iter()
@@ -440,7 +497,25 @@ pub fn validate_embedded_registry() -> Result<(u32, u32, u32), CoreError> {
 }
 
 fn decode_and_validate(bytes: &[u8], enforce_hash: bool) -> Result<RegistryDocument, CoreError> {
-    if enforce_hash && format!("{:x}", Sha256::digest(bytes)) != REGISTRY_SHA256 {
+    decode_and_validate_version(bytes, enforce_hash, REGISTRY_VERSION)
+}
+
+pub(crate) const fn registry_hash(version: u32) -> Result<&'static str, CoreError> {
+    match version {
+        REGISTRY_VERSION => Ok(REGISTRY_SHA256),
+        SLEEP_REGISTRY_VERSION => Ok(SLEEP_REGISTRY_SHA256),
+        WORKOUT_RANGE_REGISTRY_VERSION => Ok(WORKOUT_RANGE_REGISTRY_SHA256),
+        _ => Err(CoreError::UnsupportedRegistryVersion),
+    }
+}
+
+fn decode_and_validate_version(
+    bytes: &[u8],
+    enforce_hash: bool,
+    expected_version: u32,
+) -> Result<RegistryDocument, CoreError> {
+    let expected_hash = registry_hash(expected_version)?;
+    if enforce_hash && format!("{:x}", Sha256::digest(bytes)) != expected_hash {
         return Err(CoreError::InvalidRegistry);
     }
     let value: serde_json::Value =
@@ -453,6 +528,9 @@ fn decode_and_validate(bytes: &[u8], enforce_hash: bool) -> Result<RegistryDocum
     }
     let document: RegistryDocument =
         serde_json::from_value(value).map_err(|_| CoreError::InvalidRegistry)?;
+    if document.registry_version != expected_version {
+        return Err(CoreError::InvalidRegistry);
+    }
     validate_document(&document)?;
     Ok(document)
 }
@@ -460,8 +538,11 @@ fn decode_and_validate(bytes: &[u8], enforce_hash: bool) -> Result<RegistryDocum
 fn validate_document(document: &RegistryDocument) -> Result<(), CoreError> {
     if document.schema != "healthmd.metric_registry"
         || document.schema_version != 1
-        || document.registry_version != REGISTRY_VERSION
-        || document.profiles.len() != 3
+        || !matches!(
+            document.registry_version,
+            REGISTRY_VERSION | SLEEP_REGISTRY_VERSION | WORKOUT_RANGE_REGISTRY_VERSION
+        )
+        || document.profiles.len() != expected_document_profiles(document).len()
         || document.known_capability_ids.is_empty()
     {
         return Err(CoreError::InvalidRegistry);
@@ -513,13 +594,7 @@ fn validate_document(document: &RegistryDocument) -> Result<(), CoreError> {
         .map(|profile| profile.id.clone())
         .collect::<Vec<_>>();
     let profile_ids: HashSet<&str> = unique_nonempty(&profile_id_values)?;
-    if profile_ids
-        != HashSet::from([
-            "apple_health_data_v8",
-            "android_frozen_v4",
-            "android_analytical_v5",
-        ])
-    {
+    if profile_ids != expected_document_profiles(document) {
         return Err(CoreError::InvalidRegistry);
     }
     for profile in &document.profiles {
@@ -555,6 +630,37 @@ fn validate_document(document: &RegistryDocument) -> Result<(), CoreError> {
         return Err(CoreError::InvalidRegistry);
     }
     Ok(())
+}
+
+fn expected_document_profiles(document: &RegistryDocument) -> HashSet<&'static str> {
+    if document.registry_version == REGISTRY_VERSION
+        && document
+            .profiles
+            .iter()
+            .any(|profile| profile.id == "apple_health_data_v7")
+    {
+        HashSet::from([
+            "apple_health_data_v7",
+            "android_frozen_v4",
+            "android_analytical_v5",
+        ])
+    } else {
+        expected_profile_ids(document.registry_version)
+    }
+}
+
+fn expected_profile_ids(version: u32) -> HashSet<&'static str> {
+    match version {
+        REGISTRY_VERSION => HashSet::from([
+            "apple_health_data_v8",
+            "android_frozen_v4",
+            "android_analytical_v5",
+        ]),
+        SLEEP_REGISTRY_VERSION | WORKOUT_RANGE_REGISTRY_VERSION => {
+            HashSet::from(["apple_health_data_v11", "android_sleep_v6"])
+        }
+        _ => HashSet::new(),
+    }
 }
 
 fn unique_nonempty(values: &[String]) -> Result<HashSet<&str>, CoreError> {
@@ -874,7 +980,7 @@ fn project_snapshot(
 
     Ok(MetricRegistrySnapshot {
         registry_version: document.registry_version,
-        registry_sha256: REGISTRY_SHA256.to_owned(),
+        registry_sha256: registry_hash(document.registry_version)?.to_owned(),
         profile_id: profile.id.clone(),
         public_profile_id: profile.public_profile_id.clone(),
         public_schema: profile.public_schema.clone(),
@@ -959,10 +1065,7 @@ mod tests {
         assert_eq!(current.profile_id, "apple_health_data_v10");
         assert_eq!(current.public_profile_id, "apple-v10");
         assert_eq!(current.public_schema_version, 10);
-        assert_eq!(
-            current.registry_sha256,
-            crate::authority::HISTORICAL_REGISTRY_SHA256
-        );
+        assert_eq!(current.registry_sha256, old.registry_sha256);
         assert_eq!(current.categories, old.categories);
         assert_eq!(current.metrics, old.metrics);
         assert_eq!(current.outputs, old.outputs);

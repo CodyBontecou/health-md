@@ -20,6 +20,15 @@ fun configuredValue(name: String): String =
         .orElse(providers.environmentVariable(name))
         .getOrElse("")
 
+// Public trust defaults shared with Xcode; properties/env can override for isolated QA builds.
+val clinicLicensingDefaults = Properties().apply {
+    rootProject.file("../licensing/deploy/NativeLicensing.xcconfig").inputStream().use { load(it) }
+}
+fun configuredClinicValue(name: String): String =
+    providers.gradleProperty(name)
+        .orElse(providers.environmentVariable(name))
+        .getOrElse(clinicLicensingDefaults.getProperty(name).orEmpty().replace("$()", ""))
+
 fun configuredEngineMode(name: String): String =
     configuredValue(name).takeIf { it == "legacy" || it == "shadow" || it == "rust" }
         ?: "legacy"
@@ -32,10 +41,6 @@ fun String.asBuildConfigString(): String = "\"${
         .replace("\t", "\\t")
 }\""
 
-val campaignAttributionEndpointUrl = configuredValue("CAMPAIGN_ATTRIBUTION_ENDPOINT_URL")
-val campaignAttributionIngestToken = configuredValue("CAMPAIGN_ATTRIBUTION_INGEST_TOKEN")
-val onboardingAnalyticsEndpointUrl = configuredValue("ONBOARDING_ANALYTICS_ENDPOINT_URL")
-    .ifBlank { "https://health-md-pricing-analytics.costream.workers.dev" }
 val exportEngineAndroidFrozenV4 = configuredEngineMode("EXPORT_ENGINE_ANDROID_FROZEN_V4")
 val exportEngineAndroidAnalyticalV5 = configuredEngineMode("EXPORT_ENGINE_ANDROID_ANALYTICAL_V5")
 val exportEngineApiV1FrozenV4 = configuredEngineMode("EXPORT_ENGINE_API_V1_FROZEN_V4")
@@ -44,6 +49,10 @@ val practiceCompiledIn = configuredValue("PRACTICE_COMPILED_IN") == "included"
 val instrumentedTestBuildType = providers.gradleProperty("healthmdInstrumentedTestBuildType")
     .getOrElse("debug")
     .also { require(it in setOf("debug", "e2e")) }
+
+val ciAbi = providers.gradleProperty("healthmd.ciAbi").orNull?.also {
+    require(it in setOf("arm64-v8a", "x86_64")) { "healthmd.ciAbi must be arm64-v8a or x86_64" }
+}
 
 android {
     namespace = "com.healthmd"
@@ -54,13 +63,22 @@ android {
         applicationId = "com.healthmd.android"
         minSdk = 28
         targetSdk = 36
-        versionCode = 42
-        versionName = "1.9.4"
+        versionCode = 48
+        versionName = "3.5.2"
+
+        // Explicit opt-in; absent or malformed values keep claim entry points disabled.
+        buildConfigField("boolean", "MYSELF_CLAIM_ENABLED", "false")
+        // Clinic access stays hidden until it launches; existing sponsorships keep working.
+        buildConfigField("boolean", "CLINIC_ACCESS_ENABLED", "false")
+        // Trust is baked into the app build, never supplied by a clinic invitation.
+        for (name in listOf("CLINIC_LICENSING_URL", "CLINIC_LICENSING_ISSUER", "CLINIC_LICENSING_KEY_ID", "CLINIC_LICENSING_PUBLIC_KEY_DER", "CLINIC_LICENSING_TRUSTED_KEYS_JSON")) {
+            buildConfigField("String", name, configuredClinicValue(name).asBuildConfigString())
+        }
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
+            abiFilters += ciAbi?.let(::listOf) ?: listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
         }
 
         buildConfigField(
@@ -114,9 +132,12 @@ android {
             buildConfigField("String", "POLAR_TOKEN_BROKER_URL", configuredValue("POLAR_TOKEN_BROKER_URL").asBuildConfigString())
             buildConfigField("String", "WHOOP_CLIENT_ID", configuredValue("WHOOP_CLIENT_ID").asBuildConfigString())
             buildConfigField("String", "WHOOP_TOKEN_BROKER_URL", configuredValue("WHOOP_TOKEN_BROKER_URL").asBuildConfigString())
-            buildConfigField("String", "CAMPAIGN_ATTRIBUTION_ENDPOINT_URL", campaignAttributionEndpointUrl.asBuildConfigString())
-            buildConfigField("String", "CAMPAIGN_ATTRIBUTION_INGEST_TOKEN", campaignAttributionIngestToken.asBuildConfigString())
-            buildConfigField("String", "ONBOARDING_ANALYTICS_ENDPOINT_URL", onboardingAnalyticsEndpointUrl.asBuildConfigString())
+            buildConfigField("String", "WHOOP_HEALTHMD_BROKER_URL", configuredValue("WHOOP_HEALTHMD_BROKER_URL").asBuildConfigString())
+            buildConfigField("String", "WHOOP_HEALTHMD_BROKER_CLIENT_TOKEN", configuredValue("WHOOP_HEALTHMD_BROKER_CLIENT_TOKEN").asBuildConfigString())
+            // Clinic sync requests over FCM. Empty values keep the transport unavailable.
+            for (name in listOf("FIREBASE_PROJECT_ID", "FIREBASE_APPLICATION_ID", "FIREBASE_API_KEY", "FIREBASE_SENDER_ID")) {
+                buildConfigField("String", name, configuredValue(name).asBuildConfigString())
+            }
             signingConfig = signingConfigs.getByName("release")
         }
         create("fdroid") {
@@ -182,6 +203,17 @@ android {
     }
 }
 
+// Changing opt-in native QA must invalidate test receipts, including rebuilt bytes at the same path.
+tasks.withType<Test>().configureEach {
+    val hostCoreLibrary = providers.environmentVariable("HEALTHMD_HOST_CORE_LIBRARY")
+    inputs.property("healthmdHostCoreLibrary", hostCoreLibrary.orElse(""))
+    inputs.property("healthmdWakeDateConsumerFixtureDirectory",
+        providers.environmentVariable("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR").orElse(""))
+    hostCoreLibrary.orNull?.takeIf { it.isNotBlank() }?.let {
+        inputs.file(it).withPropertyName("healthmdHostCoreLibraryBytes")
+    }
+}
+
 dependencies {
     implementation(project(":direct-protocol"))
     implementation(project(":healthmd-core"))
@@ -242,9 +274,9 @@ dependencies {
 
     // Google Play-only integrations. The F-Droid runtime graph must not resolve these artifacts.
     add("playImplementation", libs.billing.ktx)
-    add("playImplementation", libs.install.referrer)
     add("playImplementation", libs.play.review)
     add("playImplementation", libs.play.review.ktx)
+    add("playImplementation", libs.firebase.messaging)
 
     // Tagged, on-device PDF authoring. The port is Apache-2.0. Its obsolete
     // Bouncy Castle transitives are excluded because direct-protocol already supplies bcprov-jdk18on.
@@ -262,6 +294,8 @@ dependencies {
 
     // Testing
     testImplementation(libs.junit)
+    // Host-only native bootstrap for opt-in real UniFFI/JNA tests; Android keeps the pinned AAR.
+    testRuntimeOnly(libs.jna)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(kotlin("reflect"))
     testImplementation(libs.mockk)
@@ -272,8 +306,10 @@ dependencies {
     testImplementation(libs.glance.appwidget.testing)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.robolectric)
+    testImplementation(libs.compose.ui.test.junit4)
     testImplementation(libs.work.testing)
     testImplementation("com.networknt:json-schema-validator:1.5.9")
+    androidTestImplementation(libs.truth)
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.runner)
@@ -282,4 +318,13 @@ dependencies {
     androidTestImplementation(libs.uiautomator)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
+}
+
+// A test-only ABI selection must never produce a release application.
+if (ciAbi != null) {
+    tasks.configureEach {
+        if (name.contains("Release")) {
+            doFirst { error("healthmd.ciAbi is debug-only; release requires every supported ABI") }
+        }
+    }
 }

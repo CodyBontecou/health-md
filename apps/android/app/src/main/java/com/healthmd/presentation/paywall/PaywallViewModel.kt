@@ -7,7 +7,9 @@ import com.healthmd.BuildConfig
 import com.healthmd.domain.billing.BillingError
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.repository.EntitlementRepository
+import com.healthmd.domain.repository.PurchaseOffer
 import com.healthmd.domain.repository.PurchaseRepository
+import com.healthmd.domain.repository.PurchasePlan
 import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -40,6 +42,13 @@ class PaywallViewModel @Inject constructor(
             distributionPolicy.fullAccessIncluded,
         )
 
+    /** Resolve persisted lifetime access before presenting a root paywall. */
+    val accessState: StateFlow<Boolean?> = combine(
+        settingsRepository.isPurchased,
+        entitlementRepository.canEnterApp,
+    ) { persisted, live -> distributionPolicy.fullAccessIncluded || persisted || live }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     val isPurchasing: StateFlow<Boolean> = purchaseRepository.isPurchasing
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
@@ -53,6 +62,15 @@ class PaywallViewModel @Inject constructor(
     val priceText: StateFlow<String?> = purchaseRepository.offer
         .map { it?.localizedPriceText }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val offers: StateFlow<List<PurchaseOffer>> =
+        if (StaticPurchasePreview.enabled) MutableStateFlow(StaticPurchasePreview.offers).asStateFlow()
+        else purchaseRepository.offers
+
+    fun refreshAccess() {
+        entitlementRepository.refresh()
+        purchaseRepository.refresh()
+    }
 
     val purchasesAvailable: Boolean =
         distributionPolicy.purchasesAvailable && purchaseRepository.isAvailable
@@ -68,18 +86,18 @@ class PaywallViewModel @Inject constructor(
         // Included F-Droid access must not create or mutate Play purchase persistence.
         if (!distributionPolicy.fullAccessIncluded) {
             viewModelScope.launch {
-                entitlementRepository.isUnlocked
+                entitlementRepository.isPermanentlyUnlocked
                     .filter { it }
                     .collect { settingsRepository.setPurchased(true) }
             }
         }
     }
 
-    fun launchPurchaseFlow(activity: Activity) {
+    fun launchPurchaseFlow(activity: Activity, plan: PurchasePlan = PurchasePlan.LIFETIME) {
         if (!purchasesAvailable) return
         viewModelScope.launch {
             try {
-                if (!purchaseRepository.launchPurchase(activity)) {
+                if (!purchaseRepository.launchPurchase(activity, plan)) {
                     Timber.w("Purchase flow failed to launch")
                 }
             } catch (error: Exception) {

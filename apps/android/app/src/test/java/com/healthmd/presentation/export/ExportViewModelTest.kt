@@ -18,6 +18,7 @@ import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.model.ActivityData
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.FormatCustomization
 import com.healthmd.domain.model.ExportFormat
@@ -29,6 +30,8 @@ import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.SleepDayAttribution
+import com.healthmd.domain.model.SleepDayAttributionOverride
 import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
@@ -48,6 +51,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -57,6 +61,7 @@ import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Rule
@@ -65,6 +70,7 @@ import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import java.time.Duration
 import java.time.LocalDate
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ExportViewModelTest {
@@ -120,6 +126,38 @@ class ExportViewModelTest {
         assertThat(exportRepository.exportCalls).isEqualTo(0)
         assertThat(historyRepository.entries).isEmpty()
         assertThat(viewModel.uiState.value.isExporting).isFalse()
+    }
+
+    @Test
+    fun exportMomentStartsFromTheNewRunNotTheLastOne() = runTest {
+        val healthRepository = FakeHealthRepository(hasPermissions = true)
+        val viewModel = createViewModel(
+            healthRepository = healthRepository,
+            exportRepository = FakeExportRepository(),
+            exportHistoryRepository = FakeExportHistoryRepository(),
+        )
+        advanceUntilIdle()
+
+        val today = LocalDate.now()
+        viewModel.setStartDate(today)
+        viewModel.setEndDate(today)
+        viewModel.startExport()
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.exportProgressDate).isEqualTo(today)
+
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        healthRepository.fetchGate = gate
+        viewModel.setStartDate(today.minusDays(6))
+        viewModel.startExport()
+        runCurrent()
+
+        val state = viewModel.uiState.value
+        assertThat(state.isExporting).isTrue()
+        assertThat(state.exportProgress).isEqualTo(0)
+        assertThat(state.exportTotal).isEqualTo(7)
+        assertThat(state.exportProgressDate).isNull()
+        gate.complete(Unit)
+        advanceUntilIdle()
     }
 
     @Test
@@ -237,7 +275,7 @@ class ExportViewModelTest {
         assertThat(exportRepository.previewCalls).isEqualTo(1)
         assertThat(exportRepository.exportCalls).isEqualTo(1)
         assertThat(historyRepository.entries).hasSize(1)
-        assertThat(settingsRepository.getFreeExportsUsed()).isEqualTo(1)
+        assertThat(settingsRepository.getFreeExportsUsed()).isEqualTo(0)
     }
 
     @Test
@@ -297,7 +335,7 @@ class ExportViewModelTest {
         assertThat(historyRepository.entries).hasSize(1)
         assertThat(historyRepository.entries.single().target).isEqualTo(ExportTarget.API_ENDPOINT)
         assertThat(historyRepository.entries.single().fileCount).isEqualTo(0)
-        assertThat(settingsRepository.getFreeExportsUsed()).isEqualTo(1)
+        assertThat(settingsRepository.getFreeExportsUsed()).isEqualTo(0)
         assertThat(viewModel.uiState.value.exportedFolderUri).isNull()
     }
 
@@ -390,7 +428,7 @@ class ExportViewModelTest {
         assertThat(healthRepository.fetchCalls).isEqualTo(0)
         assertThat(exportRepository.exportCalls).isEqualTo(0)
         assertThat(historyRepository.entries.single().totalCount).isEqualTo(1)
-        assertThat(settingsRepository.getFreeExportsUsed()).isEqualTo(1)
+        assertThat(settingsRepository.getFreeExportsUsed()).isEqualTo(0)
     }
 
     @Test
@@ -428,7 +466,7 @@ class ExportViewModelTest {
     }
 
     @Test
-    fun allTimeExportDoesNotRequireHistoryWhenAllVisibleDataIsRecent() = runTest {
+    fun allTimeStillNeedsHistoryAfterSwitchingToTodayAndBackWhenVisibleDataIsRecent() = runTest {
         val today = LocalDate.now()
         val healthRepository = FakeHealthRepository(
             hasPermissions = true,
@@ -448,7 +486,51 @@ class ExportViewModelTest {
         advanceUntilIdle()
 
         assertThat(viewModel.uiState.value.allTimeSelected).isTrue()
-        assertThat(viewModel.uiState.value.requiresHistoricalReadPermission).isFalse()
+        assertThat(viewModel.uiState.value.requiresHistoricalReadPermission).isTrue()
+        assertThat(viewModel.uiState.value.historyPermissionNeeded).isTrue()
+
+        viewModel.setDateRange(today, today)
+        assertThat(viewModel.uiState.value.allTimeSelected).isFalse()
+        assertThat(viewModel.uiState.value.historyPermissionNeeded).isFalse()
+
+        viewModel.selectAllTime()
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.startDate).isEqualTo(today.minusDays(6))
+        assertThat(viewModel.uiState.value.historyPermissionNeeded).isTrue()
+
+        viewModel.buildPreview()
+        advanceUntilIdle()
+        viewModel.startExport()
+        advanceUntilIdle()
+
+        assertThat(healthRepository.fetchCalls).isEqualTo(0)
+        assertThat(exportRepository.exportCalls).isEqualTo(0)
+        assertThat(exportRepository.previewCalls).isEqualTo(0)
+        assertThat(historyRepository.entries).isEmpty()
+    }
+
+    @Test
+    fun allTimeWithHistoryPermissionExportsReadableData() = runTest {
+        val today = LocalDate.now()
+        val healthRepository = FakeHealthRepository(
+            hasPermissions = true,
+            hasHistoricalReadPermission = true,
+            earliestDataDate = today.minusDays(6),
+        )
+        val exportRepository = FakeExportRepository()
+        val historyRepository = FakeExportHistoryRepository()
+        val viewModel = createViewModel(
+            healthRepository = healthRepository,
+            exportRepository = exportRepository,
+            exportHistoryRepository = historyRepository,
+        )
+        advanceUntilIdle()
+
+        viewModel.selectAllTime()
+        advanceUntilIdle()
+
+        assertThat(viewModel.uiState.value.allTimeSelected).isTrue()
+        assertThat(viewModel.uiState.value.requiresHistoricalReadPermission).isTrue()
         assertThat(viewModel.uiState.value.historyPermissionNeeded).isFalse()
 
         viewModel.startExport()
@@ -608,29 +690,64 @@ class ExportViewModelTest {
     }
 
     @Test
-    fun thirdExportGuidanceShowsTwoRemainingWithoutCompetingReviewPrompt() = runTest {
-        val settingsRepository = FakeSettingsRepository(initialSuccessfulExportCount = 2, initialFreeExportsUsed = 2)
+    fun unpaidUserCanCompleteFirstExportButCannotStartAnother() = runTest {
+        val health = FakeHealthRepository(hasPermissions = true)
+        val exports = FakeExportRepository()
         val viewModel = createViewModel(
-            healthRepository = FakeHealthRepository(hasPermissions = true),
-            settingsRepository = settingsRepository,
+            healthRepository = health,
+            exportRepository = exports,
+            entitlementRepository = FakeBillingRepository(initialUnlocked = false, verifiedAccess = true),
         )
         advanceUntilIdle()
-        val reviewRequests = mutableListOf<Unit>()
-        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.requestReview.toList(reviewRequests)
-        }
         viewModel.startExport()
         advanceUntilIdle()
-        assertThat(viewModel.uiState.value.postExportMilestone).isEqualTo(3)
-        assertThat(viewModel.uiState.value.freeExportsRemaining).isEqualTo(2)
-        assertThat(reviewRequests).isEmpty()
-        viewModel.dismissPostExportGuidance()
-        assertThat(settingsRepository.getFreeExportsUsed()).isEqualTo(3)
+        assertThat(exports.exportCalls).isEqualTo(1)
+        assertThat(viewModel.uiState.value.freeExportsRemaining).isEqualTo(0)
         viewModel.startExport()
         advanceUntilIdle()
-        assertThat(viewModel.uiState.value.postExportMilestone).isNull()
-        assertThat(reviewRequests).hasSize(1)
-        collector.cancel()
+        assertThat(exports.exportCalls).isEqualTo(1)
+        assertThat(viewModel.uiState.value.isPurchased).isFalse()
+    }
+
+    @Test
+    fun expiredSubscriptionIsRecheckedBeforeExportAndNeverPersistedAsLifetime() = runTest {
+        val health = FakeHealthRepository(hasPermissions = true)
+        val exports = FakeExportRepository()
+        val settings = FakeSettingsRepository()
+        val viewModel = createViewModel(
+            healthRepository = health,
+            exportRepository = exports,
+            settingsRepository = settings,
+            entitlementRepository = FakeBillingRepository(initialUnlocked = true, permanent = false, verifiedAccess = false),
+        )
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.isPurchased).isTrue()
+        viewModel.startExport()
+        advanceUntilIdle()
+        assertThat(settings.isPurchased.first()).isFalse()
+        assertThat(health.fetchCalls).isEqualTo(0)
+        assertThat(exports.exportCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun stalePersistedLifetimeFlagCannotBypassFreshExportAdmission() = runTest {
+        val health = FakeHealthRepository(hasPermissions = true)
+        val exports = FakeExportRepository()
+        val settings = FakeSettingsRepository()
+        settings.setPurchased(true)
+        val viewModel = createViewModel(
+            healthRepository = health,
+            exportRepository = exports,
+            settingsRepository = settings,
+            entitlementRepository = FakeBillingRepository(initialUnlocked = true, permanent = false, verifiedAccess = false),
+        )
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.isPurchased).isTrue()
+        viewModel.startExport()
+        advanceUntilIdle()
+        assertThat(health.fetchCalls).isEqualTo(0)
+        assertThat(exports.exportCalls).isEqualTo(0)
+        assertThat(viewModel.uiState.value.isPurchased).isFalse()
     }
 
     private fun allowedProfileRepository() = mockk<ExportProfileRepository> {
@@ -689,8 +806,21 @@ private class FakeHealthRepository(
     var fetchCalls = 0
         private set
 
+    /** When set, each fetch waits on it, holding an export mid-run. */
+    var fetchGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+
+    override suspend fun resolveCaptureContext(
+        zoneId: ZoneId,
+        sleepDayAttributionOverride: SleepDayAttributionOverride,
+    ) = AndroidCaptureContext(
+        zoneId,
+        (sleepDayAttributionOverride as? SleepDayAttributionOverride.Value)?.attribution
+            ?: SleepDayAttribution.DEFAULT,
+    )
+
     override suspend fun fetchHealthData(date: LocalDate): HealthData {
         fetchCalls++
+        fetchGate?.await()
         return HealthData(
             date = date,
             activity = ActivityData(steps = 1),
@@ -804,9 +934,7 @@ private class FakeSettingsRepository(
     override suspend fun getFreeExportsRemaining(): Int = FreemiumPolicy.remainingExports(freeExportsUsedState.value)
 
     override suspend fun setPurchased(purchased: Boolean) {
-        val wasPurchased = isPurchasedState.value
         isPurchasedState.value = purchased
-        if (purchased && !wasPurchased) resetFreeExports()
     }
 
     override suspend fun resolveOnboardingCompletion(): Boolean =
@@ -817,6 +945,13 @@ private class FakeSettingsRepository(
     }
 
     override suspend fun getSuccessfulExportCount(): Int = successfulExportCount
+
+    private val successfulOperationIds = mutableSetOf<String>()
+    override suspend fun recordSuccessfulExportOnce(operationId: String): Boolean {
+        if (!successfulOperationIds.add(operationId)) return false
+        incrementSuccessfulExportCount()
+        return true
+    }
 
     override suspend fun incrementSuccessfulExportCount() {
         successfulExportCount++
@@ -860,8 +995,14 @@ private class FakeSettingsRepository(
     }
 }
 
-private class FakeBillingRepository : EntitlementRepository {
-    override val isUnlocked: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
+private class FakeBillingRepository(
+    initialUnlocked: Boolean = true,
+    permanent: Boolean = initialUnlocked,
+    private val verifiedAccess: Boolean = initialUnlocked,
+) : EntitlementRepository {
+    override val isUnlocked: StateFlow<Boolean> = MutableStateFlow(initialUnlocked).asStateFlow()
+    override val isPermanentlyUnlocked: StateFlow<Boolean> = MutableStateFlow(permanent).asStateFlow()
+    override suspend fun verifyAccess(): Boolean = verifiedAccess
     override fun refresh() = Unit
     override fun debugSetUnlocked(unlocked: Boolean) = Unit
     override fun debugReset() = Unit

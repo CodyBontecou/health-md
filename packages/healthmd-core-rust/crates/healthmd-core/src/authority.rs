@@ -2,30 +2,47 @@
 
 use crate::{CoreError, REGISTRY_SHA256};
 
-/// Shipped v3.4.2 authority, retained verbatim from 837687662aa2853d1872724c72a97e1526519bbc.
+/// Original pre-v8 authority, retained verbatim from c77024b87170260531f8df8fc5b604ad35375466.
 pub const HISTORICAL_REGISTRY_SHA256: &str =
-    "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99";
-const HISTORICAL_BYTES: &[u8] = include_bytes!("../registry/metric-registry-shipped-v3.4.2.json");
+    "b988fa9a0fea4cf3a0768ee6ad89251a15386c87eb929ce1e46b136fd33b1f4b";
+const HISTORICAL_BYTES: &[u8] = include_bytes!("../registry/metric-registry-pre-v8-c77024b.json");
 const CURRENT_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v1.json");
+const SLEEP_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v2.json");
+const WORKOUT_RANGE_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v3.json");
+
+pub(crate) fn supports_registry_version(hash: &str, version: u32) -> bool {
+    match hash {
+        REGISTRY_SHA256 | HISTORICAL_REGISTRY_SHA256 => version == crate::REGISTRY_VERSION,
+        crate::SLEEP_REGISTRY_SHA256 => version == crate::SLEEP_REGISTRY_VERSION,
+        crate::WORKOUT_RANGE_REGISTRY_SHA256 => version == crate::WORKOUT_RANGE_REGISTRY_VERSION,
+        _ => false,
+    }
+}
 
 pub(crate) fn registry_bytes(hash: &str, profile: &str) -> Result<&'static [u8], CoreError> {
-    if profile == "apple_health_data_v10" {
-        return if hash == HISTORICAL_REGISTRY_SHA256 {
-            Ok(HISTORICAL_BYTES)
-        } else {
-            Err(CoreError::UnsupportedRegistryProfile)
-        };
-    }
-    if !matches!(
-        profile,
-        "apple_health_data_v8" | "android_frozen_v4" | "android_analytical_v5"
-    ) {
-        return Err(CoreError::UnsupportedRegistryProfile);
-    }
-    if hash == REGISTRY_SHA256 {
+    if hash == REGISTRY_SHA256
+        && matches!(
+            profile,
+            "apple_health_data_v8"
+                | "apple_health_data_v10"
+                | "android_frozen_v4"
+                | "android_analytical_v5"
+        )
+    {
         Ok(CURRENT_BYTES)
-    } else if hash == HISTORICAL_REGISTRY_SHA256 {
+    } else if hash == HISTORICAL_REGISTRY_SHA256
+        && matches!(
+            profile,
+            "apple_health_data_v7" | "android_frozen_v4" | "android_analytical_v5"
+        )
+    {
         Ok(HISTORICAL_BYTES)
+    } else if matches!(profile, "apple_health_data_v11" | "android_sleep_v6") {
+        match hash {
+            crate::SLEEP_REGISTRY_SHA256 => Ok(SLEEP_BYTES),
+            crate::WORKOUT_RANGE_REGISTRY_SHA256 => Ok(WORKOUT_RANGE_BYTES),
+            _ => Err(CoreError::UnsupportedRegistryProfile),
+        }
     } else {
         Err(CoreError::UnsupportedRegistryProfile)
     }
@@ -34,10 +51,21 @@ pub(crate) fn registry_bytes(hash: &str, profile: &str) -> Result<&'static [u8],
 pub(crate) fn supports_semantic(hash: &str, profile: &str, revision: u32) -> bool {
     registry_bytes(hash, profile).is_ok()
         && (revision == 1
-            || (matches!(profile, "apple_health_data_v8" | "apple_health_data_v10")
-                && revision == 2))
+            || (revision == 2
+                && ((hash == REGISTRY_SHA256
+                    && matches!(profile, "apple_health_data_v8" | "apple_health_data_v10"))
+                    || (matches!(
+                        hash,
+                        crate::SLEEP_REGISTRY_SHA256 | crate::WORKOUT_RANGE_REGISTRY_SHA256
+                    ) && profile == "apple_health_data_v11"))))
 }
 
 pub(crate) fn supports_render(hash: &str, profile: &str, revision: u32) -> bool {
-    registry_bytes(hash, profile).is_ok() && revision == 2
+    registry_bytes(hash, profile).is_ok()
+        && revision
+            == if hash == HISTORICAL_REGISTRY_SHA256 {
+                1
+            } else {
+                2
+            }
 }

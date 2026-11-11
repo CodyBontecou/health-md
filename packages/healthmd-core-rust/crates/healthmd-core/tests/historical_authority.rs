@@ -3,18 +3,17 @@ use healthmd_core::{render::RenderSession, semantic::SemanticSession};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
-// Exact git objects from v3.4.2 (837687662aa2853d1872724c72a97e1526519bbc); never regenerate.
-const SEMANTIC: &[u8] = include_bytes!(
-    "../../../../contracts/semantic-input/v1/fixtures/historical-shipped-v3.4.2.json"
-);
+// Exact git objects from c77024b87170260531f8df8fc5b604ad35375466; never regenerate.
+const SEMANTIC: &[u8] =
+    include_bytes!("fixtures/contracts/semantic-input/v1/fixtures/historical-pre-v8-c77024b.json");
 const RENDER: &[u8] =
-    include_bytes!("../../../../contracts/render-input/v1/fixtures/historical-shipped-v3.4.2.json");
+    include_bytes!("fixtures/contracts/render-input/v1/fixtures/historical-pre-v8-c77024b.json");
 
 #[test]
 fn historical_semantic_clients_reproduce_original_authority_and_result_bytes() {
     assert_eq!(
         format!("{:x}", Sha256::digest(SEMANTIC)),
-        "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439"
+        "0f5c8dfc6e52759c7b671082bfd5121253f1907d5af97ad1ec4f2c6bb9fefb7e"
     );
     let fixture: Value = serde_json::from_slice(SEMANTIC).unwrap();
     for case in fixture["cases"].as_array().unwrap() {
@@ -42,7 +41,7 @@ fn historical_semantic_clients_reproduce_original_authority_and_result_bytes() {
 fn historical_render_clients_reproduce_every_original_artifact_byte() {
     assert_eq!(
         format!("{:x}", Sha256::digest(RENDER)),
-        "0938986585652b3df4734ed52b3e8b8be3e6122837fb947f83a764e8c56447a2"
+        "59fee27e488f76da193d8013fba4ff82d76887fe12df45439ea7de286feb4bc3"
     );
     let fixture: Value = serde_json::from_slice(RENDER).unwrap();
     for case in fixture["cases"].as_array().unwrap() {
@@ -110,7 +109,10 @@ fn historical_clients_reject_unknown_and_crossed_authorities() {
         );
     }
     let mut incompatible = semantic["cases"][0]["config"].clone();
-    incompatible["profile_revision"] = Value::from(3);
+    incompatible["profile_revision"] = Value::from(2);
+    assert!(SemanticSession::from_json(&serde_json::to_vec(&incompatible).unwrap()).is_err());
+    incompatible["profile_revision"] = Value::from(1);
+    incompatible["profile"] = Value::String("apple_health_data_v8".to_owned());
     assert!(SemanticSession::from_json(&serde_json::to_vec(&incompatible).unwrap()).is_err());
     for hash in ["0".repeat(64), healthmd_core::REGISTRY_SHA256.to_owned()] {
         let case = &render["cases"][0];
@@ -124,33 +126,4 @@ fn historical_clients_reject_unknown_and_crossed_authorities() {
             .is_err()
         );
     }
-}
-
-#[test]
-fn v10_uses_its_frozen_base_and_rejects_foundation_registry_relabeling() {
-    use healthmd_core::registry::{
-        MetricRegistryProfile, metric_registry_snapshot, metric_registry_snapshot_at_authority,
-    };
-    let current = metric_registry_snapshot(MetricRegistryProfile::AppleHealthDataV10, 1).unwrap();
-    assert_eq!(current.public_schema_version, 10);
-    assert_eq!(
-        current.registry_sha256,
-        healthmd_core::authority::HISTORICAL_REGISTRY_SHA256
-    );
-    assert!(
-        metric_registry_snapshot_at_authority(
-            MetricRegistryProfile::AppleHealthDataV10,
-            1,
-            healthmd_core::REGISTRY_SHA256
-        )
-        .is_err()
-    );
-    let retained = metric_registry_snapshot_at_authority(
-        MetricRegistryProfile::AppleHealthDataV8,
-        1,
-        healthmd_core::authority::HISTORICAL_REGISTRY_SHA256,
-    )
-    .unwrap();
-    assert_eq!(retained.public_schema_version, 8);
-    assert_eq!(retained.metrics, current.metrics);
 }

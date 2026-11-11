@@ -48,6 +48,7 @@ struct ExportActivityBanner: View {
     let sourceLabel: String?
     let targetLabel: String?
     let message: String
+    let messageLineLimit: Int?
     let progress: Double?
     let showsIndeterminateProgress: Bool
     let progressAccessibilityLabel: String
@@ -65,6 +66,7 @@ struct ExportActivityBanner: View {
         sourceLabel: String? = nil,
         targetLabel: String? = nil,
         message: String,
+        messageLineLimit: Int? = 2,
         progress: Double?,
         showsIndeterminateProgress: Bool,
         progressAccessibilityLabel: String,
@@ -81,6 +83,7 @@ struct ExportActivityBanner: View {
         self.sourceLabel = sourceLabel
         self.targetLabel = targetLabel
         self.message = message
+        self.messageLineLimit = messageLineLimit
         self.progress = progress
         self.showsIndeterminateProgress = showsIndeterminateProgress
         self.progressAccessibilityLabel = progressAccessibilityLabel
@@ -139,12 +142,11 @@ struct ExportActivityBanner: View {
                 }
             }
 
-            if !message.isEmpty {
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(Color.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            Text(message)
+                .font(.caption)
+                .foregroundStyle(Color.textSecondary)
+                .lineLimit(messageLineLimit)
+                .fixedSize(horizontal: false, vertical: true)
 
             if let progress {
                 let clampedProgress = min(max(progress, 0), 1)

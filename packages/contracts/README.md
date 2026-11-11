@@ -8,6 +8,7 @@ The package is licensed under the [GNU Affero General Public License v3.0 only](
 
 | Path | Purpose |
 |---|---|
+| [`clinic-sponsorship/v1`](clinic-sponsorship/v1/contract.md) | Unpublished manual clinic pilot: signed grants, explicit patient consent and destination-aware export admission |
 | [`manifest.json`](manifest.json) | Contract versions, ownership, consumers, fixture provenance, and integrity hashes |
 | [`product-capabilities.json`](product-capabilities.json) | Machine-readable Apple/Android capability and output-profile inventory |
 | [`../healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json`](../healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json) | Rust-owned ordered metric/profile inventory pinned by `manifest.json` |
@@ -20,6 +21,13 @@ The package is licensed under the [GNU Affero General Public License v3.0 only](
 | [`shared-setup/v2`](shared-setup/v2/contract.md) | Public bounded Apple/Android portable named-profile setup bundle with registry-backed alias union, exact v2 platform extensions, non-operative destination/schedule intent, and language-neutral Add/Replace/Undo transaction semantics; version 2 is the one and only profile version |
 | [`cloud-repair/v1`](cloud-repair/v1/contract.md) | **Staged, not enabled or manifest-registered:** static no-scope app link, encrypted repair draft, review-only approved-device dispatch and synthetic vectors; no upload authorization or verified receipt |
 | [`agent-data/v1`](agent-data/v1/contract.md) | Public read-only grant, query, and response contracts plus phone-to-gateway ingestion manifest and health-free receipt contracts, shared by local and future hosted agent data stores |
+
+## Scoped direct notes (staged)
+
+[Direct scoped daily-note writes v1](direct-protocol/scoped-notes-v1/contract.md) defines bilateral
+capability negotiation, frozen per-note policy, capture binding, and host-owned skip/install
+recovery. Portable CLI negotiation and receiver behavior are staged; native producers do not
+advertise the extension yet.
 
 ## History evidence (staged)
 
@@ -59,6 +67,7 @@ Run the package checks from the repository root:
 
 ```bash
 python3 packages/contracts/validate.py
+python3 -m unittest discover -s packages/contracts -p test_validate_sleep_attribution.py
 # or
 make test-contracts
 
@@ -101,7 +110,7 @@ A unified cross-platform successor is now specified as a **deferred `healthmd.he
 
 `product-capabilities.json` records output profiles and product-level capabilities. Each capability is classified as `shared`, `apple_only`, `android_only`, `unavailable`, or `planned`. Platform entries use `available`, `unavailable`, or `planned`; every unavailable entry must carry a non-empty reason, and every planned entry must name its target. Platform-only data remains a supported product capability rather than a parity defect.
 
-The contract manifest pins product capabilities, the immutable metric-registry-v1, and the independently versioned Apple-v10 profile extension by SHA-256. Update a hash only after reviewing its semantic diff and evidence. `make test-product-parity` checks capability classifications, profile/contract references, registry identity/order/availability/output invariants, evidence paths, canonical bytes, and pinned hashes.
+The product capability inventory is editable governance metadata and has no manifest SHA-256 pin. Its classifications, profile/contract references, and evidence paths are still validated. The metric registry and immutable contract fixtures remain SHA-256-pinned; update their hashes only after reviewing the semantic diff and evidence. `make test-product-parity` checks these rules along with registry identity/order/availability/output invariants and canonical bytes.
 
 ## Fixture policy
 
@@ -115,3 +124,5 @@ Canonical fixtures contain synthetic protocol values only; never add health reco
 Do not regenerate a fixture merely to make a failing consumer pass.
 
 The independently published Rust crates keep protocol, semantic, and render differential fixture mirrors inside their Cargo packages so release archives remain self-contained. `validate.py` requires those mirrors to be byte-identical to the canonical assets. Android's in-repository Gradle module consumes the canonical v2 fixture directly.
+
+The deferred [sleep-attribution successor](sleep-attribution/v1/contract.md) inventories three synthetic Android-to-core v2 interoperability fixtures (the original handoff/plan pair plus a metadata-off exact-summary plan) with reviewed hashes. Validation checks the schemas and cross-stage authority, batch sequencing, artifact identity and content integrity. This bounded evidence does not enable Morning ends, qualify all successor grammars, or change historical profile inventories/signatures.

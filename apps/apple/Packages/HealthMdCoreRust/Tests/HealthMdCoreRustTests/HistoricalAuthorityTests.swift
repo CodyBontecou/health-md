@@ -4,17 +4,25 @@ import XCTest
 @testable import HealthMdCoreRust
 
 final class HistoricalAuthorityTests: XCTestCase {
+    func testCurrentProfileFFIDiscriminantsRemainUnchanged() {
+        for (profile, discriminant) in [(CoreMetricRegistryProfile.appleHealthDataV8, UInt8(1)), (.androidFrozenV4, UInt8(2)), (.androidAnalyticalV5, UInt8(3))] {
+            var bytes: [UInt8] = []
+            FfiConverterTypeCoreMetricRegistryProfile.write(profile, into: &bytes)
+            XCTAssertEqual(bytes, [0, 0, 0, discriminant])
+        }
+    }
+
     func testHistoricalNativeClientsKeepExactAuthorityAndEveryResultAndArtifactByte() throws {
         var root = URL(fileURLWithPath: #filePath)
         for _ in 0..<7 { root.deleteLastPathComponent() }
-        let semantic = try fixture(root, "semantic-input", "shipped-v3.4.2")
-        let render = try fixture(root, "render-input", "shipped-v3.4.2")
+        let semantic = try fixture(root, "semantic-input", "pre-v8-c77024b")
+        let render = try fixture(root, "render-input", "pre-v8-c77024b")
         let service = HealthMdCoreService()
         for item in try XCTUnwrap(semantic["cases"] as? [[String: Any]]) {
             let configuration = try XCTUnwrap(item["config"] as? [String: Any])
             let profile: CoreMetricRegistryProfile
             switch configuration["profile"] as? String {
-            case "apple_health_data_v8": profile = .appleHealthDataV8
+            case "apple_health_data_v7": profile = .appleHealthDataV7
             case "android_frozen_v4": profile = .androidFrozenV4
             case "android_analytical_v5": profile = .androidAnalyticalV5
             default: return XCTFail("Unreviewed historical profile")

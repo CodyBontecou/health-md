@@ -6,7 +6,6 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "a400c0aaad27221977a40c2a73d91eb6a3f58886aa9dcf62be8535b358d55249",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -17,7 +16,7 @@
       "id": "healthmd.metric_registry",
       "version": 1,
       "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
-      "sha256": "7b7c3d2b9030c8fbc6db08b4e740922140d7cc2a9b7727461c47ad9baa6fd771",
+      "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
       "implementations": [
         "packages/healthmd-core-rust/crates/healthmd-core/src/registry.rs",
         "apps/apple/HealthMd/Shared/Core/HealthMdCoreRegistryAdapter.swift",
@@ -354,7 +353,7 @@
       "fixtures": [
         {
           "path": "packages/contracts/semantic-input/v1/fixtures/differential-v1.json",
-          "sha256": "3a4764c3b4439ca0b8841a6d2d1dd14fbd02ad56ffd2712ea663bad7e750b1b6",
+          "sha256": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439",
           "provenance": "Reviewed synthetic cross-platform semantic cases; Rust, Swift, and Kotlin tests verify canonical encoding and exact result hashes without production health data.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/semantic-differential-v1.json"
@@ -392,25 +391,33 @@
           "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9.json",
           "sha256": "3dbf93498ee3ecd1dafde2408c40ebb66c01d42b6107973c48176893c6668b2b",
           "provenance": "Generated directly by the production Swift range generator and JSON renderer from the canonical synthetic partial-range corpus; Rust reconstructs and verifies the same public contract semantics.",
-          "mirrors": []
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/contracts/rollup-summary/v9/fixtures/range-v9.json"
+          ]
         },
         {
           "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9.csv",
           "sha256": "6e72ba48289c5302a44636427d3d9747fe9297eb86b482d544411b2167208eb7",
           "provenance": "Generated directly by the production Swift range generator and CSV renderer from the canonical synthetic partial-range corpus.",
-          "mirrors": []
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/contracts/rollup-summary/v9/fixtures/range-v9.csv"
+          ]
         },
         {
           "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9.md",
           "sha256": "1c9307fd17cd84bb3d99b6062a2de40718572a07ae891fb69c28b1eee14fe2a4",
           "provenance": "Generated directly by the production Swift range generator and Markdown renderer from the canonical synthetic partial-range corpus.",
-          "mirrors": []
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/contracts/rollup-summary/v9/fixtures/range-v9.md"
+          ]
         },
         {
           "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9-bases.md",
           "sha256": "8c09db1a0af44294ef051476f2ac727ed42ae66e7c51b693d5dfdaa4d9e136ec",
           "provenance": "Generated directly by the production Swift range generator and Obsidian Bases renderer from the canonical synthetic partial-range corpus.",
-          "mirrors": []
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/contracts/rollup-summary/v9/fixtures/range-v9-bases.md"
+          ]
         }
       ]
     },
@@ -441,7 +448,7 @@
       "fixtures": [
         {
           "path": "packages/contracts/render-input/v1/fixtures/differential-v1.json",
-          "sha256": "574dd32d4e67ff7d3b4ecaacba09a17dd11183bc60149781a9f78158c3df1ed0",
+          "sha256": "0938986585652b3df4734ed52b3e8b8be3e6122837fb947f83a764e8c56447a2",
           "provenance": "Reviewed synthetic render requests and exact profile plans; Rust verifies every path, byte, length, checksum, and write mode.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/render-differential-v1.json"
@@ -471,7 +478,7 @@
         },
         {
           "path": "packages/contracts/render-input/v1/fixtures/native-android-bases-requests-v1.json",
-          "sha256": "cc84820ad3a87a489702287f1759e91ffff873eca41da3c587b1c4ee98bcf199",
+          "sha256": "63936636dd139f386f845c91cb6cbe7bb32dcad9e237d51a096a2acb7b95de5f",
           "provenance": "Frozen Kotlin render-input requests from the production HealthDataFields presentation snapshot paired with independent production Obsidian Bases bytes for frozen-v4 and analytical-v5 metric/imperial cases.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-bases-requests-v1.json"
@@ -479,7 +486,7 @@
         },
         {
           "path": "packages/contracts/render-input/v1/fixtures/native-android-render-requests-v1.json",
-          "sha256": "250d68d4ea77dd7e451a2d3cf3415d403f07aa44a6312f4fac5d06f3ee35f037",
+          "sha256": "b94a7c9d0533919a36471bf3fd96a1bd51524b8b3ca404a27344aa922473373d",
           "provenance": "Frozen Kotlin render-input presentation snapshots paired with independent production Markdown, Obsidian Bases, JSON, and CSV bytes for Android frozen-v4 and analytical-v5 default, granular, native-alias, metric, and imperial cases.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-render-requests-v1.json"
@@ -602,6 +609,29 @@
           "path": "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v8.json",
           "sha256": "d077deb20f8bcae121b9ac2da30b1f7f6bbf0ed2c1a7c4296076d882ca98374a",
           "provenance": "Current Apple v8 signature generated and guarded by the Apple export schema signature tests.",
+          "mirrors": []
+        }
+      ]
+    },
+    {
+      "id": "healthmd.health_data.apple_detail",
+      "version": 12,
+      "status": "inventory_only",
+      "summary": "Apple apple-v12 compatibility detail successor: the Night begins apple-v8 grammar plus start-owned per-category detailSamples and per-stage sleep source attribution, selected only by an explicit detailed override for an expansion category or sleep. apple-v8 bytes are unchanged.",
+      "authorities": [
+        "apps/apple/HealthMd/Shared/Models/DetailSample.swift",
+        "apps/apple/HealthMd/Shared/Models/ExportSettingsSnapshot.swift",
+        "docs/features/per-group-export-detail.md"
+      ],
+      "consumers": [
+        "apps/apple/HealthMdTests/Export/ExportSchemaSignatureTests.swift",
+        "apps/apple/HealthMdTests/Export/AppleV12DetailExpansionTests.swift"
+      ],
+      "fixtures": [
+        {
+          "path": "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v12.json",
+          "sha256": "a56f4e7aabd2d074e32bf8201ca8e7191ef573cf4b35343374cf1a83274f3efa",
+          "provenance": "Reviewed apple-v12 signature generated from the synthetic detail-expansion fixture day by the Apple export schema signature tests.",
           "mirrors": []
         }
       ]
@@ -745,16 +775,38 @@
       ]
     },
     {
+      "id": "healthmd.health_data.android_analytical_detail",
+      "version": 7,
+      "status": "inventory_only",
+      "summary": "Android android-analytical-v7 compatibility detail successor: the analytical v5 grammar plus per-record interval arrays for calories, distance, floors, elevation, hydration and body records, selected only by an explicit detailed activity, nutrition or body override. Frozen v4 and analytical v5 bytes are unchanged.",
+      "authorities": [
+        "apps/android/app/src/main/java/com/healthmd/domain/model/DailyRecordSchemaProfile.kt",
+        "apps/android/app/src/main/java/com/healthmd/data/export/JsonExporter.kt",
+        "docs/features/per-group-export-detail.md"
+      ],
+      "consumers": [
+        "apps/android/app/src/test/java/com/healthmd/export/ExporterSchemaSignatureTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/export/AnalyticalV7ExportTest.kt"
+      ],
+      "fixtures": [
+        {
+          "path": "apps/android/app/src/test/resources/export-contract/signatures/exporter_signature_android_analytical_v7.json",
+          "sha256": "23dfa58936442fe8c1793f5967ea7cc9d1212eb9d9fd3a2c0025402089811a97",
+          "provenance": "Reviewed android-analytical-v7 signature generated from the synthetic v7 exporter fixture day; v4 and v5 signatures are unchanged.",
+          "mirrors": []
+        }
+      ]
+    },
+    {
       "id": "healthmd.campaign_attribution",
       "version": 1,
       "status": "deferred",
-      "summary": "First-party Android campaign-install payload accepted by the website Worker; schema extraction is deferred.",
+      "summary": "Historical Android campaign-install contract; the candidate removes its app producer and replaces ingestion with a discard responder. Website redirects and counters remain separate.",
       "authorities": [
-        "apps/android/app/src/play/java/com/healthmd/data/attribution/CampaignAttributionModels.kt",
+        "apps/android/docs/campaign-attribution.md",
         "apps/website/cloudflare/attribution-worker/src/worker.js"
       ],
       "consumers": [
-        "apps/android/app/src/playTest/java/com/healthmd/data/attribution/OkHttpCampaignAttributionReporterTest.kt",
         "apps/website/test/attribution-worker.test.mjs"
       ],
       "documentation": [
@@ -777,6 +829,163 @@
         "apps/website/test/visualization-catalog.test.mjs"
       ],
       "fixtures": []
+    },
+    {
+      "id": "healthmd.sleep_attribution",
+      "version": 1,
+      "status": "deferred",
+      "summary": "Production-gated wake-date successor authority and synthetic semantic/render v2 interoperability; historical profiles remain unchanged.",
+      "specification": "packages/contracts/sleep-attribution/v1/contract.md",
+      "authorities": [
+        "packages/contracts/sleep-attribution/v1/contract.md",
+        "packages/contracts/semantic-input/v2/semantic-input.schema.json",
+        "packages/contracts/semantic-input/v2/semantic-result.schema.json",
+        "packages/contracts/render-input/v2/render-input.schema.json",
+        "packages/contracts/render-input/v2/artifact-plan.schema.json",
+        "packages/contracts/render-input/v2/stream-artifact-plan-item.schema.json",
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v2.json",
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v3.json"
+      ],
+      "implementations": [
+        "packages/contracts/validate.py",
+        "packages/healthmd-core-rust/crates/healthmd-core/src/sleep.rs",
+        "packages/healthmd-core-rust/crates/healthmd-core/src/render/sleep_profiles.rs"
+      ],
+      "consumers": [
+        "packages/contracts/test_validate_sleep_attribution.py",
+        "packages/healthmd-core-rust/crates/healthmd-core/tests/sleep_rendering.rs",
+        "packages/healthmd-core-rust/crates/healthmd-core/tests/workout_range_authority.rs"
+      ],
+      "documentation": [
+        "packages/contracts/render-input/v2/contract.md",
+        "packages/contracts/semantic-input/v2/contract.md"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/render-input/v2/fixtures/native-android-v6-handoff.json",
+          "sha256": "87bcfe86b503a06b6e03f0d2bafc3bda68ffe98510254f50c1eaebf5ea8f07ed",
+          "provenance": "Emitted by Kotlin semantic/render adapters from synthetic SDK aggregate facts; replayed by real Rust sessions against literal expected reductions. Not a native public-writer or device qualification golden.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/contracts/render-input/v2/fixtures/native-android-v6-handoff.json"
+          ]
+        },
+        {
+          "path": "packages/contracts/render-input/v2/fixtures/core-android-v6-artifact-plan.json",
+          "sha256": "949821b96090e866f3a53479bed3ebd063b1d13ca4050a94b2ab1d1f65b11e3b",
+          "provenance": "Emitted by the successor Rust renderer from the native handoff; Kotlin verifies plan identities, content descriptors and defensive copies. Not production readiness evidence.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/render-input/v2/fixtures/core-android-v6-summary-facts-artifact-plan.json",
+          "sha256": "542cc6a6662350849ddb1bfd31236b2b0c0b8339b9926139347da7df3f66b113",
+          "provenance": "Successor Rust replay of the unchanged native Android handoff with exact metadata-off sleep summary facts. The original artifact-plan fixture remains immutable migration evidence. Not production readiness evidence.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/contracts/render-input/v2/fixtures/core-android-v6-summary-facts-artifact-plan.json"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "healthmd.rollup_summary.sleep",
+      "version": 11,
+      "status": "deferred",
+      "summary": "Production-gated Apple v11 wake-date requested-range summary; immutable historical v8/v9 output remains supported.",
+      "specification": "packages/contracts/rollup-summary/v11/contract.md",
+      "authorities": [
+        "packages/contracts/rollup-summary/v11/contract.md",
+        "packages/contracts/rollup-summary/v11/rollup-summary.schema.json"
+      ],
+      "implementations": [
+        "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+        "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_range_rollup_v9.rs",
+        "packages/contracts/validate.py"
+      ],
+      "consumers": [
+        "packages/healthmd-core-rust/crates/healthmd-core/tests/sleep_range_summary.rs",
+        "packages/contracts/test_validate_sleep_attribution.py"
+      ],
+      "documentation": [
+        "packages/contracts/sleep-attribution/v1/contract.md"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/rollup-summary/v11/fixtures/range-v11-bases.md",
+          "sha256": "5978d440d427435330ef4b6f4d106f1188e5fb4c1952613db55b5bfe08c2b3e2",
+          "provenance": "Actual shared-core v11 range artifact from synthetic SDK aggregate facts and real semantic/render sessions; independently asserted DST bounds, successful empty-day coverage and whole-session quantities. Native execution/consumer qualification remains pending.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/rollup-summary/v11/fixtures/range-v11.csv",
+          "sha256": "a5a1857e0b0b13f0b2d6005c3b1cab18f10b180071c76c1c681d032311367d0d",
+          "provenance": "Actual shared-core v11 range artifact from synthetic SDK aggregate facts and real semantic/render sessions; independently asserted DST bounds, successful empty-day coverage and whole-session quantities. Native execution/consumer qualification remains pending.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/rollup-summary/v11/fixtures/range-v11.json",
+          "sha256": "cf6ee5f811c9bebc602c850fe396dda6f4e769a69aa62b8253c416d0a856ddfe",
+          "provenance": "Actual shared-core v11 range artifact from synthetic SDK aggregate facts and real semantic/render sessions; independently asserted DST bounds, successful empty-day coverage and whole-session quantities. Native execution/consumer qualification remains pending.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/rollup-summary/v11/fixtures/range-v11.md",
+          "sha256": "48bc6d302a2aefcdf1c9956ec1fcc5db3b2f0b15f1b05ed0d39f1e2223f6b9e3",
+          "provenance": "Actual shared-core v11 range artifact from synthetic SDK aggregate facts and real semantic/render sessions; independently asserted DST bounds, successful empty-day coverage and whole-session quantities. Native execution/consumer qualification remains pending.",
+          "mirrors": []
+        }
+      ]
+    },
+    {
+      "id": "healthmd.clinic-sponsored-access",
+      "version": 1,
+      "status": "canonical",
+      "summary": "Installation-bound clinic grants, proof-bound enrollment recovery and destination-aware admission with manual billing; no health payload schema changes.",
+      "specification": "packages/contracts/clinic-sponsorship/v1/contract.md",
+      "authorities": [
+        "packages/contracts/clinic-sponsorship/v1/contract.md"
+      ],
+      "implementations": [
+        "apps/licensing/src/service.mjs",
+        "apps/apple/HealthMd/Shared/Models/ClinicExportAuthorization.swift",
+        "apps/apple/HealthMd/Shared/Models/ClinicGrantVerifier.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/billing/ClinicExportAuthorization.kt",
+        "apps/android/app/src/main/java/com/healthmd/domain/billing/ClinicGrantVerifier.kt",
+        "apps/wake/src/state.ts",
+        "apps/apple/HealthMd/iOS/ClinicSyncDoorbellManager.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/clinicsync/ClinicSyncDoorbell.kt"
+      ],
+      "consumers": [
+        "scripts/tests/test_clinic_export_authorization.py",
+        "apps/android/app/src/test/java/com/healthmd/domain/billing/ClinicExportAuthorizationTest.kt",
+        "apps/licensing/test/service.test.mjs",
+        "apps/licensing/test/production.test.mjs",
+        "apps/android/app/src/test/java/com/healthmd/domain/billing/ClinicSponsorshipRecoveryTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/data/clinicsync/ClinicSyncDoorbellManagerTest.kt",
+        "apps/apple/HealthMdTests/Wake/ClinicSyncDoorbellManagerTests.swift",
+        "apps/wake/src/delegated-sync.test.ts"
+      ],
+      "documentation": [
+        "apps/licensing/README.md"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/clinic-sponsorship/v1/authorization-fixtures.json",
+          "sha256": "38eecc4bb9355676ef314e46576855b47826c2714677ff8ffcf4de80037bd120",
+          "provenance": "Synthetic authorization and ephemeral P-256 verification vectors; no private signing key or live patient data.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/clinic-sponsorship/v1/verification-fixtures.json",
+          "sha256": "310ae896331c3f1c0e15088bae9756bb7d1cd89005c4b75454219f1ed766b9e5",
+          "provenance": "Synthetic authorization and ephemeral P-256 verification vectors; no private signing key or live patient data.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/clinic-sponsorship/v1/sync-doorbell-fixtures.json",
+          "sha256": "f7dc46a6a05839ca5d0407701a0d557d30fabd28b9f38b553b676ec0c8b30684",
+          "provenance": "Synthetic clinic sync doorbell messages, RFC-0005 wake request HMAC vector and push payloads; fictional key and identifiers, no patient data.",
+          "mirrors": []
+        }
+      ]
     },
     {
       "id": "healthmd.diagnostics",
@@ -1011,6 +1220,43 @@
           "sha256": "5644b1af9471dad14d36a9b683e54aaa49a7024afb3771872633778a78b0a9c7",
           "provenance": "Reviewed synthetic ingest request manifest for an Apple complete health-data daily upload whose informational record_count deliberately disagrees with byte_count, proving counts never reject or reclassify; placeholder hashes, no production health data, account identity, credential, token, or device identifier.",
           "mirrors": []
+        }
+      ]
+    },
+    {
+      "id": "healthmd.direct.scoped_daily_notes",
+      "version": 1,
+      "status": "deferred",
+      "summary": "Source-opt-in CLI note negotiation with capture-bound durable recovery and truthful skip receipts; staged pending mobile producers and runtime qualification.",
+      "specification": "packages/contracts/direct-protocol/scoped-notes-v1/contract.md",
+      "authorities": [
+        "packages/contracts/direct-protocol/scoped-notes-v1/contract.md"
+      ],
+      "implementations": [
+        "packages/healthmd-core-rust/crates/healthmd-protocol/src/notes.rs",
+        "packages/healthmd-core-rust/crates/healthmd-core/src/render/markdown_merge/scoped_note.rs",
+        "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectScopedDailyNotePolicy.swift",
+        "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/ScopedDailyNotePolicy.kt",
+        "apps/cli/crates/healthmd-client/src/direct.rs",
+        "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+        "apps/cli/crates/healthmd-client/src/v2_receiver.rs"
+      ],
+      "consumers": [
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/scoped_note_policy.rs",
+        "apps/apple/Packages/HealthMdConnectivity/Tests/HealthMdConnectionCoreTests/ScopedDailyNotePolicyTests.swift",
+        "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/ScopedDailyNotePolicyTest.kt",
+        "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+        "apps/cli/crates/healthmd-client/src/v2_receiver.rs",
+        "apps/cli/crates/healthmd-client/src/direct_fake_peer_tests.rs"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/direct-protocol/scoped-notes-v1/fixtures/policy.json",
+          "sha256": "e83e83ebf811ef6f0e5f53a47c284972190ca3206ee89db00e8ba29692d012c5",
+          "provenance": "Synthetic Swift policy-codec canonical JSON, independently byte-verified by Kotlin and Rust; no source health data.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/scoped-note-policy-v1.json"
+          ]
         }
       ]
     }

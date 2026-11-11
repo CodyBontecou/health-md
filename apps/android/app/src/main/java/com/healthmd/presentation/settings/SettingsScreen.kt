@@ -3,460 +3,383 @@ package com.healthmd.presentation.settings
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
-import com.healthmd.data.health.providers.HealthProviderDirectExportStatus
+import com.healthmd.data.health.HealthConnectIntentLauncher
+import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.data.health.providers.HealthProviderId
-import com.healthmd.data.health.providers.HealthProviderState
-import com.healthmd.distribution.DistributionWearSettingsCard
-import com.healthmd.domain.distribution.DistributionChannel
-import com.healthmd.presentation.common.*
-import com.healthmd.presentation.export.ExportProfilesEntryCard
+import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.AgentDataGatewayEndpoint
+import com.healthmd.domain.model.ExportTarget
+import com.healthmd.domain.model.HealthMetricCategory
+import com.healthmd.presentation.common.LocalAppFolderName
+import com.healthmd.presentation.directcli.DirectCliViewModel
+import com.healthmd.presentation.export.ExportProfilesViewModel
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
-import com.healthmd.widget.setup.WidgetSettingsCard
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+/**
+ * Settings, grouped as on iOS: the plan, Destinations, Data, and App. Each row opens the page
+ * that owns that capability; the lock, setup sharing, privacy and help live in App & support.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
+    /** A blocked-change toast asked for the lock: Settings opens App & support, which scrolls to it. */
     protectionSettingsRequestId: Long? = null,
     onNavigateToPaywall: () -> Unit = {},
-    onNavigateToMyselfClaim: () -> Unit = {},
-    onNavigateToExportProfiles: () -> Unit = {},
     onNavigateToClinicianReport: () -> Unit = {},
     onNavigateToDirectCli: () -> Unit = {},
-    onNavigateToSharedSetup: () -> Unit = {},
-    onNavigateToDiagnostics: () -> Unit = {},
+    onNavigateToFolderDestination: () -> Unit = {},
+    clinicAccessAvailable: Boolean = false,
+    onNavigateToClinicAccess: () -> Unit = {},
+    onNavigateToApiEndpoint: () -> Unit = {},
+    onNavigateToGateway: () -> Unit = {},
+    onNavigateToConnectedApps: () -> Unit = {},
+    onNavigateToAppSupport: () -> Unit = {},
+    /** The app-wide schedule, scheduled target and background access. */
+    onNavigateToScheduleSettings: () -> Unit = {},
+    onNavigateToMetrics: () -> Unit = {},
+    /** The entry open beside the list on wide layouts. */
+    selectedEntry: SettingsEntry? = null,
 ) {
     val isPurchased by viewModel.isPurchased.collectAsStateWithLifecycle()
     val distributionPolicy = viewModel.distributionPolicy
     val protectionEnabled by viewModel.preventAccidentalChanges.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val protectionRequester = remember { BringIntoViewRequester() }
 
     LaunchedEffect(protectionSettingsRequestId) {
-        if (protectionSettingsRequestId != null) protectionRequester.bringIntoView()
+        if (protectionSettingsRequestId != null) onNavigateToAppSupport()
     }
+
+    // Status values come from data the app already holds; nothing is guessed.
+    val folderName = LocalAppFolderName.current
+    val exportSettings by viewModel.settings.collectAsStateWithLifecycle()
+    val directCli: DirectCliViewModel = hiltViewModel()
+    val directCliState by directCli.uiState.collectAsStateWithLifecycle()
+    val profiles: ExportProfilesViewModel = hiltViewModel()
+    val profileState by profiles.uiState.collectAsStateWithLifecycle()
+    val healthProviders by viewModel.healthProviderStates.collectAsStateWithLifecycle()
+    val connectedApps = if (distributionPolicy.directCloudProvidersAvailable) {
+        healthProviders.filter {
+            it.provider.definition.id == HealthProviderId.WHOOP && (it.isDirectConnectionConfigured || it.isConnected)
+        }
+    } else {
+        emptyList()
+    }
+    val healthConnect = remember(context) { HealthConnectManager(context) }
+    var healthConnectAllowed by remember { mutableStateOf<Boolean?>(null) }
+    LifecycleResumeEffect(healthConnect) {
+        val check = coroutineScope.launch {
+            healthConnectAllowed = runCatching {
+                healthConnect.isAvailable() && healthConnect.hasAllPermissions()
+            }.getOrDefault(false)
+        }
+        onPauseOrDispose { check.cancel() }
+    }
+    val metricCount = HealthMetricCategory.entries.sumOf { exportSettings.metricSelection.enabledMetricCount(it) }
+    val ready = SettingsBadge(stringResource(R.string.settings_status_ready), SettingsBadgeTone.OK)
+    val off = SettingsBadge(stringResource(R.string.settings_status_off), SettingsBadgeTone.OFF)
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = Spacing.md, vertical = Spacing.lg),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            .padding(horizontal = Spacing.md, vertical = Spacing.md)
+            .testTag("settings.hub"),
     ) {
-        Spacer(modifier = Modifier.height(Spacing.sm))
+        Text(
+            text = stringResource(R.string.nav_settings),
+            style = MaterialTheme.typography.headlineMedium,
+            color = AppColors.textPrimary,
+            modifier = Modifier.padding(horizontal = Spacing.xxs, vertical = Spacing.xs).semantics { heading() },
+        )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            GeistIconCircle(size = 48.dp) {
-                Icon(
-                    Icons.Outlined.Settings,
-                    contentDescription = null,
-                    tint = AppColors.accent,
-                    modifier = Modifier.size(20.dp),
+        // The plan: restore or manage it on the paywall; F-Droid includes full access.
+        val plan = stringResource(if (isPurchased) R.string.settings_plan_full_access else R.string.settings_plan_free)
+        SettingsPlanCard(
+            plan = if (distributionPolicy.purchasesAvailable) stringResource(R.string.settings_plan_manage, plan) else plan,
+            onClick = if (distributionPolicy.purchasesAvailable) onNavigateToPaywall else null,
+            modifier = Modifier.padding(top = Spacing.xs),
+        )
+
+        val folderSummary = SettingsFolderSummary.of(
+            defaultFolder = folderName,
+            subfolder = exportSettings.subfolder,
+            folderProfiles = profileState.rows
+                .filter { it.profile.target == ExportTarget.DEVICE_FOLDER }
+                .map { it.profile.folderUri to it.profile.folderDisplayName },
+        )
+        SettingsGroup(
+            title = stringResource(R.string.settings_section_destinations),
+            rows = listOf(
+                { shape ->
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.settings_vault_title),
+                        subtitle = when (folderSummary) {
+                            is SettingsFolderSummary.Several ->
+                                pluralStringResource(R.plurals.settings_vault_folders, folderSummary.count, folderSummary.count)
+                            is SettingsFolderSummary.Default ->
+                                stringResource(R.string.settings_vault_default, folderSummary.path)
+                            is SettingsFolderSummary.Own -> folderSummary.name
+                            SettingsFolderSummary.None -> null
+                        },
+                        icon = Icons.Outlined.Folder,
+                        badge = if (folderName != null) ready else off,
+                        onClick = onNavigateToFolderDestination,
+                        selected = selectedEntry == SettingsEntry.FOLDER,
+                        modifier = Modifier.testTag("settings.folder"),
+                    )
+                },
+                { shape ->
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.settings_cli_title),
+                        subtitle = if (directCliState.hasTrust) stringResource(R.string.settings_cli_paired_one) else null,
+                        icon = Icons.Outlined.Terminal,
+                        badge = if (directCliState.hasTrust) {
+                            SettingsBadge(stringResource(R.string.settings_status_paired), SettingsBadgeTone.OK)
+                        } else {
+                            off
+                        },
+                        onClick = onNavigateToDirectCli,
+                        selected = selectedEntry == SettingsEntry.DIRECT_CLI,
+                        modifier = Modifier.testTag("settings.cli"),
+                    )
+                },
+                { shape ->
+                    val configured = APIExportEndpoint.isConfigured(exportSettings.apiEndpointUrl)
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.export_preview_api_destination),
+                        subtitle = if (configured) {
+                            APIExportEndpoint.displayName(exportSettings.apiEndpointUrl)
+                        } else {
+                            stringResource(R.string.settings_api_subtitle_off)
+                        },
+                        icon = Icons.Outlined.Code,
+                        badge = if (configured) ready else off,
+                        onClick = onNavigateToApiEndpoint,
+                        selected = selectedEntry == SettingsEntry.API,
+                        modifier = Modifier.testTag("settings.api"),
+                    )
+                },
+                { shape ->
+                    val configured = AgentDataGatewayEndpoint.isConfigured(exportSettings.agentDataGatewayUrl)
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.export_preview_gateway_destination),
+                        subtitle = if (configured) {
+                            AgentDataGatewayEndpoint.displayName(exportSettings.agentDataGatewayUrl)
+                        } else {
+                            stringResource(R.string.settings_gateway_subtitle_off)
+                        },
+                        icon = Icons.Outlined.UploadFile,
+                        badge = if (configured) ready else off,
+                        onClick = onNavigateToGateway,
+                        selected = selectedEntry == SettingsEntry.GATEWAY,
+                        modifier = Modifier.testTag("settings.gateway"),
+                    )
+                },
+            ),
+        )
+
+        val dataRows = buildList<@Composable (Shape) -> Unit> {
+            // Health Connect has no iOS row: HealthKit access lives in the system Health app.
+            add { shape ->
+                SettingsRow(
+                    shape = shape,
+                    title = stringResource(R.string.health_provider_label_health_connect),
+                    subtitle = stringResource(R.string.settings_health_connect_subtitle),
+                    icon = Icons.Outlined.FavoriteBorder,
+                    trailing = when (healthConnectAllowed) {
+                        true -> stringResource(R.string.settings_status_allowed)
+                        false -> stringResource(R.string.settings_status_not_allowed)
+                        null -> null
+                    },
+                    trailingTone = if (healthConnectAllowed == true) SettingsTrailingTone.POSITIVE else SettingsTrailingTone.NEUTRAL,
+                    onClick = { HealthConnectIntentLauncher(context).openSettings() },
+                    external = true,
                 )
             }
-            Column {
-                Text(
-                    text = stringResource(R.string.nav_settings),
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = AppColors.textPrimary,
-                )
-                Text(
-                    text = stringResource(R.string.settings_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = AppColors.textSecondary,
+            add { shape ->
+                SettingsRow(
+                    shape = shape,
+                    title = stringResource(R.string.settings_default_metrics),
+                    icon = Icons.Outlined.Tune,
+                    trailing = metricCount.toString(),
+                    onClick = onNavigateToMetrics,
+                    modifier = Modifier.testTag("settings.metrics"),
                 )
             }
-        }
-
-        ConfigurationProtectionSettingsCard(
-            enabled = protectionEnabled,
-            onEnabledChange = viewModel::setPreventAccidentalChanges,
-            modifier = Modifier
-                .bringIntoViewRequester(protectionRequester)
-                .testTag(ConfigurationProtectionTestTags.SECTION),
-        )
-
-        // Premium upgrade (show at top for free users)
-        if (!isPurchased && distributionPolicy.purchasesAvailable) {
-            SettingsNavigationCard(
-                title = stringResource(R.string.settings_upgrade_title),
-                subtitle = stringResource(R.string.settings_upgrade_subtitle),
-                icon = Icons.Outlined.WorkspacePremium,
-                onClick = onNavigateToPaywall,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(Spacing.sm))
-
-        if (distributionPolicy.purchasesAvailable) {
-            SettingsNavigationCard(
-                title = stringResource(R.string.myself_claim_entry),
-                subtitle = stringResource(R.string.myself_claim_entry_subtitle),
-                icon = Icons.Outlined.WorkspacePremium,
-                onClick = onNavigateToMyselfClaim,
-                modifier = Modifier.testTag("settings_myself_claim"),
-            )
-        }
-
-        WidgetSettingsCard()
-        if (distributionPolicy.wearSyncAvailable) {
-            DistributionWearSettingsCard()
-        }
-
-        // Profiles & Reports: occasional-use export configuration surfaces that
-        // moved off the Export screen so daily export controls come first.
-        ExportProfilesEntryCard(onOpen = onNavigateToExportProfiles)
-
-        SettingsNavigationCard(
-            title = stringResource(R.string.clinician_report_title),
-            subtitle = stringResource(R.string.clinician_report_entry_subtitle),
-            icon = Icons.Outlined.Description,
-            onClick = onNavigateToClinicianReport,
-            modifier = Modifier.testTag("clinician_report_entry"),
-        )
-
-        SettingsNavigationCard(
-            title = stringResource(R.string.shared_setup_title),
-            subtitle = stringResource(R.string.shared_setup_settings_detail),
-            icon = Icons.Outlined.Share,
-            onClick = onNavigateToSharedSetup,
-        )
-
-        // Health source configuration is intentionally hidden until the integrations are ready.
-
-        SettingsNavigationCard(
-            title = stringResource(R.string.direct_cli_title),
-            subtitle = stringResource(R.string.settings_direct_cli_subtitle),
-            icon = Icons.Outlined.Computer,
-            onClick = onNavigateToDirectCli,
-        )
-
-        SettingsNavigationCard(
-            title = stringResource(R.string.diagnostics_title),
-            subtitle = stringResource(R.string.diagnostics_entry),
-            icon = Icons.Outlined.BugReport,
-            onClick = onNavigateToDiagnostics,
-            modifier = Modifier.testTag("diagnostics.entry"),
-        )
-
-        HealthDiagnosticsSection(
-            onShareDiagnostics = {
-                coroutineScope.launch {
-                    shareRedactedDiagnostics(
-                        context = context,
-                        reportText = viewModel.buildRedactedDiagnosticsShareText(),
+            add { shape ->
+                SettingsRow(
+                    shape = shape,
+                    title = stringResource(R.string.automations_schedule_settings_title),
+                    subtitle = stringResource(R.string.settings_schedule_subtitle),
+                    icon = Icons.Outlined.Schedule,
+                    onClick = onNavigateToScheduleSettings,
+                    selected = selectedEntry == SettingsEntry.SCHEDULE,
+                    modifier = Modifier.testTag("settings.schedule"),
+                )
+            }
+            if (connectedApps.isNotEmpty()) {
+                add { shape ->
+                    val names = connectedApps.filter { it.isConnected }.map { it.provider.definition.displayName }.sorted()
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.settings_connected_apps),
+                        icon = Icons.Outlined.Apps,
+                        trailing = names.takeIf { it.isNotEmpty() }?.joinToString(", "),
+                        onClick = onNavigateToConnectedApps,
+                        selected = selectedEntry == SettingsEntry.CONNECTED_APPS,
+                        modifier = Modifier.testTag("settings.connectedApps"),
                     )
                 }
-            },
-        )
-
-        GeistCard {
-            SectionLabel(stringResource(R.string.section_about))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                Icon(
-                    Icons.Outlined.Info,
-                    contentDescription = null,
-                    tint = AppColors.accent,
-                    modifier = Modifier.size(24.dp),
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(
-                            when (distributionPolicy.channel) {
-                                DistributionChannel.GOOGLE_PLAY -> R.string.distribution_channel_play
-                                DistributionChannel.FDROID -> R.string.distribution_channel_fdroid
-                            },
-                        ),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = AppColors.textPrimary,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Text(
-                        text = stringResource(R.string.about_license_summary),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AppColors.textMuted,
+            }
+            if (clinicAccessAvailable) {
+                add { shape ->
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.settings_clinic_access),
+                        icon = Icons.Outlined.MedicalServices,
+                        onClick = onNavigateToClinicAccess,
+                        selected = selectedEntry == SettingsEntry.CLINIC_ACCESS,
+                        modifier = Modifier.testTag("settings.clinic"),
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(Spacing.xs))
-
-            SettingsNavigationCard(
-                title = stringResource(R.string.about_source_code),
-                icon = Icons.Outlined.Code,
-                onClick = { openExternalUrl(context, SOURCE_CODE_URL) },
-                external = true,
-            )
-
-            Spacer(modifier = Modifier.height(Spacing.xs))
-
-            SettingsNavigationCard(
-                title = stringResource(R.string.about_license),
-                icon = Icons.Outlined.Gavel,
-                onClick = { openExternalUrl(context, LICENSE_URL) },
-                external = true,
-            )
+            add { shape ->
+                SettingsRow(
+                    shape = shape,
+                    title = stringResource(R.string.clinician_report_title),
+                    icon = Icons.Outlined.Description,
+                    onClick = onNavigateToClinicianReport,
+                    modifier = Modifier.testTag("clinician_report_entry"),
+                    selected = selectedEntry == SettingsEntry.CLINICIAN_REPORT,
+                )
+            }
         }
+        SettingsGroup(title = stringResource(R.string.settings_section_data), rows = dataRows)
 
-        // Feedback
-        GeistCard {
-            SectionLabel(stringResource(R.string.section_feedback))
-
-            SettingsNavigationCard(
-                title = stringResource(R.string.feedback_send_title),
-                subtitle = stringResource(R.string.feedback_send_subtitle),
-                icon = Icons.Outlined.Email,
-                onClick = { FeedbackHelper.sendFeedbackEmail(context) },
-                external = true,
-            )
-
-            Spacer(modifier = Modifier.height(Spacing.xs))
-
-            SettingsNavigationCard(
-                title = stringResource(R.string.feedback_discord_title),
-                subtitle = stringResource(R.string.feedback_discord_subtitle),
-                icon = Icons.Outlined.Groups,
-                onClick = { FeedbackHelper.openDiscordCommunity(context) },
-                external = true,
-            )
-
-            Spacer(modifier = Modifier.height(Spacing.xs))
-
-            SettingsNavigationCard(
-                title = stringResource(R.string.feedback_github_title),
-                subtitle = stringResource(R.string.feedback_github_subtitle),
-                icon = Icons.Outlined.BugReport,
-                onClick = { FeedbackHelper.openGitHubIssue(context) },
-                external = true,
-            )
-        }
+        // As on iOS, each App row opens App & support, which owns these controls.
+        val appSupportSelected = selectedEntry == SettingsEntry.APP_SUPPORT
+        SettingsGroup(
+            title = stringResource(R.string.settings_section_app),
+            rows = listOf(
+                { shape ->
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.settings_lock_configuration),
+                        icon = Icons.Outlined.Lock,
+                        trailing = when (protectionEnabled) {
+                            true -> stringResource(R.string.settings_value_on)
+                            false -> stringResource(R.string.settings_status_off)
+                            null -> null
+                        },
+                        onClick = onNavigateToAppSupport,
+                        selected = appSupportSelected,
+                        modifier = Modifier.testTag("settings.lock"),
+                    )
+                },
+                { shape ->
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.settings_privacy),
+                        icon = Icons.Outlined.PanTool,
+                        trailing = stringResource(R.string.settings_no_analytics),
+                        onClick = onNavigateToAppSupport,
+                        modifier = Modifier.testTag("settings.privacy"),
+                    )
+                },
+                { shape ->
+                    SettingsRow(
+                        shape = shape,
+                        title = stringResource(R.string.settings_help_diagnostics),
+                        icon = Icons.AutoMirrored.Outlined.HelpOutline,
+                        onClick = onNavigateToAppSupport,
+                        modifier = Modifier.testTag("settings.appSupport"),
+                    )
+                },
+            ),
+        )
 
         Spacer(modifier = Modifier.height(Spacing.xl))
     }
 }
 
-@Composable
-private fun HealthProviderSupportSection(
-    providers: List<HealthProviderUiState>,
-    onOpenProvider: (HealthProviderUiState) -> Unit,
-) {
-    GeistCard {
-        SectionLabel(stringResource(R.string.section_health_sources))
+/** Which entry is open beside the list on wide layouts, highlighted as on the board. */
+enum class SettingsEntry {
+    FOLDER, DIRECT_CLI, API, GATEWAY, SCHEDULE, CONNECTED_APPS, CLINIC_ACCESS, CLINICIAN_REPORT, APP_SUPPORT,
+}
 
-        Text(
-            text = stringResource(R.string.health_sources_description),
-            style = MaterialTheme.typography.bodySmall,
-            color = AppColors.textMuted,
-        )
+/**
+ * The folder row's subtitle. Folder automations can each write to their own folder, so it
+ * says how many are in use; one default folder reads as its path, an own folder by its name.
+ */
+sealed interface SettingsFolderSummary {
+    data object None : SettingsFolderSummary
+    data class Default(val path: String) : SettingsFolderSummary
+    data class Own(val name: String) : SettingsFolderSummary
+    data class Several(val count: Int) : SettingsFolderSummary
 
-        Spacer(modifier = Modifier.height(Spacing.sm))
-
-        providers.forEachIndexed { index, provider ->
-            HealthProviderRow(providerState = provider, onClick = { onOpenProvider(provider) })
-            if (index != providers.lastIndex) {
-                Spacer(modifier = Modifier.height(Spacing.xs))
-                HorizontalDivider(color = AppColors.borderSubtle)
-                Spacer(modifier = Modifier.height(Spacing.xs))
+    companion object {
+        /** [folderProfiles] holds each folder automation's own folder (uri to display name). */
+        fun of(
+            defaultFolder: String?,
+            subfolder: String,
+            folderProfiles: List<Pair<String?, String?>>,
+        ): SettingsFolderSummary {
+            val own = folderProfiles.filter { it.first != null }
+            val ownFolders = own.mapNotNull { it.first }.toSet()
+            val usesDefault = folderProfiles.isEmpty() || folderProfiles.any { it.first == null }
+            val count = ownFolders.size + if (usesDefault && defaultFolder != null) 1 else 0
+            return when {
+                count > 1 -> Several(count)
+                usesDefault -> defaultFolder?.let { folder ->
+                    val trimmed = subfolder.trim().trim('/')
+                    Default(if (trimmed.isEmpty()) folder else "$folder/$trimmed")
+                } ?: None
+                else -> own.firstNotNullOfOrNull { it.second }?.let(::Own) ?: None
             }
         }
     }
 }
 
-@Composable
-private fun HealthDiagnosticsSection(
-    onShareDiagnostics: () -> Unit,
-) {
-    GeistCard {
-        SectionLabel(stringResource(R.string.section_health_diagnostics))
-
-        Text(
-            text = stringResource(R.string.health_diagnostics_description),
-            style = MaterialTheme.typography.bodySmall,
-            color = AppColors.textMuted,
-        )
-
-        Spacer(modifier = Modifier.height(Spacing.sm))
-
-        SettingsNavigationCard(
-            title = stringResource(R.string.health_diagnostics_share_title),
-            subtitle = stringResource(R.string.health_diagnostics_share_subtitle),
-            icon = Icons.Outlined.Share,
-            onClick = onShareDiagnostics,
-            external = true,
-        )
-    }
-}
-
-@Composable
-private fun HealthProviderRow(
-    providerState: HealthProviderUiState,
-    onClick: () -> Unit,
-) {
-    val provider = providerState.provider
-    val definition = provider.definition
-    GeistCardClickable(
-        onClick = onClick,
-        padding = Spacing.sm,
-    ) {
-        Icon(
-            imageVector = when (definition.id) {
-                HealthProviderId.HEALTH_CONNECT -> Icons.Outlined.Favorite
-                HealthProviderId.SAMSUNG_HEALTH,
-                HealthProviderId.HUAWEI_HEALTH -> Icons.Outlined.PhoneAndroid
-                else -> Icons.Outlined.Dataset
-            },
-            contentDescription = null,
-            tint = if (providerState.isSelected || providerState.isConnected || provider.isInstalled || definition.directExportStatus == HealthProviderDirectExportStatus.Available) {
-                AppColors.success
-            } else {
-                AppColors.accent
-            },
-            modifier = Modifier.size(24.dp),
-        )
-        Spacer(modifier = Modifier.width(Spacing.sm))
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = definition.displayName,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = AppColors.textPrimary,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = when {
-                        providerState.isSelected -> stringResource(R.string.health_provider_status_selected)
-                        providerState.isConnected -> stringResource(R.string.status_connected)
-                        provider.isInstalled -> stringResource(R.string.health_provider_status_installed)
-                        providerState.isDirectConnectionConfigured -> stringResource(R.string.health_provider_status_ready_to_connect)
-                        else -> stringResource(definition.directExportStatus.labelRes)
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (providerState.isSelected || providerState.isConnected || provider.isInstalled) AppColors.success else AppColors.textMuted,
-                    maxLines = 1,
-                )
-            }
-            Text(
-                text = stringResource(definition.summaryRes),
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.textMuted,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(modifier = Modifier.height(Spacing.xxs))
-            Text(
-                text = stringResource(
-                    R.string.health_provider_integration_details,
-                    stringResource(definition.integrationKind.labelRes),
-                    stringResource(definition.setupDescriptionRes),
-                ),
-                style = MaterialTheme.typography.labelSmall,
-                color = AppColors.textSecondary,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Spacer(modifier = Modifier.width(Spacing.xs))
-        Icon(
-            Icons.Outlined.ArrowOutward,
-            contentDescription = stringResource(provider.actionLabelRes),
-            tint = AppColors.textMuted,
-            modifier = Modifier.size(16.dp),
-        )
-    }
-}
-
-private const val SOURCE_CODE_URL = "https://github.com/CodyBontecou/health-md"
-private const val LICENSE_URL = "https://github.com/CodyBontecou/health-md/blob/main/apps/android/LICENSE"
-
-private fun openExternalUrl(context: Context, url: String) {
+internal fun openExternalUrl(context: Context, url: String) {
     runCatching {
         context.startActivity(
             Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             },
-        )
-    }
-}
-
-private fun shareRedactedDiagnostics(
-    context: Context,
-    reportText: String,
-) {
-    val sendIntent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.health_diagnostics_share_subject))
-        putExtra(Intent.EXTRA_TEXT, reportText)
-    }
-    runCatching {
-        context.startActivity(
-            Intent.createChooser(
-                sendIntent,
-                context.getString(R.string.health_diagnostics_share_chooser),
-            ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-        )
-    }
-}
-
-private fun openProviderSetup(
-    context: Context,
-    provider: HealthProviderState,
-    preferredIntent: Intent? = null,
-) {
-    val setupIntent = preferredIntent ?: provider.setupIntent
-    if (setupIntent != null && runCatching { context.startActivity(setupIntent) }.isSuccess) {
-        return
-    }
-
-    val fallbackUri = provider.definition.webSetupUri
-        ?: provider.definition.setupPackageName?.let { "https://play.google.com/store/apps/details?id=$it" }
-        ?: return
-
-    runCatching {
-        context.startActivity(
-            Intent(Intent.ACTION_VIEW, Uri.parse(fallbackUri)).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
         )
     }
 }

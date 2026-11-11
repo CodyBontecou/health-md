@@ -127,13 +127,14 @@ function crc32(bytes) {
 
 // ZIP32, stored entries. No executable payloads, absolute paths, symlinks or
 // platform-specific archiver dependencies. Fixed date: 2026-10-26 00:00.
-export function zipVault(files) {
+export function zipVault(files, { rootName = VAULT_NAME } = {}) {
+  if (!rootName || /[\\/]/.test(rootName) || rootName === "." || rootName === "..") throw new Error("Unsafe archive root");
   const localParts = [], centralParts = [];
   let offset = 0;
   const date = ((2026 - 1980) << 9) | (10 << 5) | 26;
   for (const [relative, bytes] of [...files].sort(([a], [b]) => a < b ? -1 : 1)) {
     if (relative.startsWith('/') || relative.split('/').some(part => !part || part === '..') || relative.includes('\\')) throw new Error(`Unsafe archive path: ${relative}`);
-    const name = Buffer.from(`${VAULT_NAME}/${relative}`);
+    const name = Buffer.from(`${rootName}/${relative}`);
     const checksum = crc32(bytes);
     const local = Buffer.alloc(30);
     local.writeUInt32LE(0x04034b50, 0); local.writeUInt16LE(20, 4);

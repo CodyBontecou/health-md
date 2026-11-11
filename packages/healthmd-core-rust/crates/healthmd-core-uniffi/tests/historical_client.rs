@@ -5,10 +5,10 @@ use healthmd_core_uniffi::{
 use serde_json::Value;
 
 const SEMANTIC: &[u8] = include_bytes!(
-    "../../../../contracts/semantic-input/v1/fixtures/historical-shipped-v3.4.2.json"
+    "../../../../contracts/semantic-input/v1/fixtures/historical-pre-v8-c77024b.json"
 );
 const RENDER: &[u8] =
-    include_bytes!("../../../../contracts/render-input/v1/fixtures/historical-shipped-v3.4.2.json");
+    include_bytes!("../../../../contracts/render-input/v1/fixtures/historical-pre-v8-c77024b.json");
 
 #[test]
 fn coarse_native_clients_keep_original_authority_through_semantics_and_rendering() {
@@ -21,7 +21,7 @@ fn coarse_native_clients_keep_original_authority_through_semantics_and_rendering
         .zip(render["cases"].as_array().unwrap())
     {
         let profile = match semantic_case["config"]["profile"].as_str().unwrap() {
-            "apple_health_data_v8" => CoreMetricRegistryProfile::AppleHealthDataV8,
+            "apple_health_data_v7" => CoreMetricRegistryProfile::AppleHealthDataV7,
             "android_frozen_v4" => CoreMetricRegistryProfile::AndroidFrozenV4,
             "android_analytical_v5" => CoreMetricRegistryProfile::AndroidAnalyticalV5,
             _ => panic!("unreviewed profile"),

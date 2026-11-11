@@ -323,7 +323,7 @@ struct FrontmatterCustomizationView: View {
             ],
             fields: [
                 GeistDialogField(
-                    placeholder: LocalizedStringKey(renameTargetKey ?? ""),
+                    placeholder: LocalizedStringKey("\(renameTargetKey ?? "")"),
                     text: $renameTempKey
                 )
             ]
@@ -474,7 +474,7 @@ struct FrontmatterCustomizationView: View {
     private var healthMetricFieldsCard: some View {
         FormatSectionCard(
             title: "Health Metric Fields",
-            subtitle: "Enabled: \(enabledFieldCount) of \(config.fields.count)"
+            subtitle: String(localized: "Enabled: \(enabledFieldCount) of \(config.fields.count)")
         ) {
             fieldSearchBar
 
@@ -551,7 +551,7 @@ struct FrontmatterCustomizationView: View {
     private func customFieldRow(key: String, value: String) -> some View {
         FormatFrontmatterEntry(
             key: key,
-            value: value.isEmpty ? String(localized: "Empty Value") : value,
+            value: FrontmatterFieldPresentation.customValue(value),
             deleteLabel: String(localized: "Delete custom field \(key)")
         ) {
             configurationProtection.performConfigurationChange {
@@ -590,7 +590,7 @@ struct FrontmatterCustomizationView: View {
         } label: {
             HStack(spacing: Spacing.sm) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(category.name)
+                    Text(LocalizedStringKey(category.name))
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Color.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)

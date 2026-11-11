@@ -341,6 +341,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.platform` | string |
 | `$.hello._0.protocolVersion` | integer |
 | `$.hello._0.supportsAllAvailableHistoryExportRequests` | boolean |
+| `$.hello._0.supportsAppleV12DetailExpansion` | boolean |
 | `$.hello._0.supportsAuthoritativeMacExportFileAccounting` | boolean |
 | `$.hello._0.supportsCanonicalHealthDataSelection` | boolean |
 | `$.hello._0.supportsChunkedMacExportJobs` | boolean |
@@ -356,6 +357,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.supportsManualIPSync` | boolean |
 | `$.hello._0.supportsPartitionedConnectedExports` | boolean |
 | `$.hello._0.supportsPerDateExportCompletion` | boolean |
+| `$.hello._0.supportsPerGroupExportDetail` | boolean |
 | `$.hello._0.supportsPhoneContextAutomation` | boolean |
 | `$.hello._0.supportsRangeV9Summaries` | boolean |
 | `$.hello._0.supportsRequestScopedContextAcquisition` | boolean |
@@ -1151,6 +1153,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macStatus._0.capabilities.platform` | string |
 | `$.macStatus._0.capabilities.protocolVersion` | integer |
 | `$.macStatus._0.capabilities.supportsAllAvailableHistoryExportRequests` | boolean |
+| `$.macStatus._0.capabilities.supportsAppleV12DetailExpansion` | boolean |
 | `$.macStatus._0.capabilities.supportsAuthoritativeMacExportFileAccounting` | boolean |
 | `$.macStatus._0.capabilities.supportsCanonicalHealthDataSelection` | boolean |
 | `$.macStatus._0.capabilities.supportsChunkedMacExportJobs` | boolean |
@@ -1166,6 +1169,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macStatus._0.capabilities.supportsManualIPSync` | boolean |
 | `$.macStatus._0.capabilities.supportsPartitionedConnectedExports` | boolean |
 | `$.macStatus._0.capabilities.supportsPerDateExportCompletion` | boolean |
+| `$.macStatus._0.capabilities.supportsPerGroupExportDetail` | boolean |
 | `$.macStatus._0.capabilities.supportsPhoneContextAutomation` | boolean |
 | `$.macStatus._0.capabilities.supportsRangeV9Summaries` | boolean |
 | `$.macStatus._0.capabilities.supportsRequestScopedContextAcquisition` | boolean |
@@ -2288,6 +2292,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.platform` | string |
 | `$.protocolVersion` | integer |
 | `$.supportsAllAvailableHistoryExportRequests` | boolean |
+| `$.supportsAppleV12DetailExpansion` | boolean |
 | `$.supportsAuthoritativeMacExportFileAccounting` | boolean |
 | `$.supportsCanonicalHealthDataSelection` | boolean |
 | `$.supportsChunkedMacExportJobs` | boolean |
@@ -2303,6 +2308,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.supportsManualIPSync` | boolean |
 | `$.supportsPartitionedConnectedExports` | boolean |
 | `$.supportsPerDateExportCompletion` | boolean |
+| `$.supportsPerGroupExportDetail` | boolean |
 | `$.supportsPhoneContextAutomation` | boolean |
 | `$.supportsRangeV9Summaries` | boolean |
 | `$.supportsRequestScopedContextAcquisition` | boolean |

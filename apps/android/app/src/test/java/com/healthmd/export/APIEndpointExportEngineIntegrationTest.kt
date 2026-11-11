@@ -335,6 +335,25 @@ class APIEndpointExportEngineIntegrationTest {
     }
 
     @Test
+    fun requiredPreparedOperationNeverRecapturesWhenJournalIsMissing() = runTest {
+        for (store in listOf(null, MemoryAPIExportOperationStore())) {
+            val capture = RecordingCapture(mapOf(first to HealthData(first)))
+            val uploader = RecordingUploader()
+            val runner = runner(mode = ExportEngineMode.rust, capture = capture,
+                native = APIExportNativePlanBuilder { error("must not plan") },
+                rust = APIExportRustPlanner { error("must not plan") }, uploader = uploader, operationStore = store)
+            for (id in listOf(null, "missing-prepared-operation")) {
+                val result = runner.exportDates(listOf(first), settings(), durableOperationId = id,
+                    durableSettingsSnapshotJson = "snapshot-v1", requireExistingDurableOperation = true)
+                assertThat(result.successCount).isEqualTo(0)
+                assertThat(result.failedDateDetails.map { it.date }).containsExactly(first)
+                assertThat(capture.calls).isEmpty()
+                assertThat(uploader.payloads).isEmpty()
+            }
+        }
+    }
+
+    @Test
     fun durableStoreMustCommitBeforeFirstPost() = runTest {
         val uploader = RecordingUploader()
         val store = object : APIExportOperationStore {
@@ -382,11 +401,13 @@ class APIEndpointExportEngineIntegrationTest {
     fun historicalAuthorityPreparedBodiesReplayWithoutUpgradingPinOrRerendering() = runTest {
         assertDurablePreparedReplay(testPin(ExportEngineMode.rust).copy(
             registrySha256 = com.healthmd.domain.exportengine.ExportEnginePin.HISTORICAL_REGISTRY_SHA256,
+            renderProfileRevision = 1u,
         ))
     }
 
     private suspend fun assertDurablePreparedReplay(pin: com.healthmd.domain.exportengine.ExportEnginePin) {
-        val frozenSettings = settings().copy(
+        // Production callers freeze the selected authority before capture/planning.
+        val acceptedSettings = settings().copy(
             executionEnginePin = pin,
             executionEngineAuthorityIsFrozen = true,
         )
@@ -420,7 +441,7 @@ class APIEndpointExportEngineIntegrationTest {
 
         val partial = firstRunner.exportDates(
             dates = listOf(first, second, third),
-            settings = frozenSettings,
+            settings = acceptedSettings,
             durableOperationId = operationId,
             durableSettingsSnapshotJson = "snapshot-v1",
         )
@@ -429,6 +450,15 @@ class APIEndpointExportEngineIntegrationTest {
         assertThat(partial.failedDateDetails.map { it.date }).containsExactly(third)
         assertThat(partial.retryOperationIds).containsExactly(third, operationId)
         assertThat(store.load(operationId)!!.acknowledgedBatchCount).isEqualTo(1)
+        // apiPlan expands the preview descriptor into the complete validated envelope.
+        // Freeze the actual pre-resume bytes, including the failed first upload attempt.
+        assertThat(store.load(operationId)!!.enginePinJson)
+            .isEqualTo(com.healthmd.domain.exportengine.ExportEnginePinCodec.encodeCanonical(pin))
+        val preparedSecondBody = store.load(operationId)!!.batches[1].bytes
+        assertThat(firstUploader.payloads).hasSize(2)
+        assertThat(preparedSecondBody).isEqualTo(firstUploader.payloads[1].encodeToByteArray())
+        assertThat(Json.parseToJsonElement(preparedSecondBody.decodeToString()).jsonObject["schema"]!!.jsonPrimitive.content)
+            .isEqualTo("healthmd.api_export")
 
         val resumedCapture = RecordingCapture(emptyMap())
         val resumedUploader = RecordingUploader()
@@ -444,17 +474,15 @@ class APIEndpointExportEngineIntegrationTest {
 
         val resumed = resumedRunner.exportDates(
             dates = listOf(third),
-            settings = frozenSettings,
+            settings = acceptedSettings,
             durableOperationId = operationId,
             durableSettingsSnapshotJson = "snapshot-v1",
+            requireExistingDurableOperation = true,
         )
 
         assertThat(resumedCapture.calls).isEmpty()
         assertThat(resumedUploader.payloads).hasSize(1)
-        // apiPlan expands preview descriptors into real envelopes. Resume must
-        // reproduce the exact attempted prepared envelope, not its descriptor.
-        assertThat(firstUploader.payloads).hasSize(2)
-        assertThat(resumedUploader.payloads.single()).isEqualTo(firstUploader.payloads[1])
+        assertThat(resumedUploader.payloads.single().encodeToByteArray()).isEqualTo(preparedSecondBody)
         assertThat(store.load(operationId)!!.enginePinJson).isEqualTo(com.healthmd.domain.exportengine.ExportEnginePinCodec.encodeCanonical(pin))
         assertThat(resumed.successCount).isEqualTo(1)
         assertThat(resumed.totalCount).isEqualTo(1)

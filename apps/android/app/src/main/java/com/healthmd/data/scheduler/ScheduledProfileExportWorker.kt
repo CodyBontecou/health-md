@@ -43,6 +43,7 @@ import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
+import com.healthmd.domain.repository.forCaptureOperation
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.MainActivity
 import com.healthmd.presentation.navigation.NavDestination
@@ -139,32 +140,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     override suspend fun getForegroundInfo(): ForegroundInfo {
         ScheduledExportCancellationCoordinator.prepare(id)
         val notificationID = ScheduledExportCancellationCoordinator.foregroundNotificationID(id)
-        val openAppIntent = Intent(applicationContext, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra(MainActivity.EXTRA_START_ROUTE, NavDestination.SCHEDULE.route)
-        }
-        val contentIntent = PendingIntent.getActivity(
-            applicationContext,
-            notificationID,
-            openAppIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        val notification = NotificationCompat.Builder(
-            applicationContext,
-            HealthMdApplication.EXPORT_CHANNEL_ID,
-        )
-            .setSmallIcon(android.R.drawable.ic_menu_save)
-            .setContentTitle(applicationContext.getString(R.string.export_progress_title))
-            .setContentText(applicationContext.getString(R.string.automatic_export_subtitle))
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setContentIntent(contentIntent)
-            .addAction(
-                0,
-                applicationContext.getString(R.string.action_cancel_export),
-                ScheduledExportCancelReceiver.pendingIntent(applicationContext, id),
-            )
-            .setOngoing(true)
-            .build()
+        val notification = ScheduledExportProgressNotification.build(applicationContext, id, notificationID)
         val foregroundServiceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
         } else 0
@@ -204,12 +180,33 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         }
 
         val nowMillis = System.currentTimeMillis()
-        val due = ScheduledProfileOccurrenceMath.dueOccurrence(entry, nowMillis)
+        var due = ScheduledProfileOccurrenceMath.dueOccurrence(entry, nowMillis)
             ?: return Result.success() // Nothing actionable (no boundary passed or fully caught up).
-        val profile = due.pendingExport?.asFrozenProfile(storedProfile) ?: storedProfile
-
+        var profile = due.pendingExport?.asFrozenProfile(storedProfile) ?: storedProfile
         val current = settingsRepository.getExportSettings()
-        val settings = snapshotFactory.restoreForRun(profile, current, entry.lookbackDays)
+        val freshProfile = if (due.pendingExport == null) {
+            try {
+                snapshotFactory.captureForNewOccurrence(storedProfile, current, entry.zone, healthRepository)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { return Result.retry() }
+        } else profile
+        if (freshProfile != null) {
+            profile = freshProfile
+            if (due.pendingExport == null) {
+                val accepted = com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson)
+                if (accepted?.providerCaptureAuthority != null) {
+                    val pending = ScheduledProfilePendingExport(id = operationId(profileId, due),
+                        ownerEpochDays = due.exportDates.map(LocalDate::toEpochDay).distinct().sorted(),
+                        fireAtMillis = due.fireAtMillis, settingsSnapshotJson = profile.settingsSnapshotJson,
+                        target = profile.target, profileName = profile.name, apiEndpointUrl = profile.apiEndpointUrl,
+                        agentDataGatewayUrl = profile.agentDataGatewayUrl, folderUri = profile.folderUri,
+                        folderDisplayName = profile.folderDisplayName, refreshSlotMillis = due.refreshSlotMillis)
+                    if (!entryStore.admitOccurrence(entry, pending)) return Result.retry()
+                    due = due.copy(pendingExport = pending)
+                }
+            }
+        }
+        val settings = freshProfile?.let { snapshotFactory.restoreForRun(it, current, entry.lookbackDays) }
         if (settings == null) {
             Timber.e("Profile snapshot invalid, disabling entry profileId=%s", profileId)
             recordHistory(
@@ -235,13 +232,14 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         // Today Refresh bookkeeping: the occurrence may carry today's partial file alongside
         // completed-day catch-up. Refresh-only runs must not advance the completed-day frontier.
         val refreshSlotMillis = due.refreshSlotMillis
+        val refreshZone = if (due.pendingExport?.refreshSlotMillis != null)
+            requireNotNull(settings.executionSleepCaptureContext).zoneId else entry.zone
         val refreshDate = refreshSlotMillis
-            ?.let { slot -> Instant.ofEpochMilli(slot).atZone(entry.zone).toLocalDate() }
+            ?.let { slot -> Instant.ofEpochMilli(slot).atZone(refreshZone).toLocalDate() }
         val hasCompletedDayWork = refreshDate == null || dates.any { it != refreshDate }
         entitlementRepository.refresh()
         val isPurchased = distributionPolicy.fullAccessIncluded ||
-            settingsRepository.isPurchased.first() ||
-            entitlementRepository.isUnlocked.first()
+            entitlementRepository.verifyExportAccess(profile.target, settings.apiEndpointUrl.takeIf { settings.exportMode == com.healthmd.rawexport.ExportMode.COMPATIBILITY })
         if (!isPurchased) {
             // Scheduled automation is a purchased capability on Android; record and stop.
             recordHistory(
@@ -260,8 +258,16 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             return Result.failure()
         }
 
-        val hasBackgroundRead = runCatchingCancellable {
-            healthRepository.hasBackgroundReadPermission()
+        val acceptedPending = due.pendingExport
+        val storedFolderReady = if (profile.target == ExportTarget.DEVICE_FOLDER && acceptedPending?.durableOperationId != null) {
+            folderAdoption.withProfileFolder(profile) {
+                exportRepository.hasResumableDurableScheduledFolderOperation(acceptedPending.durableOperationId,
+                    dates, settings, profile.settingsSnapshotJson)
+            }
+        } else false
+        val hasBackgroundRead = if (storedFolderReady ||
+            (profile.target == ExportTarget.API_ENDPOINT && acceptedPending?.durableOperationId != null)) true else runCatchingCancellable {
+            healthRepository.forCaptureOperation(settings).hasBackgroundReadPermission()
         }.getOrDefault(false)
         if (!hasBackgroundRead) {
             recordHistory(
@@ -306,6 +312,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         }
         val result = try {
             ScheduledExportCancellationCoordinator.run(id) {
+                    val exportProgress = ScheduledExportProgressNotification.updater(applicationContext, id)
                 when (target) {
                     ExportTarget.DEVICE_FOLDER ->
                         // Per-profile folder: adopt the profile's binding around the run (the live
@@ -314,12 +321,13 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                             if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
                                 exportRawDates(dates, settings, target)
                             } else if (useDurableFolder) {
-                                ExportOrchestrator(healthRepository, exportRepository)
+                                ExportOrchestrator(healthRepository, exportRepository, rawSnapshotExportRunner)
                                     .exportDatesDurably(
                                         dates = dates,
                                         settings = settings,
                                         durableFolderOperationId = durableOperationId,
                                         durableSettingsSnapshotJson = snapshotJson,
+                                        onProgress = exportProgress,
                                         requireExistingJournal = shouldRequireExistingProfileFolderJournal(
                                             pendingOperationId = pendingOperationId,
                                             isPendingResidual = due.pendingExport != null,
@@ -327,8 +335,8 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                                         ),
                                     )
                             } else {
-                                ExportOrchestrator(healthRepository, exportRepository)
-                                    .exportDates(dates, settings)
+                                ExportOrchestrator(healthRepository, exportRepository, rawSnapshotExportRunner)
+                                    .exportDates(dates, settings, onProgress = exportProgress)
                             }.copy(target = ExportTarget.DEVICE_FOLDER)
                         }
 
@@ -341,8 +349,10 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                             apiEndpointExportRunner.exportDates(
                                 dates = dates,
                                 settings = settings.copy(exportTarget = ExportTarget.API_ENDPOINT),
+                                onProgress = exportProgress,
                                 durableOperationId = durableOperationId,
                                 durableSettingsSnapshotJson = snapshotJson,
+                                requireExistingDurableOperation = pendingOperationId != null,
                             )
                         }
 
@@ -350,6 +360,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                         agentDataGatewayExportRunner.exportDates(
                             dates = dates,
                             settings = settings.copy(exportTarget = ExportTarget.AGENT_DATA_GATEWAY),
+                            onProgress = exportProgress,
                         )
                 }
             }
@@ -461,7 +472,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
 
         if (!result.isFullSuccess) {
             val remainingDates = cancellationRemainingDates(dates, target, settings.exportMode, result)
-            val replacements = if (hasCompletedDayWork) {
+            val replacements = if (hasCompletedDayWork || due.pendingExport?.refreshSlotMillis != null) {
                 residualPendingExports(
                     profile = profile,
                     due = due,
@@ -587,8 +598,11 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         fallbackDurableOperationId: String? = null,
     ): List<ScheduledProfilePendingExport> {
         val operationByDate = result.retryOperationIds + result.retryFolderOperationIds
+        val refreshZone = if (due.pendingExport?.refreshSlotMillis != null)
+            requireNotNull(com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decodeOrNull(
+                profile.settingsSnapshotJson)?.sleepCaptureContext).zoneId else due.entry.zone
         val refreshDate = due.refreshSlotMillis?.let {
-            Instant.ofEpochMilli(it).atZone(due.entry.zone).toLocalDate()
+            Instant.ofEpochMilli(it).atZone(refreshZone).toLocalDate()
         }
         // Raw refresh failures retry on the next slot, not through a compatibility journal.
         // Keep compatibility journal date groups unchanged; their exact batch plan is durable.
@@ -624,6 +638,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 folderUri = profile.folderUri,
                 folderDisplayName = profile.folderDisplayName,
                 durableOperationId = operationID,
+                refreshSlotMillis = due.refreshSlotMillis?.takeIf { refreshDate in dates },
             )
         }
     }

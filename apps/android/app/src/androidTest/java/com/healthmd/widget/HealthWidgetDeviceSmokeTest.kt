@@ -12,6 +12,10 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.healthmd.widget.data.NoBackupHealthWidgetSnapshotStore
 import com.healthmd.widget.glance.ActivityGlanceWidget
 import com.healthmd.widget.glance.ActivityWidgetReceiver
+import com.healthmd.widget.glance.ArchiveGlanceWidget
+import com.healthmd.widget.glance.ArchiveWideGlanceWidget
+import com.healthmd.widget.glance.ArchiveWideWidgetReceiver
+import com.healthmd.widget.glance.ArchiveWidgetReceiver
 import com.healthmd.widget.glance.HealthSummaryGlanceWidget
 import com.healthmd.widget.glance.HealthSummaryWidgetReceiver
 import com.healthmd.widget.glance.HeartRangeGlanceWidget
@@ -46,6 +50,9 @@ class HealthWidgetDeviceSmokeTest {
             Provider(ActivityWidgetReceiver::class.java, ActivityGlanceWidget()),
             Provider(HeartRangeWidgetReceiver::class.java, HeartRangeGlanceWidget()),
             Provider(SleepWidgetReceiver::class.java, SleepGlanceWidget()),
+            // Coverage-only Archive widgets render from export history, never the health snapshot.
+            Provider(ArchiveWidgetReceiver::class.java, ArchiveGlanceWidget()),
+            Provider(ArchiveWideWidgetReceiver::class.java, ArchiveWideGlanceWidget()),
         )
         val installed = providers.flatMap { provider ->
             manager.getAppWidgetIds(ComponentName(context, provider.receiver))

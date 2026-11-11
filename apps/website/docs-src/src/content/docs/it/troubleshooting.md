@@ -25,7 +25,7 @@ Se un risultato strutturato riporta `complete_empty`, distinguilo da output non 
 
 ## Il sonno della scorsa notte manca da Oggi
 
-Health.md usa una finestra locale del sonno **da mezzogiorno a mezzogiorno** su Apple e Android. Martedì mattina esporta **Ieri** (lunedì), anche per il sonno iniziato dopo mezzanotte di martedì, oppure lunedì e martedì per sonno e attività. Se la fonte sincronizza tardi, ripeti il giorno del diario. Vedi gli [esempi di date](/it/docs/sleep-date-attribution/#sleep-date-examples).
+**Inizio della notte (predefinito):** Health.md usa una finestra locale del sonno **da mezzogiorno a mezzogiorno** su Apple e Android. Martedì mattina esporta **Ieri** (lunedì), anche per il sonno iniziato dopo mezzanotte di martedì, oppure lunedì e martedì per sonno e attività. Se la fonte sincronizza tardi, ripeti il giorno del diario. Vedi gli [esempi di date](/it/docs/sleep-date-attribution/#sleep-date-examples). **Fine al mattino:** esporta la data del risveglio, quindi martedì per la notte di lunedì. Entrambe le modalità usano il fuso orario dell'esportazione.
 
 ## L'anteprima mostra dati, ma la cartella è vuota
 

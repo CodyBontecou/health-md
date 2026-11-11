@@ -12,6 +12,10 @@ import com.healthmd.domain.clinicianreport.*
 import com.healthmd.domain.model.*
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
+import com.healthmd.data.health.HealthProviderRegistry
+import com.healthmd.data.health.HealthRepositoryImpl
+import com.healthmd.domain.repository.SettingsRepository
 import io.mockk.mockk
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
@@ -58,7 +62,7 @@ class ClinicianReportDataSourceTest {
         val manager = mockk<HealthConnectManager>()
         val provider = HealthConnectDataProvider(manager)
         coEvery {
-            manager.fetchHealthDataRange(any(), any(), true, pinnedZone, true)
+            manager.fetchHealthDataRange(any(), any(), true, pinnedZone, true, SleepDayAttribution.DEFAULT, any())
         } answers {
             firstArg<List<LocalDate>>().map { date -> HealthData(date) }
         }
@@ -69,7 +73,69 @@ class ClinicianReportDataSourceTest {
         )
 
         coVerify(exactly = 1) {
-            manager.fetchHealthDataRange(listOf(day), any(), true, pinnedZone, true)
+            manager.fetchHealthDataRange(listOf(day), any(), true, pinnedZone, true, SleepDayAttribution.DEFAULT, any())
+        }
+    }
+
+    @Test fun explicitNightBeginsOverrideIsNotRepopulatedFromStoredMorningEnds() = runTest {
+        val manager = mockk<HealthConnectManager>()
+        val provider = HealthConnectDataProvider(manager)
+        val registry = mockk<HealthProviderRegistry>()
+        val settings = mockk<SettingsRepository>()
+        coEvery { settings.getSelectedHealthProviderId() } returns "health_connect"
+        coEvery { settings.getSleepDayAttribution() } returns SleepDayAttribution.MORNING_ENDS
+        every { registry.providerFor("health_connect") } returns provider
+        coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
+            firstArg<List<LocalDate>>().map(::HealthData)
+        }
+        val repository = HealthRepositoryImpl(registry, settings)
+
+        repository.fetchHealthDataRange(
+            dates = listOf(day),
+            sleepDayAttributionOverride = SleepDayAttributionOverride.Value(SleepDayAttribution.NIGHT_BEGINS),
+        )
+
+        coVerify(exactly = 0) { settings.getSleepDayAttribution() }
+        coVerify(exactly = 1) {
+            manager.fetchHealthDataRange(
+                listOf(day),
+                any(),
+                false,
+                any(),
+                false,
+                SleepDayAttribution.NIGHT_BEGINS,
+            )
+        }
+    }
+
+    @Test fun singleDateCapturePinsZoneBeforeStoredAttributionRead() = runTest {
+        val previous = TimeZone.getDefault()
+        val capturedZone = ZoneId.of("America/Los_Angeles")
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone(capturedZone))
+            val manager = mockk<HealthConnectManager>()
+            val provider = HealthConnectDataProvider(manager)
+            val registry = mockk<HealthProviderRegistry>()
+            val settings = mockk<SettingsRepository>()
+            coEvery { settings.getSelectedHealthProviderId() } returns "health_connect"
+            coEvery { settings.getSleepDayAttribution() } answers {
+                TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"))
+                SleepDayAttribution.NIGHT_BEGINS
+            }
+            every { registry.providerFor("health_connect") } returns provider
+            coEvery {
+                manager.fetchHealthDataRange(any(), any(), false, capturedZone, false, SleepDayAttribution.NIGHT_BEGINS, any())
+            } returns listOf(HealthData(day, sleep = SleepData(totalDuration = 1.minutes)))
+            val repository = HealthRepositoryImpl(registry, settings)
+
+            val captured = repository.fetchHealthData(day)
+
+            assertThat(captured.sleep.totalDuration).isEqualTo(1.minutes)
+            coVerify(exactly = 1) {
+                manager.fetchHealthDataRange(any(), any(), false, capturedZone, false, SleepDayAttribution.NIGHT_BEGINS, any())
+            }
+        } finally {
+            TimeZone.setDefault(previous)
         }
     }
 
@@ -217,7 +283,7 @@ class ClinicianReportDataSourceTest {
         var pinnedCalendarDays = false
 
         init {
-            coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any()) } answers {
+            coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
                 requestedDates = firstArg()
                 requestedTypes = secondArg()
                 includeGranular = thirdArg()

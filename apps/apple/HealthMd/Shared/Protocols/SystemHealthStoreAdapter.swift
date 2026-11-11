@@ -150,6 +150,9 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         }
         #endif
         guard isAvailable else { return .unavailable }
+        // Enabled for the SDK 27 family qualified by the public-declaration CI
+        // probe. Runtime availability cannot hide declarations from older SDKs.
+        #if HEALTHMD_HAS_HISTORY_AUTHORIZATION_API
         if #available(iOS 27.0, macOS 27.0, macCatalyst 27.0, watchOS 27.0, visionOS 27.0, *) {
             do {
                 let dates = try await store.earliestAuthorizedSampleDate(for: types)
@@ -162,6 +165,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 return .failure
             }
         }
+        #endif
         return .unavailable
     }
 
@@ -432,7 +436,11 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         )
         #elseif HEALTHMD_HAS_HEALTHKIT_HISTORY_AUTHORIZATION
         guard #available(iOS 27.0, macOS 27.0, macCatalyst 27.0, watchOS 27.0, visionOS 27.0, *) else {
-            throw NSError(domain: "HealthMd.HealthKitCapability", code: 27, userInfo: [NSLocalizedDescriptionKey: "Health history authorization boundaries require OS 27 or later."])
+            throw NSError(
+                domain: "HealthMd.HealthKitCapability",
+                code: 27,
+                userInfo: [NSLocalizedDescriptionKey: "Health history authorization boundaries require OS 27 or later."]
+            )
         }
         let boundaries = try await store.earliestAuthorizedSampleDate(for: types)
         return Dictionary(uniqueKeysWithValues: boundaries.map { type, date in
@@ -597,7 +605,10 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 value: $0.value,
                 startDate: $0.startDate,
                 endDate: $0.endDate,
-                metadata: Self.serializedMetadata($0.metadata)
+                metadata: Self.serializedMetadata($0.metadata),
+                uuid: $0.uuid,
+                sourceBundleIdentifier: $0.sourceRevision.source.bundleIdentifier,
+                sourceName: $0.sourceRevision.source.name
             )
         }
     }
@@ -1855,7 +1866,9 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 value: $0.quantity.doubleValue(for: u),
                 startDate: $0.startDate,
                 endDate: $0.endDate,
-                metadata: Self.serializedMetadata($0.metadata)
+                metadata: Self.serializedMetadata($0.metadata),
+                sourceBundleIdentifier: $0.sourceRevision.source.bundleIdentifier,
+                sourceName: $0.sourceRevision.source.name
             )
         }
     }

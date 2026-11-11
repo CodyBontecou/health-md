@@ -299,6 +299,12 @@ struct SyncPeerCapabilities: Codable, Equatable {
     /// Whether this peer preserves the two-dimensional compatibility-series /
     /// canonical-archive policy instead of interpreting the legacy combined Boolean.
     let supportsSplitExportDetailPolicy: Bool
+    /// Whether this peer honors per-group compatibility detail overrides. Older peers ignore the
+    /// unknown snapshot key, so jobs with overrides are rejected before transfer instead.
+    let supportsPerGroupExportDetail: Bool
+    /// Whether this peer decodes every per-group override (including `body`) and renders the
+    /// apple-v12 `detailSamples` successor. Older peers would silently write apple-v8.
+    let supportsAppleV12DetailExpansion: Bool
     /// Canonical `healthmd.healthkit_records` archive schema versions this peer can produce/consume.
     let canonicalArchiveSchemaVersions: [Int]
     /// Versioned strict CLI raw-result envelope schema versions this peer can produce/consume.
@@ -338,6 +344,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case connectedTransferBinaryFrameVersions
         case connectedTransferMaximumInFlightChunks
         case supportsSplitExportDetailPolicy
+        case supportsPerGroupExportDetail
+        case supportsAppleV12DetailExpansion
         case canonicalArchiveSchemaVersions
         case canonicalRawResultSchemaVersions
     }
@@ -377,7 +385,9 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsDurableConnectedExportRecovery: Bool = false,
         connectedTransferBinaryFrameVersions: [Int] = [],
         connectedTransferMaximumInFlightChunks: Int = 1,
-        supportsSplitExportDetailPolicy: Bool = false
+        supportsSplitExportDetailPolicy: Bool = false,
+        supportsPerGroupExportDetail: Bool = false,
+        supportsAppleV12DetailExpansion: Bool = false
     ) {
         self.protocolVersion = protocolVersion
         self.appVersion = appVersion
@@ -417,6 +427,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
             8
         )
         self.supportsSplitExportDetailPolicy = supportsSplitExportDetailPolicy
+        self.supportsPerGroupExportDetail = supportsPerGroupExportDetail
+        self.supportsAppleV12DetailExpansion = supportsAppleV12DetailExpansion
         self.canonicalArchiveSchemaVersions = Array(Set(canonicalArchiveSchemaVersions)).sorted()
         self.canonicalRawResultSchemaVersions = Array(Set(canonicalRawResultSchemaVersions)).sorted()
     }
@@ -503,6 +515,14 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsSplitExportDetailPolicy = try container.decodeIfPresent(
             Bool.self,
             forKey: .supportsSplitExportDetailPolicy
+        ) ?? false
+        supportsPerGroupExportDetail = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .supportsPerGroupExportDetail
+        ) ?? false
+        supportsAppleV12DetailExpansion = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .supportsAppleV12DetailExpansion
         ) ?? false
         canonicalArchiveSchemaVersions = try container.decodeIfPresent(
             [Int].self,
@@ -616,6 +636,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
             && (!dailyNotesOnlyExportEnabled || supportsDailyNoteOnlyExports)
             && (!dataDictionarySuppressionRequested || supportsDataDictionaryExportPreference)
             && (detailPolicy.isLegacyRepresentable || supportsSplitExportDetailPolicy)
+            && (!detailPolicy.hasDetailOverrides || supportsPerGroupExportDetail)
+            && (!detailPolicy.requiresAppleV12PeerSupport || supportsAppleV12DetailExpansion)
             && (!detailPolicy.includesCanonicalArchive || (
                 supportsSizeBoundedConnectedTransfers
                     && canonicalArchiveSchemaVersions.contains(
@@ -663,7 +685,9 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsDurableConnectedExportRecovery: true,
             connectedTransferBinaryFrameVersions: [ConnectedTransferBinaryFrame.currentVersion],
             connectedTransferMaximumInFlightChunks: 4,
-            supportsSplitExportDetailPolicy: true
+            supportsSplitExportDetailPolicy: true,
+            supportsPerGroupExportDetail: true,
+            supportsAppleV12DetailExpansion: true
         )
     }
 }

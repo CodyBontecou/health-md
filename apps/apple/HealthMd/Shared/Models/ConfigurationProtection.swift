@@ -144,7 +144,7 @@ struct ConfigurationProtectionToast: View {
                         Text("Settings are locked")
                             .font(Typography.bodyEmphasis())
                             .foregroundStyle(Color.textPrimary)
-                        Text("Turn off Prevent Accidental Changes in Settings to edit your configuration.")
+                        Text("Turn off Lock configuration in Settings to edit your configuration.")
                             .font(Typography.caption())
                             .foregroundStyle(Color.textSecondary)
                             .multilineTextAlignment(.leading)
@@ -170,7 +170,7 @@ struct ConfigurationProtectionToast: View {
             .buttonStyle(.plain)
             .accessibilityIdentifier(AccessibilityID.ConfigurationProtection.toast)
             .accessibilityLabel("Settings are locked")
-            .accessibilityHint("Double tap to open Prevent Accidental Changes in Settings")
+            .accessibilityHint("Double tap to open Lock configuration in Settings")
             #if os(iOS)
             .transition(.move(edge: .bottom).combined(with: .opacity))
             #else

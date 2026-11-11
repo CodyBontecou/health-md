@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_schedule_clinic_destination_title">Destinația clinicii</string>
+    <string name="m3_schedule_clinic_destination_body">Clinica ta gestionează această destinație. Folosește Accesul clinicii pentru a o selecta sau pentru a gestiona partajarea. Celelalte destinații necesită propriul acces la Health.md.</string>
+</resources>

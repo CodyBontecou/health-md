@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="m3_tools_diagnostics_verbosity">Ausführlichkeit</string>
+    <string name="m3_tools_diagnostics_subsystem">Subsystem</string>
+    <string name="m3_tools_diagnostics_time_range">Zeitraum</string>
+    <string name="m3_tools_diagnostics_events">Neueste Ereignisse</string>
+    <string name="m3_tools_diagnostics_files">Dateien im Paket</string>
+    <string name="m3_tools_direct_cli_pairing">Mit deinem Computer koppeln</string>
+    <string name="m3_tools_direct_cli_manual">Manuell eingeben</string>
+    <string name="m3_tools_direct_cli_computer">Gekoppelter Computer</string>
+    <string name="m3_tools_direct_cli_export">Export</string>
+    <string name="m3_tools_clinic_title">Klinikzugang</string>
+    <string name="m3_tools_clinic_intro">Deine Klinik kann die Übermittlung an ihren freigegebenen Endpunkt übernehmen. Du entscheidest, was geteilt wird. Andere Exportziele erfordern deinen eigenen Health.md-Zugang.</string>
+    <string name="m3_tools_clinic_storage_unavailable">Entsperre dein Telefon und versuche es erneut. Der Klinikzugang konnte nicht sicher gelesen werden.</string>
+    <string name="m3_tools_clinic_fallback_name">Klinik</string>
+    <string name="m3_tools_clinic_sharing">Freigabe</string>
+    <string name="m3_tools_clinic_allow_sharing">Freigabe für diese Klinik erlauben</string>
+    <string name="m3_tools_clinic_sharing_description">Nur die Messwerte und Daten, die du in Health.md auswählst, werden gesendet. Zeitpläne verwenden deine gespeicherte Auswahl. Wenn du die Freigabe deaktivierst, werden künftige Uploads an die Klinik gestoppt; bereits empfangene Kopien der Klinik werden nicht gelöscht.</string>
+    <string name="m3_tools_clinic_upload_token">Upload-Token der Klinik (optional)</string>
+    <string name="m3_tools_clinic_upload_token_description">Wenn deine Klinik ein persönliches Upload-Token bereitstellt, gib es hier ein. Es wird sicher gespeichert und nur für den freigegebenen Endpunkt dieser Klinik verwendet.</string>
+    <string name="m3_tools_clinic_use_destination">Klinikziel verwenden</string>
+    <string name="m3_tools_clinic_sync_requests">Synchronisierungsanfragen</string>
+    <string name="m3_tools_clinic_allow_sync">Synchronisierungsanfragen dieser Klinik erlauben</string>
+    <string name="m3_tools_clinic_sync_description">Deine Klinik kann eine Benachrichtigung senden, um deine neuesten Daten anzufragen. Nichts wird gesendet, bis du darauf tippst; dann werden gestern und heute mit dieser Klinik geteilt. Wenn du dies deaktivierst, werden keine neuen Anfragen mehr empfangen.</string>
+    <string name="m3_tools_clinic_invitation">Einladung</string>
+    <string name="m3_tools_clinic_invitation_code">Einladungscode</string>
+    <string name="m3_tools_clinic_accept_invitation">Einladung annehmen</string>
+    <string name="m3_tools_clinic_not_configured">Der Klinikzugang ist in dieser Version von Health.md nicht konfiguriert.</string>
+    <string name="m3_tools_clinic_enrollment_pending">Deine Einladung ist sicher gespeichert. Versuche es erneut, um die Registrierung abzuschließen; du brauchst keinen neuen Code.</string>
+    <string name="m3_tools_clinic_retry_enrollment">Registrierung wiederholen</string>
+    <string name="m3_tools_clinic_refresh">Klinikzugang aktualisieren</string>
+    <string name="m3_tools_clinic_disconnect_clinic">Klinik trennen</string>
+    <string name="m3_tools_clinic_error">Der Klinikzugang konnte nicht aktualisiert werden. Prüfe deine Verbindung oder wiederhole deine gespeicherte Registrierung.</string>
+    <string name="m3_tools_clinic_disconnect_question">Diese Klinik trennen?</string>
+    <string name="m3_tools_clinic_disconnect_body">Die von der Klinik gesponserte Freigabe endet. Dein selbst erworbener Zugang und deine lokalen Gesundheitsdaten bleiben verfügbar.</string>
+    <string name="m3_tools_clinic_disconnect">Trennen</string>
+    <string name="m3_tools_clinic_sync_sharing_required">Erlaube zuerst die Freigabe für diese Klinik.</string>
+    <string name="m3_tools_clinic_sync_push_unavailable">Synchronisierungsanfragen sind in dieser Version von Health.md nicht verfügbar.</string>
+    <string name="m3_tools_clinic_sync_notifications_denied">Die Berechtigung für Benachrichtigungen wurde nicht erteilt. Erlaube Benachrichtigungen für Health.md in den Einstellungen.</string>
+    <string name="m3_tools_clinic_sync_wake_service">Der Benachrichtigungsdienst ist nicht verfügbar. Versuche es später erneut.</string>
+    <string name="m3_tools_clinic_sync_clinic_unreachable">Deine Klinik war nicht erreichbar. Versuche es später erneut.</string>
+    <string name="m3_tools_clinic_sync_storage">Entsperre dein Telefon und versuche es erneut. Der Anfrageschlüssel konnte nicht sicher gespeichert werden.</string>
+</resources>

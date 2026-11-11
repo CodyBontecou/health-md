@@ -21,25 +21,19 @@ final class ExportProfilesJourneyUITests: XCTestCase {
     }
 
     private func openSettingsTab(_ app: XCUIApplication) {
-        let settingsTab = app.tabBars.buttons["Settings"]
-        // Use XCTest's normal wait for the first navigation after launch.
-        // A hosted failure stayed on Export after this action; verify the tab
-        // selection before looking for controls belonging to Settings.
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
-        if !settingsTab.isSelected { settingsTab.tap() }
-        let selected = expectation(
-            for: NSPredicate(format: "selected == true"),
-            evaluatedWith: settingsTab
-        )
-        wait(for: [selected], timeout: 10)
+        UITestLaunchHelper.openSettingsTab(in: app)
     }
 
-    /// Opens the Export Profiles management sheet from Settings.
+    /// Opens the legacy Export Profiles management sheet. Automations now own profile
+    /// management (AutomationsGlass), so App & support no longer links here; the sheet
+    /// stays reachable for these journeys through a debug launch argument.
     private func openProfilesManagementSheet(_ app: XCUIApplication) {
-        openSettingsTab(app)
-        let row = app.buttons["export.profiles.entry"]
-        XCTAssertTrue(row.waitUntilExists(timeout: 10), "Export Profiles row should exist in Settings")
-        row.tap()
+        app.terminate()
+        app.launchArguments += ["-UITestOpenExportProfiles", "YES"]
+        app.launch()
+        let settings = app.buttons["Settings"].firstMatch
+        XCTAssertTrue(settings.waitForExistence(timeout: 10))
+        settings.tap()
         XCTAssertTrue(
             app.navigationBars["Export Profiles"].waitUntilExists(timeout: 10),
             "management sheet should open from Settings"
@@ -70,20 +64,39 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Export Profiles"].waitUntilExists(timeout: 5))
     }
 
+    func testCreatingAPIProfileKeepsSelectedEndpointOnFirstSave() {
+        let app = UITestLaunchHelper.firstRunExportApp()
+        app.launch()
+        openProfilesManagementSheet(app)
+        app.buttons["New profile"].tap()
+        let name = app.textFields["export.profiles.editor.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        name.tap()
+        let initialName = name.value as? String ?? ""
+        name.typeText(String(repeating: "\u{8}", count: initialName.count) + "API Creation Regression")
+        app.buttons["Target"].tap()
+        app.buttons["API Endpoint"].tap()
+        app.buttons["export.profiles.editor.addEndpoint"].tap()
+        let url = app.textFields["export.profiles.editor.endpointURL"]
+        XCTAssertTrue(url.waitForExistence(timeout: 5))
+        url.tap()
+        url.typeText("https://qa.example.test/export")
+        app.buttons["export.profiles.editor.addEndpoint.confirm"].tap()
+        let create = app.buttons["export.profiles.editor.confirm"]
+        XCTAssertTrue(create.waitForExistence(timeout: 5))
+        create.tap()
+        let row = app.buttons["export.profiles.row.API Creation Regression"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        XCTAssertFalse(row.label.contains("not configured"))
+        row.tap()
+        XCTAssertTrue(app.staticTexts["https://qa.example.test/export"].waitForExistence(timeout: 5))
+    }
+
     // MARK: - Journey A: migration + Settings entry
 
     func testQA_MigrationShowsDefaultProfileInSettings() {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
-
-        // The active profile is managed inside the destination screen rather
-        // than rendered as a status pill on the Settings entry row.
-        openSettingsTab(app)
-        let row = app.buttons["export.profiles.entry"]
-        XCTAssertTrue(row.waitUntilExists(timeout: 10), "Export Profiles row should exist in Settings")
-        snap("01-settings-profiles-row")
-        let configuredValue = expectation(for: NSPredicate(format: "value == 'Configured'"), evaluatedWith: row)
-        wait(for: [configuredValue], timeout: 10)
 
         openProfilesManagementSheet(app)
         XCTAssertTrue(
@@ -181,114 +194,75 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         checkProfileSchedule(refreshInterval: "Every hour")
     }
 
-    /// Each independent interval retains the real enable/edit/save/reopen path and
-    /// its assertions, within the unchanged per-test execution allowance.
     private func checkProfileSchedule(refreshInterval: String?) {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
 
-        let scheduleTab = app.tabBars.buttons["Schedule"]
-        XCTAssertTrue(scheduleTab.waitUntilExists(timeout: 10))
-        scheduleTab.tap()
-
-        // Profile Schedules card appears below the legacy schedule card.
-        let card = app.staticTexts["Profile Schedules"]
-        XCTAssertTrue(card.waitUntilExists(timeout: 10), "Profile Schedules card should exist")
-        app.swipeUp()
-        if !card.isHittable { app.swipeUp() }
+        // AutomationsGlass: a profile without a schedule shows no card switch.
+        XCTAssertTrue(UITestLaunchHelper.openAutomation(in: app))
+        let scheduleRow = app.buttons["glass.automation.schedule"]
+        XCTAssertTrue(scheduleRow.waitUntilExists(timeout: 10), "the automation should offer its schedule")
+        XCTAssertTrue(scheduleRow.label.contains("Off"), "an unscheduled automation reads Off")
         snap("07-schedule-tab-profiles")
+
+        // ScheduleG: turning the schedule on saves a daily cadence.
+        scheduleRow.tap()
+        let enabledToggle = app.switches["glass.schedule.enabled"]
+        XCTAssertTrue(enabledToggle.waitUntilExists(timeout: 5), "ScheduleG should open")
         XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier ENDSWITH '.discardRecovery'")).count, 0,
                        "a profile with no pending recovery must not offer discard")
-
-        XCTAssertTrue(
-            app.staticTexts["No profile schedules enabled."].waitUntilExists(timeout: 5),
-            "empty-state footer should appear when no profile schedules are enabled"
-        )
-        XCTAssertTrue(
-            app.staticTexts["Default"].firstMatch.waitUntilExists(timeout: 5),
-            "each profile should have a schedule row"
-        )
-
-        // Enable the Default profile's schedule. The row should immediately
-        // reflect its seeded daily cadence and replace the empty-state footer.
-        let toggle = app.switches["Schedule Default"]
-        XCTAssertTrue(toggle.waitUntilExists(timeout: 5))
-        toggle.tap()
-        XCTAssertTrue(
-            app.staticTexts.matching(
-                NSPredicate(format: "label BEGINSWITH 'Daily at'")
-            ).firstMatch.waitUntilExists(timeout: 5),
-            "enabled schedule should show its seeded daily cadence"
-        )
-        XCTAssertTrue(
-            app.staticTexts["No profile schedules enabled."].waitForNonExistence(timeout: 5),
-            "empty-state footer should disappear when a schedule is enabled"
-        )
         snap("08-schedule-enabled-daily")
 
-        // Open the cadence editor through the row's dedicated action. The
-        // profile name is intentionally read-only after the accessibility split.
-        let editSchedule = app.buttons["Edit schedule for Default"]
-        XCTAssertTrue(editSchedule.waitUntilExists(timeout: 5))
-        editSchedule.tap()
-        let enabledToggle = app.switches["Enabled"]
-        XCTAssertTrue(enabledToggle.waitUntilExists(timeout: 5), "cadence editor sheet should open")
-        snap("09-cadence-editor")
-
-        // The standard-width editor keeps its three native cadence buttons;
-        // constrained widths use the separately covered adaptive menu fallback.
+        // The standard-width editor keeps its three native cadence buttons.
         let weekly = app.buttons["Weekly"].firstMatch
         XCTAssertTrue(weekly.waitUntilExists(timeout: 5), "weekly cadence should be available")
         weekly.tap()
-        app.buttons["Save"].firstMatch.tap()
-        XCTAssertTrue(
-            app.staticTexts.matching(
-                NSPredicate(format: "label CONTAINS 'Weekly on'")
-            ).firstMatch.waitUntilExists(timeout: 5),
-            "row summary should reflect the weekly cadence"
-        )
+        if enabledToggle.value as? String == "0" { enabledToggle.tap() }
+        XCTAssertEqual(enabledToggle.value as? String, "1", "the schedule should be on")
+        snap("09-cadence-editor")
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(enabledToggle.waitForNonExistence(timeout: 5), "ScheduleG must close")
+        XCTAssertFalse(scheduleRow.label.contains("Off"), "the row should reflect the saved schedule")
         snap("10-weekly-cadence-saved")
 
-        // The base journey verifies toggle/cadence/footer; each interval case also
-        // verifies its persisted value and preserves the weekly completed-day cadence.
+        // Minute choices survive save/reopen and do not change completed-day cadence.
         if let label = refreshInterval {
-            XCTAssertTrue(enabledToggle.waitForNonExistence(timeout: 5), "previous editor must finish dismissing")
-            editSchedule.tap()
+            scheduleRow.tap()
             XCTAssertTrue(enabledToggle.waitUntilExists(timeout: 5), "editor must reopen before editing refresh")
-            let form = app.collectionViews.firstMatch
-            let refresh = app.switches["Today Refresh"].firstMatch
+            // The glass schedule sheet scrolls in a plain ScrollView, not a Form list.
+            let form = app.scrollViews["glass.schedule.content"]
+            let refresh = app.switches["glass.schedule.todayRefresh"].firstMatch
             if !refresh.isHittable { form.swipeUp() }
             XCTAssertTrue(refresh.waitUntilExists(timeout: 5))
             XCTAssertTrue(refresh.isHittable, "refresh control must be visible before tapping")
-            // SwiftUI exposes a full-width row and a nested native switch. Tap the
-            // switch itself; the empty center of the row does not toggle it.
-            if refresh.value as? String == "0" { refresh.switches.firstMatch.tap() }
+            // The glass switch is one accessible element: the whole row toggles it.
+            if refresh.value as? String == "0" { refresh.tap() }
             XCTAssertEqual(refresh.value as? String, "1", "refresh should be enabled")
-            let interval = app.buttons["Refresh Interval"].firstMatch
-            if !interval.isHittable { form.swipeUp() }
-            XCTAssertTrue(interval.waitUntilExists(timeout: 5), "minute interval menu should appear when refresh is enabled")
-            interval.tap()
-            app.buttons[label].firstMatch.tap()
-            app.buttons["Save"].firstMatch.tap()
+            // Interval chips abbreviate visually; each exposes the full interval as its label.
+            let chip = app.buttons[label].firstMatch
+            if !chip.isHittable { form.swipeUp() }
+            XCTAssertTrue(chip.waitUntilExists(timeout: 5), "interval chips should appear when refresh is enabled")
+            chip.tap()
+            app.navigationBars.buttons.firstMatch.tap()
             XCTAssertTrue(enabledToggle.waitForNonExistence(timeout: 5))
-            editSchedule.tap()
+            scheduleRow.tap()
             XCTAssertTrue(enabledToggle.waitUntilExists(timeout: 5))
-            let savedInterval = app.buttons["Refresh Interval"].firstMatch
-            if !savedInterval.isHittable { app.collectionViews.firstMatch.swipeUp() }
+            let savedInterval = app.buttons[label].firstMatch
+            if !savedInterval.isHittable { app.scrollViews["glass.schedule.content"].swipeUp() }
             XCTAssertTrue(savedInterval.waitUntilExists(timeout: 5))
-            XCTAssertEqual(savedInterval.value as? String, label)
+            XCTAssertTrue(savedInterval.isSelected, "\(label) should stay selected after reopening")
             let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             screenshot.name = "Persisted Today Refresh - \(label)"
             screenshot.lifetime = .keepAlways
             add(screenshot)
-            app.buttons["Cancel"].firstMatch.tap()
+            app.scrollViews["glass.schedule.content"].swipeDown()
             XCTAssertTrue(
-                app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'Weekly on'"))
-                    .firstMatch.waitUntilExists(timeout: 5),
+                app.buttons["Weekly"].firstMatch.isSelected,
                 "Today Refresh must preserve the completed-day cadence"
             )
+            app.navigationBars.buttons.firstMatch.tap()
+            XCTAssertTrue(enabledToggle.waitForNonExistence(timeout: 5))
         }
-
     }
 
     // MARK: - Journey D: dedicated management view
@@ -398,6 +372,13 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         field.coordinate(withNormalizedOffset: .zero).withOffset(
             CGVector(dx: pasteFrame.midX - fieldFrame.minX, dy: pasteFrame.midY - fieldFrame.minY)
         ).tap()
+        // Observe the clipboard edit's completion before asserting its exact UUID.
+        // Closing the menu alone does not prove that the field has received the paste.
+        let pastedID = expectation(
+            for: NSPredicate(format: "value == %@", expectedCopiedID),
+            evaluatedWith: field
+        )
+        wait(for: [pastedID], timeout: 10)
         XCTAssertEqual(field.value as? String, expectedCopiedID, "Copy must place this profile's exact UUID on the clipboard")
         snap("13a-copied-id-pasted")
         field.typeText(String(repeating: "\u{8}", count: expectedCopiedID.count) + "Daily Everything")

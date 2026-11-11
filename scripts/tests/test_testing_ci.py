@@ -59,62 +59,32 @@ class CIOrchestrationTests(unittest.TestCase):
                 self.assertTrue(selected["run"])
                 self.assertEqual({job for job in ci.JOBS if selected[job]}, expected)
 
-    def test_push_trigger_includes_every_component_consumer(self):
-        triggers = WORKFLOW.get("on", WORKFLOW.get(True))
-        patterns = triggers["push"]["paths"]
-        for path in ("AGENTS.md", "Makefile", "apps/android/app/src/Main.kt", "apps/cli/Cargo.toml",
-                     "packages/contracts/example.json", "packages/healthmd-core-rust/Cargo.toml",
-                     "docs/migration/README.md", ".github/workflows/android-ci.yml"):
-            self.assertTrue(any(pattern_to_regex(pattern).match(path) for pattern in patterns), path)
-        detector = next(step for step in JOBS["changes"]["steps"] if step.get("id") == "detect")
-        self.assertIn("apps/android/scripts/android-ci-plan.py", detector["run"])
-        for flag in ("run", *ci.JOBS):
-            self.assertEqual(JOBS["changes"]["outputs"][flag], "${{ steps.detect.outputs." + flag + " }}")
+    def test_component_wrappers_keep_exact_release_inputs(self):
+        for name in ("android", "apple", "practice"):
+            workflow = yaml.safe_load((ROOT / f".github/workflows/{name}-ci.yml").read_text())
+            test = workflow["jobs"]["test"]
+            self.assertEqual(test["uses"], "./.github/workflows/ci.yml")
+            self.assertIn("inputs.release_sha", test["with"]["release_sha"])
+            self.assertTrue(test["with"]["full_qualification"])
 
-    def test_each_job_uses_its_own_selection_flag(self):
-        for job, flag in (("test", "test"), ("instrumentation", "instrumentation"),
-                          ("fdroid", "fdroid"), ("wear-emulator-smoke", "wear"),
-                          ("rust-kotlin-direct-interop", "interop")):
-            prefix = "always() && " if job in {"instrumentation", "fdroid"} else ""
-            self.assertEqual(JOBS[job]["if"], "${{ " + prefix + "needs.changes.outputs." + flag + " == 'true' }}")
+    def test_portable_gate_retains_current_source_and_budget_verification(self):
+        workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
+        test = workflow["jobs"]["test"]
+        self.assertEqual(test["timeout-minutes"], 2)
+        commands = "\n".join(step.get("run", "") for step in test["steps"])
+        self.assertIn("python3 scripts/ci/run.py", commands)
+        self.assertIn("scripts/ci/verify_run.py", commands)
+        self.assertIn("SOURCE_REVISION", commands)
+        self.assertEqual(test["env"]["HEALTHMD_CI_RESULTS"], ".pi/ci-receipts")
 
-    def gate(self, **overrides):
-        env = {**os.environ, "CHANGES_RESULT": "success", "CHANGES_RUN": "true", "POLICY_RESULT": "success"}
-        for job in ci.JOBS:
-            env[job.upper() + "_RUN"] = "true"
-            env[job.upper() + "_RESULT"] = "success"
-        env.update(overrides)
-        return subprocess.run(["bash", "-c", JOBS["gate"]["steps"][0]["run"]], env=env, capture_output=True).returncode
-
-    def test_gate_accepts_complete_successful_qualification(self):
-        self.assertEqual(self.gate(), 0)
-
-    def test_gate_accepts_selected_interop_and_explicitly_skipped_jobs(self):
-        overrides = {}
-        for job in ("TEST", "FDROID", "WEAR", "INSTRUMENTATION"):
-            overrides[job + "_RUN"] = "false"
-            overrides[job + "_RESULT"] = "skipped"
-        self.assertEqual(self.gate(**overrides), 0)
-
-    def test_gate_rejects_failed_or_skipped_selected_jobs(self):
-        for job in ("POLICY", "TEST", "FDROID", "INTEROP", "WEAR", "INSTRUMENTATION"):
-            for result in ("failure", "skipped", "cancelled", ""):
-                with self.subTest(job=job, result=result):
-                    self.assertNotEqual(self.gate(**{job + "_RESULT": result}), 0)
-
-    def test_gate_rejects_detector_failure_missing_flags_and_inconsistent_scope(self):
-        for changes in ({"CHANGES_RESULT": "failure"}, {"CHANGES_RUN": ""},
-                        {"TEST_RUN": ""}, {"TEST_RUN": "unexpected"},
-                        {"CHANGES_RUN": "false", "TEST_RUN": "true"}):
-            self.assertNotEqual(self.gate(**changes), 0)
-
-    def test_gate_accepts_unaffected_pr_only_with_all_jobs_skipped(self):
-        skipped = {"CHANGES_RUN": "false", "POLICY_RESULT": "skipped"}
-        for job in ci.JOBS:
-            skipped[job.upper() + "_RUN"] = "false"
-            skipped[job.upper() + "_RESULT"] = "skipped"
-        self.assertEqual(self.gate(**skipped), 0)
-        self.assertNotEqual(self.gate(**{**skipped, "INTEROP_RESULT": "failure"}), 0)
+    def test_cloud_remains_an_independent_synthetic_gate(self):
+        workflow = yaml.safe_load((ROOT / ".github/workflows/cloud-ci.yml").read_text())
+        job = workflow["jobs"]["validate"]
+        self.assertEqual(job["defaults"]["run"]["working-directory"], "apps/cloud")
+        commands = "\n".join(step.get("run", "") for step in job["steps"])
+        for command in ("npm ci", "npm run check", "npm run verify:production-safety", "npm run test:smoke", "npm audit --audit-level=moderate"):
+            self.assertIn(command, commands)
+        self.assertTrue(all("--dry-run" in line for line in commands.splitlines() if "wrangler deploy" in line))
 
     def test_non_pr_events_always_select_full_qualification(self):
         preamble = ACTION_SHELL.split("python3 - <<'PY'", 1)[0]
@@ -131,29 +101,6 @@ class CIOrchestrationTests(unittest.TestCase):
                 for step in job.get("steps", []):
                     if step.get("uses", "").startswith("android-actions/setup-android@"):
                         self.assertEqual(step.get("with", {}).get("packages"), "platform-tools")
-
-    def test_apple_nightly_runs_one_coverage_enabled_macos_suite(self):
-        jobs = yaml.safe_load((ROOT / ".github/workflows/apple-nightly.yml").read_text())["jobs"]
-        commands = [step.get("run", "") for step in jobs["extended-macos"]["steps"]]
-        self.assertEqual(sum("make coverage" in command for command in commands), 1)
-        self.assertFalse(any("make test-macos" in command for command in commands))
-        self.assertTrue(any("tee build/logs/build-macos.log" in command and "make coverage" in command for command in commands))
-
-    def test_apple_ci_docs_keep_coverage_build_profile(self):
-        jobs = yaml.safe_load((ROOT / ".github/workflows/apple-ci.yml").read_text())["jobs"]
-        self.assertEqual(jobs["test-macos"].get("env", {}).get("MACOS_CODE_COVERAGE"), "YES")
-
-    def test_website_ci_installs_and_builds_docs_once_without_losing_checks(self):
-        jobs = yaml.safe_load((ROOT / ".github/workflows/website-ci.yml").read_text())["jobs"]
-        commands = [step.get("run", "") for step in jobs["validate"]["steps"]]
-        self.assertEqual(sum(command.count("npm --prefix docs-src ci") for command in commands), 1)
-        self.assertEqual(sum(command.count("npm run build:ci") for command in commands), 1)
-        self.assertFalse(any(re.search(r"npm run (?:docs:check|docs:build|build)(?:\\s|$)", command) for command in commands))
-        self.assertTrue(any("npm test" in command for command in commands))
-        self.assertTrue(any("npm run reference:check" in command for command in commands))
-        self.assertTrue(any("npm run visualizations:sync" in command for command in commands))
-        self.assertEqual(commands.count("npm run docs:check-built"), 1)
-        self.assertLess(commands.index("npm run build:ci"), commands.index("npm run docs:check-built"))
 
 
 if __name__ == "__main__":

@@ -47,4 +47,14 @@
     <string name="wear_preview_placeholder">झलक; कोई स्वास्थ्य मान नहीं</string>
     <string name="wear_complication_description">%1$s, %2$s, %3$s</string>
     <string name="wear_complication_long">%1$s %2$s · %3$s</string>
+    <string name="wear_short_activity">गतिविधि</string>
+    <string name="wear_short_recovery">रिकवरी</string>
+    <string name="wear_short_steps">कदम</string>
+    <string name="wear_short_move">ऊर्जा</string>
+    <string name="wear_short_exercise">व्यायाम</string>
+    <string name="wear_short_sleep">नींद</string>
+    <string name="wear_short_resting_hr">आराम</string>
+    <string name="wear_short_average_hr">औसत HR</string>
+    <string name="wear_short_hrv">HRV</string>
+    <string name="wear_short_blood_oxygen">SpO₂</string>
 </resources>

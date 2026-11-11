@@ -127,14 +127,14 @@
       "sha256" : "b9a72e7f9eb09520595467270d1954d373491d1620ee738da2043361a56ab03b"
     },
     {
-      "bytes" : 136182,
+      "bytes" : 134641,
       "path" : "message-fields.md",
-      "sha256" : "3ff0fa79ea502393010686b61289116eb8f0cdeb7d6b3b274beb8ce29aa8a4d8"
+      "sha256" : "73de6e440d09b74496414a5d3dab43707f3b82e330d8fdeed113f11324017d0a"
     },
     {
-      "bytes" : 1772,
+      "bytes" : 1809,
       "path" : "peer-capabilities.json",
-      "sha256" : "2cd6d4023de5d6d1a19202f5670504bb3803e0a792654cdafa601dabfe504438"
+      "sha256" : "f9d50aa621b4e83322035e400b68743187693d80191e7cd84b21989db30202dc"
     },
     {
       "bytes" : 3241,

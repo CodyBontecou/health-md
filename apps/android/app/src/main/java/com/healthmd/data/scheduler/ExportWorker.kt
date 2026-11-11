@@ -44,6 +44,7 @@ import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
+import com.healthmd.domain.repository.forCaptureOperation
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.MainActivity
 import com.healthmd.rawexport.ExportMode
@@ -163,29 +164,7 @@ class ExportWorker @AssistedInject constructor(
     override suspend fun getForegroundInfo(): ForegroundInfo {
         ScheduledExportCancellationCoordinator.prepare(id)
         val notificationID = ScheduledExportCancellationCoordinator.foregroundNotificationID(id)
-        val openAppIntent = Intent(applicationContext, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra(MainActivity.EXTRA_START_ROUTE, NavDestination.SCHEDULE.route)
-        }
-        val contentIntent = PendingIntent.getActivity(
-            applicationContext,
-            notificationID,
-            openAppIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        val notification = NotificationCompat.Builder(applicationContext, HealthMdApplication.EXPORT_CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_menu_save)
-            .setContentTitle(applicationContext.getString(R.string.export_progress_title))
-            .setContentText(applicationContext.getString(R.string.automatic_export_subtitle))
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setContentIntent(contentIntent)
-            .addAction(
-                0,
-                applicationContext.getString(R.string.action_cancel_export),
-                ScheduledExportCancelReceiver.pendingIntent(applicationContext, id),
-            )
-            .setOngoing(true)
-            .build()
+        val notification = ScheduledExportProgressNotification.build(applicationContext, id, notificationID)
         val foregroundServiceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
         } else 0
@@ -349,8 +328,7 @@ class ExportWorker @AssistedInject constructor(
         val historyOperationId = durableFolderOperationId ?: durableApiOperationId ?: admissionOperationId
         entitlementRepository.refresh()
         val isPurchased = distributionPolicy.fullAccessIncluded ||
-            settingsRepository.isPurchased.first() ||
-            entitlementRepository.isUnlocked.first()
+            entitlementRepository.verifyExportAccess(capturedTarget, settings.apiEndpointUrl.takeIf { settings.exportMode == com.healthmd.rawexport.ExportMode.COMPATIBILITY })
         val dates = scheduledDates(
             settings,
             destinationFingerprint,
@@ -449,7 +427,7 @@ class ExportWorker @AssistedInject constructor(
             pendingApiOperationId == null && !canResumeStoredFolder
         ) {
             runCatchingCancellable {
-                healthRepository.hasBackgroundReadPermission()
+                healthRepository.forCaptureOperation(settings).hasBackgroundReadPermission()
             }
         } else {
             kotlin.Result.success(true)
@@ -501,6 +479,7 @@ class ExportWorker @AssistedInject constructor(
         return try {
             val result = try {
                 ScheduledExportCancellationCoordinator.run(id) {
+                    val exportProgress = ScheduledExportProgressNotification.updater(applicationContext, id)
                     if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
                         rawSnapshotExportRunner.exportRange(
                             startDate = dates.first(),
@@ -511,30 +490,34 @@ class ExportWorker @AssistedInject constructor(
                         )
                     } else when (settings.scheduledExportTarget) {
                         ExportTarget.DEVICE_FOLDER -> {
-                            val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
+                            val orchestrator = ExportOrchestrator(healthRepository, exportRepository, rawSnapshotExportRunner)
                             if (durableFolderOperationId != null && capturedSnapshotJson != null) {
                                 orchestrator.exportDatesDurably(
                                     dates = dates,
                                     settings = settings,
                                     durableFolderOperationId = durableFolderOperationId,
                                     durableSettingsSnapshotJson = capturedSnapshotJson,
+                                    onProgress = exportProgress,
                                     requireExistingJournal = pendingFolderOperationId != null ||
                                         (runAttemptCount > 0 && !hasFreshFolderRetry),
                                 )
                             } else {
-                                orchestrator.exportDates(dates, settings)
+                                orchestrator.exportDates(dates, settings, onProgress = exportProgress)
                             }.copy(target = ExportTarget.DEVICE_FOLDER)
                         }
                         ExportTarget.API_ENDPOINT -> apiEndpointExportRunner.exportDates(
                             dates = dates,
                             settings = settings.copy(exportTarget = ExportTarget.API_ENDPOINT),
+                                onProgress = exportProgress,
                             expectedDestinationFingerprint = destinationFingerprint,
                             durableOperationId = durableApiOperationId,
                             durableSettingsSnapshotJson = capturedSnapshotJson,
+                            requireExistingDurableOperation = pendingApiOperationId != null,
                         )
                         ExportTarget.AGENT_DATA_GATEWAY -> agentDataGatewayExportRunner.exportDates(
                             dates = dates,
                             settings = settings.copy(exportTarget = ExportTarget.AGENT_DATA_GATEWAY),
+                            onProgress = exportProgress,
                             expectedDestinationFingerprint = destinationFingerprint,
                         )
                     }
@@ -662,7 +645,7 @@ class ExportWorker @AssistedInject constructor(
                         localizedDate(endDate),
                     )
                 },
-                if (result.isFullSuccess) NavDestination.EXPORT.route else NavDestination.SCHEDULE.route,
+                if (result.isFullSuccess) NavDestination.ARCHIVE.route else NavDestination.SCHEDULE.route,
                 promptRecovery = !result.isFullSuccess,
             )
 
@@ -938,7 +921,7 @@ class ExportWorker @AssistedInject constructor(
             .build()
 
         val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val notificationId = if (route == NavDestination.EXPORT.route) {
+        val notificationId = if (route == NavDestination.ARCHIVE.route) {
             EXPORT_RESULT_NOTIFICATION_ID
         } else {
             SCHEDULE_RESULT_NOTIFICATION_ID

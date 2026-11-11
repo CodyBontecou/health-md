@@ -1,27 +1,54 @@
 package com.healthmd.presentation.navigation
 
+import android.net.Uri
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FileUpload
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Autorenew
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.healthmd.R
+import java.time.LocalDate
 
+/** Top-level destinations: Archive, Automations and Settings. Export now is a global action. */
 enum class NavDestination(
     val route: String,
     val icon: ImageVector,
     @StringRes val label: Int,
 ) {
-    EXPORT("export", Icons.Outlined.FileUpload, R.string.nav_export),
-    SCHEDULE("schedule", Icons.Outlined.Schedule, R.string.nav_schedule),
-    HISTORY("history", Icons.Outlined.History, R.string.nav_history),
+    ARCHIVE("archive", Icons.Outlined.CalendarMonth, R.string.nav_archive),
+
+    // Keeps the "schedule" route so notification and recovery deep links still land here.
+    AUTOMATIONS("schedule", Icons.Outlined.Autorenew, R.string.nav_automations),
     SETTINGS("settings", Icons.Outlined.Settings, R.string.nav_settings),
+    ;
+
+    companion object {
+        /** The schedule controls now live in Automations. */
+        val SCHEDULE: NavDestination get() = AUTOMATIONS
+    }
 }
 
 // Sub-screen routes (not in bottom nav)
 object SubRoutes {
+    /** The full export screen, opened from the global Export now action. */
+    const val EXPORT_NOW = "export"
+    /**
+     * Export now preset to one date, opened by Backfill and the Archive's fixes. A profile id
+     * presets the automation too (iOS `ExportNowRequest(profileID:)`).
+     */
+    const val EXPORT_BACKFILL = "export/backfill/{date}?profileId={profileId}"
+    fun exportBackfill(date: LocalDate, profileId: String? = null): String =
+        "export/backfill/$date" + profileId?.let { "?profileId=${Uri.encode(it)}" }.orEmpty()
+    /**
+     * The day page: the file one automation wrote for an Archive date. The lane (an encoded
+     * [com.healthmd.presentation.archive.ArchiveProfile]) opens that automation's tab.
+     */
+    const val ARCHIVE_DAY = "archive/day/{date}?lane={lane}"
+    fun archiveDay(date: LocalDate, lane: String? = null): String =
+        "archive/day/$date" + lane?.let { "?lane=${Uri.encode(it)}" }.orEmpty()
+    const val HISTORY = "history"
+    const val CLINIC_ACCESS = "clinic-access"
     const val ONBOARDING = "onboarding"
     const val METRIC_SELECTION = "metric_selection"
     const val FORMAT_CUSTOMIZATION = "format_customization"
@@ -33,9 +60,26 @@ object SubRoutes {
     const val DIRECT_CLI = "direct_cli"
     const val SHARED_SETUP = "shared_setup"
     const val EXPORT_PROFILES = "export_profiles"
+    /** The profiles screen opened on one profile's detail. */
+    const val EXPORT_PROFILE = "export_profiles/{profileId}"
+    /** The automation detail hub on compact layouts; wide layouts show it as a pane. */
+    const val AUTOMATION_DETAIL = "automation/{profileId}"
+    fun exportProfile(profileId: String): String = "export_profiles/$profileId"
+    fun automationDetail(profileId: String): String = "automation/$profileId"
+    /** The automation composer: the profile as one editable sentence with a live file preview. */
+    const val AUTOMATION_COMPOSE = "automation/{profileId}/compose"
+    fun automationCompose(profileId: String): String = "automation/$profileId/compose"
     const val DIAGNOSTICS = "diagnostics"
+    /** The app-wide schedule, scheduled target, permissions and history, from Automations. */
+    const val SCHEDULE_SETTINGS = "schedule_settings"
+    const val FOLDER_DESTINATION = "folder_destination"
     const val MYSELF_CLAIM = "myself_claim"
     const val PAYWALL = "paywall"
+    /** Settings pages pushed from the Settings tab, as on iOS. */
+    const val SETTINGS_APP_SUPPORT = "settings/app_support"
+    const val SETTINGS_API_ENDPOINT = "settings/api_endpoint"
+    const val SETTINGS_GATEWAY = "settings/gateway"
+    const val SETTINGS_CONNECTED_APPS = "settings/connected_apps"
 }
 
 enum class PaywallEntryPoint(

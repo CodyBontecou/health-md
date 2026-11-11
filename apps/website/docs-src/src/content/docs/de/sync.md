@@ -19,8 +19,8 @@ description: "Verwenden Sie die macOS-Begleit-App als lokales Ziel. Ihr iPhone e
 <ol>
 <li>Installieren und öffnen Sie die macOS-App.</li>
 <li>Wählen Sie auf dem Mac einen Zielordner, damit Health.md Schreibzugriff erhält.</li>
-<li>Öffnen Sie auf dem iPhone den Tab „Synchronisierung“ und aktivieren Sie die Mac-Verbindung.</li>
-<li>Kehren Sie zum Tab „Export“ zurück, wählen Sie <em>Verbundener Mac</em>, konfigurieren Sie den Export und tippen Sie auf „Export“.</li>
+<li>Öffnen Sie auf dem iPhone <strong>Einstellungen → Mac-Ziel</strong> und aktivieren Sie es.</li>
+<li>Wählen Sie <em>Verbundener Mac</em> als Ziel einer Automation (<strong>Automationen → Automation → Ausgabe</strong>) und verwenden Sie dann <strong>Jetzt exportieren</strong> oder den Zeitplan der Automation.</li>
 </ol>
 
 ## Übertragene Daten

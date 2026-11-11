@@ -178,7 +178,7 @@ docs/                              # Feature docs, QA notes, experiment runbooks
 3. Set your development team and signing settings.
 4. Run the iOS app on a physical iPhone for real HealthKit data.
 5. Grant Health permissions and choose an export folder.
-6. Optional: open the Mac app, choose a destination folder, then select **Connected Mac** from the iPhone Export tab.
+6. Optional: open the Mac app, choose a destination folder, then choose **Connected Mac** as an automation's destination on iPhone (Automations › automation › Output), or in **Automations › All export settings**.
 
 ### Build from CLI
 

@@ -25,7 +25,7 @@ enum HealthMdCoreRegistryAdapter {
               snapshot.publicSchemaVersion == UInt32(HealthMdExportSchema.version),
               snapshot.registryVersion == 1,
               snapshot.profileRevision == 1,
-              AppleExportEnginePin.supportsRegistry(snapshot),
+              snapshot.registrySha256 == HealthMetrics.registrySHA256,
               snapshot.metrics.count == 230 else {
             throw AdapterError.invalidMetadata
         }

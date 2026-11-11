@@ -458,7 +458,9 @@ for (const fragment of [
   ".followRedirects(false)", ".followSslRedirects(false)",
   "response.code != 307 && response.code != 308", "redirectCount < MAX_REDIRECTS",
   "it.scheme == originalUrl.scheme && it.host == originalUrl.host && it.port == originalUrl.port",
-  "if (!it.isSuccessful)", "APIExportUploadResult(it.code, responsePreview(it))",
+  "if (!it.isSuccessful)",
+  "personalAccess && !managedClinicEndpoint && redirectedUrl != null",
+  "APIExportUploadResult(it.code, if (personalAccess && !managedClinicEndpoint) responsePreview(it) else null)",
 ]) requireText(androidApiClient, fragment, "Android compatibility redirect boundary");
 const androidApiClientTest = read(
   "apps/android/app/src/test/java/com/healthmd/export/APIExportClientTest.kt", repository);

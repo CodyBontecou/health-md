@@ -5,13 +5,6 @@ import Foundation
 enum AccessibilityID {
 
     // MARK: - Navigation Tabs
-    enum Tab {
-        static let export = "tab.export"
-        static let schedule = "tab.schedule"
-        static let sync = "tab.sync"
-        static let settings = "tab.settings"
-    }
-
     // MARK: - Export Tab
     enum Export {
         static let contentScroll = "export.content.scroll"
@@ -35,6 +28,8 @@ enum AccessibilityID {
         static let activityBanner = "export.activityBanner"
         static let filenameEditorButton = "export.filenameEditorButton"
         static let outputEditorSaveButton = "export.outputEditorSaveButton"
+        static let sleepDayAttributionPicker = "export.sleepDayAttribution.picker"
+        static let sleepDateGuidance = "export.dateRange.sleepGuidance"
 
         // Large interactive export confirmation (Export tab only).
         // SwiftUI alert titles cannot carry accessibility identifiers; the
@@ -147,7 +142,6 @@ enum AccessibilityID {
 
     // MARK: - Sync
     enum Sync {
-        static let configurationTargetPicker = "sync.configurationTargetPicker"
         static let syncToggle = "sync.syncToggle"
         static let connectionStatus = "sync.connectionStatus"
         static let manualSyncButton = "sync.manualSyncButton"

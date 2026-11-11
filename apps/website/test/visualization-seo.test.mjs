@@ -97,3 +97,87 @@ test('customizer keeps canonical independent of palette/filter while preserving 
     }
   }
 });
+
+test('studio identity survives saved selections, theme rerenders and Back while explicit selections retain chart URLs', async () => {
+  const source = await fs.readFile(path.join(root, 'assets/visualization-customizer.js'), 'utf8');
+  const html = await fs.readFile(path.join(root, 'visualizations/index.html'), 'utf8');
+  const attributes = new Map();
+  const initialTitle = html.match(/<title>(.*?)<\/title>/s)[1];
+  for (const match of html.matchAll(/<meta (name|property)="([^"]+)" content="([^"]*)"/g)) {
+    attributes.set(`meta[${match[1]}="${match[2]}"]:content`, match[3]);
+  }
+  attributes.set('link[rel="canonical"]:href', `${origin}/visualizations/`);
+  const initialAttributes = new Map(attributes);
+  const calls = [];
+  const location = { origin, pathname: '/visualizations/', search: '', hash: '' };
+  function navigate(method, url) {
+    calls.push({ method, url });
+    const next = new URL(url, origin);
+    Object.assign(location, { pathname: next.pathname, search: next.search, hash: next.hash });
+  }
+  const window = { location, HealthMdPluginVisualizations: {
+    colorSchemes: { ocean: {}, forest: {} },
+    renderers: { 'mood-trend': () => {}, 'activity-rings': () => {} }, htmlRenderers: {},
+  }, history: {
+    replaceState: (_state, _title, url) => navigate('replace', url),
+    pushState: (_state, _title, url) => navigate('push', url),
+  } };
+  const document = {
+    title: initialTitle, addEventListener() {},
+    head: { querySelector: (selector) => ({
+      getAttribute: (name) => attributes.get(`${selector}:${name}`),
+      setAttribute: (name, value) => attributes.set(`${selector}:${name}`, value),
+    }) },
+  };
+  const instrumented = source.replace(/\}\)\(\);\s*$/, 'window.testIdentity = { state, readState, captureStudioMetadata, syncPageIdentity, readUrlState, applyUrlState, ensureSelectionInFilter, visualizations }; })();');
+  const localStorage = { getItem: () => JSON.stringify({ visualization: 'mood-trend', dataFilter: 'mental', colorScheme: 'ocean' }) };
+  vm.runInNewContext(instrumented, { window, document, URLSearchParams, localStorage });
+  const api = window.testIdentity;
+  api.captureStudioMetadata();
+  api.readState();
+  const savedChart = api.visualizations.find((item) => item.id === 'mood-trend');
+  assert.equal(api.state.visualization, savedChart.id);
+  assert.equal(api.state.colorScheme, 'ocean');
+  const assertStudio = () => {
+    assert.equal(location.pathname, '/visualizations/');
+    assert.equal(document.title, initialTitle);
+    assert.deepEqual(attributes, initialAttributes);
+  };
+  api.syncPageIdentity(savedChart); // Initial render with a restored nondefault preference.
+  assertStudio();
+  api.syncPageIdentity(savedChart); // Site theme changes rerender without navigation intent.
+  assertStudio();
+  assert.equal(calls.length, 0);
+
+  api.syncPageIdentity(savedChart, { pushUrl: true });
+  assert.equal(calls.at(-1).method, 'push');
+  assert.equal(location.pathname, '/visualizations/mindfulness-mood/mood-trend/ocean-colors/');
+  assert.equal(attributes.get('link[rel="canonical"]:href'), `${origin}/visualizations/mindfulness-mood/mood-trend/theme-colors/`);
+  assert.equal(attributes.get('meta[property="og:url"]:content'), origin + location.pathname);
+
+  Object.assign(location, { pathname: '/visualizations/', search: '', hash: '' });
+  api.applyUrlState(api.readUrlState());
+  api.syncPageIdentity(savedChart, { skipUrl: true }); // popstate/Back to the studio.
+  assertStudio();
+  assert.equal(calls.length, 1);
+
+  location.search = '?viz=activity-rings&colors=forest';
+  api.applyUrlState(api.readUrlState());
+  api.ensureSelectionInFilter();
+  assert.equal(api.state.visualization, 'activity-rings', 'explicit chart query wins over the saved mood category');
+  assert.equal(api.state.dataFilter, 'activity');
+  const explicitChart = api.visualizations.find((item) => item.id === api.state.visualization);
+  api.syncPageIdentity(explicitChart);
+  assert.ok(location.pathname.endsWith('/activity-rings/forest-colors/'));
+  assert.equal(location.search, '');
+  assert.equal(attributes.get('link[rel="canonical"]:href'), `${origin}/visualizations/activity-fitness/activity-rings/theme-colors/`);
+  const explicitTitle = document.title;
+  api.syncPageIdentity(explicitChart);
+  assert.equal(document.title, explicitTitle, 'deep-link theme rerender remains a chart');
+
+  location.search = '?visualization=mood-trend&data=all&colors=ocean';
+  api.applyUrlState(api.readUrlState());
+  api.ensureSelectionInFilter();
+  assert.equal(api.state.visualization, 'mood-trend');
+  assert.equal(api.state.dataFilter, 'all', 'an explicit category filter remains authoritative');
+});

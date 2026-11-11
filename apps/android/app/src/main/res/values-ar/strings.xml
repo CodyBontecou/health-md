@@ -307,19 +307,15 @@
     <!-- Paywall screen -->
     <string name="paywall_title">إلغاء قفل Health.md</string>
     <string name="paywall_subtitle">لقد استخدمت عمليات التصدير المجانية الخمس</string>
-    <string name="paywall_unlimited_exports">عمليات تصدير غير محدودة، إلى الأبد</string>
+    <string name="paywall_unlimited_exports">عمليات تصدير غير محدودة</string>
     <string name="paywall_scheduled_exports">عمليات تصدير تلقائية مجدولة</string>
     <string name="paywall_future_features">جميع الميزات المستقبلية مضمنة</string>
-    <string name="paywall_one_time">دفعة واحدة \u2014 بلا اشتراك</string>
-    <string name="paywall_unlock_button">إلغاء قفل Health.md</string>
     <string name="paywall_restore">استعادة عملية الشراء</string>
 
     <!-- Export progress dialog -->
     <string name="export_progress_title">جارٍ تصدير البيانات الصحية</string>
 
     <!-- Navigation labels -->
-    <string name="nav_export">تصدير</string>
-    <string name="nav_schedule">الجدولة</string>
     <string name="nav_history">السجل</string>
     <string name="nav_settings">الإعدادات</string>
 
@@ -349,6 +345,7 @@
     <string name="date_format_display_iso8601" tools:ignore="TypographyDashes">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">أمريكي قصير (01/13/2026)</string>
     <string name="date_format_display_us_long">أمريكي طويل (يناير 13، 2026)</string>
+    <string name="date_format_display_eu_dot">أوروبي بنقاط (13.01.2026)</string>
     <string name="date_format_display_eu_short">أوروبي قصير (13/01/2026)</string>
     <string name="date_format_display_eu_long">أوروبي طويل (13 يناير 2026)</string>
     <string name="date_format_display_compact">مضغوط (20260113)</string>
@@ -556,7 +553,6 @@
     <string name="debug_requires_history_permission">النطاق يحتاج إلى إذن السجل</string>
     <string name="debug_first_permission_grant">أول منح للإذن</string>
     <string name="section_health_sources">مصادر البيانات الصحية</string>
-    <string name="health_sources_description">Health Connect هو مصدر التصدير المحلي. يستطيع Health.md تصدير البيانات التي تكتبها التطبيقات المدعومة في Health Connect.</string>
     <string name="health_provider_status_installed">تم التثبيت</string>
     <string name="health_provider_status_selected">محدّد</string>
     <string name="health_provider_status_ready_to_connect">جاهز للاتصال</string>
@@ -574,6 +570,21 @@
     <string name="feedback_no_app_available">لا يوجد تطبيق متاح لفتح هذا الرابط</string>
     <string name="granular_data_title">تضمين سلاسل زمنية مفصّلة</string>
     <string name="granular_data_description">أضف عينات مؤرخة زمنيًا، مثل معدل ضربات القلب ومراحل النوم، إلى عمليات تصدير التوافق. وللحصول على نسخة مكتملة عبر API، استخدم لقطة API خام.</string>
+    <string name="detail_overrides_title">التفاصيل حسب الفئة</string>
+    <string name="detail_overrides_description">تجاوز الإعداد الافتراضي لفئات محددة. يحتفظ الملخص بالمجاميع اليومية فقط؛ ولا تتغير الملخصات اليومية أبدًا.</string>
+    <string name="detail_choice_default">افتراضي</string>
+    <string name="detail_choice_summary">ملخص</string>
+    <string name="detail_choice_sessions">الجلسات</string>
+    <string name="detail_choice_detailed">مفصّل</string>
+    <string name="detail_group_sleep_hint">تعرض الجلسات كل جلسة نوم بالتاريخ والوقت الكاملين. ويضيف المفصّل مراحل النوم.</string>
+    <string name="detail_expansion_schema_hint">يضيف الخيار المفصّل للنشاط أو التغذية أو الجسم كل سجل مصدر، ويحوّل تصديرات JSON وCSV وMarkdown التحليلية إلى المخطط 7.</string>
+    <string name="sleep_attribution_title">إسناد نوم اليوم</string>
+    <string name="sleep_attribution_night_begins">تبدأ في الليل</string>
+    <string name="sleep_attribution_morning_ends">تنتهي في الصباح</string>
+    <string name="sleep_attribution_night_begins_description">يستخدم النوم الفترة من الظهر إلى ظهر اليوم التالي في الملاحظة اليومية. هذا هو الخيار الافتراضي ويطابق عمليات التصدير السابقة.</string>
+    <string name="sleep_attribution_morning_ends_description">خيار تنتهي في الصباح غير متاح لملفات التصدير الحالية. اختر تبدأ في الليل لعملية تصدير جديدة.</string>
+    <string name="sleep_attribution_morning_ends_wake_description">تُنسب جلسة النوم بأكملها إلى تاريخ استيقاظك، وفقًا للمنطقة الزمنية للتصدير.</string>
+
     <string name="metric_category_cycling">ركوب الدراجات</string>
     <string name="metric_category_medications">الأدوية</string>
     <string name="metric_category_other">أخرى</string>
@@ -680,17 +691,11 @@
     <string name="scheduled_recovery_result_complete">اكتملت استعادة عمليات التصدير المجدولة.</string>
     <string name="scheduled_recovery_result_blocked">استعادة عمليات التصدير المجدولة غير جاهزة بعد.</string>
     <string name="not_now">ليس الآن</string>
-    <string name="release_notes_title">ما الجديد في %s</string>
-    <string name="release_notes_settings_hint">يمكنك ضبط صيغ التصدير وقالب Markdown المخصص والمقاييس من الإعدادات.</string>
-    <string name="release_notes_open_settings">افتح الإعدادات</string>
-    <string name="release_notes_got_it">حسنًا</string>
     <string name="release_notes_highlight_feedback">تعيد جلسات Direct CLI الاتصال تلقائيًا بعد انقطاعات قصيرة لسطح المكتب، فتكتمل عمليات التصدير بموثوقية.</string>
     <string name="release_notes_highlight_export_parity">تنتظر أوامر نافذة الاستيقاظ من سطح المكتب حتى 120 ثانية لتفتح التطبيق وتتصل، دون أي إشعارات فورية.</string>
     <string name="release_notes_highlight_templates">لا يزال الربط اليدوي عبر العنوان والمنفذ والرمز المكوّن من 20 رقمًا يعمل، بما في ذلك مع إصدارات CLI الأقدم.</string>
     <string name="release_notes_highlight_workouts">يتضمن إصلاحات للموثوقية والتوافق في الإعداد والتصدير والجداول والاتصالات.</string>
     <string name="export_notification_background_permission_required">تحتاج عمليات التصدير المجدولة إلى وصول Health Connect في الخلفية. افتح قسم «الجدولة» في Health.md لتفعيله.</string>
-    <string name="paywall_unlock_button_price">إلغاء القفل مقابل %s</string>
-    <string name="paywall_purchasing">جارٍ إتمام الشراء\u2026</string>
     <string name="paywall_restoring">جارٍ الاستعادة\u2026</string>
     <string name="debug_purchase_title">عناصر تحكم تصحيح الأخطاء</string>
     <string name="debug_current_state">الحالة الحالية: %s</string>
@@ -743,7 +748,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">يُستخدم فقط لعمليات التصدير اليدوية الكبيرة، مثل 90 يومًا أو كل المدة، كي يتمكن Health.md من قراءة بيانات Health Connect الأقدم من النافذة القياسية البالغة 30 يومًا</string>
     <string name="privacy_policy_direct_cli">لا تحدث عمليات تصدير Direct CLI إلا بعد أن تقرن جهازك بالكمبيوتر وتتصل به صراحةً. تُرسل السجلات الصحية عبر اتصال مشفّر ومصادق عليه، وتُحفظ بصورة خاصة لإتاحة استئناف النقل لمدة لا تتجاوز سبعة أيام، وتُحذف قبل ذلك إذا ألغيت العملية أو نسيت الاقتران.</string>
-    <string name="privacy_policy_footer">لا يشغّل Health.md سحابة للبيانات الصحية. قد ترسل إحالة الحملات معرّفات UUID عشوائية ينشئها التطبيق للتثبيتات أو الأحداث وبيانات وصفية للحملة تم التحقق منها. ولا ترسل أبدًا بيانات صحية أو بيانات إحالة خام أو معرّفات أجهزة أو عمليات تصدير أو حسابات أو مسارات.</string>
+    <string name="privacy_policy_footer">لا يجمع هذا الإصدار تحليلات استخدام مخصصة أو بيانات إسناد الإعلانات. للمشتريات والجدولة والخدمات الاختيارية إفصاحات خصوصية منفصلة.</string>
     <string name="section_export_type">نوع التصدير</string>
     <string name="export_type_compatibility">تصدير التوافق</string>
     <string name="export_type_compatibility_description">ملفات Markdown أو Obsidian Bases أو JSON أو CSV يومية لمسارات عمل Health.md الحالية</string>
@@ -817,7 +822,7 @@
     <string name="onboarding_skip">تخطي</string>
     <string name="onboarding_back">العودة</string>
     <string name="export_failure_paywall_label">يلزم إلغاء القفل</string>
-    <string name="export_guidance_paywall">تتطلب عمليات التصدير المجدولة إلغاء القفل الدائم. افتح شاشة الترقية لإتاحة عمليات التصدير غير المحدودة والجدولة.</string>
+    <string name="export_guidance_paywall">تتطلب عمليات التصدير المجدولة تجربة أو اشتراكًا نشطًا أو وصولًا مدى الحياة. افتح شاشة الشراء لعرض خيارات الوصول.</string>
     <string name="export_source_retry">أعد المحاولة</string>
     <string name="export_source_shortcut">الاختصار</string>
     <string name="export_source_remote">عن بُعد</string>
@@ -1196,6 +1201,8 @@
     <string name="export_preview_api_preparation_failed">فشل إعداد تصدير API.</string>
     <string name="export_preview_artifacts_per_range">الملفات الناتجة لكل نطاق</string>
     <string name="export_preview_back_description">العودة إلى معاينة التصدير</string>
+    <string name="export_preview_wrap_lines">التفاف الأسطر</string>
+    <string name="export_preview_format_text">تنسيق النص</string>
     <string name="export_preview_destination_label">الوجهة</string>
     <string name="export_preview_empty_file">(ملف فارغ)</string>
     <string name="export_preview_formats_per_day">الصيغ لكل يوم</string>
@@ -1643,4 +1650,51 @@
     <string name="post_export_upgrade_action">عرض الوصول مدى الحياة</string>
     <string name="post_export_manual_action">متابعة التصدير اليدوي</string>
     <string name="post_export_continue_free">المتابعة مجانًا</string>
+    <string name="export_sleep_date_guidance">يشمل النوم الفترة من ظهر كل تاريخ محدد حتى ظهر اليوم التالي. لنوم الليلة الماضية، اختر أمس.</string>
+    <string name="export_sleep_preview_window">نافذة النوم: من ظهر %1$s إلى ظهر %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance">إذا كانت بيانات النوم مفقودة، جرّب التاريخ السابق. قد يظهر نوم الصباح في ملخص ذلك التاريخ حتى لو كانت السجلات الخام مؤرخة اليوم. تُعرض أخطاء الاستعلام بشكل منفصل؛ وقد تعني النتيجة الفارغة أيضًا عدم توفر إذن القراءة.</string>
+    <string name="export_sleep_date_guidance_morning_ends">تُنسب جلسات النوم كاملةً إلى التاريخ الذي تنتهي فيه حسب المنطقة الزمنية للتصدير. لنوم الليلة الماضية، اختر اليوم.</string>
+    <string name="export_sleep_preview_window_morning_ends">تواريخ انتهاء النوم: من %1$s إلى %2$s (%3$s).</string>
+    <string name="export_sleep_preview_guidance_morning_ends">تُنسب جلسات النوم كاملةً إلى تاريخ انتهائها حسب المنطقة الزمنية لهذا التصدير، دون اقتطاع عند الظهر. تُعرض أخطاء الاستعلام بشكل منفصل؛ وقد تعني النتيجة الفارغة أيضًا عدم توفر إذن القراءة.</string>
+    <string name="whoop_connection_description">اربط WHOOP لتصدير التعافي والإجهاد والنوم والتمارين وقياسات الجسم. يتم تسجيل الدخول عبر متصفحك؛ ويخزن Health.md الرموز مشفرة على هذا الجهاز. يؤدي قطع الاتصال إلى إزالة الاتصال المحفوظ على هذا الجهاز.</string>
+    <string name="whoop_connect">ربط WHOOP</string>
+    <string name="whoop_sources_description">اربط WHOOP للتصدير مباشرة من مزود البيانات، أو واصل استخدام Health Connect للسجلات المحلية.</string>
+    <string name="whoop_sign_in_failed">تعذر بدء تسجيل الدخول إلى WHOOP. تحقق من اتصالك وحاول مجددًا.</string>
+    <string name="whoop_use_health_connect">استخدام Health Connect للتصدير</string>
+    <string name="whoop_reconnect">إعادة ربط WHOOP</string>
+    <string name="whoop_disconnect">قطع اتصال WHOOP</string>
+    <string name="whoop_use_for_exports">استخدام WHOOP للتصدير</string>
+    <string name="paywall_access_subtitle">اختر اشتراكًا أو وصولًا مدى الحياة لبدء أرشيفك الصحي الخاص. تتضمن الاشتراكات المؤهلة تجربة مجانية لمدة 7 أيام.</string>
+    <string name="paywall_plan_choices">وصول أسبوعي أو سنوي أو مدى الحياة</string>
+    <string name="paywall_weekly_price">%1$s / أسبوع</string>
+    <string name="paywall_yearly_price">%1$s / سنة</string>
+    <string name="paywall_lifetime_price">مدى الحياة — %1$s مرة واحدة</string>
+    <string name="paywall_trial_then">7 أيام مجانًا، ثم %1$s</string>
+    <string name="paywall_retry">حاول مجددًا</string>
+    <string name="paywall_manage_subscriptions">إدارة الاشتراكات</string>
+    <string name="paywall_terms">الشروط</string>
+    <string name="paywall_privacy">الخصوصية</string>
+    <string name="paywall_subscription_disclosure">تتضمن الاشتراكات المؤهلة تجربة مجانية لمدة 7 أيام، ثم تتجدد تلقائيًا بالسعر المعروض ما لم تُلغَ قبل انتهاء التجربة أو الفترة الحالية. يمكنك الإدارة أو الإلغاء في Google Play. يُحصّل ثمن الوصول مدى الحياة فورًا كعملية شراء لمرة واحدة. يظل الوصول المدفوع الحالي محفوظًا. العمر ليس لديه محاكمة. لا يؤدي حذف التطبيق أو شراء مدى الحياة إلى إلغاء الاشتراك الحالي.</string>
+    <plurals name="widget_archive_gaps">
+        <item quantity="zero">%1$s فجوات</item>
+        <item quantity="one">فجوة واحدة (%1$s)</item>
+        <item quantity="two">فجوتان (%1$s)</item>
+        <item quantity="few">%1$s فجوات</item>
+        <item quantity="many">%1$s فجوة</item>
+        <item quantity="other">%1$s فجوة</item>
+    </plurals>
+    <plurals name="widget_archive_days_in_month">
+        <item quantity="zero">يوم في %1$s</item>
+        <item quantity="one">يوم في %1$s</item>
+        <item quantity="two">يومان في %1$s</item>
+        <item quantity="few">أيام في %1$s</item>
+        <item quantity="many">يومًا في %1$s</item>
+        <item quantity="other">يوم في %1$s</item>
+    </plurals>
+
+    <string name="clinic_sync_channel_name">طلبات المزامنة من العيادة</string>
+    <string name="clinic_sync_request_body">تطلب عيادتك أحدث بياناتك الصحية. اضغط لإرسالها.</string>
+    <string name="clinic_sync_result_sent">تم إرسال أحدث بياناتك إلى عيادتك.</string>
+    <string name="clinic_sync_result_failed">تعذر إرسال بياناتك إلى العيادة. افتح Health.md وحاول مرة أخرى.</string>
+    <string name="clinic_sync_result_profile_missing">افتح وصول العيادة في Health.md واختر استخدام وجهة العيادة أولاً.</string>
 </resources>

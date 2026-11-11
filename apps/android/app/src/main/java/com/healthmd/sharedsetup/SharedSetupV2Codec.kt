@@ -480,7 +480,7 @@ class SharedSetupV2Codec(
         private val FORMATS = setOf("csv", "json", "markdown", "obsidian_bases")
         private val WRITE_MODES = setOf("overwrite", "append", "update")
         private val COMPATIBILITY_DETAILS = setOf("summary", "selected_time_series")
-        private val DATE_FORMATS = setOf("iso8601", "us_short", "us_long", "eu_short", "eu_long", "compact", "friendly")
+        private val DATE_FORMATS = setOf("iso8601", "us_short", "us_long", "eu_short", "eu_dot", "eu_long", "compact", "friendly")
         private val TIME_FORMATS = setOf("hour_24", "hour_24_seconds", "hour_12", "hour_12_seconds")
         private val UNITS = setOf("metric", "imperial")
         private val KEY_STYLES = setOf("snake_case", "camel_case")

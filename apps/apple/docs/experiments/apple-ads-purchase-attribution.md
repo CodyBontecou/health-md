@@ -1,5 +1,7 @@
 # Apple Ads purchase attribution
 
+> Candidate removal — unpublished: app analytics and attribution collectors, queues and identifiers are removed. Legacy /v1/events and /v1/installs uploads are discarded by the candidate server code without reading or storing their bodies. Website redirects/counters remain a separate surface. No deployment or deletion of historical data has occurred. The details below document the earlier implementation, not current candidate behavior.
+
 Outcome: measure which acquisition campaigns produce purchasing installations,
 without linking advertising to health data or sending purchases to advertisers.
 

@@ -14,6 +14,7 @@ enum DateFormatPreference: String, CaseIterable, Codable {
     case iso8601 = "yyyy-MM-dd"           // 2026-01-13
     case usShort = "MM/dd/yyyy"           // 01/13/2026
     case usLong = "MMMM d, yyyy"          // January 13, 2026
+    case euDot = "dd.MM.yyyy"             // 13.01.2026
     case euShort = "dd/MM/yyyy"           // 13/01/2026
     case euLong = "d MMMM yyyy"           // 13 January 2026
     case compact = "yyyyMMdd"             // 20260113
@@ -24,6 +25,7 @@ enum DateFormatPreference: String, CaseIterable, Codable {
         case .iso8601: return String(localized: "ISO 8601 (2026-01-13)", comment: "Date format option")
         case .usShort: return String(localized: "US Short (01/13/2026)", comment: "Date format option")
         case .usLong: return String(localized: "US Long (January 13, 2026)", comment: "Date format option")
+        case .euDot: return String(localized: "EU Dot (13.01.2026)", comment: "Date format option")
         case .euShort: return String(localized: "EU Short (13/01/2026)", comment: "Date format option")
         case .euLong: return String(localized: "EU Long (13 January 2026)", comment: "Date format option")
         case .compact: return String(localized: "Compact (20260113)", comment: "Date format option")

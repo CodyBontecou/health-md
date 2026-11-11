@@ -167,8 +167,9 @@ class CloudProviderFixtureMappingTest {
         listOf("activity/sleep", "activity/workout", "recovery").forEach { endpoint ->
             val request = server.takeRequest()
             assertThat(request.requestUrl!!.encodedPath).isEqualTo("/developer/v2/$endpoint")
-            assertThat(request.requestUrl!!.queryParameter("start")).isEqualTo("2026-06-02T00:00:00Z")
-            assertThat(request.requestUrl!!.queryParameter("end")).isEqualTo("2026-06-03T00:00:00Z")
+            val hour = if (endpoint == "activity/sleep") "12" else "00"
+            assertThat(request.requestUrl!!.queryParameter("start")).isEqualTo("2026-06-02T${hour}:00:00Z")
+            assertThat(request.requestUrl!!.queryParameter("end")).isEqualTo("2026-06-03T${hour}:00:00Z")
             assertThat(request.requestUrl!!.queryParameter("limit")).isEqualTo("25")
             assertThat(request.requestUrl!!.queryParameter("cycleId")).isNull()
         }
