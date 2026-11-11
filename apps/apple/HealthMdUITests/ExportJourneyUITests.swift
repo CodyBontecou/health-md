@@ -262,8 +262,16 @@ final class ExportJourneyUITests: XCTestCase {
             return
         }
         openFolder.tap()
+        // The captured remote Open element can retain its old AX identity after
+        // Files dismisses. Resolve fresh queries on each sample and require the
+        // app's export action to be reachable before continuing the journey.
         let pickerDismissed = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "exists == false"), object: openFolder
+            predicate: NSPredicate { _, _ in
+                !app.collectionViews["File View"].exists
+                    && !app.buttons["DOCPicker.actionButton"].exists
+                    && app.buttons[UITestLaunchHelper.Export.exportButton].isHittable
+            },
+            object: nil
         )
         let dismissal = XCTWaiter.wait(for: [pickerDismissed], timeout: 10)
         if dismissal != .completed {

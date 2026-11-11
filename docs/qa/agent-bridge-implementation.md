@@ -7,6 +7,45 @@ Acceptance is the [roadmap](../architecture/agent-bridge-parity-roadmap.md) and 
 
 The active PR-readiness task authorizes source edits, scoped verification and normal pushes to the existing feature branches. Feature merges, releases/deployments, real health reads, native credential provisioning, user settings/schedule mutations, device notifications and physical-device actions retain their separate authorization gates. Dependency repairs #215/#216/#217 were explicitly approved and merged. B19/B20 remain approval-blocked. Missing evidence is not a pass. Unit tests cannot qualify a physical matrix.
 
+## Published-head CI diagnosis (2026-11-10)
+
+At published source `5a1a46ede37d53f0cc599ddc284c7dd2f400eae3`,
+[Apple CI 40615080138](https://github.com/CodyBontecou/health-md/actions/runs/40615080138)
+passed macOS and iOS units, Connectivity and UI shards 0/1/3. Shard 2 failed
+`testSuccessfulExport_folderBrowserRendersOnFirstPresentationAndReopens` at the
+10-second picker-dismissal assertion. Its retained activity tree sampled the captured
+`DOCPicker.actionButton` as existing after Open; the subsequent attached hierarchy
+shows the app export screen, and the attached fresh Open query has no matches.
+The test now resolves fresh picker queries per sample and requires the app export
+action to be hittable. The original deadline, real Files setup, first-presentation
+filename assertion and reopen assertion remain. Swift parsing and all 20 SDK-free UI
+artifact-policy tests pass; fresh SDK27 shard execution is still required. This is a
+test synchronization repair, not verified runtime resolution of the hosted failure.
+
+[Android CI 40615080090](https://github.com/CodyBontecou/health-md/actions/runs/40615080090)
+still reached its 60-minute job limits: Debug completed the test command in 52m10s
+then was cancelled during lint; Release was cancelled during its test command. The
+aggregate gates correctly failed. E2E JVM, Rust/Kotlin interop and all six device
+shards passed. The seven-day JVM artifacts are no longer available; the retained
+job logs do not isolate a new source defect. No timeout, coverage or authority fence
+was relaxed. Three host CI-runner regressions pass; both JVM lanes remain unresolved.
+
+Host checks pass with Rust 1.88: all 100 bridge fake-peer tests, 23 host
+planning tests, three retained-prefix tests and formatting. Contract validation and
+all 33 bridge-contract tests pass. An initial broader host run encountered sandbox
+TCP-bind denials (138 passed, 92 failed, one ignored); an isolated bind-denial repro
+preceded the successful loopback-permitted bridge run. No production authority,
+approved binding, transfer/recovery, public contract, fixture or rollout source changed.
+Local evidence and portable verification receipts are retained under ignored
+`.pi/pr189-readiness/` and `.pi/verification/pr189-readiness/` in the isolated checkout.
+
+The PR remains draft. Installed provisioning/orchestration, recipes/scheduling,
+remaining output products, Windows private authority, killed production-producer
+recovery and full CLI/MCP × Apple/Android physical journeys remain acceptance gates.
+B19/B20 remain separately approval-blocked and extension-4 advertisement stays closed.
+This increment imports no unpublished parent #188 work. No native build, device QA,
+push, deployment or release was performed.
+
 ## Native issuer bootstrap increment (2026-10-20)
 
 The current PR acceptance work adds explicit local-native bootstrap APIs on Apple and Android.
