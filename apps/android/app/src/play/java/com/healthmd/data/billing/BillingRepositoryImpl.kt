@@ -395,6 +395,12 @@ class BillingRepositoryImpl(
                 _purchaseError.value = errorForResponse(queryResult.responseCode, BillingError.PRODUCT_UNAVAILABLE)
                 return@withPurchaseLaunchAdmission false
             }
+            // Ownership can change while Play's product query is suspended.
+            if (activeSubscriptionToken != oldToken ||
+                YearlySwitchEligibility.eligible(_subscriptionStatus.value, _yearlySwitchOffer.value) == null
+            ) {
+                return@withPurchaseLaunchAdmission false
+            }
             if (_yearlySwitchOffer.value != displayed) {
                 // The terms changed under the card: show the new ones and require another tap.
                 _purchaseError.value = BillingError.SERVICE_UNAVAILABLE

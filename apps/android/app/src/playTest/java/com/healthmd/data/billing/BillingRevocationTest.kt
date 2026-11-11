@@ -1,5 +1,6 @@
 package com.healthmd.data.billing
 
+import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageInfo
@@ -7,7 +8,10 @@ import android.content.pm.PackageManager
 import androidx.test.core.app.ApplicationProvider
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
+import com.android.billingclient.api.ProductDetails
+import com.android.billingclient.api.ProductDetailsResponseListener
 import com.android.billingclient.api.Purchase
+import com.android.billingclient.api.QueryProductDetailsResult
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.PurchasesResponseListener
 import com.google.common.truth.Truth.assertThat
@@ -20,8 +24,10 @@ import com.healthmd.export.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.runCurrent
@@ -214,10 +220,74 @@ class BillingRevocationTest {
         assertThat(fixture.repository.subscriptionStatus.value).isEqualTo(SubscriptionStatus.Unknown)
     }
 
+    @Test fun yearlySwitchDoesNotLaunchAfterWeeklyOwnershipChangesDuringCatalogRead() = runTest {
+        val fixture = fixture(backgroundScope, cached = false, purchases = listOf(purchase(PurchasePlan.WEEKLY)))
+        fun phase(price: Long, mode: Int, cycles: Int, formatted: String) = mockk<ProductDetails.PricingPhase> {
+            every { billingPeriod } returns "P1Y"
+            every { priceAmountMicros } returns price
+            every { priceCurrencyCode } returns "USD"
+            every { recurrenceMode } returns mode
+            every { billingCycleCount } returns cycles
+            every { formattedPrice } returns formatted
+        }
+        val introductory = phase(19_990_000, ProductDetails.RecurrenceMode.FINITE_RECURRING, 1, "USD 19.99")
+        val recurring = phase(29_990_000, ProductDetails.RecurrenceMode.INFINITE_RECURRING, 0, "USD 29.99")
+        val offer = mockk<ProductDetails.SubscriptionOfferDetails> {
+            every { basePlanId } returns YearlySwitchOfferIds.BASE_PLAN_ID
+            every { offerId } returns YearlySwitchOfferIds.OFFER_ID
+            every { offerTags } returns listOf(YearlySwitchOfferIds.TAG)
+            every { offerToken } returns "switch-token"
+            every { pricingPhases } returns mockk {
+                every { pricingPhaseList } returns listOf(introductory, recurring)
+            }
+        }
+        val details = mockk<ProductDetails>(relaxed = true) {
+            every { productId } returns PurchasePlan.YEARLY.productId
+            every { productType } returns BillingClient.ProductType.SUBS
+            every { oneTimePurchaseOfferDetails } returns null
+            every { subscriptionOfferDetails } returns listOf(offer)
+        }
+        val ok = result(BillingClient.BillingResponseCode.OK)
+        every { fixture.client.launchBillingFlow(any(), any()) } returns ok
+        val catalog = QueryProductDetailsResult.create(listOf(details), emptyList())
+        var holdNextCatalogRead = false
+        var pendingCatalog: ProductDetailsResponseListener? = null
+        every { fixture.client.queryProductDetailsAsync(any(), any<ProductDetailsResponseListener>()) } answers {
+            val listener = secondArg<ProductDetailsResponseListener>()
+            if (holdNextCatalogRead) {
+                holdNextCatalogRead = false
+                pendingCatalog = listener
+            } else {
+                listener.onProductDetailsResponse(ok, catalog)
+            }
+        }
+
+        fixture.repository.refresh()
+        runCurrent()
+        assertThat(fixture.repository.yearlySwitchOffer.value).isNotNull()
+        assertThat(fixture.repository.subscriptionStatus.value)
+            .isEqualTo(SubscriptionStatus.Subscribed(PurchasePlan.WEEKLY, isAutoRenewing = true))
+
+        holdNextCatalogRead = true
+        val launch = async { fixture.repository.launchYearlySwitch(mockk<Activity>(relaxed = true)) }
+        runCurrent()
+        val listener = checkNotNull(pendingCatalog)
+        every { fixture.client.queryPurchasesAsync(any(), any<PurchasesResponseListener>()) } answers {
+            secondArg<PurchasesResponseListener>().onQueryPurchasesResponse(ok, emptyList())
+        }
+        assertThat(fixture.repository.restorePurchase()).isFalse()
+        assertThat(fixture.repository.subscriptionStatus.value).isEqualTo(SubscriptionStatus.Ended(PurchasePlan.WEEKLY))
+        listener.onProductDetailsResponse(ok, catalog)
+
+        assertThat(launch.await()).isFalse()
+        verify(exactly = 0) { fixture.client.launchBillingFlow(any(), any()) }
+    }
+
     private data class Fixture(
         val repository: BillingRepositoryImpl,
         val prefs: SharedPreferences,
         val purchased: MutableStateFlow<Boolean>,
+        val client: BillingClient,
     )
 
     private fun result(code: Int) = BillingResult.newBuilder().setResponseCode(code).build()
@@ -267,7 +337,7 @@ class BillingRevocationTest {
         every { client.queryPurchasesAsync(any(), any<PurchasesResponseListener>()) } answers {
             secondArg<PurchasesResponseListener>().onQueryPurchasesResponse(result(responseCode), purchases)
         }
-        return Fixture(BillingRepositoryImpl(context, settings, client, scope, verifier, now), prefs, purchased)
+        return Fixture(BillingRepositoryImpl(context, settings, client, scope, verifier, now), prefs, purchased, client)
     }
 
     private companion object {
