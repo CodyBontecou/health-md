@@ -192,14 +192,10 @@ export function createProfileSqlCandidate(ports?: SyntheticProfileSqlPorts): Pro
   }
   async function commit(owner: string, s: Snapshot, partition: Partition, changes: ProfileSqlStatement[], principal: ConfigPrincipal): Promise<void> {
     authorized(s, principal, MUTATE, false);
-    const family = s.auth.families[principal.sessionId];
-    requireValue(family, "unavailable");
-    // Conservatively use the earliest access expiry in this current generation.
-    // SQL checks database time too: an authorization snapshot cannot outlive its
-    // grant while waiting for the batch/connection. Fixture clocks use real time.
-    const access = Object.values(s.auth.access).filter(a => a.sessionId === principal.sessionId && a.generation === principal.sessionGeneration);
-    const validUntil = Math.min(family.absoluteExpiresAt, family.idleExpiresAt, ...access.map(a => a.expiresAt));
-    requireValue(access.length > 0 && Number.isSafeInteger(validUntil), "unavailable");
+    // Only AS02 can resolve the actual authorizing access row. A refreshed
+    // family's current generation does not identify an older valid access token.
+    const validUntil = p.authority.configAccessDeadlineAtCommit(s.auth, principal, "POST", MUTATE);
+    requireValue(Number.isSafeInteger(validUntil), "unavailable");
     // The CHECK failure aborts the ENTIRE D1 batch. A zero-row UPDATE is never success.
     // The auth body was checked above. Its version cannot change between that check
     // and linearization; disable/revoke/refresh advance it in the same DB transaction.

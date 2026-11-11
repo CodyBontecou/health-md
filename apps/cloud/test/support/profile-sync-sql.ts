@@ -85,10 +85,10 @@ export class HostProfileSql implements ProfileSqlPort, AuthStore {
     } catch (error) { if (!committed) this.db.exec("ROLLBACK"); throw error; }
   }
 }
-export async function sqlHarness(path: string, fresh = true) {
+export async function sqlHarness(path: string, fresh = true, clock: () => number = () => Math.floor(Date.now() / 1000)) {
   const store = new HostProfileSql(path); if (fresh) store.initialize();
   const rateKey = await crypto.subtle.importKey("raw", new Uint8Array(32).fill(91), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const authority = new SyntheticNativeAuthority({ registration, store, clock: () => Math.floor(Date.now() / 1000),
+  const authority = new SyntheticNativeAuthority({ registration, store, clock,
     rateKey: (purpose, label) => purposeRateKey(rateKey, purpose, label) });
   // Public AS02 browser decision + S256 exchange, TWO distinct fixture browser owners.
   async function issue(accountId: typeof owners[number]): Promise<NativeSessionResponse> {

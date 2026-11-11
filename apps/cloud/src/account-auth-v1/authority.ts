@@ -285,6 +285,16 @@ export class SyntheticNativeAuthority {
       throw new AuthError("unauthorized");
     }
   }
+  /** SQL fence deadline for the EXACT access token that issued this opaque
+   * principal. Family generation is current and may differ from access generation.
+   * Revalidate all authority/scopes against the same supplied fresh snapshot. */
+  configAccessDeadlineAtCommit(s: Readonly<AuthState>, principal: ConfigPrincipal, method: string, exactPath: string): number {
+    this.assertConfigAtCommit(s, principal, method, exactPath);
+    const digest = this.issuedPrincipals.get(principal)!;
+    const access = s.access[digest]!;
+    const family = s.families[principal.sessionId]!;
+    return Math.min(access.expiresAt, family.absoluteExpiresAt, family.idleExpiresAt);
+  }
   private inventory(f: Family, current: boolean): SessionInventory {
     return { session_id: f.binding.sessionId, client_id: f.binding.clientId,
       platform: client(this.registration, f.binding.clientId).platform, created_at: f.createdAt,

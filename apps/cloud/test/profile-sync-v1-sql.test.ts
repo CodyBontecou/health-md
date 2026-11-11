@@ -10,9 +10,9 @@ const literal = corpus.cases.find(c => c.id === "valid-publish")!.raw!;
 const publish = JSON.parse(literal) as Record<string, unknown>;
 const roots: string[] = [], stores: HostProfileSql[] = [];
 afterEach(() => { for (const store of stores.splice(0)) store.db.close(); for (const root of roots.splice(0)) rmSync(root, { recursive: true }); });
-async function harness() {
+async function harness(clock?: () => number) {
   const root = mkdtempSync(join(tmpdir(), "healthmd-as06-synthetic-")); roots.push(root);
-  const h = await sqlHarness(join(root, "fixture.sqlite")); stores.push(h.store);
+  const h = await sqlHarness(join(root, "fixture.sqlite"), true, clock); stores.push(h.store);
   const a = await h.issue(owners[0]), b = await h.issue(owners[1]);
   const ra = h.request(a), rb = h.request(b);
   return { ...h, a, b, ra, rb, path: join(root, "fixture.sqlite") };
@@ -254,6 +254,56 @@ describe("inactive AS06 actual-profile SQL transactions", () => {
     } else h.store.db.prepare(`UPDATE ${table} SET body=? WHERE rowid=?`).run(JSON.stringify(body), row.rowid);
     expect(await h.service.mutate(h.ra, original())).not.toHaveProperty("ok");
     expect(await h.service.read(h.request(h.a, "/api/profile-sync/v1/read"), revision(first))).not.toHaveProperty("ok");
+  });
+  it.each(["mutate", "optIn", "withdraw", "select"] as const)("exact old-token expiry fences delayed SQL %s after refresh with zero effects", async operation => {
+    const base = Math.floor(Date.now() / 1000); let now = base;
+    const h = await harness(() => now);
+    h.store.db.function("unixepoch", () => now);
+    now = base + 290;
+    const refreshed = await h.authority.token(encode({ grant_type: "refresh_token", client_id: h.a.client_id,
+      installation_id: h.a.installation_id, refresh_token: h.a.refresh_token }));
+    expect(refreshed.session_generation).toBe(1);
+    now = base + 299;
+    // Old-generation access is deliberately still accepted after refresh.
+    expect(await h.service.optIn(h.ra)).toEqual({ ok: true });
+    expect(await h.service.select(h.ra, original())).toEqual({ ok: true });
+    const tables = ["ps_authority", "ps_partition", "ps_head", "ps_revision", "ps_event", "ps_receipt", "ps_nonce", "ps_guard"];
+    const snapshot = () => tables.map(table => h.store.db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all());
+    const before = snapshot();
+    h.store.beforeBatch = () => { now = base + 301; }; // genuine token deadline crossed at SQL, not at JS validation
+    const result = operation === "select" ? await h.service.select(h.ra, original()) : operation === "mutate" ?
+      await h.service.mutate(h.ra, original()) : await h.service[operation](h.ra);
+    expect(result).not.toHaveProperty("ok");
+    expect(snapshot()).toEqual(before); // includes consent/selection, accounting and ALL profile artifacts
+    const current = await h.authority.authorizeConfig(refreshed.access_token, "POST", "/api/profile-sync/v1/mutate");
+    const auth = await h.store.read(state => state);
+    expect(h.authority.configAccessDeadlineAtCommit(auth, current, "POST", "/api/profile-sync/v1/mutate")).toBe(base + 590);
+    // The expired historical token must not poison current-token writes.
+    expect(await h.service.optIn(h.request(refreshed))).toEqual({ ok: true });
+  });
+  it("exact deadline requires the issuing authority's opaque principal and current authorization", async () => {
+    const base = Math.floor(Date.now() / 1000); let now = base;
+    const h = await harness(() => now), path = "/api/profile-sync/v1/mutate";
+    now = base + 290;
+    const refreshed = await h.authority.token(encode({ grant_type: "refresh_token", client_id: h.a.client_id,
+      installation_id: h.a.installation_id, refresh_token: h.a.refresh_token }));
+    now = base + 299;
+    const old = await h.authority.authorizeConfig(h.a.access_token, "POST", path);
+    const current = await h.authority.authorizeConfig(refreshed.access_token, "POST", path);
+    const auth = await h.store.read(state => state);
+    expect(old.sessionGeneration).toBe(1);
+    expect(h.authority.configAccessDeadlineAtCommit(auth, old, "POST", path)).toBe(base + 300);
+    expect(h.authority.configAccessDeadlineAtCommit(auth, current, "POST", path)).toBe(base + 590);
+    expect(() => h.authority.configAccessDeadlineAtCommit(auth, { ...old }, "POST", path)).toThrow();
+    expect(() => h.authority.configAccessDeadlineAtCommit(auth, old, "POST", "/api/v1/exports")).toThrow();
+    const peer = await sqlHarness(h.path, false, () => now); stores.push(peer.store);
+    expect(() => peer.authority.configAccessDeadlineAtCommit(auth, old, "POST", path)).toThrow();
+    now = base + 301;
+    expect(() => h.authority.configAccessDeadlineAtCommit(auth, old, "POST", path)).toThrow();
+    expect(h.authority.configAccessDeadlineAtCommit(auth, current, "POST", path)).toBe(base + 590);
+    await h.authority.revoke({ kind: "access", token: refreshed.access_token });
+    const revoked = await h.store.read(state => state);
+    expect(() => h.authority.configAccessDeadlineAtCommit(revoked, current, "POST", path)).toThrow();
   });
   it("SQL database-time fence rejects a grant expiring while waiting for execution", async () => {
     const h = await harness(); await h.service.optIn(h.ra); await h.service.select(h.ra, original());
