@@ -8,6 +8,7 @@ import com.healthmd.data.clinicianreport.DefaultClinicianReportDataSource
 import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.data.health.HealthDataMerger
 import com.healthmd.data.health.providers.cloud.CloudHealthApiClient
+import com.healthmd.data.health.providers.cloud.CloudHealthRawResponse
 import com.healthmd.di.HealthDistributionModule
 import com.healthmd.di.HealthModule
 import com.healthmd.domain.clinicianreport.ClinicianReportWarning
@@ -16,11 +17,13 @@ import com.healthmd.domain.clinicianreport.ReportDateRange
 import com.healthmd.domain.clinicianreport.ReportMetric
 import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.DataTypeSelection
+import com.healthmd.domain.model.ExportDetailSelection
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.repository.SettingsRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -56,7 +59,7 @@ class ClinicianReportLocalCaptureTest {
         coEvery { settings.getConnectedHealthProviderIds() } returns setOf("health_connect", "whoop")
         coEvery { settings.getSleepDayAttribution() } returns SleepDayAttribution.NIGHT_BEGINS
         val manager = mockk<HealthConnectManager>()
-        coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any()) } answers {
+        coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
             localFailure?.let { throw it }
             firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 1_234)) }
         }
@@ -71,6 +74,10 @@ class ClinicianReportLocalCaptureTest {
         coEvery { api.captureConnectionId("whoop") } returns "11111111-1111-4111-8111-111111111111"
         coEvery { api.getJson(any(), any(), any(), any()) } returns
             Json.parseToJsonElement("""{"records":[]}""")
+        val emptyPage = mockk<CloudHealthRawResponse>()
+        every { emptyPage.jsonValid } returns true
+        every { emptyPage.json } returns Json.parseToJsonElement("""{"records":[]}""")
+        coEvery { api.getRawJsonResponse(any(), any(), any(), any(), any(), any()) } returns emptyPage
         val registry = HealthDistributionModule.provideHealthProviderRegistry(
             healthConnect = healthConnect,
             whoop = HealthDistributionModule.provideWhoop(api),
@@ -88,8 +95,11 @@ class ClinicianReportLocalCaptureTest {
         )
 
         coVerify(exactly = 0) { api.getJson(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { api.getRawJsonResponse(any(), any(), any(), any(), any(), any()) }
         coVerify(exactly = 0) { api.isConfigured(any()) }
         coVerify(exactly = 0) { api.token(any()) }
+        coVerify(exactly = 0) { api.forCaptureOperation(any()) }
+        coVerify(exactly = 0) { api.captureConnectionId(any()) }
         if (localFailure == null) {
             assertThat(input.dailyValues.map { it.value }).containsExactly(1_234.0)
             assertThat(input.warnings).isEmpty()
@@ -101,6 +111,7 @@ class ClinicianReportLocalCaptureTest {
         coVerify(exactly = 1) {
             manager.fetchHealthDataRange(
                 listOf(day), DataTypeSelection().deselectAll().copy(activity = true), true, zone, true,
+                SleepDayAttribution.NIGHT_BEGINS, ExportDetailSelection.uniform(true),
             )
         }
         coVerify(exactly = 0) { settings.getSelectedHealthProviderId() }
@@ -114,6 +125,6 @@ class ClinicianReportLocalCaptureTest {
         repository.fetchHealthDataRange(
             listOf(day), DataTypeSelection().deselectAll().copy(activity = true), false, zone, false,
         )
-        coVerify(atLeast = 1) { api.getJson("whoop", any(), any(), any()) }
+        coVerify(atLeast = 1) { api.getRawJsonResponse("whoop", any(), any(), any(), any(), any()) }
     }
 }
