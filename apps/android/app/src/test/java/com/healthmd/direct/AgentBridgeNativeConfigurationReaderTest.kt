@@ -3122,7 +3122,8 @@ class AgentBridgeNativeConfigurationReaderTest {
                 .exporterSettings().copy(apiEndpointUrl = "https://synthetic.invalid/never-contact", scheduleEnabled = true,
                     exportTarget = ExportTarget.API_ENDPOINT, scheduledExportTarget = ExportTarget.API_ENDPOINT)
             settings.updateExportSettings(native)
-            val snapshot = AndroidExportSettingsSnapshotCodec.encodeCanonical(AndroidExportSettingsSnapshot.capture(native, null, ZoneId.of("UTC")))
+            val snapshot = AndroidExportSettingsSnapshotCodec.encodeCanonical(AndroidExportSettingsSnapshot.capture(
+                native, null, requireNotNull(native.executionSleepCaptureContext).zoneId))
             val selected = profiles.add("Selected", snapshot, ExportTarget.API_ENDPOINT)
             val other = profiles.add("Active", snapshot, ExportTarget.DEVICE_FOLDER)
             profiles.activate(other.id)
