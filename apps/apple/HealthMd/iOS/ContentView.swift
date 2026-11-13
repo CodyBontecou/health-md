@@ -49,6 +49,17 @@ struct ContentView: View {
     @State private var partialExportNotice: PartialExportNotice?
     @State private var showError = false
     @State private var errorMessage = ""
+    private struct FrontmatterConflictNotice {
+        let profileID: UUID?
+        let conflicts: [FrontmatterKeyConflict]
+    }
+    private struct FrontmatterConflictReview: Identifiable {
+        let id = UUID()
+        let profile: ExportProfile
+        let destination: FrontmatterConflictDestination
+    }
+    @State private var frontmatterConflictNotice: FrontmatterConflictNotice?
+    @State private var frontmatterConflictReview: FrontmatterConflictReview?
     @State private var errorReason: ExportFailureReason?
     @State private var statusDismissTimer: Timer?
     @State private var exportTask: Task<Void, Never>?
@@ -340,6 +351,12 @@ struct ContentView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(item: $frontmatterConflictReview) { review in
+            if let profileCoordinator {
+                GlassFrontmatterConflictReviewSheet(coordinator: profileCoordinator, profile: review.profile,
+                    destination: review.destination)
+            }
+        }
         .sheet(isPresented: $showExportProfiles) {
             if let profileCoordinator {
                 NavigationStack {
@@ -428,18 +445,12 @@ struct ContentView: View {
         .geistDialog(
             isPresented: $showError,
             title: Text(errorReason?.alertTitle ?? ExportFailureReason.unknown.alertTitle),
-            message: Text(errorMessage),
-            actions: errorReason == .noHealthData
-                ? [
-                    .action("Done", role: .secondary),
-                    .action("Open Health App") {
-                        if let healthURL = URL(string: "x-apple-health://") {
-                            UIApplication.shared.open(healthURL)
-                        }
-                    }
-                ]
-                : [.action("OK", role: .secondary)]
+            message: Text(verbatim: errorMessage),
+            actions: exportErrorActions
         )
+        .onChange(of: showError) { _, presented in
+            if !presented { frontmatterConflictNotice = nil }
+        }
         .geistDialog(
             isPresented: Binding(
                 get: {
@@ -1085,6 +1096,18 @@ struct ContentView: View {
         // taps should focus that immutable export, not create a competing job.
         if restoreInteractiveCorpusExportIfNeeded() { return }
 
+        let conflicts = advancedSettings.formatCustomization.frontmatterConfig.keyConflicts
+        if (advancedSettings.dailyNoteInjection.enabled || advancedSettings.exportFormats.contains(.markdown)
+            || advancedSettings.exportFormats.contains(.obsidianBases)), !conflicts.isEmpty {
+            presentExportConfigurationError(FrontmatterConfiguration.keyConflictMessage)
+            // Local presentation only: keep identifiers out of persisted failures and diagnostics.
+            frontmatterConflictNotice = FrontmatterConflictNotice(profileID: profiles.profileStore.activeProfileID,
+                conflicts: conflicts)
+            errorMessage = conflicts.map(\.localDescription).joined(separator: "\n\n")
+                + "\n\n" + FrontmatterConfiguration.keyConflictMessage
+            return
+        }
+
         partialExportNotice = nil
         statusDismissTimer?.invalidate()
         vaultManager.clearLastExportPresentationTarget()
@@ -1311,7 +1334,32 @@ struct ContentView: View {
         }
     }
 
+    private var exportErrorActions: [GeistDialogAction] {
+        if let notice = frontmatterConflictNotice, let profileID = notice.profileID,
+           let destination = notice.conflicts.first?.sources.first?.destination,
+           let coordinator = profileCoordinator,
+           let profile = coordinator.profileStore.profile(id: profileID) {
+            return [
+                .action("Done", role: .secondary) { frontmatterConflictNotice = nil },
+                .action("Review conflict") {
+                    frontmatterConflictNotice = nil
+                    frontmatterConflictReview = FrontmatterConflictReview(profile: profile, destination: destination)
+                }
+            ]
+        }
+        if errorReason == .noHealthData {
+            return [
+                .action("Done", role: .secondary),
+                .action("Open Health App") {
+                    if let healthURL = URL(string: "x-apple-health://") { UIApplication.shared.open(healthURL) }
+                }
+            ]
+        }
+        return [.action("OK", role: .secondary)]
+    }
+
     private func presentExportConfigurationError(_ message: String) {
+        frontmatterConflictNotice = nil
         exportStatusMessage = message
         errorReason = nil
         errorMessage = message
@@ -1329,6 +1377,7 @@ struct ContentView: View {
         _ reason: ExportFailureReason,
         detail: FailedDateDetail? = nil
     ) {
+        frontmatterConflictNotice = nil
         errorReason = reason
         errorMessage = reason.alertMessage(detail: detail)
         showError = true

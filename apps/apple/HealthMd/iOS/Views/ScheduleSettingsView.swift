@@ -35,7 +35,7 @@ struct ScheduleRetryExportPolicy {
         case .noFormatsSelected:
             reason = .unknown
             details = exportError.localizedDescription
-        case .markdownMergeRejected, .dailyNotePathConflict, .invalidExportPath:
+        case .markdownMergeRejected, .frontmatterKeyConflict, .dailyNotePathConflict, .invalidExportPath:
             reason = .fileWriteError
             details = exportError.localizedDescription
         }

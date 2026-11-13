@@ -206,6 +206,11 @@ struct FrontmatterCustomizationView: View {
                 )
 
                 frontmatterSummary
+                if !config.conflictingOutputKeys.isEmpty {
+                    Text("Choose a unique, non-reserved field name.")
+                        .font(.footnote).foregroundStyle(Color.errorText)
+                        .accessibilityIdentifier("frontmatter.keyConflict")
+                }
                 coreFieldsCard
                 customFieldsCard
                 placeholderFieldsCard
@@ -315,7 +320,11 @@ struct FrontmatterCustomizationView: View {
                 set: { if !$0 { renameTargetKey = nil } }
             ),
             title: Text("Rename Field"),
-            message: renameTargetKey.map { Text("Enter a custom name for \($0).") },
+            message: renameTargetKey.map { key in
+                config.hasConflictingName(renameTempKey, for: key)
+                    ? Text("Choose a unique, non-reserved field name.")
+                    : Text("Enter a custom name for \(key).")
+            },
             actions: [
                 .cancel(),
                 .action("Save Name") { applyRename(renameTempKey) },

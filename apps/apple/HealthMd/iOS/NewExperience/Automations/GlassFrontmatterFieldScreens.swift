@@ -60,6 +60,12 @@ struct GlassFrontmatterGroupScreen: View {
             .frame(minHeight: GlassMetrics.touchTarget)
             .glassSurface(cornerRadius: GlassMetrics.touchTarget / 2)
 
+            if !config.conflictingOutputKeys.isEmpty {
+                Text("Choose a unique, non-reserved field name.")
+                    .glassFont(.rowSubtitle)
+                    .foregroundStyle(Color.errorText)
+                    .accessibilityIdentifier("frontmatter.keyConflict")
+            }
             GlassPanel {
                 ForEach(visibleFields) { field in
                     fieldRow(field)
@@ -79,9 +85,16 @@ struct GlassFrontmatterGroupScreen: View {
                 .autocorrectionDisabled()
             Button(String(localized: "Cancel"), role: .cancel) {}
             Button(String(localized: "Save Name")) { applyRename(renameText) }
+                .disabled(renameKey.map { config.hasConflictingName(renameText, for: $0) } ?? false)
             Button(String(localized: "Reset Name")) { applyRename(nil) }
         } message: {
-            if let renameKey { Text("Enter a custom name for \(renameKey).") }
+            if let renameKey {
+                if config.hasConflictingName(renameText, for: renameKey) {
+                    Text("Choose a unique, non-reserved field name.")
+                } else {
+                    Text("Enter a custom name for \(renameKey).")
+                }
+            }
         }
     }
 
@@ -97,6 +110,10 @@ struct GlassFrontmatterGroupScreen: View {
                         .foregroundStyle(palette.text)
                     if field.outputKey != field.originalKey {
                         Text(verbatim: field.originalKey).glassFont(.rowSubtitle).foregroundStyle(palette.muted)
+                    }
+                    if field.isEnabled && config.hasConflictingName(field.customKey, for: field.originalKey) {
+                        Text("Choose a unique, non-reserved field name.")
+                            .glassFont(.rowSubtitle).foregroundStyle(Color.errorText)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -309,6 +326,39 @@ extension View {
         onDismiss: @escaping () -> Void
     ) -> some View {
         modifier(GlassAddFieldAlerts(config: config, kind: kind, onDismiss: onDismiss))
+    }
+}
+/// Opens the failing automation's editor, not whichever automation is active later.
+struct GlassFrontmatterConflictReviewSheet: View {
+    let coordinator: ExportProfileCoordinator
+    let profile: ExportProfile
+    let destination: FrontmatterConflictDestination
+    @StateObject private var customization: FormatCustomization
+
+    init(coordinator: ExportProfileCoordinator, profile: ExportProfile, destination: FrontmatterConflictDestination) {
+        self.coordinator = coordinator
+        self.profile = profile
+        self.destination = destination
+        let customization = FormatCustomization()
+        profile.settings.formatCustomization.apply(to: customization)
+        _customization = StateObject(wrappedValue: customization)
+    }
+
+    var body: some View {
+        GlassPageSheet {
+            Group {
+                switch destination {
+                case .metrics(let group): GlassFrontmatterGroupScreen(config: customization.frontmatterConfig, group: group)
+                case .core: GlassFrontmatterCoreScreen(config: customization.frontmatterConfig)
+                case .custom: GlassUserFieldsScreen(config: customization.frontmatterConfig, kind: .custom)
+                case .placeholders: GlassUserFieldsScreen(config: customization.frontmatterConfig, kind: .placeholder)
+                }
+            }
+            .glassAutosave(FormatCustomizationSnapshot.from(customization),
+                revert: { $0.apply(to: customization) },
+                save: { value in coordinator.saveSettings(for: profile) { $0.formatCustomization = value } })
+        }
+        .glassTheme()
     }
 }
 #endif

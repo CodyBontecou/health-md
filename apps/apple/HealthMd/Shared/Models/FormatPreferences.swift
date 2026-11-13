@@ -408,6 +408,56 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         }
     }
     
+    /// Configuration validation only; user-defined keys are never included in error telemetry.
+    var conflictingOutputKeys: Set<String> { Set(keyConflicts.map(\.outputKey)) }
+
+    var keyConflicts: [FrontmatterKeyConflict] {
+        let entries = Dictionary(grouping: configuredOutputSources(), by: \.key)
+        return entries.keys.sorted().compactMap { key in
+            let sources = entries[key, default: []].map(\.source)
+            let reserved = Self.reservedNoteKeys.contains(key)
+            guard sources.count > 1 || reserved else { return nil }
+            return FrontmatterKeyConflict(outputKey: key, sources: sources, isReserved: reserved)
+        }
+    }
+
+    func hasConflictingName(_ name: String, for originalKey: String) -> Bool {
+        guard fields.first(where: { $0.originalKey == originalKey })?.isEnabled == true else { return false }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let key = trimmed.isEmpty ? originalKey : trimmed
+        return Self.reservedNoteKeys.contains(key) || configuredOutputKeys(excluding: originalKey).contains(key)
+    }
+
+    private static let reservedNoteKeys: Set<String> = [
+        "healthmd_injection_kind", "healthmd_daily_injection_v1", "healthmd_daily_injection_v2"
+    ]
+
+    private func configuredOutputKeys(excluding originalKey: String? = nil) -> [String] {
+        configuredOutputSources(excluding: originalKey).map(\.key)
+    }
+
+    private func configuredOutputSources(excluding originalKey: String? = nil)
+        -> [(key: String, source: FrontmatterConflictSource)] {
+        let configured = Set(fields.map(\.originalKey))
+        // Missing legacy fields are enabled defaults, just as in the injector.
+        let effectiveFields = fields + Self.defaultFields.filter { !configured.contains($0.originalKey) }
+        var entries = effectiveFields.filter { $0.isEnabled && $0.originalKey != originalKey }.map { field in
+            let key = field.customKey.trimmingCharacters(in: .whitespacesAndNewlines)
+            return (key: key.isEmpty ? field.originalKey : key,
+                source: FrontmatterConflictSource(originalKey: field.originalKey,
+                    destination: .metrics(FrontmatterFieldGroup.group(for: field.originalKey))))
+        }
+        if includeDate { entries.append((customDateKey, .init(originalKey: "date", destination: .core))) }
+        if includeType { entries.append((customTypeKey, .init(originalKey: "type", destination: .core))) }
+        entries += customFields.keys.sorted().map { ($0, .init(originalKey: $0, destination: .custom)) }
+        entries += placeholderFields.map { ($0, .init(originalKey: $0, destination: .placeholders)) }
+        return entries
+    }
+
+    static var keyConflictMessage: String {
+        String(localized: "Frontmatter key conflict. Give each enabled field a unique, non-reserved name in Frontmatter Fields. Your daily note was not changed.")
+    }
+
     /// Get the output key for a given original key
     func outputKey(for originalKey: String) -> String? {
         guard let field = fields.first(where: { $0.originalKey == originalKey }),
