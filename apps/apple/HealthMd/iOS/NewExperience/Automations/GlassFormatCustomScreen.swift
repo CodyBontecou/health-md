@@ -23,6 +23,7 @@ struct GlassFormatCustomScreen: View {
         self.profile = profile
         let customization = FormatCustomization()
         profile.settings.formatCustomization.apply(to: customization)
+        customization.frontmatterConfig.migrateMissingDefaultFields()
         _customization = StateObject(wrappedValue: customization)
     }
 
