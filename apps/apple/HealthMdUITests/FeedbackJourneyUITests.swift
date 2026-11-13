@@ -45,6 +45,7 @@ final class FeedbackJourneyUITests: XCTestCase {
         completion.tap()
         XCTAssertTrue(app.staticTexts["Mail couldn’t send"].waitForExistence(timeout: 5))
         XCTAssertFalse(completion.exists, "The synthetic composer must be dismissed before recovery")
+        assertFailureExplanation(containing: "Text entered in Mail is not available to Health.md; re-enter it below if needed.")
         XCTAssertTrue(app.textViews["feedback.reportText"].exists)
         app.buttons["feedback.close"].tap()
         assertReturnedToSupport(action: "feedback.sendFeedback")
@@ -68,8 +69,15 @@ final class FeedbackJourneyUITests: XCTestCase {
         action.tap()
     }
 
+    private func assertFailureExplanation(containing expected: String) {
+        let explanation = app.staticTexts["feedback.failureMessage"]
+        XCTAssertTrue(explanation.waitForExistence(timeout: 5))
+        XCTAssertTrue(explanation.label.contains(expected), "Show the failure-specific recovery instructions")
+    }
+
     private func exerciseLocalRecovery(title: String, destination: String, supportAction: String) {
         XCTAssertTrue(app.staticTexts[title].waitForExistence(timeout: 5))
+        assertFailureExplanation(containing: "You can write and copy a report here")
         let editor = app.textViews["feedback.reportText"]
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
         let template = editor.value as? String ?? ""

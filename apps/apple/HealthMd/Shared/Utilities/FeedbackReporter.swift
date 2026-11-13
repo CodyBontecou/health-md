@@ -290,6 +290,12 @@ private struct GlassReportFallbackContent: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
+                    Text(message)
+                        .font(.system(size: 14))
+                        .foregroundStyle(palette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 4)
+                        .accessibilityIdentifier("feedback.failureMessage")
                     Text(strings.localOnly)
                         .font(.system(size: 14))
                         .foregroundStyle(palette.muted)
