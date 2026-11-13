@@ -1946,7 +1946,7 @@ final class MacExportJobExecutor {
                     reason: .accessDenied,
                     errorDetails: exportError.localizedDescription
                 )
-            case .markdownMergeRejected, .noFormatsSelected, .dailyNotePathConflict, .invalidExportPath:
+            case .markdownMergeRejected, .frontmatterKeyConflict, .noFormatsSelected, .dailyNotePathConflict, .invalidExportPath:
                 return FailedDateDetail(date: date, reason: .fileWriteError, errorDetails: exportError.localizedDescription)
             }
         }

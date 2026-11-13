@@ -13,6 +13,117 @@ class DailyNoteInjectorTest {
     private val injector = DailyNoteInjector()
 
     @Test
+    fun workoutCountOnlyDoesNotWriteOtherWorkoutProperties() {
+        val customization = FormatCustomization(frontmatterConfig = FrontmatterConfiguration(
+            includeDate = false,
+            fields = FrontmatterConfiguration.defaultFields.map { field ->
+                field.copy(isEnabled = field.originalKey == "workout_count")
+            },
+        ))
+        val (result, content) = injector.inject(null, ExportFixtures.fullDay,
+            DailyNoteInjectionSettings(enabled = true, createIfMissing = true), customization)
+        assertThat(result).isEqualTo(InjectionResult.CREATED)
+        val header = requireNotNull(content).lineSequence().drop(1).takeWhile { it != "---" }.toList()
+        assertThat(header).containsExactly("workout_count: 1")
+    }
+
+    @Test
+    fun editorValidationFlagsOnlyEnabledDuplicatesAndReservedNames() {
+        assertThat(FrontmatterConfiguration().conflictingOutputKeys).isEmpty()
+        val fields = listOf(
+            com.healthmd.domain.model.CustomFrontmatterField("workout_count", "same"),
+            com.healthmd.domain.model.CustomFrontmatterField("workout_minutes", "same"),
+        )
+        val config = FrontmatterConfiguration(fields = fields)
+        assertThat(config.conflictingOutputKeys).containsExactly("same")
+        val legacy = config.copy(fields = listOf(fields.first().copy(customKey = "workout_minutes")))
+        assertThat(legacy.conflictingOutputKeys).containsExactly("workout_minutes")
+        assertThat(config.copy(fields = fields.map { it.copy(isEnabled = it.originalKey == "workout_count") })
+            .conflictingOutputKeys).isEmpty()
+        assertThat(config.copy(fields = listOf(fields.first().copy(customKey = "date"))).conflictingOutputKeys)
+            .containsExactly("date")
+        assertThat(config.copy(fields = listOf(fields.first().copy(customKey = "healthmd_injection_kind"))).conflictingOutputKeys)
+            .containsExactly("healthmd_injection_kind")
+    }
+
+    @Test
+    fun conflictDetailsKeepSourcesAndRouteOnlyCanonicalEditorTags() {
+        val fields = listOf(
+            com.healthmd.domain.model.CustomFrontmatterField("steps", "local_private_key"),
+            com.healthmd.domain.model.CustomFrontmatterField("workout_count", "local_private_key"),
+        )
+        val config = FrontmatterConfiguration(fields = fields,
+            customFields = mapOf("local_private_key" to "value"), placeholderFields = listOf("local_private_key"))
+        val conflict = config.keyConflicts.single()
+        assertThat(conflict.outputKey).isEqualTo("local_private_key")
+        assertThat(conflict.sources.map { it.originalKey }).containsExactly("steps", "workout_count", "local_private_key", "local_private_key").inOrder()
+        val targets = conflict.sources.map { com.healthmd.presentation.settings.FrontmatterCustomizationTags.conflictTarget(it) }
+        assertThat(targets).containsExactly("frontmatter.output.steps", "frontmatter.output.workout_count",
+            "frontmatter.custom.key", "frontmatter.placeholder.key").inOrder()
+        assertThat(targets.joinToString()).doesNotContain("local_private_key")
+        val reserved = config.copy(fields = listOf(fields.first().copy(customKey = "healthmd_injection_kind")),
+            customFields = emptyMap(), placeholderFields = emptyList()).keyConflicts.single()
+        assertThat(reserved.isReserved).isTrue()
+        assertThat(reserved.sources).hasSize(1)
+        val date = config.copy(fields = listOf(fields.first().copy(customKey = "date")),
+            customFields = emptyMap(), placeholderFields = emptyList()).keyConflicts.single()
+        assertThat(com.healthmd.presentation.settings.FrontmatterCustomizationTags.conflictTarget(date.sources.last()))
+            .isEqualTo("frontmatter.date.key")
+    }
+
+    @Test
+    fun collidingKeysFailWithoutReturningPartialNote() {
+        val fields = FrontmatterConfiguration.defaultFields.map { field -> field.copy(
+            isEnabled = field.originalKey in setOf("workout_count", "workout_minutes"), customKey = "same",
+        ) }
+        for (base in listOf(null, "", "My journal", "---\ntitle: keep\n---\nMy journal")) {
+            val (result, note) = injector.inject(base, ExportFixtures.fullDay,
+                DailyNoteInjectionSettings(enabled = true, createIfMissing = true),
+                FormatCustomization(frontmatterConfig = FrontmatterConfiguration(fields = fields)))
+            assertThat(result).isEqualTo(InjectionResult.FAILED)
+            assertThat(note).isNull()
+        }
+    }
+
+    @Test
+    fun dateAndReservedKeyCollisionsAreRejected() {
+        for (key in listOf("date", "healthmd_injection_kind", "healthmd_daily_injection_v1", "healthmd_daily_injection_v2")) {
+            val fields = FrontmatterConfiguration.defaultFields.map { field -> field.copy(
+                isEnabled = field.originalKey == "workout_count", customKey = key,
+            ) }
+            val (result, note) = injector.inject(null, ExportFixtures.fullDay,
+                DailyNoteInjectionSettings(enabled = true, createIfMissing = true),
+                FormatCustomization(frontmatterConfig = FrontmatterConfiguration(fields = fields)))
+            assertThat(result).isEqualTo(InjectionResult.FAILED)
+            assertThat(note).isNull()
+        }
+    }
+
+    @Test
+    fun disabledFieldWithCollidingAliasDoesNotBlockSelectedField() {
+        val fields = FrontmatterConfiguration.defaultFields.map { field -> field.copy(
+            isEnabled = field.originalKey == "workout_count", customKey = "same",
+        ) }
+        val (result, note) = injector.inject(null, ExportFixtures.fullDay,
+            DailyNoteInjectionSettings(enabled = true, createIfMissing = true),
+            FormatCustomization(frontmatterConfig = FrontmatterConfiguration(fields = fields, includeDate = false)))
+        assertThat(result).isEqualTo(InjectionResult.CREATED)
+        assertThat(note).contains("same: 1")
+        assertThat(note).doesNotContain("same: 30")
+    }
+
+    @Test
+    fun allMetricFieldsDisabledKeepUserPropertiesAndBodyUntouched() {
+        val config = FormatCustomization(frontmatterConfig = FrontmatterConfiguration(includeDate = false,
+            fields = FrontmatterConfiguration.defaultFields.map { it.copy(isEnabled = false) }))
+        val existing = "---\r\nworkout_count: 9 # user property\r\n---\r\nMy journal"
+        val (result, note) = injector.inject(existing, ExportFixtures.fullDay,
+            DailyNoteInjectionSettings(enabled = true), config)
+        assertThat(result).isEqualTo(InjectionResult.SKIPPED)
+        assertThat(note).isNull()
+    }
+
+    @Test
     fun frontmatterOnlyAddsYamlToNoteWithoutExistingFrontmatter() {
         val existing = """
             Morning pages.

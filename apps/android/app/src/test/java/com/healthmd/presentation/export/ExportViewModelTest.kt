@@ -129,6 +129,67 @@ class ExportViewModelTest {
     }
 
     @Test
+    fun conflictingFrontmatterShowsActionableStateBeforeReadingOrWriting() = runTest {
+        val configuration = com.healthmd.domain.model.FrontmatterConfiguration(
+            fields = listOf(
+                com.healthmd.domain.model.CustomFrontmatterField("workout_count", "same"),
+                com.healthmd.domain.model.CustomFrontmatterField("workout_minutes", "same"),
+            ),
+        )
+        val settings = FakeSettingsRepository(initialSettings = ExportSettings(
+            formatCustomization = com.healthmd.domain.model.FormatCustomization(frontmatterConfig = configuration)))
+        val health = FakeHealthRepository(hasPermissions = true)
+        val exports = FakeExportRepository()
+        val viewModel = createViewModel(healthRepository = health, exportRepository = exports, settingsRepository = settings)
+        advanceUntilIdle()
+        viewModel.startExport()
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.frontmatterKeyConflict).isTrue()
+        assertThat(viewModel.uiState.value.frontmatterConflicts.single().outputKey).isEqualTo("same")
+        assertThat(viewModel.uiState.value.frontmatterConflicts.single().sources.map { it.originalKey })
+            .containsExactly("workout_count", "workout_minutes").inOrder()
+        assertThat(viewModel.uiState.value.isExporting).isFalse()
+        assertThat(health.fetchCalls).isEqualTo(0)
+        assertThat(exports.exportCalls).isEqualTo(0)
+        viewModel.dismissFrontmatterKeyConflict()
+        assertThat(viewModel.uiState.value.frontmatterKeyConflict).isFalse()
+        assertThat(viewModel.uiState.value.frontmatterConflicts).isEmpty()
+        viewModel.buildPreview()
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.frontmatterKeyConflict).isTrue()
+        assertThat(viewModel.uiState.value.isPreviewing).isFalse()
+        assertThat(health.fetchCalls).isEqualTo(0)
+        viewModel.dismissFrontmatterKeyConflict()
+        val corrected = settings.getExportSettings().let { it.copy(formatCustomization = it.formatCustomization.copy(
+            frontmatterConfig = configuration.copy(fields = configuration.fields.map { field -> field.copy(customKey = field.originalKey) }))) }
+        settings.updateExportSettings(corrected)
+        advanceUntilIdle()
+        viewModel.startExport()
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.frontmatterKeyConflict).isFalse()
+        assertThat(exports.exportCalls).isEqualTo(1)
+    }
+
+    @Test
+    fun unusedFrontmatterConflictsDoNotBlockJsonOnlyExports() = runTest {
+        val config = com.healthmd.domain.model.FrontmatterConfiguration(fields = listOf(
+            com.healthmd.domain.model.CustomFrontmatterField("workout_count", "same"),
+            com.healthmd.domain.model.CustomFrontmatterField("workout_minutes", "same"),
+        ))
+        val settings = FakeSettingsRepository(initialSettings = ExportSettings(
+            exportFormat = ExportFormat.JSON, exportFormats = setOf(ExportFormat.JSON),
+            formatCustomization = com.healthmd.domain.model.FormatCustomization(frontmatterConfig = config)))
+        val exports = FakeExportRepository()
+        val viewModel = createViewModel(healthRepository = FakeHealthRepository(hasPermissions = true),
+            exportRepository = exports, settingsRepository = settings)
+        advanceUntilIdle()
+        viewModel.startExport()
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.frontmatterKeyConflict).isFalse()
+        assertThat(exports.exportCalls).isEqualTo(1)
+    }
+
+    @Test
     fun exportMomentStartsFromTheNewRunNotTheLastOne() = runTest {
         val healthRepository = FakeHealthRepository(hasPermissions = true)
         val viewModel = createViewModel(

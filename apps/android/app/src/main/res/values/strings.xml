@@ -1553,4 +1553,11 @@
     <string name="date_picker_show_calendar">Show calendar</string>
     <string name="date_picker_input_label">Date (YYYY-MM-DD)</string>
     <string name="date_picker_invalid_date">Enter a valid, available date in YYYY-MM-DD format.</string>
+    <string name="frontmatter_review_conflict">Review conflict</string>
+    <string name="frontmatter_conflict_duplicate_key">The key “%1$s” is used by:</string>
+    <string name="frontmatter_conflict_reserved_key">The key “%1$s” is reserved:</string>
+    <string name="frontmatter_key_conflict_title">Frontmatter key conflict</string>
+    <string name="frontmatter_key_conflict_toast">Frontmatter key conflict. Review Frontmatter Fields.</string>
+    <string name="frontmatter_key_conflict_inline">Choose a unique, non-reserved field name.</string>
+    <string name="frontmatter_key_conflict_message">Frontmatter key conflict. Give each enabled field a unique, non-reserved name in Frontmatter Fields. Your daily note was not changed.</string>
 </resources>

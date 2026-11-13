@@ -11,6 +11,21 @@ import XCTest
 
 // Static customizations to avoid macOS 26 deinit crash.
 private enum JSONContractCustomizations {
+    static let workoutCountOnly: FormatCustomization = {
+        let c = FormatCustomization()
+        for index in c.frontmatterConfig.fields.indices {
+            c.frontmatterConfig.fields[index].isEnabled =
+                c.frontmatterConfig.fields[index].originalKey == "workout_count"
+        }
+        return c
+    }()
+    static let workoutsOnly: MetricSelectionState = {
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.enabledMetrics.insert("workouts")
+        return selection
+    }()
+
     static let metric: FormatCustomization = {
         let c = FormatCustomization()
         c.unitPreference = .metric
@@ -31,6 +46,23 @@ private enum JSONContractCustomizations {
 }
 
 final class JSONExporterContractTests: XCTestCase {
+    func testFrontmatterFieldSelectionDoesNotFilterJSONWorkoutRecords() throws {
+        for data in [ExportFixtures.fullDay,
+                     ExportFixtures.fullDay.filtered(by: JSONContractCustomizations.workoutsOnly)] {
+            let baseline = try data.toJSONThrowing(customization: JSONContractCustomizations.metric)
+            let selected = try data.toJSONThrowing(customization: JSONContractCustomizations.workoutCountOnly)
+            XCTAssertEqual(selected, baseline)
+            let root = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(selected.utf8)) as? [String: Any])
+            let workouts = try XCTUnwrap(root["workouts"] as? [[String: Any]])
+            let workout = try XCTUnwrap(workouts.first)
+            XCTAssertNotNil(workout["duration"])
+            XCTAssertNotNil(workout["calories"])
+        }
+        let selected = parseJSON(ExportFixtures.fullDay.filtered(by: JSONContractCustomizations.workoutsOnly),
+                                 customization: JSONContractCustomizations.workoutCountOnly)
+        XCTAssertNil(selected["sleep"])
+        XCTAssertNil(selected["heart"])
+    }
 
     func testEUDotIsUsedAcrossReadableExportDates() {
         let data = ExportFixtures.fullDay
