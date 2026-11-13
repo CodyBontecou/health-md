@@ -32,6 +32,15 @@ private nonisolated final class MemoryKeychain:KeychainStoring,@unchecked Sendab
         try Data("saved-plan".utf8).write(to:plans.appendingPathComponent("pending.json"))
         let lost=ReceiverCoverageSettings(keychain:MemoryKeychain(),storageDirectory:root)
         do{_ = try lost.key(create:true); fatalError("Lost recovery key rotated")}catch{}
+        // An unlistable plan location is unknown recovery state, not an empty journal.
+        try FileManager.default.removeItem(at:plans)
+        let obstruction=Data("preserve-unknown-state".utf8)
+        try obstruction.write(to:plans)
+        let missingKeys=MemoryKeychain()
+        let obstructed=ReceiverCoverageSettings(keychain:missingKeys,storageDirectory:root)
+        do{_ = try obstructed.key(create:true); fatalError("Unlistable recovery state allowed a replacement key")}catch{}
+        precondition(missingKeys.values.isEmpty)
+        let retained=try Data(contentsOf:plans); precondition(retained==obstruction)
         let count=keys.values.count; precondition(count==1)
         print("Runtime secure-key ownership, scope binding, configuration persistence and stable settings passed")
     }

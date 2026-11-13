@@ -41,8 +41,11 @@ class ReceiverCoverageRuntime(
         suspend fun save(context: Context, scope: String, configuration: ReceiverCoverageConfiguration?, uploadUrl: String,
                          credentials: APIExportCredentialStore) {
             if (configuration == null) { synchronized(lock) { Files.deleteIfExists(path(context, scope)) }; return }
-            val plans = context.filesDir.toPath().resolve("receiver-coverage/plans").toFile()
-            val key = credentials.receiverCoverageKey(create = plans.list()?.isEmpty() != false)
+            val plans = context.filesDir.toPath().resolve("receiver-coverage/plans")
+            // A failed directory listing is unknown recovery state, not an empty journal.
+            // notExists is false when existence cannot be determined; list then fails closed.
+            val canCreateKey = Files.notExists(plans) || Files.list(plans).use { !it.findAny().isPresent }
+            val key = credentials.receiverCoverageKey(create = canCreateKey)
             ReceiverCoveragePreflight.prepare(ReceiverCoveragePreflight.Policy.MISSING_DAYS, uploadUrl,
                 configuration.preflightUrl, emptyMap(), configuration.scopeId, "UTC", "{}".toByteArray(), configuration.refreshRecentDays, key)
             synchronized(lock) { ReceiverCoverageAtomicFile.write(path(context, scope), configuration.json().toByteArray()) }

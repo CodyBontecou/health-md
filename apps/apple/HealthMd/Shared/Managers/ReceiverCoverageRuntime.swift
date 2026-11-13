@@ -42,8 +42,18 @@ import CryptoKit
             return data
         }
         let plans = storageDirectory.appendingPathComponent("plans")
-        guard create, (try? FileManager.default.contentsOfDirectory(atPath: plans.path).isEmpty) != false else {
-            throw ReceiverCoveragePreflight.BoundaryError.destinationChanged
+        guard create else { throw ReceiverCoveragePreflight.BoundaryError.destinationChanged }
+        do {
+            guard try FileManager.default.contentsOfDirectory(atPath: plans.path).isEmpty else {
+                throw ReceiverCoveragePreflight.BoundaryError.destinationChanged
+            }
+        } catch {
+            // Only an absent journal permits initial setup. An unreadable/non-directory
+            // location is unknown recovery state, never evidence that no plans exist.
+            let failure = error as NSError
+            guard failure.domain == NSCocoaErrorDomain, failure.code == NSFileReadNoSuchFileError else {
+                throw ReceiverCoveragePreflight.BoundaryError.destinationChanged
+            }
         }
         var data = Data(count: 32)
         let status = data.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 32, $0.baseAddress!) }

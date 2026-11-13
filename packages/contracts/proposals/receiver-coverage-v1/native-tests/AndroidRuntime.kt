@@ -69,6 +69,18 @@ fun main()=runBlocking {
   try {ReceiverCoverageRuntime.save(context,"legacy",config,"https://example.com/upload",credentials); error("Lost recovery key rotated")}
   catch(e:IllegalStateException){}
   check(credentials.key==null)
+  // An unlistable plan location must not authorize creation of a replacement key.
+  val plans=root.resolve("receiver-coverage/plans")
+  plans.toFile().deleteRecursively()
+  val obstruction="preserve-unknown-state".toByteArray()
+  Files.write(plans,obstruction)
+  val originalConfiguration=ReceiverCoverageRuntime.configuration(context,"legacy")
+  val blocked=runCatching {ReceiverCoverageRuntime.save(context,"legacy",config,"https://example.com/upload",credentials)}.isFailure
+  check(blocked){"Unlistable recovery state allowed a replacement key"}
+  check(credentials.key==null)
+  check(Files.readAllBytes(plans).contentEquals(obstruction))
+  check(ReceiverCoverageRuntime.configuration(context,"legacy")==originalConfiguration)
+  Files.delete(plans)
   credentials.key=ByteArray(32){1}; access.sponsoredEndpoint.value="https://example.com/upload"
   try {runtime.destination(config.json(),"https://example.com/upload",output,"UTC"); error("Managed rotating destination accepted")}
   catch(e:IllegalStateException){}
