@@ -687,8 +687,8 @@ class BillingRepositoryImpl(
             if (legacy) prefs.edit().putBoolean(KEY_LEGACY_UNLOCK_GRANTED, true).apply()
             saveUnlockState(snapshot.hasLifetime || legacy)
         }
-        if (fullSnapshot || snapshot.activePurchase != null) {
-            // A delta can report a new plan but never an absence, so only full snapshots lapse.
+        if (SubscriptionLapse.shouldApplyPurchaseUpdate(_subscriptionStatus.value, snapshot.activePurchase, fullSnapshot)) {
+            // A delta cannot remove known Lifetime ownership or report a lapse.
             activeSubscriptionToken = snapshot.activeSubscriptionToken
             updateSubscriptionStatus(snapshot.activePurchase)
         }

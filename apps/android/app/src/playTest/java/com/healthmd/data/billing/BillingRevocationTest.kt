@@ -105,6 +105,30 @@ class BillingRevocationTest {
         assertThat(fixture.purchased.value).isTrue()
     }
 
+    @Test fun subscriptionDeltaCannotDisplaceVerifiedLifetimeUntilAFullSnapshotRevokesIt() = runTest {
+        val fixture = fixture(backgroundScope, purchases = listOf(purchase(PurchasePlan.LIFETIME)))
+        assertThat(fixture.repository.restorePurchase()).isTrue()
+        assertThat(fixture.repository.subscriptionStatus.value).isEqualTo(SubscriptionStatus.Lifetime)
+
+        val weekly = purchase(PurchasePlan.WEEKLY)
+        fixture.repository.onPurchasesUpdated(result(BillingClient.BillingResponseCode.OK), listOf(weekly))
+        runCurrent()
+        assertThat(fixture.repository.subscriptionStatus.value).isEqualTo(SubscriptionStatus.Lifetime)
+        assertThat(fixture.repository.isPermanentlyUnlocked.value).isTrue()
+        assertThat(fixture.prefs.getString(BillingRepositoryImpl.KEY_REMEMBERED_SUBSCRIPTION, null)).isNull()
+
+        // Only a complete query can prove Lifetime is gone; it must still replace the status.
+        every { fixture.client.queryPurchasesAsync(any(), any<PurchasesResponseListener>()) } answers {
+            secondArg<PurchasesResponseListener>().onQueryPurchasesResponse(result(BillingClient.BillingResponseCode.OK), listOf(weekly))
+        }
+        assertThat(fixture.repository.restorePurchase()).isTrue()
+        assertThat(fixture.repository.subscriptionStatus.value)
+            .isEqualTo(SubscriptionStatus.Subscribed(PurchasePlan.WEEKLY, isAutoRenewing = true))
+        assertThat(fixture.repository.isPermanentlyUnlocked.value).isFalse()
+        assertThat(fixture.prefs.getString(BillingRepositoryImpl.KEY_REMEMBERED_SUBSCRIPTION, null))
+            .isEqualTo(PurchasePlan.WEEKLY.productId)
+    }
+
     @Test fun subscriptionRetainsLiveAccessWithoutRetainingRefundedLifetimeFlags() = runTest {
         val fixture = fixture(backgroundScope, purchases = listOf(purchase(PurchasePlan.YEARLY)))
         assertThat(fixture.repository.restorePurchase()).isTrue()

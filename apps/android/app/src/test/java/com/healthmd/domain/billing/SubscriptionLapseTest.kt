@@ -5,6 +5,18 @@ import com.healthmd.domain.repository.PurchasePlan
 import org.junit.Test
 
 class SubscriptionLapseTest {
+    @Test fun subscriptionDeltaCannotReplaceKnownLifetimeButFullSnapshotCan() {
+        val weekly = ActivePurchase(PurchasePlan.WEEKLY, isAutoRenewing = true)
+        assertThat(SubscriptionLapse.shouldApplyPurchaseUpdate(SubscriptionStatus.Lifetime, weekly, false)).isFalse()
+        assertThat(SubscriptionLapse.shouldApplyPurchaseUpdate(SubscriptionStatus.Lifetime, weekly, true)).isTrue()
+        assertThat(SubscriptionLapse.shouldApplyPurchaseUpdate(SubscriptionStatus.Lifetime, null, false)).isFalse()
+        assertThat(SubscriptionLapse.shouldApplyPurchaseUpdate(SubscriptionStatus.Lifetime, null, true)).isTrue()
+        assertThat(SubscriptionLapse.shouldApplyPurchaseUpdate(SubscriptionStatus.Free, weekly, false)).isTrue()
+        assertThat(SubscriptionLapse.shouldApplyPurchaseUpdate(SubscriptionStatus.Unknown, null, false)).isFalse()
+        assertThat(SubscriptionLapse.shouldApplyPurchaseUpdate(SubscriptionStatus.Free,
+            ActivePurchase(PurchasePlan.LIFETIME, false), false)).isTrue()
+    }
+
     private val weekly = ActivePurchase(PurchasePlan.WEEKLY, isAutoRenewing = true)
     private val yearlyCanceled = ActivePurchase(PurchasePlan.YEARLY, isAutoRenewing = false)
     private val lifetime = ActivePurchase(PurchasePlan.LIFETIME, isAutoRenewing = false)

@@ -46,6 +46,11 @@ sealed interface SubscriptionStatus {
 
 /** Pure lapse detection, kept free of store SDK and storage types so it is unit-testable. */
 object SubscriptionLapse {
+    /** Purchase callbacks are deltas; only a full snapshot may displace known Lifetime. */
+    fun shouldApplyPurchaseUpdate(current: SubscriptionStatus, active: ActivePurchase?, fullSnapshot: Boolean): Boolean =
+        fullSnapshot || (active != null &&
+            (current != SubscriptionStatus.Lifetime || active.plan == PurchasePlan.LIFETIME))
+
     /**
      * The subscription plan to remember after a full snapshot. An owned subscription replaces
      * the memory; Lifetime clears it (there is nothing left to lapse); no ownership keeps it,
