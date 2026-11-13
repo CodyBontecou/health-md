@@ -95,6 +95,11 @@ final class WatchExportService {
             try Task.checkCancellation()
             let body = try payload.encoded()
             guard body.count <= 64 * 1024 else { throw WatchExportError.invalidCapture }
+            // Capture suspends: another service may have removed/rebound authority
+            // or queued a delivery. Do not restore stale credentials or lose its bytes.
+            // Store reads/writes are synchronous on MainActor, so this check and
+            // the pending commit cannot interleave with another service mutation.
+            guard try self.state() == state else { throw WatchExportError.pendingUpload }
             state.pending = WatchPendingUpload(id: payload.uploadID, body: body)
             try store.save(state)
         }

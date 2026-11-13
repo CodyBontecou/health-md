@@ -181,6 +181,61 @@ final class WatchExportServiceTests: XCTestCase {
         XCTAssertFalse(messages.contains { $0.hasPrefix("Backend acknowledged") })
     }
 
+    func testDestinationChangeDuringCaptureCannotRestoreOldAuthorityOrUpload() async throws {
+        let store = MemoryStore()
+        let transport = RecordingTransport()
+        let service = WatchExportService(store: store, transport: transport)
+        let otherService = WatchExportService(store: store, transport: transport)
+        try service.configure(endpoint: "https://example.com/watch", token: "old-synthetic")
+        var replacement: WatchExportState?
+        var messages: [String] = []
+        do {
+            try await service.sync(capture: {
+                try otherService.forgetDestination()
+                try otherService.configure(endpoint: "https://other.example/watch", token: "new-synthetic")
+                replacement = try otherService.state()
+                return try self.payload()
+            }, progress: { messages.append($0) })
+            XCTFail("Expected stale capture rejection")
+        } catch {
+            guard case WatchExportError.pendingUpload = error else { return XCTFail("Unexpected error: \(error)") }
+        }
+        XCTAssertEqual(store.state, replacement)
+        XCTAssertTrue(transport.uploads.isEmpty)
+        XCTAssertFalse(messages.contains { $0.hasPrefix("Backend acknowledged") })
+        XCTAssertFalse(service.isRunning)
+    }
+
+    func testNewPendingUploadDuringCaptureCannotBeOverwritten() async throws {
+        let store = MemoryStore()
+        let transport = RecordingTransport()
+        let otherTransport = RecordingTransport()
+        otherTransport.error = WatchExportError.transport
+        let service = WatchExportService(store: store, transport: transport)
+        let otherService = WatchExportService(store: store, transport: otherTransport)
+        try service.configure(endpoint: "https://example.com/watch", token: "synthetic")
+        var replacement: WatchExportState?
+        do {
+            try await service.sync(capture: {
+                do {
+                    try await otherService.sync(capture: { try self.payload() }, progress: { _ in })
+                    XCTFail("Expected offline delivery")
+                } catch {
+                    guard case WatchExportError.transport = error else { throw error }
+                }
+                replacement = try otherService.state()
+                XCTAssertNotNil(replacement?.pending)
+                return try self.payload()
+            }, progress: { _ in })
+            XCTFail("Expected stale capture rejection")
+        } catch {
+            guard case WatchExportError.pendingUpload = error else { return XCTFail("Unexpected error: \(error)") }
+        }
+        XCTAssertEqual(store.state, replacement)
+        XCTAssertTrue(transport.uploads.isEmpty)
+        XCTAssertEqual(otherTransport.uploads.count, 1)
+    }
+
     func testDiscardIsExplicitAndAllowsNewDestinationWithoutTouchingHealthStore() async throws {
         let store = MemoryStore()
         let transport = RecordingTransport()
