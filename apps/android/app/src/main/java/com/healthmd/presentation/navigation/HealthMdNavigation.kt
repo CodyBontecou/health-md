@@ -440,6 +440,11 @@ fun HealthMdNavigation(
                             }
                         },
                         onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) { popUpTo(route) { inclusive = true } } },
+                        onReviewFrontmatterConflict = { focus ->
+                            navController.navigate("${SubRoutes.FRONTMATTER_CUSTOMIZATION}?focus=${android.net.Uri.encode(focus)}") {
+                                popUpTo(route) { inclusive = true }
+                            }
+                        },
                         onNavigateToSchedule = { navController.navigate(NavDestination.SCHEDULE.route) {
                             popUpTo(route) { inclusive = true }
                             launchSingleTop = true
@@ -783,9 +788,12 @@ fun HealthMdNavigation(
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(SubRoutes.FRONTMATTER_CUSTOMIZATION) {
+            composable("${SubRoutes.FRONTMATTER_CUSTOMIZATION}?focus={focus}",
+                arguments = listOf(navArgument("focus") { type = NavType.StringType; nullable = true; defaultValue = null }),
+            ) { entry ->
                 FrontmatterCustomizationScreen(
                     configuration = settings.formatCustomization.frontmatterConfig,
+                    initialFocusTag = entry.arguments?.getString("focus"),
                     onConfigurationChanged = { config ->
                         settingsViewModel.performConfigurationChange {
                             settingsViewModel.updateFormatCustomization(

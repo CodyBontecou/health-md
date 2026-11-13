@@ -28,6 +28,46 @@ class GoogleDriveScopedDailyNoteTest {
         System.setProperty("uniffi.component.healthmd_core_uniffi.libraryOverride", library)
     }
 
+    @Test fun `selected frontmatter survives materialization and frozen journal replay`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val root = File(context.noBackupFilesDir, "google-drive-operations")
+        root.deleteRecursively()
+        try {
+            for (profile in CompatibilitySchemaProfile.entries) {
+                val settings = ExportSettings(exportFormats = emptySet(),
+                    formatCustomization = FormatCustomization(compatibilitySchemaProfile = profile,
+                        frontmatterConfig = FrontmatterConfiguration(includeDate = false,
+                            fields = FrontmatterConfiguration.defaultFields.map {
+                                it.copy(isEnabled = it.originalKey == "steps",
+                                    customKey = if (it.originalKey == "steps") "chosen_steps" else it.customKey)
+                            })),
+                    dailyNoteInjection = DailyNoteInjectionSettings(enabled = true, createIfMissing = true),
+                    executionSleepCaptureContext = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.NIGHT_BEGINS))
+                val id = "selected-${profile.name}"
+                val bundle = factory.daily(id, null, "manual", listOf(ExportFixtures.partialDay), settings)
+                val generated = bundle.artifacts.single()
+                assertThat(generated.bytes.decodeToString()).isEqualTo("---\nchosen_steps: 8500\n---\n\n")
+                val destination = GoogleDriveDestination(id = "destination", accountReferenceId = "account",
+                    permissionId = "permission", folderId = "folder", accountLabel = "Synthetic", folderLabel = "Synthetic",
+                    capabilities = GoogleDriveFolderCapabilities(true, true), lastValidatedAtEpochMillis = 0)
+                GoogleDriveJournalStore(context).create(bundle, destination)
+                val store = GoogleDriveJournalStore(context)
+                val journal = (store.load(id) as GoogleDriveJournalLoad.Found).journal
+                val retained = journal.artifacts.single()
+                val fragment = requireNotNull(store.readArtifact(id, retained))
+                val baseline = "---\nsleep_total_hours: 99 # keep\n---\nMy journal.\n".encodeToByteArray()
+                val merged = generateDriveFinalBytes(retained.writeIntent, baseline, fragment,
+                    dailyNotePolicy = retained.dailyNotePolicy)
+                assertThat(merged.decodeToString()).contains("chosen_steps: 8500")
+                assertThat(merged.decodeToString()).contains("sleep_total_hours: 99 # keep")
+                assertThat(merged.decodeToString()).contains("My journal.")
+                assertThat(merged.decodeToString()).doesNotContain("\nsteps:")
+                assertThat(generateDriveFinalBytes(retained.writeIntent, merged, fragment,
+                    dailyNotePolicy = retained.dailyNotePolicy)).isEqualTo(merged)
+            }
+        } finally { root.deleteRecursively() }
+    }
+
     @Test fun `Morning generation and Night updates preserve scoped annotations through journal reload`() = runTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val root = File(context.noBackupFilesDir, "google-drive-operations")

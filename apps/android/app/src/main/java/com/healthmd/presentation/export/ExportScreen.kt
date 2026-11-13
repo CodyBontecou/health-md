@@ -133,6 +133,9 @@ import com.healthmd.domain.model.ExportPreviewIssue
 import com.healthmd.domain.model.ExportPreviewIssueKind
 import com.healthmd.domain.model.ExportPreviewSideEffectAction
 import com.healthmd.domain.model.ExportResult
+import com.healthmd.domain.model.FrontmatterKeyConflict
+import com.healthmd.domain.model.FrontmatterConflictSection
+import com.healthmd.presentation.settings.FrontmatterCustomizationTags
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.HealthMetricCategory
 import com.healthmd.domain.model.SleepDayAttribution
@@ -153,12 +156,34 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.text.NumberFormat
 
+@Composable
+private fun frontmatterConflictDetails(conflicts: List<FrontmatterKeyConflict>): String {
+    val paragraphs = mutableListOf<String>()
+    for (conflict in conflicts) {
+        val heading = stringResource(if (conflict.isReserved) R.string.frontmatter_conflict_reserved_key
+            else R.string.frontmatter_conflict_duplicate_key, conflict.outputKey)
+        val sources = mutableListOf<String>()
+        for (source in conflict.sources) {
+            val location = stringResource(when (source.section) {
+                FrontmatterConflictSection.METRIC -> R.string.frontmatter_metric_fields_section
+                FrontmatterConflictSection.DATE, FrontmatterConflictSection.TYPE -> R.string.frontmatter_date_type_section
+                FrontmatterConflictSection.CUSTOM -> R.string.frontmatter_custom_fields_section
+                FrontmatterConflictSection.PLACEHOLDER -> R.string.frontmatter_placeholder_fields_section
+            })
+            sources += "• $location → ${source.originalKey}"
+        }
+        paragraphs += (listOf(heading) + sources).joinToString("\n")
+    }
+    return paragraphs.joinToString("\n\n")
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExportScreen(
     viewModel: ExportViewModel = hiltViewModel(),
     onNavigateToPaywall: () -> Unit = {},
     onNavigateToAdvancedSettings: () -> Unit = {},
+    onReviewFrontmatterConflict: (String) -> Unit = {},
     onNavigateToSchedule: () -> Unit = {},
     onNavigateToUpgrade: () -> Unit = onNavigateToPaywall,
     sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
@@ -384,6 +409,43 @@ fun ExportScreen(
         viewModel.requestReview.collect {
             activity?.let(viewModel::performReviewPrompt) ?: viewModel.onReviewRequestFailed()
         }
+    }
+
+    LaunchedEffect(uiState.frontmatterKeyConflict) {
+        if (uiState.frontmatterKeyConflict) {
+            android.widget.Toast.makeText(context, R.string.frontmatter_key_conflict_toast,
+                android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
+    if (uiState.frontmatterKeyConflict) {
+        val errorColors = LocalGeistColors.current
+        AlertDialog(
+            onDismissRequest = viewModel::dismissFrontmatterKeyConflict,
+            containerColor = errorColors.gray.c200,
+            shape = RoundedCornerShape(GeistRadii.large),
+            title = { Text(stringResource(R.string.frontmatter_key_conflict_title),
+                style = GeistType.heading20, color = errorColors.primary) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Text(frontmatterConflictDetails(uiState.frontmatterConflicts) + "\n\n" +
+                        stringResource(R.string.frontmatter_key_conflict_message),
+                        style = GeistType.copy14, color = errorColors.secondary)
+                }
+            },
+            confirmButton = {
+                uiState.frontmatterConflicts.firstOrNull()?.sources?.firstOrNull()?.let { source ->
+                    TextButton(onClick = {
+                        val target = FrontmatterCustomizationTags.conflictTarget(source)
+                        viewModel.dismissFrontmatterKeyConflict()
+                        onReviewFrontmatterConflict(target)
+                    }) { Text(stringResource(R.string.frontmatter_review_conflict)) }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::dismissFrontmatterKeyConflict) { Text(stringResource(android.R.string.ok)) }
+            },
+        )
     }
 
     // Result state — kept at composable scope so the open-with dialog can read it after dismissal.

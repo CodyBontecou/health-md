@@ -217,11 +217,12 @@ struct DailyNoteInjector {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
         }
         let settings = settingsSnapshot.makeAdvancedExportSettings()
-        let keys = frontmatterKeys(enabledIn: settings.metricSelection).map {
-            resolvedOutputKey(originalKey: $0, fmConfig: settings.formatCustomization.frontmatterConfig)
-        }
+        let frontmatter = settings.formatCustomization.frontmatterConfig
+        let keys = frontmatterKeys(enabledIn: settings.metricSelection)
+            .filter { frontmatter.isFieldEnabled($0) }
+            .map { resolvedOutputKey(originalKey: $0, fmConfig: frontmatter) }
         guard !keys.contains(captureKey), !keys.contains(captureKindKey), Set(keys).count == keys.count else {
-            throw ExportError.markdownMergeRejected
+            throw ExportError.frontmatterKeyConflict
         }
         let patch = try HealthMdCoreService().prepareScopedNote(profile: .appleHealthDataV11,
             recordJSON: json, bases: text(.obsidianBases), markdown: text(.markdown),
@@ -238,7 +239,7 @@ struct DailyNoteInjector {
     static func prepareDirectNightPatch(healthData: HealthData, settings: DailyNoteInjectionSettings,
         customization: FormatCustomization, metricSelection: MetricSelectionState) throws -> String? {
         guard healthData.timeContext.sleepDayAttribution == .nightBegins,
-              let content = buildInjectionContent(healthData: healthData, settings: settings,
+              let content = try buildInjectionContent(healthData: healthData, settings: settings,
                 customization: customization, metricSelection: metricSelection),
               let makeRecord = content.nightCaptureJSON else { return nil }
         let annotation = "---\n" + (try scopedCaptureProperties(json: makeRecord())) + "---\n"
@@ -270,7 +271,7 @@ struct DailyNoteInjector {
             return preparedContent(prepared)
         }
         guard prepared == nil else { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
-        let content = buildInjectionContent(healthData: healthData, settings: settings,
+        let content = try buildInjectionContent(healthData: healthData, settings: settings,
             customization: customization, metricSelection: metricSelection)
         if let collector = scopedNightPatches, let content, let makeRecord = content.nightCaptureJSON {
             let annotation = "---\n" + (try scopedCaptureProperties(json: makeRecord())) + "---\n"
@@ -432,15 +433,16 @@ struct DailyNoteInjector {
     ) -> InjectionPreviewResult {
         guard settings.enabled else { return .skipped(reason: "Injection disabled") }
 
-        guard preparedContent == nil || calendarTimeZone.identifier == healthData.timeContext.calendarTimeZoneIdentifier,
-            let injectionContent = try? resolvedContent(
-            healthData: healthData,
-            settings: settings,
-            customization: customization,
-            metricSelection: metricSelection,
-            prepared: preparedContent
-        ) else {
-            return .skipped(reason: "No data available for enabled metrics on this date")
+        let injectionContent: InjectionContent
+        do {
+            guard preparedContent == nil || calendarTimeZone.identifier == healthData.timeContext.calendarTimeZoneIdentifier,
+                  let content = try resolvedContent(healthData: healthData, settings: settings,
+                    customization: customization, metricSelection: metricSelection, prepared: preparedContent) else {
+                return .skipped(reason: "No data available for enabled metrics on this date")
+            }
+            injectionContent = content
+        } catch {
+            return .skipped(reason: error.localizedDescription)
         }
 
         let existingContent: String
@@ -490,17 +492,24 @@ struct DailyNoteInjector {
         settings: DailyNoteInjectionSettings,
         customization: FormatCustomization,
         metricSelection: MetricSelectionState
-    ) -> InjectionContent? {
+    ) throws -> InjectionContent? {
         // Daily notes keep the apple-v8 grammar; apple-v12 detail samples never enter a note.
         let healthData = capturedHealthData.withoutDetailExpansion()
         let allMetrics = healthData.allMetricsDictionary(using: customization.unitConverter, timeFormat: customization.timeFormat)
         let fmConfig = customization.frontmatterConfig
+        // Metric selection chooses the source; field selection chooses the note properties.
         let allowedKeys = frontmatterKeys(enabledIn: metricSelection)
+            .filter { fmConfig.isFieldEnabled($0) }
 
         var injectionLines: [String] = ["---"]
+        var writtenKeys = Set<String>()
         for originalKey in allowedKeys {
             guard let value = allMetrics[originalKey] else { continue }
             let outputKey = resolvedOutputKey(originalKey: originalKey, fmConfig: fmConfig)
+            guard ![Self.captureKey, Self.captureKindKey].contains(outputKey),
+                  writtenKeys.insert(outputKey).inserted else {
+                throw ExportError.frontmatterKeyConflict
+            }
             appendFrontmatterField(key: outputKey, value: value, to: &injectionLines)
         }
         let hasFrontmatterContent = injectionLines.count > 1
