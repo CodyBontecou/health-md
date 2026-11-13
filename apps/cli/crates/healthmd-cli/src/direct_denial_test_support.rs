@@ -155,7 +155,7 @@ pub(crate) async fn encrypted_denial(malformed: bool) -> (ClientError, Uuid) {
                 supported_raw_profiles: vec![],
                 supports_durable_jobs: true,
                 supports_canonical_extraction: false,
-                transfer: Default::default(),
+                transfer: healthmd_protocol::wire::TransferCapabilities::default(),
                 query: None,
                 wake: None,
                 export_history_observation_versions: None,
