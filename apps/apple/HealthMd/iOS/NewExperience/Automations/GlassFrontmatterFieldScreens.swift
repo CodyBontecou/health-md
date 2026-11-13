@@ -341,6 +341,7 @@ struct GlassFrontmatterConflictReviewSheet: View {
         self.destination = destination
         let customization = FormatCustomization()
         profile.settings.formatCustomization.apply(to: customization)
+        customization.frontmatterConfig.migrateMissingDefaultFields()
         _customization = StateObject(wrappedValue: customization)
     }
 

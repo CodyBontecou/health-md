@@ -78,8 +78,31 @@ enum FrontmatterFieldGroup: String, CaseIterable, Identifiable, Sendable {
         (.hearing, ["headphone", "environmental"])
     ]
 
+    private static let mappedGroups: [String: FrontmatterFieldGroup] = {
+        var groups: [String: FrontmatterFieldGroup] = [:]
+        for metric in HealthMetrics.all {
+            let group: FrontmatterFieldGroup
+            switch metric.category {
+            case .sleep: group = .sleep
+            case .activity, .cycling: group = .activity
+            case .heart: group = .heart
+            case .respiratory, .vitals: group = .vitals
+            case .bodyMeasurements: group = .body
+            case .nutrition, .vitamins, .minerals: group = .nutrition
+            case .mindfulness: group = .mindfulness
+            case .mobility: group = .mobility
+            case .hearing: group = .hearing
+            case .workouts: group = .workouts
+            case .medications: group = .medications
+            default: group = .other
+            }
+            for key in HealthMetricExportMapping.frontmatterKeys(for: metric.id) { groups[key] = group }
+        }
+        return groups
+    }()
+
     static func group(for originalKey: String) -> FrontmatterFieldGroup {
-        matchOrder.first { _, prefixes in prefixes.contains { originalKey.hasPrefix($0) } }?.0 ?? .other
+        matchOrder.first { _, prefixes in prefixes.contains { originalKey.hasPrefix($0) } }?.0 ?? mappedGroups[originalKey] ?? .other
     }
 
     /// Non-empty groups in display order, each keeping the configuration's field order.
