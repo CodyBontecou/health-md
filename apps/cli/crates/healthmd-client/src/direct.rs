@@ -232,18 +232,26 @@ impl DirectClient<OsCredentialStore> {
     ///
     /// Returns an error when private storage or the installation identity is unavailable.
     pub fn open() -> Result<Self, ClientError> {
-        let layout = StorageLayout::discover()?;
+        Self::with_credentials(StorageLayout::discover()?, OsCredentialStore)
+    }
+}
+
+impl<C: crate::credentials::CredentialStore> DirectClient<C> {
+    /// Open a direct client with explicit private storage and a credential provider.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when private storage or the installation identity is unavailable.
+    pub fn with_credentials(layout: StorageLayout, credentials: C) -> Result<Self, ClientError> {
         let identity = IdentityStore::new(layout.clone()).load_or_create(Utc::now())?;
         Ok(Self {
             identity,
             layout,
             display_name: local_display_name(),
-            trust_store: TrustStore::new(OsCredentialStore),
+            trust_store: TrustStore::new(credentials),
         })
     }
-}
 
-impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     /// List locally trusted mobile sources without making a network connection.
     ///
     /// # Errors
@@ -2292,18 +2300,20 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                         if final_acknowledged {
                             return Err(ClientError::UnexpectedMessage);
                         }
+                        if !is_safe_peer_message(&value.public_message)
+                            || value.details.len() > 64
+                            || value.details.values().any(|values| values.len() > 64)
+                        {
+                            return Err(ClientError::InvalidTransfer(
+                                "the mobile export rejection is malformed".into(),
+                            ));
+                        }
                         let mut record = jobs.load(request.job_id)?;
                         record.state = if value.code == v2::ErrorCode::Cancelled {
                             JobState::Cancelled
                         } else {
                             JobState::Failed
                         };
-                        if !is_safe_peer_message(&value.public_message)
-                            || value.details.len() > 64
-                            || value.details.values().any(|values| values.len() > 64)
-                        {
-                            return Err(ClientError::UnexpectedMessage);
-                        }
                         record.updated_at = Utc::now();
                         record.message = Some("Android rejected the direct export.".into());
                         record.failure = Some(v2::ExportFailure {
