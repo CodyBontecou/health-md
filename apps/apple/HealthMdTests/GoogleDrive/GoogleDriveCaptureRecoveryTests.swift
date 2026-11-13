@@ -122,7 +122,8 @@ final class GoogleDriveCaptureRecoveryTests: XCTestCase {
         let probes = await harness.api.statusProbeCount()
         XCTAssertEqual(uploaded, frozen)
         XCTAssertEqual(retries, [frozen], "recovery must neither append again nor upload twice")
-        XCTAssertEqual(commits, ["2026-03-15.json": 1])
+        // The real renderer also emits its dictionary; each artifact commits exactly once.
+        XCTAssertEqual(commits, ["2026-03-15.json": 1, "_healthmd_data_dictionary.json": 1])
         XCTAssertGreaterThan(probes, 0)
         let recovered = try await journals.load(operationID: operationID)
         let recoveredArtifact = try XCTUnwrap(recovered.artifacts.first { $0.objectID == "existing-first" })
