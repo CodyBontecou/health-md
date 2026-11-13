@@ -8,6 +8,7 @@ Gradle Play Publisher remains removed. Do not upload, promote, submit review, or
 
 - `.github/workflows/android-release.yml` — qualifies an exact annotated, main-reachable `android/v<version>` tag, builds the signed phone AAB, retains SHA/AAB-bound intent evidence, and uploads it to `internal`.
 - `.github/workflows/android-promote-production.yml` — runs from that exact tag, promotes the same phone version code from `internal` to `production`, applies the reviewed listing in that same edit, submits it for review, and verifies the resulting lifecycle.
+- `.github/workflows/android-screenshots.yml` — replaces reviewed phone and tablet screenshots for all reviewed locales without writing tracks, listing copy, icons, or bundles. Requires the exact published release tag/code, a main-reachable annotated workflow tag, and assets identical to that release. Uses the protected `google-play` environment, retains the ordered SHA-256 intent before authentication, submits one edit for review, and verifies every committed digest and display order through a fresh disposable edit. Managed publishing remains a separate final Console action after approval.
 
 `.github/workflows/android-google-play-access-audit.yml` is the only supported credential diagnostic. From an allowed annotated Android tag, it records exact Internal/generated-artifact state, inserts and immediately deletes one empty edit, and retains a receipt proving that no edit was committed. A separate no-upload job verifies that the protected keystore matches the registered Play upload certificate and retains only public certificate digests. The workflow cannot upload an artifact, change a track/listing, or submit review.
 
@@ -50,6 +51,20 @@ bundle exec fastlane android validate_wear_release
 See `PLAY_STORE_SETUP.md` for protected credential setup. See `docs/features/wear-os-completion-audit.md` for the deferred Wear qualification work; it is not a phone-release gate.
 
 ## Command-line operator runbook
+
+### Update screenshots for an already-published release
+
+Use `android-screenshots.yml` from an immutable annotated release tag containing
+the workflow, or a main-reachable `android/recovery/*` infrastructure tag when
+repairing a missing screenshot upload path. Set `release_tag` to the original
+published release and `version_code` to its phone code. The workflow rejects
+assets that differ from that release, serializes with other Play mutations, and
+changes only phone, seven-inch, and ten-inch screenshots. It excludes deferred Wear.
+Inspect the retained intent and result artifacts. A successful receipt proves
+committed screenshot hashes and order; it does not prove review approval or public
+store propagation. A failed or lost commit response must be investigated before
+another dispatch; never blindly repeat the edit. Publish the approved screenshot
+batch using the final managed-publishing procedure below.
 
 Run from the repository root with Git, GitHub CLI (`gh`), and `jq`. Set the
 repository explicitly so an agent in another worktree cannot dispatch elsewhere:
