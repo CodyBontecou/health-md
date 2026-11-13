@@ -244,7 +244,7 @@ final class DailyNoteInjectorTests: XCTestCase {
                 DailyNoteInjector.inject(healthData: data, into: directory, settings: settings,
                     customization: Self.workoutCountCustomization, metricSelection: Self.workoutsOnly)
             }
-            guard case .created = result else { return XCTFail("Expected a materialized Drive note") }
+            guard case .updated = result else { return XCTFail("Expected a materialized Drive note") }
             let file = directory.appendingPathComponent(settings.formatFilename(for: Self.testDate) + ".md")
             let fragment = try Data(contentsOf: file)
             let patch = try XCTUnwrap(collector.patches[Self.testDate])
