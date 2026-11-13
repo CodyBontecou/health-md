@@ -100,6 +100,19 @@ nonisolated enum GoogleDriveReadiness: Equatable, Sendable {
     }
 }
 
+/// An editor must bind an actual writable destination before replacing a saved profile.
+/// Readiness alone can describe another stored destination; the selected binding is checked too.
+nonisolated enum GoogleDriveProfileBindingValidation {
+    static func invalidReason(destination: GoogleDriveDestination?, readiness: GoogleDriveReadiness) -> String? {
+        if readiness == .configurationMissing {
+            return GoogleDriveError(.configurationMissing).errorDescription
+        }
+        guard let destination else { return String(localized: "Select a Google Drive folder") }
+        guard destination.canAddChildren else { return GoogleDriveError(.folderUnavailable).errorDescription }
+        return readiness.errorID.flatMap { GoogleDriveError($0).errorDescription }
+    }
+}
+
 /// Versioned non-secret authority binding. Labels are intentionally optional and privacy-safe.
 nonisolated struct GoogleDriveDestination: Codable, Identifiable, Equatable, Sendable {
     static let currentVersion = 1

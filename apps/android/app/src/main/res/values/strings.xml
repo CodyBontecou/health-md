@@ -1527,6 +1527,7 @@
     <string name="myself_claim_store_unavailable">Google Play could not retrieve your purchase. Check your connection and Google Play account, then try again.</string>
     <string name="myself_claim_verification_failed">Your purchase could not be verified. Check your connection and try again. If it continues, contact support; no access has been claimed.</string>
     <string name="myself_claim_browser_unavailable">The claim browser could not open. Enable a browser, then verify your purchase again to continue.</string>
+    <string name="google_drive_destination_label" translatable="false">Google Drive</string>
     <string name="google_drive_title">Upload to Google Drive</string>
     <string name="google_drive_description">Choose a writable Drive folder for direct device-to-Google exports.</string>
     <string name="google_drive_connect">Connect Google Drive</string>

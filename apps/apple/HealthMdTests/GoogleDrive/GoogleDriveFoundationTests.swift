@@ -3,6 +3,22 @@ import XCTest
 @testable import HealthMd
 
 final class GoogleDriveFoundationTests: XCTestCase {
+    func testProfileEditorRequiresTheSelectedWritableDriveBindingAndCurrentReadiness() {
+        let writable = makeDestination()
+        let readOnly = GoogleDriveDestination(credentialReferenceID: UUID(), accountPermissionID: "permission",
+            folderID: "read-only", canAddChildren: false)
+        for readiness in [GoogleDriveReadiness.ready, .configurationMissing, .destinationMissing,
+                          .reauthorizationRequired, .folderUnavailable] {
+            XCTAssertNotNil(GoogleDriveProfileBindingValidation.invalidReason(destination: nil, readiness: readiness),
+                "Another destination's ready state cannot authorize an empty or unknown selection")
+            XCTAssertNotNil(GoogleDriveProfileBindingValidation.invalidReason(destination: readOnly, readiness: readiness))
+            let reason = GoogleDriveProfileBindingValidation.invalidReason(destination: writable, readiness: readiness)
+            XCTAssertEqual(reason == nil, readiness == .ready)
+            if readiness == .configurationMissing { XCTAssertTrue(reason?.contains("configuration_missing") == true) }
+            if readiness == .reauthorizationRequired { XCTAssertTrue(reason?.contains("reauthorization_required") == true) }
+        }
+    }
+
     @MainActor
     func testConnectRejectsProtectedConsentBeforeStartingOAuth() async throws {
         let authorizer = BindingTestAuthorizer()

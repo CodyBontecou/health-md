@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -702,12 +704,12 @@ internal fun ProfileNote(
 @Composable
 private fun targetLabel(target: ExportTarget): String = when (target) {
     ExportTarget.DEVICE_FOLDER -> stringResource(R.string.m3_profiles_editor_target_device)
-    ExportTarget.GOOGLE_DRIVE -> stringResource(R.string.google_drive_title)
+    ExportTarget.GOOGLE_DRIVE -> stringResource(R.string.google_drive_destination_label)
     ExportTarget.API_ENDPOINT -> stringResource(R.string.m3_profiles_editor_target_api)
     ExportTarget.AGENT_DATA_GATEWAY -> stringResource(R.string.export_preview_gateway_destination)
 }
 
-/** Three exclusive destinations: segmented buttons, or wrapping chips when labels would crowd. */
+/** Exclusive destinations: segmented buttons, or wrapping chips when labels would crowd. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TargetChoice(selected: ExportTarget, onSelect: (ExportTarget) -> Unit) {
@@ -716,7 +718,7 @@ private fun TargetChoice(selected: ExportTarget, onSelect: (ExportTarget) -> Uni
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val reading = GeistAdaptiveLayout.stackDetailedControls(maxWidth.value, LocalDensity.current.fontScale)
         if (!reading) {
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
                 targets.forEachIndexed { index, target ->
                     SegmentedButton(
                         selected = selected == target,

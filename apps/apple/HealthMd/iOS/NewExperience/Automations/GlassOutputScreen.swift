@@ -11,6 +11,8 @@ struct GlassOutputScreen: View {
         var folderVaultID: UUID?
         var apiEndpointID: UUID?
         var googleDriveDestinationID: UUID?
+        // Connection/store changes must also trigger autosave validation.
+        var googleDriveBindingIsValid: Bool
         var gatewayID: UUID?
         var settings: ExportSettingsSnapshot
     }
@@ -18,6 +20,8 @@ struct GlassOutputScreen: View {
     @ObservedObject var coordinator: ExportProfileCoordinator
     @ObservedObject private var destinationStore: ProfileDestinationStore
     let profile: ExportProfile
+    @ObservedObject private var googleDriveDestinationStore: GoogleDriveDestinationStore
+    @StateObject private var googleDriveConnectionManager: GoogleDriveConnectionManager
 
     @Environment(\.glassPalette) private var palette
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
@@ -30,6 +34,10 @@ struct GlassOutputScreen: View {
     @State private var showFolderImporter = false
     @State private var showEndpointForm = false
     @State private var showGatewayForm = false
+    @State private var showGoogleDrivePrivacyDisclosure = false
+    @State private var driveAuthorizationRequestID: UUID?
+    @State private var driveConnectionError: String?
+    @State private var connectingDrive = false
 
     private static let dateTokens = ["{date}", "{year}", "{month}", "{day}", "{weekday}", "{monthName}", "{quarter}"]
 
@@ -37,6 +45,10 @@ struct GlassOutputScreen: View {
         self.coordinator = coordinator
         _destinationStore = ObservedObject(wrappedValue: coordinator.destinationStore)
         self.profile = profile
+        _googleDriveDestinationStore = ObservedObject(wrappedValue: coordinator.googleDriveDestinationStore)
+        _googleDriveConnectionManager = StateObject(wrappedValue: GoogleDriveConnectionManager(
+            destinationStore: coordinator.googleDriveDestinationStore
+        ))
         _googleDriveDestinationID = State(initialValue: profile.googleDriveDestinationID)
         _target = State(initialValue: profile.target)
         _folderVaultID = State(initialValue: profile.folderVaultID)
@@ -104,7 +116,7 @@ struct GlassOutputScreen: View {
                     tone: .warning
                 )
             }
-            if let invalidReason {
+            if let invalidReason, driveInvalidReason == nil {
                 GlassBanner(title: invalidReason, systemImage: "exclamationmark.triangle", tone: .warning)
             }
         }
@@ -115,6 +127,31 @@ struct GlassOutputScreen: View {
             revert: restore,
             save: save
         )
+        .onAppear { refreshDriveReadiness() }
+        .onChange(of: googleDriveDestinationID) { _, _ in refreshDriveReadiness() }
+        .onChange(of: googleDriveDestinationStore.destinations) { _, _ in refreshDriveReadiness() }
+        .onChange(of: target) { _, _ in
+            driveConnectionError = nil
+            driveAuthorizationRequestID = nil
+        }
+        .confirmationDialog(
+            GoogleDrivePrivacyDisclosure.title,
+            isPresented: $showGoogleDrivePrivacyDisclosure,
+            titleVisibility: .visible
+        ) {
+            Button(GoogleDrivePrivacyDisclosure.confirm) {
+                configurationProtection.performConfigurationChange {
+                    driveAuthorizationRequestID = UUID()
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(GoogleDrivePrivacyDisclosure.message)
+        }
+        .task(id: driveAuthorizationRequestID) {
+            guard driveAuthorizationRequestID != nil else { return }
+            await connectGoogleDrive()
+        }
         .sheet(isPresented: $showFolderImporter) {
             FolderPicker { url in
                 configurationProtection.performConfigurationChange {
@@ -161,9 +198,21 @@ struct GlassOutputScreen: View {
             GlassMenuRow(
                 title: "Google Drive",
                 selection: $googleDriveDestinationID,
-                options: [nil] + coordinator.googleDriveDestinationStore.destinations.map { Optional($0.id) },
-                label: { id in coordinator.googleDriveDestinationStore.destination(id: id)?.folderLabel ?? "Select a Google Drive folder" }
+                options: [nil] + googleDriveDestinationStore.destinations.map { Optional($0.id) },
+                label: { id in googleDriveDestinationStore.destination(id: id)?.folderLabel ?? "Select a Google Drive folder" }
             )
+            addRow(
+                googleDriveDestinationID == nil ? "Connect & Choose Folder…" : "Reconnect or Change Folder…",
+                systemImage: "externaldrive.connected.to.line.below"
+            ) { showGoogleDrivePrivacyDisclosure = true }
+            .disabled(connectingDrive || googleDriveConnectionManager.readiness == .configurationMissing)
+            .accessibilityIdentifier("glass.output.connectGoogleDrive")
+            if connectingDrive {
+                ProgressView().padding(.horizontal, GlassMetrics.panelPadding)
+            }
+            if let reason = driveConnectionError ?? driveInvalidReason {
+                GlassBanner(title: reason, systemImage: "exclamationmark.triangle", tone: .warning)
+            }
         case .apiEndpoint:
             GlassMenuRow(
                 title: String(localized: "Endpoint"),
@@ -191,11 +240,11 @@ struct GlassOutputScreen: View {
         }
     }
 
-    private func addRow(_ title: String, action: @escaping () -> Void) -> some View {
+    private func addRow(_ title: String, systemImage: String = "plus", action: @escaping () -> Void) -> some View {
         Button {
             configurationProtection.performConfigurationChange(action)
         } label: {
-            GlassRow(title: title) { Image(systemName: "plus").foregroundStyle(palette.accent) }
+            GlassRow(title: title) { Image(systemName: systemImage).foregroundStyle(palette.accent) }
         }
         .buttonStyle(.plain)
     }
@@ -217,11 +266,45 @@ struct GlassOutputScreen: View {
         )
     }
 
+    private var driveInvalidReason: String? {
+        guard target == .googleDrive else { return nil }
+        return GoogleDriveProfileBindingValidation.invalidReason(
+            destination: googleDriveDestinationStore.destination(id: googleDriveDestinationID),
+            readiness: googleDriveConnectionManager.readiness
+        )
+    }
+
     private var invalidReason: String? {
-        AutomationOutputPathValidation.invalidReason(
+        driveInvalidReason ?? AutomationOutputPathValidation.invalidReason(
             folders: [draft.healthSubfolder ?? "", draft.folderStructure],
             filename: draft.filenameFormat
         )
+    }
+
+    private func refreshDriveReadiness() {
+        googleDriveConnectionManager.refreshReadiness(destinationID: googleDriveDestinationID)
+    }
+
+    @MainActor private func connectGoogleDrive() async {
+        guard configurationProtection.performConfigurationChange({}) else { return }
+        connectingDrive = true
+        defer { connectingDrive = false }
+        do {
+            let destination = try await googleDriveConnectionManager.connect(
+                replacing: googleDriveDestinationID,
+                commitAllowed: { configurationProtection.performConfigurationChange({}) }
+            )
+            try Task.checkCancellation()
+            configurationProtection.performConfigurationChange {
+                googleDriveDestinationID = destination.id
+                driveConnectionError = nil
+            }
+        } catch is CancellationError {
+            driveConnectionError = nil
+        } catch {
+            driveConnectionError = (error as? GoogleDriveError)?.errorDescription
+                ?? GoogleDriveError(.reauthorizationRequired).errorDescription
+        }
     }
 
     private var overlappingNames: [String] {
@@ -240,6 +323,7 @@ struct GlassOutputScreen: View {
             folderVaultID: folderVaultID,
             apiEndpointID: apiEndpointID,
             googleDriveDestinationID: googleDriveDestinationID,
+            googleDriveBindingIsValid: target != .googleDrive || driveInvalidReason == nil,
             gatewayID: gatewayID,
             settings: draft
         )
@@ -255,6 +339,13 @@ struct GlassOutputScreen: View {
     }
 
     private func save(_ value: Draft) {
+        if value.target == .googleDrive {
+            googleDriveConnectionManager.refreshReadiness(destinationID: value.googleDriveDestinationID)
+            guard GoogleDriveProfileBindingValidation.invalidReason(
+                destination: googleDriveDestinationStore.destination(id: value.googleDriveDestinationID),
+                readiness: googleDriveConnectionManager.readiness
+            ) == nil else { return }
+        }
         let name = coordinator.profileStore.profile(id: profile.id)?.name ?? profile.name
         _ = coordinator.updateProfile(
             id: profile.id,
