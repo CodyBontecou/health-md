@@ -26,7 +26,21 @@ final class GoogleDriveArtifactBundleProducer {
         defer { try? FileManager.default.removeItem(at: root) }
         try? (root as NSURL).setResourceValue(true, forKey: .isExcludedFromBackupKey)
 
-        let vault = VaultManager()
+        // An isolated staging vault, as the Agent Data gateway and direct CLI transfers use:
+        // a per-run defaults suite so nothing reaches the user's real vault settings, and a
+        // passthrough resolver because an app-container folder is not security scoped (the
+        // production resolver's startAccessingSecurityScopedResource returns false on device).
+        let suiteName = "HealthMd.GoogleDrive.\(operationID.uuidString.lowercased())"
+        guard let stagingDefaults = UserDefaults(suiteName: suiteName) else {
+            throw GoogleDriveError(.ambiguousCommit)
+        }
+        stagingDefaults.removePersistentDomain(forName: suiteName)
+        defer { stagingDefaults.removePersistentDomain(forName: suiteName) }
+        let vault = VaultManager(
+            defaults: SystemUserDefaults(defaults: stagingDefaults),
+            fileCoordinator: PassthroughFileCoordinator(),
+            bookmarkResolver: GoogleDriveStagingBookmarkResolver()
+        )
         try vault.configureDirectTransportStagingRoot(
             root,
             healthSubfolder: settingsSnapshot.healthSubfolder ?? VaultManager.defaultHealthSubfolder
@@ -408,4 +422,19 @@ final class GoogleDriveExportService {
             completedDates: []
         )
     }
+}
+
+/// Passthrough resolver for the ephemeral Drive staging root; mirrors the Agent Data gateway's
+/// and direct CLI transfer's staging resolvers.
+private final class GoogleDriveStagingBookmarkResolver: BookmarkResolving {
+    func resolveBookmark(data: Data) throws -> (url: URL, isStale: Bool) {
+        guard let path = String(data: data, encoding: .utf8) else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        return (URL(fileURLWithPath: path), false)
+    }
+
+    func createBookmarkData(for url: URL) throws -> Data { Data(url.path.utf8) }
+    func startAccessing(_ url: URL) -> Bool { true }
+    func stopAccessing(_ url: URL) {}
 }

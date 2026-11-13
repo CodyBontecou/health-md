@@ -529,6 +529,8 @@ class ExportViewModel @Inject constructor(
                 rawProviderSupported = currentState.rawProviderSupported,
                 rawSelectionReady = currentState.rawSelectionReady,
                 agentDataGatewayConfigured = currentState.agentDataGatewayConfigured,
+                // Without this a Drive target was never ready and manual Drive export was a no-op.
+                googleDriveReady = currentState.googleDriveConfigurationAvailable && currentState.googleDriveDestinationId != null,
             )) return
 
         dismissJob?.cancel()
