@@ -213,6 +213,8 @@ fun SettingsScreen(
             ),
         )
 
+        GoogleDriveSettingsCard()
+
         val dataRows = buildList<@Composable (Shape) -> Unit> {
             // Health Connect has no iOS row: HealthKit access lives in the system Health app.
             add { shape ->
@@ -292,7 +294,6 @@ fun SettingsScreen(
         SettingsGroup(title = stringResource(R.string.settings_section_data), rows = dataRows)
 
         // As on iOS, each App row opens App & support, which owns these controls.
-        GoogleDriveSettingsCard()
 
         val appSupportSelected = selectedEntry == SettingsEntry.APP_SUPPORT
         SettingsGroup(

@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CloudUpload
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -26,7 +28,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -40,10 +44,9 @@ import com.healthmd.data.drive.GoogleDriveAuthorizationAction
 import com.healthmd.data.drive.GoogleDriveErrorId
 import com.healthmd.data.drive.GoogleDriveReadiness
 import com.healthmd.presentation.MainActivity
-import com.healthmd.presentation.common.GeistCard
+import com.healthmd.presentation.common.GeistCardClickable
 import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.common.SecondaryButton
-import com.healthmd.presentation.common.SectionLabel
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.GeistRadii
 import com.healthmd.presentation.theme.GeistSizes
@@ -71,72 +74,111 @@ fun GoogleDriveSettingsCard(
         ActivityResultContracts.StartIntentSenderForResult(),
     ) { result -> viewModel.finish(result.data) }
 
-    GeistCard(modifier = Modifier.testTag("google_drive_settings")) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+    var showConnectionDetails by rememberSaveable { mutableStateOf(false) }
+    var showPrivacyDisclosure by rememberSaveable { mutableStateOf(false) }
+    val connect: () -> Unit = {
+        showConnectionDetails = false
+        if (protection.enabled) {
+            protection.onBlockedChange()
+        } else {
+            showPrivacyDisclosure = true
+        }
+    }
+    val destination = state.destination
+    if (destination == null) {
+        GoogleDriveConnectionButton(
+            text = stringResource(R.string.google_drive_connect),
+            enabled = !state.busy && activity != null,
+            busy = state.busy,
+            onClick = connect,
+        )
+    } else {
+        GeistCardClickable(
+            onClick = { showConnectionDetails = true },
+            modifier = Modifier.testTag("google_drive_settings"),
         ) {
-            Icon(Icons.Outlined.CloudUpload, contentDescription = null, tint = AppColors.accent)
-            Column(modifier = Modifier.weight(1f)) {
-                SectionLabel(stringResource(R.string.google_drive_title))
-                Text(
-                    text = when {
-                        state.readiness is GoogleDriveReadiness.Unavailable ->
-                            stringResource(R.string.google_drive_configuration_missing)
-                        state.destination != null -> stringResource(
-                            R.string.google_drive_connected_destination,
-                            state.destination!!.accountLabel,
-                            state.destination!!.folderLabel,
-                        )
-                        else -> stringResource(R.string.google_drive_description)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.textMuted,
-                )
-            }
-            if (state.busy) CircularProgressIndicator(modifier = Modifier.width(24.dp))
-        }
-        state.error?.let { error ->
-            Text(
-                text = error.userText(),
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.error,
-                modifier = Modifier.testTag("google_drive_error_${error.name.lowercase()}"),
+            Image(
+                painter = painterResource(R.drawable.google_drive_logo),
+                contentDescription = null,
+                modifier = Modifier.size(Spacing.lg),
             )
+            Spacer(Modifier.width(Spacing.md))
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.google_drive_destination_label), style = MaterialTheme.typography.titleMedium)
+                Text(destination.folderLabel, style = MaterialTheme.typography.bodySmall, color = AppColors.textMuted)
+            }
+            if (state.busy) {
+                CircularProgressIndicator(Modifier.size(Spacing.lg))
+            } else {
+                Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = AppColors.textMuted)
+            }
         }
-        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            GoogleDriveConnectionButton(
-                text = stringResource(
-                    if (state.destination == null) R.string.google_drive_connect else R.string.google_drive_reauthorize,
-                ),
-                enabled = !state.busy && state.readiness is GoogleDriveReadiness.Ready && activity != null,
-                onClick = {
-                    if (protection.enabled && state.destination == null) {
-                        protection.onBlockedChange()
-                        return@GoogleDriveConnectionButton
-                    }
-                    viewModel.begin { action ->
-                        if (action is GoogleDriveAuthorizationAction.Launch) {
-                            launcher.launch(IntentSenderRequest.Builder(action.pendingIntent.intentSender).build())
+    }
+
+    if (showConnectionDetails && destination != null) {
+        AlertDialog(
+            onDismissRequest = { showConnectionDetails = false },
+            title = { Text(stringResource(R.string.google_drive_destination_label)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                    Text(stringResource(R.string.google_drive_connected_destination, destination.accountLabel, destination.folderLabel))
+                    GoogleDriveConnectionButton(
+                        text = stringResource(R.string.google_drive_reauthorize),
+                        enabled = !state.busy && activity != null,
+                        onClick = connect,
+                    )
+                    SecondaryButton(
+                        text = stringResource(R.string.google_drive_disconnect),
+                        enabled = !state.busy,
+                        onClick = {
+                            showConnectionDetails = false
+                            if (protection.enabled) protection.onBlockedChange() else viewModel.disconnect()
+                        },
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showConnectionDetails = false }) { Text(stringResource(R.string.close)) }
+            },
+        )
+    }
+    if (showPrivacyDisclosure) {
+        AlertDialog(
+            onDismissRequest = { showPrivacyDisclosure = false },
+            title = { Text(stringResource(R.string.google_drive_connect)) },
+            text = {
+                val unavailable = state.readiness as? GoogleDriveReadiness.Unavailable
+                Text(unavailable?.error?.userText() ?: stringResource(R.string.google_drive_privacy_note))
+            },
+            confirmButton = {
+                if (state.readiness is GoogleDriveReadiness.Ready) {
+                    TextButton(onClick = {
+                        showPrivacyDisclosure = false
+                        viewModel.begin { action ->
+                            if (action is GoogleDriveAuthorizationAction.Launch) {
+                                launcher.launch(IntentSenderRequest.Builder(action.pendingIntent.intentSender).build())
+                            }
                         }
-                    }
-                },
-            )
-            if (state.destination != null) {
-                SecondaryButton(
-                    text = stringResource(R.string.google_drive_disconnect),
-                    enabled = !state.busy,
-                    onClick = {
-                        if (protection.enabled) protection.onBlockedChange() else viewModel.disconnect()
-                    },
-                )
-            }
-        }
-        Text(
-            stringResource(R.string.google_drive_privacy_note),
-            style = MaterialTheme.typography.bodySmall,
-            color = AppColors.textMuted,
+                    }) { Text(stringResource(R.string.google_drive_connect)) }
+                } else {
+                    TextButton(onClick = { showPrivacyDisclosure = false }) { Text(stringResource(R.string.close)) }
+                }
+            },
+            dismissButton = {
+                if (state.readiness is GoogleDriveReadiness.Ready) {
+                    TextButton(onClick = { showPrivacyDisclosure = false }) { Text(stringResource(R.string.cancel)) }
+                }
+            },
+        )
+    }
+    state.error?.let { error ->
+        AlertDialog(
+            onDismissRequest = viewModel::clearError,
+            title = { Text(stringResource(R.string.google_drive_destination_label)) },
+            text = { Text(error.userText(), modifier = Modifier.testTag("google_drive_error_${error.name.lowercase()}")) },
+            confirmButton = {
+                TextButton(onClick = viewModel::clearError) { Text(stringResource(R.string.close)) }
+            },
         )
     }
 }
@@ -146,6 +188,7 @@ fun GoogleDriveSettingsCard(
 private fun GoogleDriveConnectionButton(
     text: String,
     enabled: Boolean,
+    busy: Boolean = false,
     onClick: () -> Unit,
 ) {
     val colors = LocalGeistColors.current
@@ -173,6 +216,10 @@ private fun GoogleDriveConnectionButton(
         )
         Spacer(Modifier.width(Spacing.sm))
         Text(text, style = GeistType.button16)
+        if (busy) {
+            Spacer(Modifier.width(Spacing.sm))
+            CircularProgressIndicator(Modifier.size(Spacing.lg))
+        }
     }
 }
 
