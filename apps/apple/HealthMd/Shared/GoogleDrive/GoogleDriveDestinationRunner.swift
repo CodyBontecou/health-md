@@ -218,7 +218,7 @@ final class GoogleDriveDestinationRunner {
             folders: folders,
             accessToken: accessToken
         )
-        try await preflightAll(journal: journal, accessToken: accessToken)
+        try await preflightAll(journal: &journal, destination: destination, accessToken: accessToken)
 
         // New folders are committed parent-first. Reserved IDs were checkpointed during planning.
         for folder in folders.filter(\.isNew).sorted(by: { lhs, rhs in
@@ -458,7 +458,9 @@ final class GoogleDriveDestinationRunner {
                         baseline = metadata
                     }
                 }
-            } else if let objectID = artifact.objectID {
+            } else if let objectID = artifact.objectID, artifact.phase != .identityReserved {
+                // An identity-only checkpoint precedes final-byte preparation and any remote
+                // create. Reuse that reserved ID; it is not an existing baseline to fetch.
                 baseline = try await api.metadata(id: objectID, resourceKey: artifact.objectResourceKey, accessToken: accessToken)
             }
 
@@ -533,8 +535,13 @@ final class GoogleDriveDestinationRunner {
         }
     }
 
-    private func preflightAll(journal: GoogleDriveOperationJournal, accessToken: String) async throws {
-        for artifact in journal.artifacts where artifact.phase != .verified {
+    private func preflightAll(
+        journal: inout GoogleDriveOperationJournal,
+        destination: GoogleDriveDestination,
+        accessToken: String
+    ) async throws {
+        for index in journal.artifacts.indices where journal.artifacts[index].phase != .verified {
+            let artifact = journal.artifacts[index]
             // Verified append/update artifacts have already replaced this baseline. Rechecking
             // the obsolete version would block residual capture or tempt callers to reapply it.
             guard let baseline = artifact.baselineMetadata else { continue }
@@ -545,6 +552,31 @@ final class GoogleDriveDestinationRunner {
             )
             let expectedName = artifact.relativePath.split(separator: "/").last.map(String.init)
             let expectedParents = artifact.parentID.map { [$0] } ?? []
+            if !sameRevision(baseline, current), let session = artifact.uploadSessionURL,
+               let filename = artifact.finalFilename, let sha256 = artifact.finalSHA256,
+               let byteCount = artifact.finalByteCount {
+                // Drive may have committed the final chunk before we saved .verified. Only a
+                // retained upload session permits reconciliation here; ordinary concurrent edits
+                // still require the original revision, even if they happen to match our bytes.
+                let bytes = try await journalStore.readSpool(
+                    operationID: journal.id, filename: filename, expectedSHA256: sha256
+                )
+                let response = try? await api.uploadStatus(
+                    sessionURL: session, totalByteCount: byteCount, accessToken: accessToken
+                )
+                let metadata: GoogleDriveFileMetadata
+                if case .completed(let completed) = response { metadata = completed }
+                else { metadata = current } // Expired/lost session: exact-ID postflight is authority.
+                do {
+                    try await verifyAndBind(metadata: metadata, artifact: artifact,
+                        destination: destination, finalBytes: bytes, accessToken: accessToken)
+                } catch {
+                    throw GoogleDriveError(.remoteConflict)
+                }
+                journal.artifacts[index].phase = .verified
+                try await journalStore.save(journal)
+                continue
+            }
             guard sameRevision(baseline, current),
                   current.name == expectedName,
                   current.parents == expectedParents else {

@@ -87,6 +87,49 @@ final class GoogleDriveCaptureRecoveryTests: XCTestCase {
         XCTAssertEqual(uploaded, firstAttempt)
     }
 
+    func testCommittedAppendRecoversCompletedSessionWithoutRecapture() async throws {
+        try await exerciseCommittedAppendRecovery(expiredSession: false)
+    }
+
+    func testCommittedAppendRecoversExpiredSessionByExactIDWithoutRecapture() async throws {
+        try await exerciseCommittedAppendRecovery(expiredSession: true)
+    }
+
+    private func exerciseCommittedAppendRecovery(expiredSession: Bool) async throws {
+        let harness = try Harness(existingAppend: true)
+        defer { harness.cleanup() }
+        let operationID = UUID()
+        await harness.api.cancelAfterNextCommit(expiredSession: expiredSession)
+        let initial = await harness.export(operationID: operationID, profileID: nil, dates: harness.dates)
+        XCTAssertEqual(initial.successCount, 0)
+        let attempts = await harness.api.attempts(named: "2026-03-15.json")
+        let frozen = try XCTUnwrap(attempts.first)
+        let journals = try GoogleDriveJournalStore(rootURL: harness.root)
+        let retained = try await journals.load(operationID: operationID)
+        let retainedArtifact = try XCTUnwrap(retained.artifacts.first { $0.objectID == "existing-first" })
+        XCTAssertEqual(retainedArtifact.phase, .uploadSessionStarted)
+        XCTAssertEqual(retained.destinationSnapshot, GoogleDriveDestinationSnapshot(destination: harness.destination))
+
+        // The real export path reconstructs service, managed store and protected journal store.
+        let resumed = await harness.export(operationID: operationID, profileID: nil, dates: harness.dates)
+        XCTAssertEqual(resumed.successCount, 1)
+        XCTAssertEqual(resumed.completedDates, [harness.dates[0]])
+        XCTAssertEqual(resumed.failedDateDetails.map(\.date), [harness.dates[1]])
+        XCTAssertEqual(harness.healthStore.queriedSumIdentifiers.count, 1)
+        let uploaded = try await harness.api.bytes(named: "2026-03-15.json")
+        let retries = await harness.api.attempts(named: "2026-03-15.json")
+        let commits = await harness.api.commitCounts()
+        let probes = await harness.api.statusProbeCount()
+        XCTAssertEqual(uploaded, frozen)
+        XCTAssertEqual(retries, [frozen], "recovery must neither append again nor upload twice")
+        XCTAssertEqual(commits, ["2026-03-15.json": 1])
+        XCTAssertGreaterThan(probes, 0)
+        let recovered = try await journals.load(operationID: operationID)
+        let recoveredArtifact = try XCTUnwrap(recovered.artifacts.first { $0.objectID == "existing-first" })
+        XCTAssertEqual(recoveredArtifact.parentID, "health-folder")
+        XCTAssertEqual(recoveredArtifact.phase, .verified)
+    }
+
     func testResidualUploadRestartUsesPersistedChildIdentityAndExactBytes() async throws {
         let harness = try Harness(existingAppend: true)
         defer { harness.cleanup() }
@@ -295,6 +338,15 @@ private actor SyntheticDriveAPI: GoogleDriveAPIClientProtocol {
     private var commits: [String: Int] = [:]
     private var interrupted = false
     private var serial = 0
+    private var cancelAfterCommit = false
+    private var expiredSession = false
+    private var statusProbes = 0
+
+    func cancelAfterNextCommit(expiredSession: Bool) {
+        cancelAfterCommit = true
+        self.expiredSession = expiredSession
+    }
+    func statusProbeCount() -> Int { statusProbes }
 
     init(destination: GoogleDriveDestination, existingAppend: Bool) {
         self.destination = destination
@@ -357,9 +409,17 @@ private actor SyntheticDriveAPI: GoogleDriveAPIClientProtocol {
         files[id] = metadata
         contents[id] = data
         commits[old.name, default: 0] += 1
+        if cancelAfterCommit { cancelAfterCommit = false; throw CancellationError() }
         return .completed(metadata)
     }
-    func uploadStatus(sessionURL: URL, totalByteCount: UInt64, accessToken: String) async throws -> GoogleDriveUploadResponse { .incomplete(acknowledgedByteCount: 0) }
+    func uploadStatus(sessionURL: URL, totalByteCount: UInt64, accessToken: String) async throws -> GoogleDriveUploadResponse {
+        statusProbes += 1
+        if expiredSession { throw GoogleDriveError(.folderUnavailable) }
+        if let id = sessions[sessionURL], contents[id] != nil, let metadata = files[id] {
+            return .completed(metadata)
+        }
+        return .incomplete(acknowledgedByteCount: 0)
+    }
     func download(id: String, resourceKey: String?, accessToken: String) async throws -> Data {
         guard let bytes = contents[id] else { throw GoogleDriveError(.folderUnavailable) }
         return bytes
