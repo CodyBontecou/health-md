@@ -31,7 +31,8 @@ sealed interface DriveApiResult<out T> {
     data class Failure(val error: GoogleDriveErrorId, val retryable: Boolean = false) : DriveApiResult<Nothing>
 }
 
-data class GoogleDriveAbout(val permissionId: String)
+/** Account name is transient and must only be persisted in encrypted authority storage. */
+data class GoogleDriveAbout(val permissionId: String, val emailAddress: String? = null)
 data class GoogleDriveUploadSession(val uri: String)
 data class GoogleDriveUploadStatus(val acknowledgedBytes: Long, val complete: Boolean, val metadata: GoogleDriveRemoteMetadata? = null)
 
@@ -59,12 +60,12 @@ class OkHttpGoogleDriveApi(
     private val metadataFields = "id,name,mimeType,parents,driveId,resourceKey,version,size,md5Checksum,sha256Checksum,trashed,capabilities(canAddChildren,canEdit)"
 
     override suspend fun about(accessToken: String): DriveApiResult<GoogleDriveAbout> = execute(
-        request("$apiBaseUrl/about?fields=user(permissionId)", accessToken),
+        request("$apiBaseUrl/about?fields=user(permissionId,emailAddress)", accessToken),
     ) { response ->
-        val permissionId = parseObject(response)["user"]?.jsonObject
-            ?.get("permissionId")?.jsonPrimitive?.contentOrNull
-            ?: throw InvalidDriveResponse()
-        GoogleDriveAbout(permissionId)
+        val user = parseObject(response)["user"]?.jsonObject ?: throw InvalidDriveResponse()
+        val permissionId = user["permissionId"]?.jsonPrimitive?.contentOrNull
+            ?.takeIf(String::isNotBlank) ?: throw InvalidDriveResponse()
+        GoogleDriveAbout(permissionId, user["emailAddress"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank))
     }
 
     override suspend fun getMetadata(

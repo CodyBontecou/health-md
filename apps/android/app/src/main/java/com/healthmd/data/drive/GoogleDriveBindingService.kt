@@ -35,6 +35,17 @@ class GoogleDriveBindingService @Inject constructor(
         if (existing != null && existing.permissionId != about.permissionId) {
             return DriveApiResult.Failure(GoogleDriveErrorId.ACCOUNT_MISMATCH)
         }
+        // The Drive token proves the account; legacy Google Sign-In details are optional.
+        // permissionId remains the immutable authority, and the account name is kept only
+        // for future setAccount requests in encrypted local storage.
+        val verifiedName = about.emailAddress?.takeIf(String::isNotBlank)
+        val signInName = grant.accountName?.takeIf(String::isNotBlank)
+        if (verifiedName != null && signInName != null && verifiedName != signInName) {
+            return DriveApiResult.Failure(GoogleDriveErrorId.ACCOUNT_MISMATCH)
+        }
+        val accountName = verifiedName ?: signInName
+            ?: existing?.let { destinationStore.accountName(it) }?.takeIf(String::isNotBlank)
+            ?: return DriveApiResult.Failure(GoogleDriveErrorId.ACCOUNT_MISMATCH)
         val folderId = grant.selectedFolderIds.single()
         if (existing != null && existing.folderId != folderId) {
             return DriveApiResult.Failure(GoogleDriveErrorId.REMOTE_CONFLICT)
@@ -64,7 +75,7 @@ class GoogleDriveBindingService @Inject constructor(
         )
         // The store rechecks inside its DataStore edit, before encrypted authority is saved.
         try {
-            if (!destinationStore.saveBindingIfAllowed(destination, grant.accountName)) return protectedFailure()
+            if (!destinationStore.saveBindingIfAllowed(destination, accountName)) return protectedFailure()
         } catch (_: IllegalStateException) {
             return DriveApiResult.Failure(GoogleDriveErrorId.REMOTE_CONFLICT)
         }

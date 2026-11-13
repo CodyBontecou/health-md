@@ -101,8 +101,6 @@ class GoogleDriveAuthorizationManager @Inject constructor(
         val result = runCatching { client.authorize(silentRequest(account)).awaitResult() }
             .getOrElse { return GoogleDriveAccessTokenResult.Failed(classifyAuthorizationFailure(it)) }
         if (result.hasResolution()) return GoogleDriveAccessTokenResult.ResolutionRequired
-        val resultAccount = result.toGoogleSignInAccount()?.account?.name
-        if (resultAccount != account.name) return GoogleDriveAccessTokenResult.Failed(GoogleDriveErrorId.ACCOUNT_MISMATCH)
         if (result.grantedScopes.toSet() != setOf(GOOGLE_DRIVE_SCOPE)) {
             return GoogleDriveAccessTokenResult.Failed(GoogleDriveErrorId.PERMISSION_DENIED)
         }
@@ -164,9 +162,9 @@ class GoogleDriveAuthorizationManager @Inject constructor(
         if (result.grantedScopes.toSet() != setOf(GOOGLE_DRIVE_SCOPE)) {
             return GoogleDriveAuthorizationAction.Failed(GoogleDriveErrorId.PERMISSION_DENIED)
         }
-        val signIn = result.toGoogleSignInAccount()
-            ?: return GoogleDriveAuthorizationAction.Failed(GoogleDriveErrorId.ACCOUNT_MISMATCH)
-        val account = signIn.account ?: return GoogleDriveAuthorizationAction.Failed(GoogleDriveErrorId.ACCOUNT_MISMATCH)
+        // Drive authorization is not Google Sign-In: identity may be absent. Binding
+        // resolves the token's account through Drive about.get before storing authority.
+        val account = result.toGoogleSignInAccount()?.account
         val token = result.accessToken?.takeIf(String::isNotBlank)
             ?: return GoogleDriveAuthorizationAction.Failed(GoogleDriveErrorId.REAUTHORIZATION_REQUIRED)
         val folderIds = (extractPickerFileIds(result.tokenResponseParams) + extractPickerFileIds(pickerExtras)).distinct()
@@ -176,7 +174,7 @@ class GoogleDriveAuthorizationManager @Inject constructor(
         return GoogleDriveAuthorizationAction.Authorized(
             GoogleDriveAuthorizationGrant(
                 accessToken = token,
-                accountName = account.name,
+                accountName = account?.name,
                 // The exact Account name stays only in encrypted authority storage. Display
                 // name/email never enters destination JSON, history, analytics, or backups.
                 accountLabel = "Google account",

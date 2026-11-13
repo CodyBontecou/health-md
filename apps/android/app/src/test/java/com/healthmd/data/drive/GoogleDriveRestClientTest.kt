@@ -42,11 +42,11 @@ class GoogleDriveRestClientTest {
     fun tearDown() = server.shutdown()
 
     @Test
-    fun `about parses stable permission authority without exposing account data`() = runTest {
-        server.enqueue(MockResponse().setBody("""{"user":{"permissionId":"permission-1"}}"""))
+    fun `about parses stable permission authority and transient account identity`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"user":{"permissionId":"permission-1","emailAddress":"test@example.com"}}"""))
 
-        assertThat(api.about("token")).isEqualTo(DriveApiResult.Success(GoogleDriveAbout("permission-1")))
-        assertThat(server.takeRequest().path).isEqualTo("/drive/v3/about?fields=user(permissionId)")
+        assertThat(api.about("token")).isEqualTo(DriveApiResult.Success(GoogleDriveAbout("permission-1", "test@example.com")))
+        assertThat(server.takeRequest().path).isEqualTo("/drive/v3/about?fields=user(permissionId,emailAddress)")
     }
 
     @Test

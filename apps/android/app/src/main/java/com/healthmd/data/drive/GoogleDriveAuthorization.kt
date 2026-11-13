@@ -10,7 +10,8 @@ sealed interface GoogleDriveAuthorizationAction {
 
 data class GoogleDriveAuthorizationGrant(
     val accessToken: String,
-    val accountName: String,
+    // AuthorizationClient may omit sign-in identity for drive.file-only consent.
+    val accountName: String?,
     val accountLabel: String,
     val selectedFolderIds: List<String>,
 )

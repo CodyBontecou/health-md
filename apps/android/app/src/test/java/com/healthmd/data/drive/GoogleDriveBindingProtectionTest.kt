@@ -74,6 +74,37 @@ class GoogleDriveBindingProtectionTest {
 
     @After fun tearDown() { scope.cancel(); Dispatchers.resetMain() }
 
+    @Test fun `Drive-only grant binds token-verified account without legacy sign-in identity`() = runTest {
+        coEvery { api.about(any()) } returns DriveApiResult.Success(GoogleDriveAbout("permission", "test@example.com"))
+        val result = binding.bind(grant.copy(accountName = null))
+        assertThat(result).isInstanceOf(DriveApiResult.Success::class.java)
+        coVerify(exactly = 1) { accounts.save(any(), "test@example.com") }
+        assertThat((result as DriveApiResult.Success).value.permissionId).isEqualTo("permission")
+    }
+
+    @Test fun `missing token and sign-in account identity never persists a binding`() = runTest {
+        val result = binding.bind(grant.copy(accountName = null))
+        assertThat(result).isEqualTo(DriveApiResult.Failure(GoogleDriveErrorId.ACCOUNT_MISMATCH))
+        coVerify(exactly = 0) { accounts.save(any(), any()) }
+    }
+
+    @Test fun `conflicting token and sign-in account identities never persist a binding`() = runTest {
+        coEvery { api.about(any()) } returns DriveApiResult.Success(GoogleDriveAbout("permission", "other@example.com"))
+        assertThat(binding.bind(grant)).isEqualTo(DriveApiResult.Failure(GoogleDriveErrorId.ACCOUNT_MISMATCH))
+        coVerify(exactly = 0) { accounts.save(any(), any()) }
+    }
+
+    @Test fun `reauthorization with another permission ID never changes stored authority`() = runTest {
+        val destination = (binding.bind(grant) as DriveApiResult.Success).value
+        val before = dataStore.data.first().asMap()
+        coEvery { api.about(any()) } returns DriveApiResult.Success(GoogleDriveAbout("other-permission", "other@example.com"))
+        assertThat(binding.bind(grant.copy(accountName = null), destination.id))
+            .isEqualTo(DriveApiResult.Failure(GoogleDriveErrorId.ACCOUNT_MISMATCH))
+        assertThat(dataStore.data.first().asMap()).isEqualTo(before)
+        assertThat(destinations.find(destination.id)).isEqualTo(destination)
+        coVerify(exactly = 1) { accounts.save(any(), any()) }
+    }
+
     @Test fun `delayed Activity result after protection performs no binding or selection writes`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val authorization = mockk<GoogleDriveAuthorizationManager>()

@@ -23,6 +23,8 @@ The identifier is public configuration, not a client secret. Never add a web-cli
 
 The implementation pins `com.google.android.gms:play-services-auth:21.6.0` because that release contains the mobile Picker folder resource parameters. Authorization requests only `https://www.googleapis.com/auth/drive.file`, opts out of inherited scopes, and independently validates the Drive account permission ID and selected folder capability.
 
+Drive-only authorization can omit legacy Google Sign-In account information. The app resolves the token's current user with Drive `about.get` (`user.permissionId` and transient `user.emailAddress`) before binding. Only the account name needed for later `setAccount` requests enters encrypted authority storage; it never enters destination JSON, history, analytics, or backups. Missing identity fails closed. Silent authorization pins the encrypted account and independently verifies the returned token's immutable permission ID, without requiring a legacy sign-in account or adding identity scopes.
+
 ## Execution and recovery
 
 - One local destination record binds an encrypted Android `Account` reference, Drive `user.permissionId`, immutable folder ID, optional Shared Drive ID/resource key, and privacy-safe labels.
