@@ -62,8 +62,11 @@ class GoogleDriveScopedDailyNoteTest {
                 assertThat(merged.decodeToString()).contains("sleep_total_hours: 99 # keep")
                 assertThat(merged.decodeToString()).contains("My journal.")
                 assertThat(merged.decodeToString()).doesNotContain("\nsteps:")
-                assertThat(generateDriveFinalBytes(retained.writeIntent, merged, fragment,
-                    dailyNotePolicy = retained.dailyNotePolicy)).isEqualTo(merged)
+                store.replaceFinalBytes(journal, 0, merged)
+                val replayStore = GoogleDriveJournalStore(context)
+                val replay = (replayStore.load(id) as GoogleDriveJournalLoad.Found).journal.artifacts.single()
+                assertThat(replayStore.readArtifact(id, replay)).isEqualTo(merged)
+                assertThat(replay.dailyNotePolicy).isEqualTo(retained.dailyNotePolicy)
             }
         } finally { root.deleteRecursively() }
     }

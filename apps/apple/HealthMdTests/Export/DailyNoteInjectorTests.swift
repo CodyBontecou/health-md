@@ -260,8 +260,8 @@ final class DailyNoteInjectorTests: XCTestCase {
             XCTAssertFalse(header.contains("\nworkout_count:"))
             XCTAssertFalse(header.contains("\nworkout_calories:"))
             XCTAssertTrue(String(decoding: merged, as: UTF8.self).contains("My journal."))
-            XCTAssertEqual(try GoogleDriveFinalByteMerger.merge(baseline: merged, fragment: fragment,
-                intent: .dailyNoteMerge, dailyNotePolicy: retained), merged)
+            XCTAssertEqual(retained, policy)
+            XCTAssertEqual(retained.patch, patch)
             try FileManager.default.removeItem(at: file)
         }
     }
