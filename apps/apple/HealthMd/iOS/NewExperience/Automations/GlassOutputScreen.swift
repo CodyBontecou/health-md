@@ -201,10 +201,11 @@ struct GlassOutputScreen: View {
                 options: [nil] + googleDriveDestinationStore.destinations.map { Optional($0.id) },
                 label: { id in googleDriveDestinationStore.destination(id: id)?.folderLabel ?? "Select a Google Drive folder" }
             )
-            addRow(
-                googleDriveDestinationID == nil ? "Connect & Choose Folder…" : "Reconnect or Change Folder…",
-                systemImage: "externaldrive.connected.to.line.below"
+            GoogleDriveConnectionButton(
+                title: googleDriveDestinationID == nil ? "Connect & Choose Folder…" : "Reconnect or Change Folder…"
             ) { showGoogleDrivePrivacyDisclosure = true }
+            .padding(.horizontal, GlassMetrics.panelPadding)
+            .padding(.vertical, 8)
             .disabled(connectingDrive || googleDriveConnectionManager.readiness == .configurationMissing)
             .accessibilityIdentifier("glass.output.connectGoogleDrive")
             if connectingDrive {

@@ -4,17 +4,24 @@ import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudUpload
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -32,12 +40,15 @@ import com.healthmd.data.drive.GoogleDriveAuthorizationAction
 import com.healthmd.data.drive.GoogleDriveErrorId
 import com.healthmd.data.drive.GoogleDriveReadiness
 import com.healthmd.presentation.MainActivity
+import com.healthmd.presentation.common.GeistCard
 import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.common.SecondaryButton
-import com.healthmd.presentation.common.GeistCard
-import com.healthmd.presentation.common.PrimaryButton
 import com.healthmd.presentation.common.SectionLabel
 import com.healthmd.presentation.theme.AppColors
+import com.healthmd.presentation.theme.GeistRadii
+import com.healthmd.presentation.theme.GeistSizes
+import com.healthmd.presentation.theme.GeistType
+import com.healthmd.presentation.theme.LocalGeistColors
 import com.healthmd.presentation.theme.Spacing
 
 @Composable
@@ -95,7 +106,7 @@ fun GoogleDriveSettingsCard(
             )
         }
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            PrimaryButton(
+            GoogleDriveConnectionButton(
                 text = stringResource(
                     if (state.destination == null) R.string.google_drive_connect else R.string.google_drive_reauthorize,
                 ),
@@ -103,7 +114,7 @@ fun GoogleDriveSettingsCard(
                 onClick = {
                     if (protection.enabled && state.destination == null) {
                         protection.onBlockedChange()
-                        return@PrimaryButton
+                        return@GoogleDriveConnectionButton
                     }
                     viewModel.begin { action ->
                         if (action is GoogleDriveAuthorizationAction.Launch) {
@@ -127,6 +138,41 @@ fun GoogleDriveSettingsCard(
             style = MaterialTheme.typography.bodySmall,
             color = AppColors.textMuted,
         )
+    }
+}
+
+/** Original logo from https://developers.google.com/workspace/drive/api/guides/branding. */
+@Composable
+private fun GoogleDriveConnectionButton(
+    text: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = LocalGeistColors.current
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = GeistSizes.controlLarge)
+            .testTag("google_drive_connect"),
+        shape = RoundedCornerShape(GeistRadii.full),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = colors.background100,
+            contentColor = colors.gray.c1000,
+            disabledContainerColor = colors.background100,
+            disabledContentColor = colors.gray.c700,
+        ),
+        border = BorderStroke(1.dp, if (enabled) colors.gray.c700 else colors.gray.c300),
+    ) {
+        Image(
+            painter = painterResource(R.drawable.google_drive_logo),
+            contentDescription = null,
+            modifier = Modifier.size(Spacing.lg),
+            alpha = if (enabled) 1f else 0.38f,
+        )
+        Spacer(Modifier.width(Spacing.sm))
+        Text(text, style = GeistType.button16)
     }
 }
 

@@ -1437,15 +1437,12 @@ struct ExportProfileEditorSheet: View {
                             .tag(UUID?.some(destination.id))
                     }
                 }
-                Button {
+                GoogleDriveConnectionButton(
+                    title: googleDriveDestinationID == nil ? "Connect & Choose Folder…" : "Reconnect or Change Folder…"
+                ) {
                     configurationProtection.performConfigurationChange {
                         showGoogleDrivePrivacyDisclosure = true
                     }
-                } label: {
-                    Label(
-                        googleDriveDestinationID == nil ? "Connect & Choose Folder…" : "Reconnect or Change Folder…",
-                        systemImage: "externaldrive.connected.to.line.below"
-                    )
                 }
                 if let destinationID = googleDriveDestinationID {
                     Button(role: .destructive) {
