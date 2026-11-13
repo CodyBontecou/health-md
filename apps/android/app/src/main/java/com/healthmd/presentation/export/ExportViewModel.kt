@@ -100,6 +100,9 @@ data class ExportUiState(
     val apiConfigurationError: APIConfigurationIssue? = null,
     val selectedHealthProviderId: String = "health_connect",
     val profileExecutionIssue: ExportProfileExecutionIssue? = null,
+    val frontmatterKeyConflict: Boolean = false,
+    /** Local editor guidance only; never persisted to history, API errors, or diagnostics. */
+    val frontmatterConflicts: List<FrontmatterKeyConflict> = emptyList(),
 ) {
     val requiresHistoricalReadPermission: Boolean
         // The earliest readable sample may already be clipped by Health Connect's
@@ -498,6 +501,7 @@ class ExportViewModel @Inject constructor(
         val awakeActivityId = ExportAwakeCoordinator.shared.beginActivity()
         exportJob = viewModelScope.launch {
             val settings = settingsRepository.getExportSettings()
+            if (rejectConflictingFrontmatter(settings)) return@launch
             if (!distributionPolicy.fullAccessIncluded &&
                 !entitlementRepository.verifyExportAccess(
                     settings.exportTarget, settings.apiEndpointUrl.takeIf { settings.exportMode == ExportMode.COMPATIBILITY })) {
@@ -723,6 +727,7 @@ class ExportViewModel @Inject constructor(
 
             try {
                 val settings = settingsRepository.getExportSettings()
+                if (rejectConflictingFrontmatter(settings)) return@launch
                 if (activeProfileRequiresRebind()) {
                     _uiState.update {
                         it.copy(
@@ -803,6 +808,22 @@ class ExportViewModel @Inject constructor(
                 _uiState.update { it.copy(isPreviewing = false) }
             }
         }
+    }
+
+    private fun rejectConflictingFrontmatter(settings: ExportSettings): Boolean {
+        val usesFrontmatter = settings.dailyNoteInjection.enabled ||
+            settings.exportFormats.any { it == ExportFormat.MARKDOWN || it == ExportFormat.OBSIDIAN_BASES }
+        val conflicts = settings.formatCustomization.frontmatterConfig.keyConflicts
+        val conflict = settings.exportMode == ExportMode.COMPATIBILITY && usesFrontmatter && conflicts.isNotEmpty()
+        if (conflict) _uiState.update {
+            it.copy(frontmatterKeyConflict = true, frontmatterConflicts = conflicts,
+                lastResult = null, preview = null, exportedFolderUri = null)
+        }
+        return conflict
+    }
+
+    fun dismissFrontmatterKeyConflict() {
+        _uiState.update { it.copy(frontmatterKeyConflict = false, frontmatterConflicts = emptyList()) }
     }
 
     fun dismissPreview() {

@@ -28,6 +28,44 @@ final class DailyNoteInjectorTests: XCTestCase {
         c.markdownTemplate.includeWorkoutDetailsAndMetadata = false
         return c
     }()
+    private static let workoutCountCustomization: FormatCustomization = {
+        let c = FormatCustomization()
+        for index in c.frontmatterConfig.fields.indices {
+            let selected = c.frontmatterConfig.fields[index].originalKey == "workout_count"
+            c.frontmatterConfig.fields[index].isEnabled = selected
+            if selected { c.frontmatterConfig.fields[index].customKey = "My workout count" }
+        }
+        return c
+    }()
+    private static let edgeCaseCustomizations: [(String, FormatCustomization)] = {
+        ["workout_count", "workout_minutes", "none", "legacy", "collision", "reserved", "dateCollision", "disabledCollision"].map { name in
+            let c = FormatCustomization()
+            for index in c.frontmatterConfig.fields.indices {
+                let key = c.frontmatterConfig.fields[index].originalKey
+                c.frontmatterConfig.fields[index].isEnabled = key == name ||
+                    (["reserved", "dateCollision", "disabledCollision"].contains(name) && key == "workout_count") ||
+                    (name == "collision" && ["workout_count", "workout_minutes"].contains(key))
+                if ["collision", "disabledCollision"].contains(name) { c.frontmatterConfig.fields[index].customKey = "same" }
+                if name == "reserved" { c.frontmatterConfig.fields[index].customKey = "healthmd_daily_injection_v1" }
+                if name == "dateCollision" { c.frontmatterConfig.fields[index].customKey = "date" }
+            }
+            if name == "legacy" { c.frontmatterConfig.fields = [] }
+            return (name, c)
+        }
+    }()
+    private static let crossGroupConflictConfiguration: FrontmatterConfiguration = {
+        let config = FrontmatterConfiguration()
+        config.fields = [CustomFrontmatterField(originalKey: "steps", customKey: "local_private_key"),
+            CustomFrontmatterField(originalKey: "workout_count", customKey: "local_private_key")]
+        config.customFields = ["local_private_key": "value"]
+        config.placeholderFields = ["local_private_key"]
+        return config
+    }()
+    private static let legacyConflictConfiguration: FrontmatterConfiguration = {
+        let config = FrontmatterConfiguration()
+        config.fields = [CustomFrontmatterField(originalKey: "workout_count", customKey: "workout_minutes")]
+        return config
+    }()
     private static let imperialCustomization: FormatCustomization = {
         let c = FormatCustomization()
         c.unitPreference = .imperial
@@ -160,6 +198,143 @@ final class DailyNoteInjectorTests: XCTestCase {
         s.enabledMetrics.insert("average_valence")
         return s
     }()
+
+    func testInject_workoutCountOnlyHonorsFieldSelectionAndMatchesPreview() throws {
+        let directory = makeTempDir()
+        defer { cleanup(directory) }
+        var data = HealthData(date: Self.testDate)
+        data.workouts = [WorkoutData(workoutType: .running, startTime: Self.testDate,
+            duration: 1800, calories: 250, distance: 5000, avgHeartRate: 145)]
+        // A retained unselected property belongs to the user; do not remove or update it.
+        let existing = "---\nworkout_minutes: 99 # keep\n---\nMy journal.\n"
+        let file = directory.appendingPathComponent(Self.enabledCreateSettings.formatFilename(for: Self.testDate) + ".md")
+        try existing.write(to: file, atomically: true, encoding: .utf8)
+        for settings in [Self.enabledCreateSettings, Self.sectionsCreateSettings] {
+            guard case .preview(let preview) = DailyNoteInjector.preview(healthData: data,
+                base: .existingContent(existing), settings: settings,
+                customization: Self.workoutCountCustomization, metricSelection: Self.workoutsOnly) else {
+                return XCTFail("Expected a daily-note preview")
+            }
+            let result = DailyNoteInjector.inject(healthData: data, into: directory,
+                settings: settings, customization: Self.workoutCountCustomization, metricSelection: Self.workoutsOnly)
+            guard case .updated = result else { return XCTFail("Expected injected note") }
+            let note = try String(contentsOf: file, encoding: .utf8)
+            XCTAssertEqual(note, preview.content)
+            let frontmatter = try XCTUnwrap(MarkdownMerger.splitFrontmatter(from: note)).frontmatter
+            XCTAssertTrue(frontmatter.contains("My workout count: 1"), frontmatter)
+            XCTAssertTrue(frontmatter.contains("workout_minutes: 99 # keep"), frontmatter)
+            for key in ["workout_count:", "workout_calories:", "workout_distance_km:", "workouts:", "workout_avg_heart_rate:"] {
+                XCTAssertFalse(frontmatter.contains("\n" + key), frontmatter)
+            }
+            XCTAssertTrue(note.contains("My journal."))
+            try existing.write(to: file, atomically: true, encoding: .utf8)
+        }
+    }
+
+    func testInject_adversarialFieldSelectionMatrix() throws {
+        var data = HealthData(date: Self.testDate)
+        data.activity.steps = 42 // Present but not selected as a source metric.
+        data.workouts = [WorkoutData(workoutType: .running, startTime: Self.testDate,
+            duration: 1800, calories: 250, distance: 5000, avgHeartRate: 145)]
+        let bases = ["", "My journal without a trailing newline",
+            "---\r\nworkout_calories: 999 # old property\r\nnotes: |\r\n  Keep my: text\r\n---\r\nJournal"]
+        for (name, config) in Self.edgeCaseCustomizations where !["collision", "reserved", "dateCollision"].contains(name) {
+            for settings in [Self.enabledCreateSettings, Self.sectionsCreateSettings] {
+                for existing in bases {
+                    let directory = makeTempDir()
+                    defer { cleanup(directory) }
+                    let file = directory.appendingPathComponent(settings.formatFilename(for: Self.testDate) + ".md")
+                    try existing.write(to: file, atomically: true, encoding: .utf8)
+                    let preview = DailyNoteInjector.preview(healthData: data, base: .existingContent(existing),
+                        settings: settings, customization: config, metricSelection: Self.workoutsOnly)
+                    let result = DailyNoteInjector.inject(healthData: data, into: directory,
+                        settings: settings, customization: config, metricSelection: Self.workoutsOnly)
+                    if name == "none" && !settings.injectMarkdownSections {
+                        guard case .skipped = result, case .skipped = preview else {
+                            XCTFail("All fields disabled must skip a frontmatter-only injection"); continue
+                        }
+                        XCTAssertEqual(try String(contentsOf: file, encoding: .utf8), existing)
+                        continue
+                    }
+                    guard case .updated = result, case .preview(let expected) = preview else {
+                        XCTFail("Expected update for \(name)"); continue
+                    }
+                    let note = try String(contentsOf: file, encoding: .utf8)
+                    XCTAssertEqual(note, expected.content, name)
+                    let header = MarkdownMerger.splitFrontmatter(from: note)?.frontmatter ?? ""
+                    XCTAssertFalse(header.contains("\nsteps:"), "Unselected source metric leaked")
+                    if name == "workout_count" { XCTAssertTrue(header.contains("workout_count: 1")); XCTAssertFalse(header.contains("workout_minutes:")) }
+                    if name == "workout_minutes" { XCTAssertTrue(header.contains("workout_minutes: 30")); XCTAssertFalse(header.contains("workout_count:")) }
+                    if name == "legacy" { XCTAssertTrue(header.contains("workout_count: 1")); XCTAssertTrue(header.contains("workout_minutes: 30")) }
+                    if name == "disabledCollision" { XCTAssertTrue(header.contains("same: 1")); XCTAssertFalse(header.contains("same: 30")) }
+                    if existing.contains("old property") && name != "legacy" {
+                        XCTAssertTrue(note.contains("workout_calories: 999 # old property"))
+                        XCTAssertTrue(note.contains("  Keep my: text"))
+                    }
+                    _ = DailyNoteInjector.inject(healthData: data, into: directory, settings: settings,
+                        customization: config, metricSelection: Self.workoutsOnly)
+                    XCTAssertEqual(try String(contentsOf: file, encoding: .utf8), note, "Repeated export: \(name)")
+                }
+            }
+        }
+    }
+
+    func testInject_rejectsCollidingSelectedKeysWithoutChangingNote() throws {
+        var data = HealthData(date: Self.testDate)
+        data.workouts = [WorkoutData(workoutType: .running, startTime: Self.testDate,
+            duration: 1800, calories: 250, distance: nil)]
+        for (name, config) in Self.edgeCaseCustomizations where ["collision", "reserved"].contains(name) {
+            for existing in ["", "My journal", "---\ntitle: keep\n---\nMy journal"] {
+                let directory = makeTempDir()
+                defer { cleanup(directory) }
+                let file = directory.appendingPathComponent(Self.enabledCreateSettings.formatFilename(for: Self.testDate) + ".md")
+                try existing.write(to: file, atomically: true, encoding: .utf8)
+                let result = DailyNoteInjector.inject(healthData: data, into: directory,
+                    settings: Self.enabledCreateSettings, customization: config, metricSelection: Self.workoutsOnly)
+                guard case .failed(let error) = result else { XCTFail("Conflicting keys must fail: \(name)"); continue }
+                XCTAssertEqual(error.localizedDescription, FrontmatterConfiguration.keyConflictMessage)
+                XCTAssertEqual(try String(contentsOf: file, encoding: .utf8), existing)
+                guard case .skipped(let message) = DailyNoteInjector.preview(healthData: data, base: .existingContent(existing),
+                    settings: Self.enabledCreateSettings, customization: config, metricSelection: Self.workoutsOnly) else {
+                    XCTFail("Invalid keys must not produce a preview"); continue
+                }
+                XCTAssertEqual(message, FrontmatterConfiguration.keyConflictMessage)
+            }
+        }
+    }
+
+    func testFieldEditorConflictValidationMatchesExportGuidance() {
+        XCTAssertTrue(Self.customization.frontmatterConfig.conflictingOutputKeys.isEmpty)
+        XCTAssertEqual(Self.legacyConflictConfiguration.conflictingOutputKeys, ["workout_minutes"])
+        XCTAssertTrue(Self.legacyConflictConfiguration.hasConflictingName("workout_minutes", for: "workout_count"))
+        for (name, config) in Self.edgeCaseCustomizations {
+            let invalid = ["collision", "reserved", "dateCollision"].contains(name)
+            XCTAssertEqual(!config.frontmatterConfig.conflictingOutputKeys.isEmpty, invalid, name)
+            XCTAssertEqual(config.frontmatterConfig.hasConflictingName(
+                config.frontmatterConfig.fields.first { $0.originalKey == "workout_count" }?.customKey ?? "workout_count",
+                for: "workout_count"), invalid, name)
+        }
+        XCTAssertTrue(FrontmatterConfiguration.keyConflictMessage.contains("Frontmatter Fields"))
+        XCTAssertTrue(FrontmatterConfiguration.keyConflictMessage.contains("not changed"))
+    }
+
+    func testConflictDetailsIdentifyFieldsAndEditorDestinationsWithoutChangingDiagnostics() throws {
+        let collision = try XCTUnwrap(Self.edgeCaseCustomizations.first { $0.0 == "collision" })
+        let conflict = try XCTUnwrap(collision.1.frontmatterConfig.keyConflicts.first)
+        XCTAssertEqual(conflict.outputKey, "same")
+        XCTAssertEqual(conflict.sources.map(\.originalKey), ["workout_count", "workout_minutes"])
+        XCTAssertEqual(conflict.sources.map(\.destination), [.metrics(.workouts), .metrics(.workouts)])
+        XCTAssertTrue(conflict.localDescription.contains("Workouts → workout_minutes"))
+        let crossGroup = try XCTUnwrap(Self.crossGroupConflictConfiguration.keyConflicts.first)
+        XCTAssertEqual(crossGroup.sources.map(\.destination), [.metrics(.activity), .metrics(.workouts), .custom, .placeholders])
+        XCTAssertTrue(crossGroup.localDescription.contains("local_private_key"))
+        XCTAssertFalse(ExportError.frontmatterKeyConflict.localizedDescription.contains("local_private_key"))
+        let date = try XCTUnwrap(Self.edgeCaseCustomizations.first { $0.0 == "dateCollision" }?.1.frontmatterConfig.keyConflicts.first)
+        XCTAssertEqual(date.sources.last?.destination, .core)
+        let reserved = try XCTUnwrap(Self.edgeCaseCustomizations.first { $0.0 == "reserved" }?.1.frontmatterConfig.keyConflicts.first)
+        XCTAssertTrue(reserved.isReserved)
+        XCTAssertEqual(reserved.sources.count, 1)
+    }
 
     // MARK: - frontmatterKeys
 
