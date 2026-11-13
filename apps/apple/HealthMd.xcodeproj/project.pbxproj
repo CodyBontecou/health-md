@@ -246,6 +246,8 @@
 				iOS/Views/IndividualTrackingView.swift,
 				iOS/Views/MetricSelectionView.swift,
 				iOS/Views/OnboardingView.swift,
+				iOS/Views/OnboardingSteps.swift,
+				iOS/NewExperience/Settings/GlassAPIEndpointEditorSheet.swift,
 				iOS/Views/PaywallView.swift,
 				iOS/Views/ScheduleSettingsView.swift,
 				macOS/Info.plist,

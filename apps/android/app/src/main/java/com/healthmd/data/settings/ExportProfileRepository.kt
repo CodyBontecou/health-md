@@ -239,6 +239,27 @@ class ExportProfileRepository @Inject constructor(
     }
 
     /**
+     * Removes a profile's API endpoint binding (its saved endpoint was deleted). The target stays
+     * API and the frozen snapshot keeps the old destination identity, so runs fail closed as
+     * "not configured" instead of falling back to another URL. Returns false for unknown ids.
+     */
+    suspend fun clearApiEndpoint(id: String): Boolean {
+        var applied = false
+        dataStore.edit { prefs ->
+            val decoded = ExportProfilePersistence.decode(prefs)
+            if (decoded.corruptRoot) return@edit
+            val existing = decoded.profiles
+            val index = existing.indexOfFirst { it.id == id }
+            if (index >= 0) {
+                val updated = existing[index].copy(apiEndpointUrl = null, updatedAtEpochMillis = System.currentTimeMillis())
+                ExportProfilePersistence.writeNative(prefs, decoded, existing.toMutableList().apply { set(index, updated) })
+                applied = true
+            }
+        }
+        return applied
+    }
+
+    /**
      * Full editor update in one atomic DataStore edit: rename (trim + unique suffixing),
      * retarget, rebind the destination — endpoint URL for API targets, SAF folder for folder
      * targets (both cleared when switching away) — and replace the frozen snapshot. Returns
@@ -295,6 +316,31 @@ class ExportProfileRepository @Inject constructor(
             }
         }
         return storedName
+    }
+
+    /**
+     * Binds a connected local Google Drive destination to a profile and targets Drive (onboarding's
+     * Folder step). The frozen snapshot is left to the caller's flush. Returns false for unknown ids.
+     */
+    suspend fun bindGoogleDriveDestination(id: String, destinationId: String): Boolean {
+        if (destinationId.isBlank()) return false
+        var applied = false
+        dataStore.edit { prefs ->
+            val decoded = ExportProfilePersistence.decode(prefs)
+            if (decoded.corruptRoot) return@edit
+            val existing = decoded.profiles
+            val index = existing.indexOfFirst { it.id == id }
+            if (index >= 0) {
+                val updated = existing[index].copy(
+                    target = ExportTarget.GOOGLE_DRIVE,
+                    destinationId = destinationId,
+                    updatedAtEpochMillis = System.currentTimeMillis(),
+                )
+                ExportProfilePersistence.writeNative(prefs, decoded, existing.toMutableList().apply { set(index, updated) })
+                applied = true
+            }
+        }
+        return applied
     }
 
     /** Clears a local Drive binding without changing profile output settings or target identity. */

@@ -1,9 +1,16 @@
 import SwiftUI
-import StoreKit
-import WebKit
 
-// MARK: - Onboarding Flow
+// MARK: - Onboarding v2
 
+/// First-run setup: Welcome → Packs → Apple Health → Folder → First note → Make it daily.
+///
+/// Goal: the first real file lands in the user's folder in about five taps. Packs
+/// replace the full metric list, onboarding configures the existing Default
+/// automation (renamed "Daily note") instead of creating a second one, the first
+/// note is shown rendered with the raw file behind a toggle, the one free export
+/// writes the past 7 days, and the trial is offered only after the user has seen
+/// their notes. The flow never traps the user: Health access and the folder can
+/// both be skipped and repaired from the app later.
 struct OnboardingView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -11,46 +18,86 @@ struct OnboardingView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @EnvironmentObject var sharedSetupCoordinator: SharedSetupCoordinator
+    var services: OnboardingServices = .preview
     let onComplete: () -> Void
 
-    @State private var currentStep = 0
+    @State private var step: OnboardingStep = .welcome
     @State private var direction: TransitionDirection = .forward
+    @State private var packs: Set<OnboardingMetricPack> = OnboardingMetricPack.defaultSelection
+    @State private var destination: OnboardingDestination = .folder
     @State private var isRequestingHealthAuthorization = false
     @State private var healthAuthorizationError: String?
+    @State private var week = OnboardingWeekState()
+    @State private var saveState: OnboardingSaveState = .idle
+    @State private var trialState: OnboardingTrialState = .idle
+    @State private var endpointEditor: OnboardingEndpointEditorRequest?
+    /// Bumped after the endpoint sheet saves or deletes, so the step re-reads it.
+    @State private var endpointRevision = 0
+    @State private var showDriveDisclosure = false
+    @State private var isConnectingDrive = false
+    @State private var driveError: String?
+    /// Bumped after a Drive connection attempt, so the step re-reads the binding.
+    @State private var driveRevision = 0
 
-    private let totalSteps = OnboardingStep.allCases.count
-    private let sampleExportStepIndex = OnboardingStep.sampleExport.rawValue
-    private let folderStepIndex = OnboardingStep.folder.rawValue
-    private let readyStepIndex = OnboardingStep.ready.rawValue
+    private var metricCount: Int { OnboardingMetricPack.metricIDs(for: packs).count }
 
-    private var step: OnboardingStep {
-        OnboardingStep(rawValue: currentStep) ?? .welcome
+    /// The free export runs only when there is real data and a writable folder.
+    /// Otherwise the step finishes setup and leaves the allowance unused.
+    private var canSaveWeek: Bool {
+        guard week.hasRealData, purchaseManager.canExport else { return false }
+        if destination == .api { return apiEndpoint != nil }
+        if usesConnectedDrive { return driveFolder?.isReady == true }
+        return vaultManager.vaultURL != nil && !vaultManager.requiresVaultReselection
     }
 
-    private var canGoBack: Bool {
-        currentStep > 0 && step != .ready
+    /// Google Drive uses the direct Drive connection when this build has it;
+    /// otherwise the option falls back to a Drive folder picked in Files.
+    private var usesConnectedDrive: Bool { destination == .drive && services.driveAvailable() }
+
+    private var driveFolder: OnboardingDriveFolder? {
+        _ = driveRevision
+        return services.driveFolder()
     }
 
-    /// Setup steps are intentionally not gated. Health access and folder choice
-    /// can both be completed later from the app, so onboarding never traps users.
-    private var canAdvance: Bool { true }
+    private var apiEndpoint: OnboardingAPIEndpoint? {
+        _ = endpointRevision
+        return services.apiEndpoint()
+    }
 
     var body: some View {
         ZStack {
             Color.glassAdaptive(\.bg).ignoresSafeArea()
 
-            OnboardingPageLayout(pageID: currentStep) {
-                VStack(spacing: Spacing.s4) {
-                    topBar
-                    OnboardingProgressBar(current: step.phase.rawValue, total: OnboardingPhase.allCases.count)
+            OnboardingPageLayout(pageID: step.rawValue) {
+                if step.showsTopBar {
+                    OnboardingTopBar(
+                        progress: step.progressIndex,
+                        total: OnboardingStep.progressCount,
+                        onBack: goBack
+                    )
                 }
             } content: {
                 stepContent
-                    .id(currentStep)
+                    .id(step)
+                    .transition(stepTransition)
             } footer: {
                 footerControls
                     .transition(.opacity)
             }
+        }
+        .glassTheme()
+        .onAppear(perform: restorePacksFromSelection)
+        .sheet(item: $endpointEditor, onDismiss: { endpointRevision += 1 }) { request in
+            endpointEditorSheet(request)
+        }
+        .alert(
+            GoogleDrivePrivacyDisclosure.title,
+            isPresented: $showDriveDisclosure
+        ) {
+            Button(GoogleDrivePrivacyDisclosure.confirm, action: connectDrive)
+            Button(String(localized: "Cancel"), role: .cancel) {}
+        } message: {
+            Text(GoogleDrivePrivacyDisclosure.message)
         }
         .alert(
             String(localized: "Unable to Connect Apple Health"),
@@ -65,44 +112,42 @@ struct OnboardingView: View {
         }
     }
 
-    private var topBar: some View {
-        OnboardingNavigationHeader(
-            current: step.phase.rawValue,
-            total: OnboardingPhase.allCases.count,
-            canGoBack: canGoBack,
-            showsMark: step != .welcome,
-            onBack: goBack
-        )
-    }
+    // MARK: Content
 
     @ViewBuilder
     private var stepContent: some View {
         switch step {
         case .welcome:
-            GlassWelcomeStep()
-                .glassTheme()
-                .transition(stepTransition)
-        case .healthAccess:
-            HealthAccessStep(isAuthorized: healthKitManager.isAuthorized)
-                .transition(stepTransition)
-        case .sampleExport:
-            SampleExportStep()
-                .transition(stepTransition)
+            OnboardingWelcomeStep()
+        case .packs:
+            OnboardingPacksStep(selection: $packs)
+        case .health:
+            OnboardingHealthStep(packs: packs, isAuthorized: healthKitManager.isAuthorized)
         case .folder:
-            FolderSetupStep(
-                vaultName: vaultManager.vaultName,
-                hasFolder: vaultManager.vaultURL != nil
+            OnboardingFolderStep(
+                destination: $destination,
+                folderName: vaultManager.vaultURL == nil ? nil : services.folderLabel(),
+                onChooseFolder: { showFolderPicker = true },
+                previewDates: OnboardingWeekState.defaultDates(),
+                apiEndpoint: apiEndpoint,
+                onEditAPIEndpoint: { endpointEditor = OnboardingEndpointEditorRequest(endpointID: apiEndpoint?.id) },
+                driveAvailable: services.driveAvailable(),
+                driveFolder: driveFolder,
+                driveError: destination == .drive ? driveError : nil,
+                isConnectingDrive: isConnectingDrive,
+                onChangeDrive: { showDriveDisclosure = true }
             )
-            .transition(stepTransition)
-        case .ready:
-            ReadyStep(
-                healthAuthorized: healthKitManager.isAuthorized,
-                folderSelected: vaultManager.vaultURL != nil,
-                folderName: vaultManager.vaultName,
-                onConnectHealth: { requestHealthAuthorization(advanceWhenConnected: false) },
-                onSelectFolder: { showFolderPicker = true }
+        case .firstNote:
+            OnboardingFirstNoteStep(week: $week, healthAuthorized: healthKitManager.isAuthorized)
+                .task(id: week.loadID) { await loadWeekIfNeeded() }
+        case .daily:
+            OnboardingDailyStep(
+                savedBanner: savedBanner,
+                destinationLabel: services.destinationLabel(),
+                trialTimeline: services.trialTimeline(),
+                fullAccessIncluded: purchaseManager.isUnlocked
             )
-            .transition(stepTransition)
+            .task { await services.prepareTrial() }
         }
     }
 
@@ -111,151 +156,424 @@ struct OnboardingView: View {
         VStack(spacing: Spacing.s3) {
             switch step {
             case .welcome:
-                // The Health step still explains access and makes the request. Importing a
-                // shared setup lives in Settings › More (ImportSetupG), not on the welcome board.
-                OnboardingPrimaryButton(
-                    title: String(localized: "Connect Apple Health"),
-                    icon: "arrow.right",
-                    accessibilityHint: String(localized: "Double tap to continue"),
+                OnboardingPillButton(
+                    title: String(localized: "Get started"),
+                    trailingSymbol: "arrow.right",
                     action: advance
                 )
-            case .healthAccess:
-                if healthKitManager.isAuthorized {
-                    OnboardingPrimaryButton(title: String(localized: "Continue Setup"), icon: "arrow.right", action: advance)
-                } else {
-                    OnboardingPrimaryButton(
-                        title: isRequestingHealthAuthorization ? String(localized: "Connecting…") : String(localized: "Connect Apple Health"),
-                        imageAsset: "AppleHealthIcon",
-                        accessibilityHint: String(localized: "Opens Apple Health permission selection"),
-                        isDisabled: isRequestingHealthAuthorization,
-                        action: { requestHealthAuthorization(advanceWhenConnected: true) }
-                    )
-                    OnboardingSecondaryButton(title: String(localized: "Skip for Now"), icon: "forward") {
-                        skipHealthAccess()
-                    }
+                Label {
+                    Text("No account. Your data stays on your device and in your folders.")
+                } icon: {
+                    Image(systemName: "lock")
                 }
-            case .sampleExport:
-                OnboardingPrimaryButton(title: String(localized: "Continue Setup"), icon: "arrow.right", action: advance)
+                .glassFont(.caption)
+                .foregroundStyle(Color.glassAdaptive(\.muted))
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+
+            case .packs:
+                OnboardingPacksSummary(packCount: packs.count, metricCount: metricCount)
+                OnboardingPillButton(
+                    title: String(localized: "Connect Apple Health"),
+                    isDisabled: packs.isEmpty,
+                    action: confirmPacks
+                )
+
+            case .health:
+                if healthKitManager.isAuthorized && !isRequestingHealthAuthorization {
+                    OnboardingPillButton(title: String(localized: "Continue"), trailingSymbol: "arrow.right", action: advance)
+                }
+                OnboardingPillButton(
+                    title: isRequestingHealthAuthorization
+                        ? String(localized: "Connecting…")
+                        : String(localized: "Continue to Apple Health"),
+                    imageAsset: "AppleHealthIcon",
+                    style: healthKitManager.isAuthorized ? .secondary : .primary,
+                    isDisabled: isRequestingHealthAuthorization,
+                    accessibilityHint: String(localized: "Opens Apple Health permission selection"),
+                    action: requestHealthAuthorization
+                )
+                OnboardingQuietButton(title: String(localized: "Skip for now"), action: advance)
+
             case .folder:
-                if vaultManager.vaultURL == nil {
-                    OnboardingPrimaryButton(
-                        title: String(localized: "Select Export Folder"),
-                        icon: "folder.badge.plus",
+                if destination == .api && apiEndpoint == nil {
+                    OnboardingPillButton(
+                        title: String(localized: "Add API endpoint"),
+                        trailingSymbol: "plus",
+                        action: { endpointEditor = OnboardingEndpointEditorRequest(endpointID: nil) }
+                    )
+                    OnboardingQuietButton(title: String(localized: "Skip for now"), action: advance)
+                } else if usesConnectedDrive && driveFolder == nil {
+                    OnboardingPillButton(
+                        title: isConnectingDrive
+                            ? String(localized: "Connecting…")
+                            : String(localized: "Connect Google Drive"),
+                        imageAsset: "GoogleDriveLogo",
+                        isDisabled: isConnectingDrive,
+                        accessibilityHint: String(localized: "Opens Google sign-in and the Drive folder picker"),
+                        action: { showDriveDisclosure = true }
+                    )
+                    OnboardingQuietButton(title: String(localized: "Skip for now"), action: advance)
+                } else if destination != .api && !usesConnectedDrive && vaultManager.vaultURL == nil {
+                    OnboardingPillButton(
+                        title: String(localized: "Choose a folder"),
+                        trailingSymbol: "folder.badge.plus",
                         accessibilityHint: String(localized: "Opens the folder picker"),
                         action: { showFolderPicker = true }
                     )
-                    OnboardingSecondaryButton(title: String(localized: "Skip for Now"), icon: "forward") {
-                        skipFolderSetup()
-                    }
+                    OnboardingQuietButton(title: String(localized: "Skip for now"), action: advance)
                 } else {
-                    OnboardingPrimaryButton(title: String(localized: "Continue Setup"), icon: "arrow.right", action: advance)
+                    OnboardingPillButton(
+                        title: String(localized: "Show my notes"),
+                        trailingSymbol: "arrow.right",
+                        action: confirmDestination
+                    )
                 }
-            case .ready:
-                OnboardingPrimaryButton(
-                    title: String(localized: "Create My First Automation"),
-                    icon: "doc.text.magnifyingglass",
-                    accessibilityHint: String(localized: "Completes setup and opens the automation creator. Your first export is free."),
-                    action: advance
+
+            case .firstNote:
+                OnboardingPillButton(
+                    title: saveButtonTitle,
+                    leadingSymbol: canSaveWeek ? "square.and.arrow.down" : nil,
+                    isDisabled: saveState == .saving || week.isLoading,
+                    action: saveWeek
                 )
+                Text(saveFinePrint)
+                    .glassFont(.caption)
+                    .foregroundStyle(Color.glassAdaptive(\.muted))
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                if case .failed(let message) = saveState {
+                    Text(message)
+                        .glassFont(.caption)
+                        .foregroundStyle(Color.glassAdaptive(\.coral))
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                        .accessibilityIdentifier("onboarding.save.error")
+                    OnboardingQuietButton(title: String(localized: "Continue without saving")) {
+                        saveState = .idle
+                        advance()
+                    }
+                }
+
+            case .daily:
+                if purchaseManager.isUnlocked {
+                    OnboardingPillButton(
+                        title: String(localized: "Turn on daily notes"),
+                        action: { finish(enableSchedule: true) }
+                    )
+                } else {
+                    OnboardingPillButton(
+                        title: trialState == .purchasing
+                            ? String(localized: "Starting…")
+                            : (services.trialEligible()
+                                ? String(localized: "Start 7-day free trial")
+                                : String(localized: "Subscribe for daily notes")),
+                        isDisabled: trialState == .purchasing,
+                        action: startTrial
+                    )
+                    if case .failed(let message) = trialState {
+                        Text(message)
+                            .glassFont(.caption)
+                            .foregroundStyle(Color.glassAdaptive(\.coral))
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                OnboardingQuietButton(
+                    title: String(localized: "Not now, I'll export manually"),
+                    action: { finish(enableSchedule: false) }
+                )
+                if !purchaseManager.isUnlocked {
+                    Text("Cancel anytime in Settings › Apple ID › Subscriptions.")
+                        .glassFont(.caption)
+                        .foregroundStyle(Color.glassAdaptive(\.muted))
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                }
             }
         }
-        .disabled(!canAdvance)
     }
+
+    // MARK: Copy
+
+    private var saveButtonTitle: String {
+        if saveState == .saving { return String(localized: "Saving…") }
+        guard canSaveWeek else { return String(localized: "Finish setup") }
+        let count = week.daysWithData
+        if destination == .api, let apiEndpoint {
+            return String(localized: "Send \(count) days to \(apiEndpoint.name)")
+        }
+        return String(localized: "Save \(count) notes to \(services.destinationLabel())")
+    }
+
+    private var saveFinePrint: String {
+        if destination == .api && apiEndpoint == nil {
+            return String(localized: "Add an API endpoint in Automations, then use Run now. Your first export is free.")
+        }
+        if usesConnectedDrive && driveFolder?.isReady != true {
+            return String(localized: "Connect Google Drive in Automations, then use Run now. Your first export is free.")
+        }
+        if week.hasRealData && !usesConnectedDrive && vaultManager.vaultURL == nil {
+            return String(localized: "Choose a folder in Settings, then use Run now. Your first export is free.")
+        }
+        guard week.hasRealData else {
+            return String(localized: "Your free export stays unused until there’s data to write.")
+        }
+        if !purchaseManager.canExport {
+            return String(localized: "Your free export has been used. Your notes appear once you subscribe.")
+        }
+        if !usesConnectedDrive && vaultManager.requiresVaultReselection {
+            return String(localized: "Re-select your folder in Settings, then use Run now.")
+        }
+        if let range = week.rangeDescription {
+            return String(localized: "Includes \(range). Your first export is free.")
+        }
+        return String(localized: "Your first export is free and includes the past 7 days.")
+    }
+
+    private var savedBanner: String {
+        switch saveState {
+        case .saved(let count):
+            if destination == .api {
+                return String(localized: "\(count) days sent to \(services.destinationLabel())")
+            }
+            return String(localized: "\(count) notes saved to \(services.destinationLabel())")
+        default:
+            return String(localized: "Setup complete, with nothing exported yet")
+        }
+    }
+
+    // MARK: Navigation
 
     private var stepTransition: AnyTransition {
         guard !reduceMotion else { return .opacity }
-
-        let insertionOffset = direction == .forward ? 20 : -20
-        let removalOffset = direction == .forward ? -12 : 12
-
+        let insertion: CGFloat = direction == .forward ? 20 : -20
+        let removal: CGFloat = direction == .forward ? -12 : 12
         return .asymmetric(
-            insertion: .opacity.combined(with: .offset(x: CGFloat(insertionOffset), y: 0)),
-            removal: .opacity.combined(with: .offset(x: CGFloat(removalOffset), y: 0))
+            insertion: .opacity.combined(with: .offset(x: insertion)),
+            removal: .opacity.combined(with: .offset(x: removal))
         )
     }
 
     private func advance() {
-        if currentStep >= totalSteps - 1 {
-            onComplete()
-            return
-        }
-
+        guard let next = step.next else { return }
         direction = .forward
-        move(to: currentStep + 1)
+        move(to: next)
     }
 
     private func goBack() {
-        guard currentStep > 0 else { return }
+        guard let previous = step.previous else { return }
         direction = .backward
-        move(to: currentStep - 1)
+        move(to: previous)
     }
 
-    private func move(to stepIndex: Int) {
-        let update = { currentStep = max(0, min(stepIndex, totalSteps - 1)) }
+    private func move(to target: OnboardingStep) {
         if reduceMotion {
-            update()
+            step = target
         } else {
-            withAnimation(AnimationTimings.standard, update)
+            withAnimation(AnimationTimings.standard) { step = target }
         }
     }
 
-    private func requestHealthAuthorization(advanceWhenConnected: Bool) {
+    // MARK: Actions
+
+    private func restorePacksFromSelection() {
+        // Replaying setup shows what the Default automation already exports.
+        let covered = services.coveredPacks()
+        if !covered.isEmpty { packs = covered }
+    }
+
+    private func confirmPacks() {
+        services.applyPacks(packs)
+        week.invalidate()
+        advance()
+    }
+
+    private func requestHealthAuthorization() {
         guard !isRequestingHealthAuthorization else { return }
         isRequestingHealthAuthorization = true
-
+        let metricIDs = OnboardingMetricPack.metricIDs(for: packs)
         Task {
             defer { isRequestingHealthAuthorization = false }
             do {
-                let outcome = try await healthKitManager.requestAuthorization()
+                let outcome = try await healthKitManager.requestAuthorization(forMetricIDs: metricIDs)
                 if outcome == .unavailable {
                     healthAuthorizationError = String(localized: "Apple Health is not available on this device. You can skip this step and connect on a supported device later.")
                     return
                 }
-                if advanceWhenConnected && healthKitManager.isAuthorized {
-                    advance()
-                }
+                week.invalidate()
+                if healthKitManager.isAuthorized { advance() }
             } catch {
                 healthAuthorizationError = error.localizedDescription
             }
         }
     }
 
-    private func skipHealthAccess() {
-        advance()
-    }
-
-    private func skipFolderSetup() {
-        advance()
-    }
-
-}
-
-/// Setup leads into the automation creator. A preview never consumes the free
-/// export; paid access is requested when the user runs another export.
-private enum OnboardingStep: Int, CaseIterable {
-    case welcome
-    case healthAccess
-    case folder
-    case sampleExport
-    case ready
-
-    /// The welcome page's three phases, which the progress bar and "Step x of 3" count.
-    var phase: OnboardingPhase {
-        switch self {
-        case .welcome, .healthAccess: return .read
-        case .folder: return .archive
-        case .sampleExport, .ready: return .preview
+    @ViewBuilder
+    private func endpointEditorSheet(_ request: OnboardingEndpointEditorRequest) -> some View {
+        if let id = request.endpointID, let mode = services.apiEndpointEditMode(id) {
+            GlassAPIEndpointEditorSheet(
+                mode: mode,
+                onSave: { services.saveAPIEndpoint($0, id) },
+                onDelete: { services.deleteAPIEndpoint(id) }
+            )
+        } else {
+            GlassAPIEndpointEditorSheet(mode: .create) { draft in
+                guard services.saveAPIEndpoint(draft, nil) else { return false }
+                destination = .api
+                return true
+            }
         }
     }
+
+    private func connectDrive() {
+        guard !isConnectingDrive else { return }
+        isConnectingDrive = true
+        driveError = nil
+        Task {
+            let outcome = await services.connectDrive()
+            isConnectingDrive = false
+            driveRevision += 1
+            switch outcome {
+            case .connected:
+                destination = .drive
+            case .cancelled:
+                break
+            case .failed(let message):
+                driveError = message
+            }
+        }
+    }
+
+    private func confirmDestination() {
+        services.selectDestination(destination)
+        advance()
+    }
+
+    private func loadWeekIfNeeded() async {
+        guard week.needsLoad else { return }
+        let loadID = week.loadID
+        week.isLoading = true
+        let days = await services.loadWeek(week.dates)
+        // Leaving the step cancels the load, and changing packs supersedes it:
+        // never keep a partial or outdated week.
+        guard !Task.isCancelled, loadID == week.loadID else {
+            if loadID == week.loadID { week.isLoading = false }
+            return
+        }
+        week.apply(days)
+    }
+
+    private func saveWeek() {
+        guard canSaveWeek else {
+            saveState = .idle
+            advance()
+            return
+        }
+        saveState = .saving
+        Task {
+            let outcome = await services.saveWeek(week.datesWithData)
+            switch outcome {
+            case .saved(let count):
+                saveState = .saved(count)
+                advance()
+            case .failed(let message):
+                saveState = .failed(message)
+            }
+        }
+    }
+
+    private func startTrial() {
+        trialState = .purchasing
+        Task {
+            switch await services.startTrial() {
+            case .started:
+                trialState = .idle
+                finish(enableSchedule: true)
+            case .cancelled:
+                trialState = .idle
+            case .failed(let message):
+                trialState = .failed(message)
+            }
+        }
+    }
+
+    private func finish(enableSchedule: Bool) {
+        services.finish(enableSchedule)
+        onComplete()
+    }
 }
 
-/// OnboardingG's three phases: choose what Health.md can read, pick where the archive
-/// lives (the sample file shows what will be written there), then preview the first
-/// export, which the ready step leads to.
-enum OnboardingPhase: Int, CaseIterable {
-    case read
-    case archive
-    case preview
+// MARK: - Steps & state
+
+enum OnboardingStep: Int, CaseIterable {
+    case welcome
+    case packs
+    case health
+    case folder
+    case firstNote
+    case daily
+
+    static let progressCount = 4
+
+    var showsTopBar: Bool { (1...4).contains(rawValue) }
+    /// Packs, Health, Folder and First note are steps 1–4 of the progress dots.
+    var progressIndex: Int { max(0, min(rawValue - 1, Self.progressCount - 1)) }
+    var next: OnboardingStep? { OnboardingStep(rawValue: rawValue + 1) }
+    /// Back stops at the first note: after the free export, the trial offer is final.
+    var previous: OnboardingStep? {
+        self == .daily ? nil : OnboardingStep(rawValue: rawValue - 1)
+    }
+}
+
+/// The Google Drive folder onboarding's Daily note automation uploads to.
+struct OnboardingDriveFolder: Equatable {
+    let id: UUID
+    let folderLabel: String
+    let isReady: Bool
+}
+
+enum OnboardingDriveOutcome: Equatable {
+    case connected
+    case cancelled
+    case failed(String)
+}
+
+enum OnboardingDestination: String, CaseIterable, Identifiable {
+    case folder
+    case api
+    case drive
+
+    var id: String { rawValue }
+}
+
+struct OnboardingEndpointEditorRequest: Identifiable {
+    let id = UUID()
+    let endpointID: UUID?
+}
+
+enum OnboardingSaveState: Equatable {
+    case idle
+    case saving
+    case saved(Int)
+    case failed(String)
+}
+
+enum OnboardingTrialState: Equatable {
+    case idle
+    case purchasing
+    case failed(String)
+}
+
+enum OnboardingSaveOutcome: Equatable {
+    case saved(Int)
+    case failed(String)
+}
+
+enum OnboardingTrialOutcome: Equatable {
+    case started
+    case cancelled
+    case failed(String)
 }
 
 private enum TransitionDirection {
@@ -263,480 +581,237 @@ private enum TransitionDirection {
     case backward
 }
 
-// MARK: - Progress
+/// One day of the first-note preview, rendered from the user's real Health data.
+struct OnboardingDayPreview: Identifiable, Equatable {
+    struct Chip: Equatable, Hashable { let label: String; let value: String }
+    struct Section: Equatable, Hashable { let title: String; let text: String }
 
-/// OnboardingG's progress: one 24-point pill for the current phase, 6-point dots for the rest.
-struct OnboardingProgressBar: View {
-    let current: Int
-    let total: Int
+    let date: Date
+    let fileName: String
+    let hasData: Bool
+    let sleepMinutes: Double?
+    let chips: [Chip]
+    let sections: [Section]
+    let rawFile: String
 
-    var body: some View {
-        HStack(spacing: 6) {
-            ForEach(0..<total, id: \.self) { index in
-                Capsule()
-                    .fill(index == current ? Color.glassAdaptive(\.accent) : Color.glassAdaptive(\.line))
-                    .frame(width: index == current ? 24 : 6, height: 6)
-                    .animation(AnimationTimings.standard, value: current)
-                    .accessibilityHidden(true)
-            }
-        }
-        .padding(.horizontal, 4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Setup progress"))
-        .accessibilityValue(Text("Step \(current + 1) of \(total)"))
+    var id: Date { date }
+}
+
+struct OnboardingWeekState: Equatable {
+    var dates: [Date] = OnboardingWeekState.defaultDates()
+    var days: [OnboardingDayPreview] = []
+    var selectedIndex: Int = 6
+    var isLoading = false
+    var showsRaw = false
+    private(set) var loadID = 0
+    private var loaded = false
+
+    var needsLoad: Bool { !loaded && !isLoading }
+    var hasRealData: Bool { days.contains(where: \.hasData) }
+    var daysWithData: Int { days.filter(\.hasData).count }
+    var datesWithData: [Date] { days.filter(\.hasData).map(\.date) }
+    var selectedDay: OnboardingDayPreview? {
+        days.indices.contains(selectedIndex) ? days[selectedIndex] : days.last
+    }
+
+    var rangeDescription: String? {
+        guard let first = dates.first, let last = dates.last else { return nil }
+        let style = Date.FormatStyle().month(.abbreviated).day()
+        return String(localized: "\(first.formatted(style)) through \(last.formatted(style))")
+    }
+
+    mutating func apply(_ previews: [OnboardingDayPreview]) {
+        days = previews
+        selectedIndex = max(0, previews.count - 1)
+        isLoading = false
+        loaded = true
+    }
+
+    mutating func invalidate() {
+        loaded = false
+        isLoading = false
+        days = []
+        dates = Self.defaultDates()
+        loadID += 1
+    }
+
+    /// The seven complete days ending yesterday, oldest first.
+    static func defaultDates(now: Date = Date(), calendar: Calendar = .current) -> [Date] {
+        let today = calendar.startOfDay(for: now)
+        return (1...7).reversed().compactMap { calendar.date(byAdding: .day, value: -$0, to: today) }
     }
 }
 
-// MARK: - Steps
+/// The app-side work onboarding needs. `ContentView` supplies the live
+/// implementation so the flow reuses the real profile, export and purchase paths.
+struct OnboardingServices {
+    var coveredPacks: @MainActor () -> Set<OnboardingMetricPack>
+    var applyPacks: @MainActor (Set<OnboardingMetricPack>) -> Void
+    var selectDestination: @MainActor (OnboardingDestination) -> Void
+    var destinationLabel: @MainActor () -> String
+    /// The chosen local/iCloud folder, independent of the current target.
+    var folderLabel: @MainActor () -> String? = { nil }
+    /// The saved endpoint bound to the Daily note automation, if any.
+    var apiEndpoint: @MainActor () -> OnboardingAPIEndpoint? = { nil }
+    var apiEndpointEditMode: @MainActor (UUID) -> GlassAPIEndpointEditorSheet.Mode? = { _ in nil }
+    /// Creates (nil id) or edits a saved endpoint and binds it to Daily note.
+    var saveAPIEndpoint: @MainActor (APIEndpointDraft, UUID?) -> Bool = { _, _ in false }
+    var deleteAPIEndpoint: @MainActor (UUID) -> Void = { _ in }
+    /// Whether this build can connect Google Drive directly (PR #138 OAuth + Picker).
+    var driveAvailable: @MainActor () -> Bool = { false }
+    /// The Drive folder bound to the Daily note automation, if any.
+    var driveFolder: @MainActor () -> OnboardingDriveFolder? = { nil }
+    /// Shows Google consent and the folder Picker, then binds the folder to Daily note.
+    var connectDrive: @MainActor () async -> OnboardingDriveOutcome = { .cancelled }
+    var loadWeek: @MainActor ([Date]) async -> [OnboardingDayPreview]
+    var saveWeek: @MainActor ([Date]) async -> OnboardingSaveOutcome
+    var trialTimeline: @MainActor () -> [String]
+    var trialEligible: @MainActor () -> Bool
+    var prepareTrial: @MainActor () async -> Void
+    var startTrial: @MainActor () async -> OnboardingTrialOutcome
+    var finish: @MainActor (_ enableDailySchedule: Bool) -> Void
 
-/// OnboardingG's opening page. Later steps, including the Health request, are unchanged.
-private struct GlassWelcomeStep: View {
-    @Environment(\.glassPalette) private var palette
+    /// Inert services for previews and marketing capture.
+    static let preview = OnboardingServices(
+        coveredPacks: { [] },
+        applyPacks: { _ in },
+        selectDestination: { _ in },
+        destinationLabel: { "My Vault/Health" },
+        loadWeek: { dates in dates.map { OnboardingDayPreview.sample(for: $0) } },
+        saveWeek: { dates in .saved(dates.count) },
+        trialTimeline: { OnboardingServices.defaultTrialTimeline(price: nil) },
+        trialEligible: { true },
+        prepareTrial: {},
+        startTrial: { .cancelled },
+        finish: { _ in }
+    )
 
-    private let privacyPolicyURL = URL(string: "https://healthmd.app/privacy-policy.html")!
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
-            // OnboardingG's hero: the crystal heart on a 168-point glass tile.
-            Image("HealthCrystalHeart")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 104, height: 104)
-                .frame(width: 168, height: 168)
-                .glassSurface(cornerRadius: 48)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 24)
-                .accessibilityHidden(true)
-            Text("Export your health data.")
-                .glassFont(.largeTitle)
-                .foregroundStyle(palette.text)
-            Text("Create a durable copy of sleep, HRV, workouts, vitals, medications and more — as files you own.")
-                .glassFont(.body)
-                .foregroundStyle(palette.sec)
-            GlassPanel {
-                step(1, "Choose what Health.md can read")
-                step(2, "Pick where your archive lives")
-                step(3, "Create an automation and export free")
-            }
-            Text("No account or health-data cloud. Files go to folders you choose.")
-                .glassFont(.rowSubtitle)
-                .foregroundStyle(palette.muted)
-            Link("How Health.md handles data", destination: privacyPolicyURL)
-                .glassFont(.caption)
-                .foregroundStyle(palette.accent)
-                .frame(minHeight: GlassMetrics.touchTarget)
+    static func defaultTrialTimeline(price: String?, trialEligible: Bool = true) -> [String] {
+        guard trialEligible else {
+            return [price.map { String(localized: "Billed \($0) a year. Cancel anytime.") }
+                ?? String(localized: "Billed yearly. Cancel anytime.")]
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func step(_ number: Int, _ title: LocalizedStringKey) -> some View {
-        HStack(spacing: 12) {
-            Text(verbatim: "\(number)")
-                .glassFont(.caption)
-                .foregroundStyle(palette.accentInk)
-                .frame(width: 26, height: 26)
-                .background(Circle().fill(palette.accent))
-                .accessibilityHidden(true)
-            Text(title).glassFont(.body).foregroundStyle(palette.text)
-            Spacer(minLength: 0)
-        }
-        .padding(GlassMetrics.panelPadding)
-    }
-}
-
-private struct HealthAccessStep: View {
-    let isAuthorized: Bool
-
-    var body: some View {
-        VStack(spacing: Spacing.s6) {
-            OnboardingHeader(
-                eyebrow: String(localized: "Apple Health"),
-                title: String(localized: "Choose What Health.md Can Read"),
-                description: String(localized: "Grant read access for the categories you want to export. You can adjust this later in the Health app."),
-                icon: "heart.fill",
-                showsIcon: false
-            )
-
-            VStack(spacing: Spacing.s3) {
-                OnboardingStatusCard(
-                    icon: isAuthorized ? "checkmark.circle.fill" : "circle.dotted",
-                    title: isAuthorized ? String(localized: "Apple Health Connected") : String(localized: "Apple Health Not Connected"),
-                    description: isAuthorized ? String(localized: "You’re ready to generate real previews and exports.") : String(localized: "You can continue now and connect before your first export."),
-                    tint: isAuthorized ? .success : .textMuted
-                )
-
-                OnboardingFeatureRow(icon: "slider.horizontal.3", title: String(localized: "You Stay in Control"), description: String(localized: "iOS lets you approve or deny each health category."))
-                OnboardingFeatureRow(icon: "eye.slash", title: String(localized: "No Account Required"), description: String(localized: "Health.md does not need a server account to export local files."))
-            }
-        }
+        return [
+            String(localized: "Today · Start free trial"),
+            String(localized: "Day 5 · Reminder before you're charged"),
+            price.map { String(localized: "Day 7 · Billed \($0) unless cancelled") }
+                ?? String(localized: "Day 7 · Billed yearly unless cancelled"),
+        ]
     }
 }
 
-private struct SampleExportStep: View {
-    @State private var selectedFormat: SampleExportPreviewFormat = .markdown
+extension OnboardingDayPreview {
+    /// Illustrative note shown when Apple Health has no records yet. It is
+    /// always labelled as a sample and is never written to the user's folder.
+    static func sample(for date: Date) -> OnboardingDayPreview {
+        let day = date.formatted(.iso8601.year().month().day())
+        return OnboardingDayPreview(
+            date: date,
+            fileName: "\(day).md",
+            hasData: false,
+            sleepMinutes: 450,
+            chips: [
+                Chip(label: "sleep", value: "7h 30m"),
+                Chip(label: "hrv", value: "60 ms"),
+                Chip(label: "steps", value: "8,000"),
+                Chip(label: "resting", value: "58 bpm"),
+            ],
+            sections: [
+                Section(title: String(localized: "Sleep"), text: String(localized: "Bed 10:45 PM, up 6:30 AM. Deep 1h 15m, REM 1h 50m.")),
+                Section(title: String(localized: "Activity"), text: String(localized: "40 min exercise, 600 kcal active energy.")),
+            ],
+            rawFile: """
+            ---
+            date: \(day)
+            type: health-data
+            sleep_total_hours: 7.50
+            hrv_ms: 60.0
+            steps: 8000
+            resting_heart_rate: 58
+            ---
 
-    var body: some View {
-        VStack(spacing: Spacing.s6) {
-            OnboardingHeader(
-                eyebrow: String(localized: "Example File"),
-                title: String(localized: "See the Health Note Reveal"),
-                description: String(localized: "Watch Apple Health readings become a readable Markdown, CSV, JSON, or Obsidian file."),
-                icon: "doc.text.magnifyingglass",
-                showsIcon: false
-            )
+            # \(day)
 
-            SampleExportInlinePreview(selectedFormat: $selectedFormat)
-
-            ObsidianPluginLinkCard()
-        }
-        .frame(maxWidth: .infinity, alignment: .top)
-    }
-}
-
-/// Compact, non-blocking promo for the Obsidian plugin, folded into the
-/// sample-export step. Replaces the former full-screen `obsidian_plugin`
-/// onboarding step: the plugin pitch rides along with the file preview
-/// instead of gatekeeping the funnel.
-private struct ObsidianPluginLinkCard: View {
-    private let pluginURL = URL(string: "https://community.obsidian.md/plugins/health-md")!
-
-    var body: some View {
-        HStack(spacing: Spacing.s3) {
-            Image(systemName: "chart.xyaxis.line")
-                .font(Typography.scaled(size: 16, weight: .semibold))
-                .foregroundStyle(Color.primary)
-                .frame(minWidth: 32, minHeight: 32)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: Spacing.s1) {
-                Text("Make Your Body Part of Obsidian")
-                    .font(Typography.headline())
-                    .foregroundStyle(Color.glassAdaptive(\.text))
-                Text("Turn these files into vault-native dashboards with the free Health.md plugin.")
-                    .font(Typography.body())
-                    .foregroundStyle(Color.glassAdaptive(\.sec))
-            }
-
-            Link(destination: pluginURL) {
-                Text("Install")
-                    .font(Typography.bodyEmphasis())
-            }
-            .accessibilityHint("Opens the Health.md Obsidian plugin page")
-        }
-        .padding(Spacing.s3)
-        .background(Color.glassAdaptive(\.surface2))
-        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
+            ## Sleep
+            - Total: 7h 30m
+            """
         )
-        .accessibilityElement(children: .contain)
     }
 }
 
-private struct FolderSetupStep: View {
-    let vaultName: String
-    let hasFolder: Bool
-
-    var body: some View {
-        VStack(spacing: Spacing.s6) {
-            OnboardingHeader(
-                eyebrow: String(localized: "Destination"),
-                title: String(localized: "Choose Where Your Archive Lives"),
-                description: String(localized: "Save to an iPhone folder now, or connect the Mac app after onboarding to write exports to a Mac folder."),
-                icon: "folder.fill",
-                showsIcon: false
-            )
-
-            if hasFolder {
-                OnboardingStatusCard(
-                    icon: "folder.fill",
-                    title: vaultName,
-                    description: String(localized: "Health.md will write exports directly into this folder."),
-                    tint: .success
-                )
-            } else {
-                FolderPickerCard()
-            }
-
-            VStack(spacing: Spacing.s3) {
-                OnboardingFeatureRow(icon: "iphone", title: String(localized: "Local iPhone Folder"), description: String(localized: "Best when you keep notes in iCloud Drive, On My iPhone, or a synced app folder."))
-                OnboardingFeatureRow(icon: "desktopcomputer", title: String(localized: "Connected Mac Later"), description: String(localized: "Install the Mac app later to send iPhone-configured exports to a Mac folder."))
-            }
+extension OnboardingDayPreview {
+    /// Builds a day's preview from the user's real records. The raw file is the
+    /// exact Markdown the export would write with the current settings.
+    static func make(date: Date, data: HealthData?, settings: AdvancedExportSettings) -> OnboardingDayPreview {
+        let fileName = settings.filename(for: date, format: .markdown)
+        guard let data, data.hasAnyData else {
+            return OnboardingDayPreview(date: date, fileName: fileName, hasData: false, sleepMinutes: nil,
+                                        chips: [], sections: [], rawFile: "")
         }
-    }
-}
+        let time = Date.FormatStyle(date: .omitted, time: .shortened)
+        let number = IntegerFormatStyle<Int>.number
+        var chips: [Chip] = []
+        var sections: [Section] = []
 
-private struct ReadyStep: View {
-    let healthAuthorized: Bool
-    let folderSelected: Bool
-    let folderName: String
-    let onConnectHealth: () -> Void
-    let onSelectFolder: () -> Void
+        let sleep = data.sleep
+        let sleepMinutes = sleep.totalDuration > 0 ? sleep.totalDuration / 60 : nil
+        if let sleepMinutes { chips.append(Chip(label: "sleep", value: OnboardingFirstNoteStep.duration(minutes: sleepMinutes))) }
+        if let hrv = data.heart.hrv { chips.append(Chip(label: "hrv", value: "\(Int(hrv.rounded())) ms")) }
+        if let steps = data.activity.steps { chips.append(Chip(label: "steps", value: steps.formatted(number))) }
+        if let active = data.activity.activeCalories { chips.append(Chip(label: "active", value: "\(Int(active.rounded()).formatted(number)) kcal")) }
+        if let resting = data.heart.restingHeartRate { chips.append(Chip(label: "resting", value: "\(Int(resting.rounded())) bpm")) }
 
-    var body: some View {
-        VStack(spacing: Spacing.s6) {
-            OnboardingHeader(
-                eyebrow: String(localized: "Ready"),
-                title: String(localized: "Your Health Archive Is Ready"),
-                description: String(localized: "Create an automation with your chosen metrics and folder, then use Run now to generate your first export for free. Paid access is needed for further exports."),
-                icon: "checkmark.seal.fill",
-                showsIcon: false
-            )
-
-            VStack(spacing: Spacing.s3) {
-                OnboardingChecklistRow(
-                    title: String(localized: "Apple Health"),
-                    detail: healthAuthorized ? String(localized: "Connected") : String(localized: "Connect to preview your health data"),
-                    isComplete: healthAuthorized,
-                    actionTitle: healthAuthorized ? nil : String(localized: "Connect"),
-                    action: healthAuthorized ? nil : onConnectHealth
-                )
-                OnboardingChecklistRow(
-                    title: String(localized: "Export Folder"),
-                    detail: folderSelected ? folderName : String(localized: "Choose now or before exporting"),
-                    isComplete: folderSelected,
-                    actionTitle: folderSelected ? nil : String(localized: "Choose Folder"),
-                    action: folderSelected ? nil : onSelectFolder
-                )
-                OnboardingChecklistRow(
-                    title: String(localized: "Formats"),
-                    detail: String(localized: "Markdown is ready by default"),
-                    isComplete: true
-                )
-            }
+        var sleepParts: [String] = []
+        if let start = sleep.sessionStart, let end = sleep.sessionEnd {
+            sleepParts.append(String(localized: "Bed \(start.formatted(time)), up \(end.formatted(time))."))
         }
-    }
-}
-
-// MARK: - Shared Onboarding Components
-
-private struct OnboardingFeatureRow: View {
-    @Environment(\.onboardingReadingLayout) private var reading
-    let icon: String
-    let title: String
-    let description: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: Spacing.s3) {
-            if !reading {
-                Image(systemName: icon)
-                    .font(Typography.scaled(size: 16, weight: .semibold))
-                    .foregroundStyle(Color.primary)
-                    .frame(minWidth: 32, minHeight: 32)
-                    .accessibilityHidden(true)
-            }
-
-            VStack(alignment: .leading, spacing: Spacing.s1) {
-                Text(title)
-                    .font(Typography.headline())
-                    .foregroundStyle(Color.glassAdaptive(\.text))
-                Text(description)
-                    .font(Typography.body())
-                    .foregroundStyle(Color.glassAdaptive(\.sec))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: 0)
+        if sleep.deepSleep > 0 || sleep.remSleep > 0 {
+            sleepParts.append(String(localized: "Deep \(OnboardingFirstNoteStep.duration(minutes: sleep.deepSleep / 60)), REM \(OnboardingFirstNoteStep.duration(minutes: sleep.remSleep / 60))."))
         }
-        .geistCard(cornerRadius: GeistRadius.md, padding: Spacing.s3)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title). \(description)")
-    }
-}
+        if !sleepParts.isEmpty { sections.append(Section(title: String(localized: "Sleep"), text: sleepParts.joined(separator: " "))) }
 
-private struct OnboardingInfoChip: View {
-    let icon: String
-    let title: String
-
-    var body: some View {
-        HStack(spacing: Spacing.s2) {
-            Image(systemName: icon)
-                .font(Typography.scaled(size: 14, weight: .semibold))
-                .foregroundStyle(Color.glassAdaptive(\.accent))
-                .accessibilityHidden(true)
-
-            Text(title)
-                .font(Typography.bodyEmphasis())
-                .foregroundStyle(Color.glassAdaptive(\.text))
-                .fixedSize(horizontal: false, vertical: true)
+        var activityParts: [String] = []
+        if let exercise = data.activity.exerciseMinutes, exercise > 0 {
+            activityParts.append(String(localized: "\(Int(exercise.rounded())) min exercise"))
         }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, Spacing.s3)
-        .padding(.vertical, Spacing.s3)
-        .background(Color.glassAdaptive(\.bg))
-        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
+        if let workout = data.workouts.first {
+            let distance = workout.distance.map { String(format: " %.1f km", $0 / 1000) } ?? ""
+            let more = data.workouts.count > 1 ? String(localized: " and \(data.workouts.count - 1) more") : ""
+            activityParts.append(String(localized: "including a\(distance) \(workout.workoutType.displayName.lowercased())\(more)"))
+        }
+        if !activityParts.isEmpty {
+            sections.append(Section(title: String(localized: "Activity"), text: activityParts.joined(separator: ", ") + "."))
+        }
+
+        var heartParts: [String] = []
+        if let low = data.heart.heartRateMin, let high = data.heart.heartRateMax {
+            heartParts.append(String(localized: "Range \(Int(low.rounded()))–\(Int(high.rounded())) bpm"))
+        }
+        if let oxygen = data.vitals.bloodOxygenAvg {
+            heartParts.append(String(localized: "blood oxygen \(Int((oxygen * 100).rounded()))%"))
+        }
+        if !heartParts.isEmpty { sections.append(Section(title: String(localized: "Heart"), text: heartParts.joined(separator: ", ") + ".")) }
+
+        if let weight = data.body.weight {
+            let fat = data.body.bodyFatPercentage.map { String(localized: ", body fat \(String(format: "%.1f", $0 * 100))%") } ?? ""
+            sections.append(Section(title: String(localized: "Body"), text: String(localized: "Weight \(String(format: "%.1f", weight)) kg\(fat).")))
+        }
+        if let mindful = data.mindfulness.mindfulMinutes, mindful > 0 {
+            sections.append(Section(title: String(localized: "Mind"), text: String(localized: "\(Int(mindful.rounded())) mindful minutes.")))
+        }
+        if let energy = data.nutrition.dietaryEnergy {
+            let protein = data.nutrition.protein.map { String(localized: ", \(Int($0.rounded())) g protein") } ?? ""
+            sections.append(Section(title: String(localized: "Nutrition"), text: String(localized: "\(Int(energy.rounded()).formatted(number)) kcal\(protein).")))
+        }
+
+        return OnboardingDayPreview(
+            date: date,
+            fileName: fileName,
+            hasData: true,
+            sleepMinutes: sleepMinutes,
+            chips: chips,
+            sections: sections,
+            rawFile: data.export(format: .markdown, settings: settings)
         )
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(title)
-    }
-}
-
-private struct FolderPickerCard: View {
-    @Environment(\.onboardingReadingLayout) private var reading
-
-    var body: some View {
-        HStack(alignment: .top, spacing: Spacing.s3) {
-            if !reading {
-                Image(systemName: "folder.badge.plus")
-                    .font(Typography.scaled(size: 16, weight: .semibold))
-                    .foregroundStyle(Color.primary)
-                    .frame(minWidth: 36, minHeight: 36)
-                    .accessibilityHidden(true)
-            }
-
-            VStack(alignment: .leading, spacing: Spacing.s1) {
-                Text("Select Folder Now")
-                    .font(Typography.headline())
-                    .foregroundStyle(Color.glassAdaptive(\.text))
-                Text("Choose an Obsidian vault or any Files folder on this iPhone.")
-                    .font(Typography.body())
-                    .foregroundStyle(Color.glassAdaptive(\.sec))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .geistCard(cornerRadius: GeistRadius.md, padding: Spacing.s3)
-    }
-}
-
-private struct OnboardingStatusCard: View {
-    @Environment(\.onboardingReadingLayout) private var reading
-    let icon: String
-    let title: String
-    let description: String
-    let tint: Color
-
-    var body: some View {
-        HStack(alignment: .top, spacing: Spacing.s3) {
-            if !reading {
-                Image(systemName: icon)
-                    .font(Typography.scaled(size: 18, weight: .semibold))
-                    .foregroundStyle(tint)
-                    .frame(minWidth: 34, minHeight: 34)
-                    .background(tint.opacity(0.10))
-                    .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-                    .accessibilityHidden(true)
-            }
-
-            VStack(alignment: .leading, spacing: Spacing.s1) {
-                Text(title)
-                    .font(Typography.headline())
-                    .foregroundStyle(Color.glassAdaptive(\.text))
-                Text(description)
-                    .font(Typography.body())
-                    .foregroundStyle(Color.glassAdaptive(\.sec))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(Spacing.s3)
-        .background(tint.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(tint.opacity(0.25), lineWidth: 1)
-        )
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title). \(description)")
-    }
-}
-
-private struct SampleExportInlinePreview: View {
-    @Environment(\.onboardingReadingLayout) private var reading
-    @Environment(\.onboardingPreviewHeight) private var previewHeight
-    @Binding var selectedFormat: SampleExportPreviewFormat
-
-    var body: some View {
-        VStack(spacing: 0) {
-            VStack(spacing: Spacing.s3) {
-                fileHeader
-
-                OnboardingAudienceChoices(
-                    choices: SampleExportPreviewFormat.allCases,
-                    selection: selectedFormat,
-                    title: { $0.pickerTitle },
-                    onSelect: { selectedFormat = $0 }
-                )
-                .accessibilityLabel("Export format")
-            }
-            .padding(.horizontal, Spacing.s3)
-            .padding(.top, Spacing.s3)
-            .padding(.bottom, Spacing.s2)
-
-            Divider()
-                .overlay(Color.glassAdaptive(\.line))
-
-            ScrollView(.vertical) {
-                Text(selectedFormat.content)
-                    .font(Typography.monoCaption())
-                    .foregroundStyle(Color.glassAdaptive(\.text))
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(nil)
-                    .textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-                    .padding(Spacing.s4)
-            }
-            .id(selectedFormat)
-            .frame(height: previewHeight)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .scrollBounceBehavior(.basedOnSize)
-        }
-        .frame(maxWidth: .infinity, alignment: .top)
-        .background(Color.glassAdaptive(\.bg))
-        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.04), radius: 12, x: 0, y: 6)
-        .accessibilityElement(children: .contain)
-    }
-
-    private var fileHeader: some View {
-        HStack(spacing: Spacing.s3) {
-            if !reading {
-                Image(systemName: selectedFormat.icon)
-                    .font(Typography.scaled(size: 18, weight: .semibold))
-                    .foregroundStyle(Color.primary)
-                    .frame(minWidth: 36, minHeight: 36)
-                    .accessibilityHidden(true)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(selectedFormat.fileName)
-                    .font(Typography.monoEmphasis())
-                    .foregroundStyle(Color.glassAdaptive(\.text))
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text(selectedFormat.subtitle)
-                    .font(Typography.caption())
-                    .foregroundStyle(Color.glassAdaptive(\.sec))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .layoutPriority(1)
-
-            Spacer(minLength: 0)
-
-            if !reading {
-                // The full filename above also retains the extension in reading layout.
-                Text(selectedFormat.fileExtension)
-                    .font(Typography.monoCaptionEmphasis())
-                    .foregroundStyle(Color.glassAdaptive(\.sec))
-                    .padding(.horizontal, Spacing.s2)
-                    .padding(.vertical, Spacing.s1)
-                    .background(Color.glassAdaptive(\.surface2), in: Capsule())
-                    .overlay(Capsule().strokeBorder(Color.glassAdaptive(\.line), lineWidth: 1))
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Example file: \(selectedFormat.fileName). \(selectedFormat.subtitle)")
     }
 }

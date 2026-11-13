@@ -743,6 +743,42 @@ final class GoogleDriveFoundationTests: XCTestCase {
         XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer secret")
     }
 
+    /// Onboarding binds the folder it just connected to the Default automation.
+    @MainActor
+    func testBindGoogleDriveTargetsTheProfileAndRejectsUnknownFolders() throws {
+        let suite = "DriveOnboardingBinding.\(UUID())"
+        let defaults = BindingTestDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = GoogleDriveDestinationStore(userDefaults: defaults)
+        let keychain = BindingTestKeychain()
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        let vault = LifecycleHarness.retain(VaultManager(
+            defaults: SystemUserDefaults(defaults: defaults),
+            bookmarkResolver: PathMappingBookmarkResolver(), identityProbe: FakeVaultFolderIdentityProbe()
+        ))
+        let coordinator = LifecycleHarness.retain(ExportProfileCoordinator(
+            profileStore: ExportProfileStore(userDefaults: defaults),
+            destinationStore: ProfileDestinationStore(userDefaults: defaults, keychain: keychain),
+            googleDriveDestinationStore: store,
+            scheduledEntryStore: ScheduledExportEntryStore(userDefaults: defaults),
+            settings: settings, vaultManager: vault,
+            apiExportSettings: APIExportSettings(userDefaults: defaults, keychain: keychain),
+            initialTarget: .localIPhoneFolder
+        ))
+        let activeID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+
+        XCTAssertFalse(coordinator.bindGoogleDrive(UUID(), toProfile: activeID))
+        XCTAssertNotEqual(coordinator.profileStore.profile(id: activeID)?.target, .googleDrive)
+
+        let destination = makeDestination()
+        store.upsert(destination)
+        XCTAssertTrue(coordinator.bindGoogleDrive(destination.id, toProfile: activeID))
+        let profile = try XCTUnwrap(coordinator.profileStore.profile(id: activeID))
+        XCTAssertEqual(profile.target, .googleDrive)
+        XCTAssertEqual(profile.googleDriveDestinationID, destination.id)
+        XCTAssertEqual(coordinator.activeTarget, .googleDrive)
+    }
+
     private func makeDestination() -> GoogleDriveDestination {
         GoogleDriveDestination(
             id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,

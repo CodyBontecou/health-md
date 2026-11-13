@@ -32,12 +32,18 @@ struct GlassOutputScreen: View {
     @State private var gatewayID: UUID?
     @State private var draft: ExportSettingsSnapshot
     @State private var showFolderImporter = false
-    @State private var showEndpointForm = false
+    @State private var endpointEditor: EndpointEditorRequest?
     @State private var showGatewayForm = false
     @State private var showGoogleDrivePrivacyDisclosure = false
     @State private var driveAuthorizationRequestID: UUID?
     @State private var driveConnectionError: String?
     @State private var connectingDrive = false
+
+    /// Which endpoint the shared editor sheet is creating or editing.
+    private struct EndpointEditorRequest: Identifiable {
+        let id = UUID()
+        let endpointID: UUID?
+    }
 
     private static let dateTokens = ["{date}", "{year}", "{month}", "{day}", "{weekday}", "{monthName}", "{quarter}"]
 
@@ -159,16 +165,8 @@ struct GlassOutputScreen: View {
                 }
             }
         }
-        .sheet(isPresented: $showEndpointForm) {
-            ExportProfileEndpointFormSheet { name, url, token in
-                configurationProtection.performConfigurationChange {
-                    if let id = coordinator.importAPIEndpointSelection(
-                        name: name,
-                        endpointURLString: url,
-                        bearerToken: token
-                    ) { apiEndpointID = id }
-                }
-            }
+        .sheet(item: $endpointEditor) { request in
+            endpointEditorSheet(for: request.endpointID)
         }
         .sheet(isPresented: $showGatewayForm) {
             ExportProfileGatewayFormSheet { name, url in
@@ -215,16 +213,10 @@ struct GlassOutputScreen: View {
                 GlassBanner(title: reason, systemImage: "exclamationmark.triangle", tone: .warning)
             }
         case .apiEndpoint:
-            GlassMenuRow(
-                title: String(localized: "Endpoint"),
-                selection: $apiEndpointID,
-                options: [nil] + destinationStore.apiEndpoints.map { Optional($0.id) },
-                label: { id in
-                    destinationStore.apiEndpoints.first { $0.id == id }?.name
-                        ?? String(localized: "Endpoint from Settings")
-                }
-            )
-            addRow(String(localized: "Add Endpoint…")) { showEndpointForm = true }
+            ForEach(destinationStore.apiEndpoints) { endpoint in
+                savedEndpointRow(endpoint)
+            }
+            addRow(String(localized: "New endpoint")) { endpointEditor = EndpointEditorRequest(endpointID: nil) }
         case .agentDataGateway:
             GlassMenuRow(
                 title: String(localized: "Gateway"),
@@ -241,7 +233,100 @@ struct GlassOutputScreen: View {
         }
     }
 
-    private func addRow(_ title: String, systemImage: String = "plus", action: @escaping () -> Void) -> some View {
+    /// One saved endpoint: tap to send this automation there; the visible edit
+    /// button opens the shared editor, whose changes apply to every automation.
+    private func savedEndpointRow(_ endpoint: SavedAPIEndpoint) -> some View {
+        let isOn = apiEndpointID == endpoint.id
+        let users = coordinator.profileNames(usingAPIEndpoint: endpoint.id)
+        return HStack(spacing: 12) {
+            Button { apiEndpointID = endpoint.id } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 22))
+                        .foregroundStyle(isOn ? palette.accent : palette.track)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: endpoint.name).glassFont(.body).foregroundStyle(palette.text)
+                        Text(verbatim: Self.shortURL(endpoint.endpointURLString))
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundStyle(palette.sec)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Text(users.isEmpty
+                             ? String(localized: "Not used yet")
+                             : String(localized: "Used by \(users.joined(separator: ", "))"))
+                            .glassFont(.rowSubtitle)
+                            .foregroundStyle(users.isEmpty ? palette.muted : palette.ok)
+                            .lineLimit(2)
+                    }
+                    Spacer(minLength: 8)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityAddTraits(isOn ? [.isButton, .isSelected] : .isButton)
+            .accessibilityIdentifier("glass.output.endpoint.\(endpoint.name)")
+
+            Button {
+                configurationProtection.performConfigurationChange {
+                    endpointEditor = EndpointEditorRequest(endpointID: endpoint.id)
+                }
+            } label: {
+                Image(systemName: "pencil")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(palette.accent)
+                    .frame(width: GlassMetrics.touchTarget, height: GlassMetrics.touchTarget)
+                    .background(Circle().fill(palette.tint))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Edit \(endpoint.name)"))
+        }
+        .padding(.horizontal, GlassMetrics.panelPadding)
+        .padding(.vertical, 10)
+    }
+
+    @ViewBuilder private func endpointEditorSheet(for endpointID: UUID?) -> some View {
+        if let endpointID, let endpoint = destinationStore.apiEndpoint(id: endpointID) {
+            GlassAPIEndpointEditorSheet(
+                mode: .edit(
+                    name: endpoint.name,
+                    endpointURLString: endpoint.endpointURLString,
+                    token: destinationStore.token(for: endpoint.id) ?? "",
+                    usedBy: coordinator.profileNames(usingAPIEndpoint: endpoint.id)
+                ),
+                onSave: { draft in
+                    coordinator.saveAPIEndpoint(
+                        editingID: endpoint.id,
+                        name: draft.name,
+                        endpointURLString: draft.endpointURLString,
+                        bearerToken: draft.bearerToken
+                    ) != nil
+                },
+                onDelete: {
+                    coordinator.deleteAPIEndpoint(id: endpoint.id)
+                    if apiEndpointID == endpoint.id { apiEndpointID = nil }
+                }
+            )
+        } else {
+            GlassAPIEndpointEditorSheet(mode: .create) { draft in
+                guard let id = coordinator.saveAPIEndpoint(
+                    editingID: nil,
+                    name: draft.name,
+                    endpointURLString: draft.endpointURLString,
+                    bearerToken: draft.bearerToken
+                ) else { return false }
+                apiEndpointID = id
+                return true
+            }
+        }
+    }
+
+    static func shortURL(_ urlString: String) -> String {
+        guard let url = URL(string: urlString), let host = url.host else { return urlString }
+        let path = url.path == "/" ? "" : url.path
+        return host + path
+    }
+
+        private func addRow(_ title: String, systemImage: String = "plus", action: @escaping () -> Void) -> some View {
         Button {
             configurationProtection.performConfigurationChange(action)
         } label: {

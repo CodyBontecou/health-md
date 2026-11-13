@@ -542,7 +542,10 @@ class ExportProfilesViewModel @Inject constructor(
                 folderUri = profile.folderUri,
                 folderDisplayName = profile.folderDisplayName,
                 destinationId = profile.destinationId ?: connectedGoogleDriveDestinationId,
-                apiEndpointUrl = profile.apiEndpointUrl ?: currentSettings.apiEndpointUrl,
+                // An API automation whose saved endpoint was deleted is unbound: show it as not
+                // configured rather than pre-selecting whatever endpoint the live settings use.
+                apiEndpointUrl = profile.apiEndpointUrl
+                    ?: if (profile.target == ExportTarget.API_ENDPOINT) "" else currentSettings.apiEndpointUrl,
                 agentDataGatewayUrl = profile.agentDataGatewayUrl ?: currentSettings.agentDataGatewayUrl,
                 settings = restored,
             )

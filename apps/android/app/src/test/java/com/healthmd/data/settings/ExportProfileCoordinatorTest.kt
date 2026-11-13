@@ -204,6 +204,57 @@ class ExportProfileCoordinatorTest {
         mockk(relaxed = true),
     ).apply { this.scope = scope }
 
+    // MARK: - Onboarding Google Drive binding
+
+    @Test
+    fun `onboarding Drive connect targets Drive and binds the destination to the active profile`() = runTest {
+        profilesState.value = listOf(profile("daily"))
+        activeIdState.value = "daily"
+        settingsState.value = ExportSettings()
+        coEvery { settingsRepository.updateExportSettingsAtomically(any()) } answers {
+            firstArg<(ExportSettings) -> ExportSettings>()(settingsState.value).also { settingsState.value = it }
+        }
+        coEvery { profileRepository.bindGoogleDriveDestination(any(), any()) } answers {
+            val id = firstArg<String>()
+            profilesState.value = profilesState.value.map {
+                if (it.id == id) it.copy(target = ExportTarget.GOOGLE_DRIVE, destinationId = secondArg()) else it
+            }
+            true
+        }
+        val selection = mockk<com.healthmd.data.drive.GoogleDriveSelectionStore>(relaxed = true)
+        coEvery { selection.selectIfAllowed(any()) } returns true
+        val scope = CoroutineScope(SupervisorJob() + StandardTestDispatcher(testScheduler))
+        val coordinator = ExportProfileCoordinator(profileRepository, settingsRepository, factory, selection)
+            .apply { this.scope = scope }
+        try {
+            assertThat(coordinator.googleDriveDestinationWasSelected("drive-1")).isTrue()
+
+            assertThat(settingsState.value.exportTarget).isEqualTo(ExportTarget.GOOGLE_DRIVE)
+            assertThat(settingsState.value.scheduledExportTarget).isEqualTo(ExportTarget.GOOGLE_DRIVE)
+            val bound = profilesState.value.single()
+            assertThat(bound.target).isEqualTo(ExportTarget.GOOGLE_DRIVE)
+            assertThat(bound.destinationId).isEqualTo("drive-1")
+            coVerify { selection.selectIfAllowed("drive-1") }
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun `onboarding Drive connect binds nothing for a blocked profile`() = runTest {
+        profilesState.value = listOf(profile("daily"))
+        activeIdState.value = "daily"
+        coEvery { profileRepository.isSharedSetupV2Blocked("daily") } returns true
+        val scope = CoroutineScope(SupervisorJob() + StandardTestDispatcher(testScheduler))
+        try {
+            assertThat(coordinator(scope).googleDriveDestinationWasSelected("drive-1")).isFalse()
+            coVerify(exactly = 0) { profileRepository.bindGoogleDriveDestination(any(), any()) }
+            assertThat(settingsState.value.exportTarget).isEqualTo(ExportTarget.DEVICE_FOLDER)
+        } finally {
+            scope.cancel()
+        }
+    }
+
     // MARK: - Bootstrap
 
     @Test

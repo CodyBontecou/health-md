@@ -143,32 +143,17 @@ fun GoogleDriveSettingsCard(
         )
     }
     if (showPrivacyDisclosure) {
-        AlertDialog(
-            onDismissRequest = { showPrivacyDisclosure = false },
-            title = { Text(stringResource(R.string.google_drive_connect)) },
-            text = {
-                val unavailable = state.readiness as? GoogleDriveReadiness.Unavailable
-                Text(unavailable?.error?.userText() ?: stringResource(R.string.google_drive_privacy_note))
-            },
-            confirmButton = {
-                if (state.readiness is GoogleDriveReadiness.Ready) {
-                    TextButton(onClick = {
-                        showPrivacyDisclosure = false
-                        viewModel.begin { action ->
-                            if (action is GoogleDriveAuthorizationAction.Launch) {
-                                launcher.launch(IntentSenderRequest.Builder(action.pendingIntent.intentSender).build())
-                            }
-                        }
-                    }) { Text(stringResource(R.string.google_drive_connect)) }
-                } else {
-                    TextButton(onClick = { showPrivacyDisclosure = false }) { Text(stringResource(R.string.close)) }
+        GoogleDrivePrivacyDisclosureDialog(
+            readiness = state.readiness,
+            onConnect = {
+                showPrivacyDisclosure = false
+                viewModel.begin { action ->
+                    if (action is GoogleDriveAuthorizationAction.Launch) {
+                        launcher.launch(IntentSenderRequest.Builder(action.pendingIntent.intentSender).build())
+                    }
                 }
             },
-            dismissButton = {
-                if (state.readiness is GoogleDriveReadiness.Ready) {
-                    TextButton(onClick = { showPrivacyDisclosure = false }) { Text(stringResource(R.string.cancel)) }
-                }
-            },
+            onDismiss = { showPrivacyDisclosure = false },
         )
     }
     state.error?.let { error ->
@@ -181,6 +166,36 @@ fun GoogleDriveSettingsCard(
             },
         )
     }
+}
+
+/** The Drive privacy disclosure shown before Google consent (Settings and onboarding). */
+@Composable
+internal fun GoogleDrivePrivacyDisclosureDialog(
+    readiness: GoogleDriveReadiness,
+    onConnect: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val ready = readiness is GoogleDriveReadiness.Ready
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.google_drive_connect)) },
+        text = {
+            val unavailable = readiness as? GoogleDriveReadiness.Unavailable
+            Text(unavailable?.error?.userText() ?: stringResource(R.string.google_drive_privacy_note))
+        },
+        confirmButton = {
+            if (ready) {
+                TextButton(onClick = onConnect) { Text(stringResource(R.string.google_drive_connect)) }
+            } else {
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
+            }
+        },
+        dismissButton = {
+            if (ready) {
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+            }
+        },
+    )
 }
 
 /** Original logo from https://developers.google.com/workspace/drive/api/guides/branding. */
@@ -224,7 +239,7 @@ private fun GoogleDriveConnectionButton(
 }
 
 @Composable
-private fun GoogleDriveErrorId.userText(): String = stringResource(
+internal fun GoogleDriveErrorId.userText(): String = stringResource(
     when (this) {
         GoogleDriveErrorId.CONFIGURATION_MISSING -> R.string.google_drive_configuration_missing
         GoogleDriveErrorId.REAUTHORIZATION_REQUIRED -> R.string.google_drive_error_reauthorization_required

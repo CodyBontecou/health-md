@@ -255,6 +255,27 @@ class ExportProfileCoordinator @Inject constructor(
         }
     }
 
+    /**
+     * Onboarding connected a Google Drive folder: targets live settings at Drive, freezes them into
+     * the active profile, binds [destinationId] to it, and selects it so manual and scheduled runs
+     * use it. Returns false (nothing bound) when there is no active profile or it is blocked.
+     */
+    suspend fun googleDriveDestinationWasSelected(destinationId: String): Boolean = mutex.withLock {
+        val active = profileRepository.getActiveProfile() ?: return false
+        if (profileRepository.isSharedSetupV2Blocked(active.id)) return false
+        settingsRepository.updateExportSettingsAtomically { current ->
+            current.copy(
+                exportTarget = com.healthmd.domain.model.ExportTarget.GOOGLE_DRIVE,
+                scheduledExportTarget = com.healthmd.domain.model.ExportTarget.GOOGLE_DRIVE,
+            )
+        }
+        flushEditsLocked()
+        if (!profileRepository.bindGoogleDriveDestination(active.id, destinationId)) return false
+        // The connect flow already selected it; this keeps manual export on the bound folder.
+        googleDriveSelectionStore.selectIfAllowed(destinationId)
+        true
+    }
+
     /** Freezes current live settings into the active profile (debounce expiry, exports). */
     suspend fun flushEdits(): Unit = mutex.withLock { flushEditsLocked() }
 

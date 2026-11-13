@@ -107,6 +107,17 @@ object ExportModule {
 
     @Provides
     @Singleton
+    fun provideSavedAPIEndpointPersistence(
+        store: EncryptedAPIExportCredentialStore,
+    ): com.healthmd.data.export.SavedAPIEndpointPersistence = store
+
+    @Provides
+    fun provideEndpointBindingOps(
+        ops: com.healthmd.data.settings.ProfileEndpointBindingOps,
+    ): com.healthmd.data.settings.EndpointBindingOps = ops
+
+    @Provides
+    @Singleton
     fun provideShadowExportDiagnosticSink(
         recorder: AndroidShadowExportEvidenceRecorder,
     ): ShadowExportDiagnosticSink = recorder

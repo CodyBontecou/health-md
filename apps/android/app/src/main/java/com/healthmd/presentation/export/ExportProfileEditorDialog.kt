@@ -100,6 +100,11 @@ import com.healthmd.presentation.metrics.MetricSelectionScreen
 import com.healthmd.presentation.settings.ExportDetailOverridesSection
 import com.healthmd.presentation.settings.SettingsRow
 import com.healthmd.presentation.settings.groupRowShape
+import com.healthmd.presentation.endpoints.APIEndpointSheet
+import com.healthmd.presentation.endpoints.APIEndpointsViewModel
+import com.healthmd.presentation.endpoints.SavedEndpointsPicker
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.presentation.theme.GeistAdaptiveLayout
 import com.healthmd.presentation.theme.GeistBreakpoints
 import com.healthmd.presentation.theme.GeistRadii
@@ -132,6 +137,25 @@ fun ExportProfileEditorDialog(
     val colors = LocalGeistColors.current
     var draft by rememberSaveable(stateSaver = ExportProfileEditorDraftSaver) { mutableStateOf(initial) }
     var showMetricSelection by rememberSaveable { mutableStateOf(false) }
+    val endpointsViewModel: APIEndpointsViewModel = hiltViewModel()
+    val endpointSheet by endpointsViewModel.sheet.collectAsStateWithLifecycle()
+    endpointSheet?.let { sheet ->
+        val editedUrl = draft.apiEndpointUrl
+        APIEndpointSheet(
+            state = sheet,
+            onUpdate = endpointsViewModel::update,
+            onTest = endpointsViewModel::testConnection,
+            // A new or edited endpoint becomes this automation's selection.
+            onSave = { endpointsViewModel.save { saved -> draft = draft.copy(apiEndpointUrl = saved.url) } },
+            onDismiss = endpointsViewModel::dismiss,
+            onRequestDelete = endpointsViewModel::requestDelete,
+            onDelete = {
+                endpointsViewModel.delete { removed ->
+                    if (APIExportEndpoint.normalizedOrNull(editedUrl) == removed.url) draft = draft.copy(apiEndpointUrl = "")
+                }
+            },
+        )
+    }
 
     fun updateSettings(transform: (ExportSettings) -> ExportSettings) {
         draft = draft.copy(settings = transform(draft.settings))
@@ -249,12 +273,22 @@ fun ExportProfileEditorDialog(
                         }
                     }
                     ExportTarget.API_ENDPOINT -> {
-                        EditorTextField(
-                            value = draft.apiEndpointUrl,
-                            onValueChange = { draft = draft.copy(apiEndpointUrl = it) },
-                            label = stringResource(R.string.api_export_endpoint_url_label),
-                            error = stringResource(R.string.m3_profiles_editor_endpoint_invalid).takeIf { !endpointValid },
+                        // Saved endpoints are shared: pick one, edit it in place, or add a new one.
+                        val endpointRows by endpointsViewModel.rows.collectAsStateWithLifecycle()
+                        SavedEndpointsPicker(
+                            rows = endpointRows,
+                            selectedUrl = draft.apiEndpointUrl,
+                            onSelect = { draft = draft.copy(apiEndpointUrl = it.url) },
+                            onEdit = { endpointsViewModel.openEdit(it.id) },
+                            onNew = endpointsViewModel::openNew,
                         )
+                        if (!endpointValid) {
+                            Text(
+                                stringResource(R.string.endpoint_not_configured),
+                                style = GeistType.copy13,
+                                color = colors.error,
+                            )
+                        }
                     }
                     ExportTarget.GOOGLE_DRIVE -> Text(
                         text = if (driveValid) {

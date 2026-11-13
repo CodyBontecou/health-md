@@ -57,7 +57,12 @@ class GoogleDriveViewModel @Inject constructor(
         pendingOperationId = operationId?.takeIf { it.matches(Regex("[A-Za-z0-9._-]{1,128}")) }
     }
 
-    fun begin(onAction: (GoogleDriveAuthorizationAction) -> Unit) {
+    /**
+     * Starts consent + Picker. By default an existing destination is reauthorized (same account
+     * and folder); [replaceDestination] instead picks a new folder as a new destination, which
+     * onboarding's Connect/Change uses.
+     */
+    fun begin(replaceDestination: Boolean = false, onAction: (GoogleDriveAuthorizationAction) -> Unit) {
         if (mutableState.value.busy) return
         mutableState.update { it.copy(busy = true, error = null) }
         viewModelScope.launch {
@@ -66,7 +71,7 @@ class GoogleDriveViewModel @Inject constructor(
                 mutableState.update { it.copy(busy = false, error = GoogleDriveErrorId.REMOTE_CONFLICT) }
                 return@launch
             }
-            expectedDestinationId = mutableState.value.destination?.id
+            expectedDestinationId = if (replaceDestination) null else mutableState.value.destination?.id
             val action = authorization.beginPicker(expectedDestinationId)
             if (configurationProtected()) return@launch
             if (action is GoogleDriveAuthorizationAction.Authorized) {

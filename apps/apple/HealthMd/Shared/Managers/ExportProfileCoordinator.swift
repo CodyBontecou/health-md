@@ -477,7 +477,9 @@ final class ExportProfileCoordinator: ObservableObject {
     }
 
     /// Called when API endpoint settings change while a profile is active.
-    /// Upserts the endpoint and binds it to the active profile.
+    /// Edits the active profile's bound endpoint in place (keeping its name, so
+    /// the change reaches every automation that shares it), or saves and binds a
+    /// new one named after its host.
     func apiEndpointDidChange() {
         guard let activeID = profileStore.activeProfileID,
               !isProfileExecutionBlocked(activeID) else { return }
@@ -487,8 +489,21 @@ final class ExportProfileCoordinator: ObservableObject {
         guard !trimmedURL.isEmpty else { return }
 
         let token = apiExportSettings.bearerToken.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let boundID = profileStore.profile(id: activeID)?.apiEndpointID,
+           let bound = destinationStore.apiEndpoint(id: boundID),
+           destinationStore.updateAPIEndpoint(
+               id: bound.id,
+               name: bound.name,
+               endpointURLString: trimmedURL,
+               bearerToken: token.isEmpty ? nil : token
+           ) {
+            return
+        }
+        let existingName = destinationStore.apiEndpoints.first {
+            $0.endpointURLString.caseInsensitiveCompare(trimmedURL) == .orderedSame
+        }?.name
         let endpoint = destinationStore.upsertAPIEndpoint(
-            name: trimmedURL,
+            name: existingName ?? (URL(string: trimmedURL)?.host ?? trimmedURL),
             endpointURLString: trimmedURL,
             bearerToken: token.isEmpty ? nil : token
         )
@@ -517,6 +532,93 @@ final class ExportProfileCoordinator: ObservableObject {
             _ = profileStore.setGoogleDriveBinding(profileID: profile.id, destinationID: nil)
             _ = scheduledEntryStore.update(profileID: profile.id) { $0.isEnabled = false }
         }
+    }
+
+    /// Points a profile at a connected Google Drive folder and makes it upload there.
+    /// Used by onboarding, which configures the Default automation directly.
+    @discardableResult
+    func bindGoogleDrive(_ destinationID: UUID, toProfile profileID: UUID) -> Bool {
+        googleDriveDestinationStore.reload()
+        guard googleDriveDestinationStore.destination(id: destinationID) != nil,
+              !isProfileExecutionBlocked(profileID),
+              profileStore.updateTarget(id: profileID, target: .googleDrive),
+              profileStore.setGoogleDriveBinding(profileID: profileID, destinationID: destinationID) else { return false }
+        if profileStore.activeProfileID == profileID { activeTarget = .googleDrive }
+        return true
+    }
+
+    // MARK: - Saved API endpoints
+
+    /// Creates a saved endpoint, or edits `editingID` in place so the change
+    /// applies to every automation bound to it. Returns the endpoint id, or nil
+    /// when the URL is empty or already used by another saved endpoint.
+    @discardableResult
+    func saveAPIEndpoint(
+        editingID: UUID?,
+        name: String,
+        endpointURLString: String,
+        bearerToken: String?
+    ) -> UUID? {
+        if let editingID {
+            guard destinationStore.updateAPIEndpoint(
+                id: editingID,
+                name: name,
+                endpointURLString: endpointURLString,
+                bearerToken: bearerToken
+            ) else { return nil }
+            readoptActiveEndpointIfBound(to: editingID)
+            return editingID
+        }
+        return importAPIEndpointSelection(
+            name: name,
+            endpointURLString: endpointURLString,
+            bearerToken: bearerToken
+        )
+    }
+
+    /// Points a profile at a saved endpoint and makes it send to the API.
+    @discardableResult
+    func bindAPIEndpoint(_ endpointID: UUID, toProfile profileID: UUID) -> Bool {
+        guard destinationStore.apiEndpoint(id: endpointID) != nil,
+              !isProfileExecutionBlocked(profileID),
+              profileStore.updateTarget(id: profileID, target: .apiEndpoint),
+              profileStore.setAPIEndpointBinding(profileID: profileID, endpointID: endpointID) else { return false }
+        if profileStore.activeProfileID == profileID {
+            activeTarget = .apiEndpoint
+            readoptActiveEndpointIfBound(to: endpointID)
+        }
+        return true
+    }
+
+    /// Deletes a saved endpoint and unbinds every automation that used it.
+    /// When the active profile or the live settings pointed at it, the live
+    /// settings are cleared so nothing is ever sent to a different endpoint.
+    func deleteAPIEndpoint(id: UUID) {
+        guard let endpoint = destinationStore.apiEndpoint(id: id) else { return }
+        let liveMatches = apiExportSettings.endpointURLString
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .caseInsensitiveCompare(endpoint.endpointURLString) == .orderedSame
+        let affected = profileStore.profiles.filter { $0.apiEndpointID == id }.map(\.id)
+        for profileID in affected {
+            profileStore.setAPIEndpointBinding(profileID: profileID, endpointID: nil)
+        }
+        destinationStore.deleteAPIEndpoint(id: id)
+        if liveMatches || affected.contains(where: { $0 == profileStore.activeProfileID }) {
+            apiExportSettings.endpointURLString = ""
+            apiExportSettings.bearerToken = ""
+        }
+    }
+
+    /// Names of the automations bound to a saved endpoint, in list order.
+    func profileNames(usingAPIEndpoint id: UUID) -> [String] {
+        profileStore.profiles.filter { $0.apiEndpointID == id }.map(\.name)
+    }
+
+    private func readoptActiveEndpointIfBound(to endpointID: UUID) {
+        guard let activeID = profileStore.activeProfileID,
+              let active = profileStore.profile(id: activeID),
+              active.apiEndpointID == endpointID else { return }
+        adoptAPIEndpoint(for: active)
     }
 
     /// Imports a newly configured Agent Data gateway into the shared
