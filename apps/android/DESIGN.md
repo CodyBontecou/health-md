@@ -524,6 +524,8 @@ Corners scale with component size: `rounded.xs` (4px) for text fields, `rounded.
 
 ## Components
 
+Subscription surfaces use named dimensions in both themes: `GeistSizes.planArtwork` (56dp) keeps the plan identity artwork distinct from a control; `iconSmall` (18dp) fits an inline button glyph; `iconMedium` (20dp) aligns sheet list glyphs with body text; `progressStroke` (2dp) keeps a compact loading indicator legible. The indicator bounds reuse `GeistSpacing.space4` (16dp), and action gaps reuse `space2` (8dp). Grouped settings rows use `GeistSpacing.listGroupGap` (2dp), the existing narrow separation between adjoining row surfaces. Tonal buttons use Material's default flat elevation.
+
 Primary actions are filled pill buttons (48dp tall when they are the screen’s main action). Secondary actions are tonal or outlined pills; low-emphasis actions are text buttons. Switches show a check in the thumb when on. Filter chips select an automation and show a check when selected. Segmented buttons choose one value from two to five options. Top app bars use `heading-24` titles on top-level screens and `heading-20` on sub-screens. Focus shows a two-layer ring (`box-shadow: 0 0 0 2px #fef7ff, 0 0 0 4px #6a3fe0`). All touch targets are at least 48dp.
 
 ## Voice & Content

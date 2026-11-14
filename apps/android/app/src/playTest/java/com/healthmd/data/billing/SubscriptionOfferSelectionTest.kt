@@ -81,4 +81,58 @@ class SubscriptionOfferSelectionTest {
             "health_md_premium_weekly", "health_md_premium_yearly", "health_md_premium_lifetime",
         )
     }
+
+    private fun switchPhase(price: Long, mode: Int, cycles: Int, currency: String = "USD", period: String = "P1Y") =
+        mockk<ProductDetails.PricingPhase> {
+            every { billingPeriod } returns period
+            every { priceAmountMicros } returns price
+            every { recurrenceMode } returns mode
+            every { billingCycleCount } returns cycles
+            every { priceCurrencyCode } returns currency
+        }
+
+    private fun switchOffer(
+        vararg phases: ProductDetails.PricingPhase,
+        id: String? = YearlySwitchOfferIds.OFFER_ID,
+        basePlan: String = YearlySwitchOfferIds.BASE_PLAN_ID,
+        tags: List<String> = listOf(YearlySwitchOfferIds.TAG),
+        token: String = "switch-token",
+    ) = mockk<ProductDetails.SubscriptionOfferDetails> {
+        every { offerId } returns id
+        every { basePlanId } returns basePlan
+        every { offerTags } returns tags
+        every { offerToken } returns token
+        every { pricingPhases } returns mockk { every { pricingPhaseList } returns phases.toList() }
+    }
+
+    private val intro = switchPhase(19_990_000, ProductDetails.RecurrenceMode.FINITE_RECURRING, 1)
+    private val yearly = switchPhase(29_990_000, ProductDetails.RecurrenceMode.INFINITE_RECURRING, 0)
+
+    @Test fun yearlySwitchOfferIsOneDiscountedYearThenTheYearlyPrice() {
+        val offer = switchOffer(intro, yearly)
+        assertThat(selectYearlySwitchOffer(details(offer))).isSameInstanceAs(offer)
+    }
+
+    @Test fun yearlySwitchOfferIsHiddenRatherThanMisdescribed() {
+        for (invalid in listOf(
+            switchOffer(intro, yearly, id = "trial-7d"),
+            switchOffer(intro, yearly, basePlan = "weekly"),
+            switchOffer(intro, yearly, tags = emptyList()),
+            switchOffer(intro, yearly, token = ""),
+            switchOffer(yearly),
+            switchOffer(switchPhase(19_990_000, ProductDetails.RecurrenceMode.FINITE_RECURRING, 2), yearly),
+            switchOffer(switchPhase(19_990_000, ProductDetails.RecurrenceMode.FINITE_RECURRING, 1, period = "P6M"), yearly),
+            switchOffer(switchPhase(19_990_000, ProductDetails.RecurrenceMode.FINITE_RECURRING, 1, currency = "EUR"), yearly),
+            switchOffer(switchPhase(0, ProductDetails.RecurrenceMode.FINITE_RECURRING, 1), yearly),
+            switchOffer(switchPhase(29_990_000, ProductDetails.RecurrenceMode.FINITE_RECURRING, 1), yearly),
+        )) {
+            assertThat(selectYearlySwitchOffer(details(invalid))).isNull()
+        }
+    }
+
+    @Test fun paywallNeverAdvertisesTheSwitchOffer() {
+        val base = offer(phase("P1Y", 29_990_000))
+        val switch = switchOffer(intro, yearly)
+        assertThat(selectSubscriptionOffer(details(switch, base), PurchasePlan.YEARLY)).isSameInstanceAs(base)
+    }
 }

@@ -22,7 +22,11 @@ object BillingModule {
     fun provideBillingRepository(
         @ApplicationContext context: Context,
         settingsRepository: SettingsRepository,
-    ): BillingRepositoryImpl = BillingRepositoryImpl(context, settingsRepository)
+    ): BillingRepositoryImpl = BillingRepositoryImpl(
+        context,
+        settingsRepository,
+        subscriptionVerifier = com.healthmd.data.billing.PlaySubscriptionStatusApi(),
+    )
 
     @Provides
     fun provideMyselfClaimPurchaseSource(repository: BillingRepositoryImpl): MyselfClaimPurchaseSource =

@@ -54,7 +54,8 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     /** A blocked-change toast asked for the lock: Settings opens App & support, which scrolls to it. */
     protectionSettingsRequestId: Long? = null,
-    onNavigateToPaywall: () -> Unit = {},
+    /** Settings › Subscription: the plan, Manage or cancel, and the lapsed state. */
+    onNavigateToSubscription: () -> Unit = {},
     onNavigateToClinicianReport: () -> Unit = {},
     onNavigateToDirectCli: () -> Unit = {},
     onNavigateToFolderDestination: () -> Unit = {},
@@ -123,11 +124,24 @@ fun SettingsScreen(
             modifier = Modifier.padding(horizontal = Spacing.xxs, vertical = Spacing.xs).semantics { heading() },
         )
 
-        // The plan: restore or manage it on the paywall; F-Droid includes full access.
-        val plan = stringResource(if (isPurchased) R.string.settings_plan_full_access else R.string.settings_plan_free)
+        // The plan: restore or manage it in Subscription; F-Droid includes full access.
+        val subscriptionStatus = if (distributionPolicy.purchasesAvailable) {
+            val subscription: SubscriptionViewModel = hiltViewModel()
+            subscription.status.collectAsStateWithLifecycle().value
+        } else {
+            null
+        }
+        val plan = stringResource(
+            when {
+                subscriptionStatus is com.healthmd.domain.billing.SubscriptionStatus.Ended && !isPurchased ->
+                    R.string.m3_subscription_ended_title
+                isPurchased -> R.string.settings_plan_full_access
+                else -> R.string.settings_plan_free
+            },
+        )
         SettingsPlanCard(
             plan = if (distributionPolicy.purchasesAvailable) stringResource(R.string.settings_plan_manage, plan) else plan,
-            onClick = if (distributionPolicy.purchasesAvailable) onNavigateToPaywall else null,
+            onClick = if (distributionPolicy.purchasesAvailable) onNavigateToSubscription else null,
             modifier = Modifier.padding(top = Spacing.xs),
         )
 
