@@ -88,3 +88,5 @@ When canonical archive capture is off, output says `raw_capture_status: not_requ
 - `HealthKitManager` keeps standard, medication, vision, document, verifiable, and WorkoutKit paths separate; the document/clinical paths are source-gated off in current App Store builds.
 - Errors are isolated and safely described without logging clinical content/PHI.
 - macOS does not query HealthKit; iPhone prepares local/API/Connected Mac records.
+
+All Time export and preview actions rediscover readable coverage for the selected metrics before admission. Capture uses those resolved bounds without changing saved date preferences. Incomplete or empty discovery blocks the action; limited or unknown history authorization remains separately disclosed and never becomes a claim of full access. A changed selection or cancelled action cannot admit a stale result.

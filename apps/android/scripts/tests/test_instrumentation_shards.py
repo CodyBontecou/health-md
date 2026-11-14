@@ -154,6 +154,37 @@ class PartialRetryTests(unittest.TestCase):
     def verify(self):
         return shards.verify(self.root, '12', '2', source_sha=self.source_sha)
 
+    def test_partial_retry_keeps_successful_same_run_shards(self):
+        self.report(2, 'play', failed=True)
+        self.retry(2)
+        self.report(2, 'play', attempt=2)
+        result = self.verify()
+        self.assertEqual((8, 8, 0), (result['tests'], result['passed'], result['skipped']))
+        self.assertEqual({'0': '1', '1': '1', '2': '2', '3': '1', '4': '1', '5': '1'},
+                         result['shard_attempts'])
+
+    def test_latest_failed_or_incomplete_retry_never_falls_back(self):
+        self.retry(2)
+        self.report(2, 'play', failed=True, attempt=2)
+        with self.assertRaisesRegex(ValueError, 'Failed test'):
+            self.verify()
+        self.report(2, 'play', attempt=2).unlink()
+        with self.assertRaisesRegex(ValueError, 'groups mismatch'):
+            self.verify()
+
+    def test_foreign_run_future_attempt_and_invalid_shard_are_rejected(self):
+        for name in ('android-instrumentation-13-1-shard-2',
+                     'android-instrumentation-12-3-shard-2',
+                     'android-instrumentation-12-2-shard-6'):
+            with self.subTest(name=name):
+                directory = self.root / name
+                directory.mkdir()
+                try:
+                    with self.assertRaises(ValueError):
+                        self.verify()
+                finally:
+                    directory.rmdir()
+
     def test_partial_retry_retains_every_successful_shard_and_original_case_checks(self):
         self.retry()
         result = self.verify()

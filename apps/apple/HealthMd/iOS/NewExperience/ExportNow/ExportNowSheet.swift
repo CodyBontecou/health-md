@@ -70,12 +70,9 @@ struct ExportNowSheet: View {
     let destinationLabel: String
     let activeProfileID: UUID?
     let onSelectProfile: (UUID) -> Void
-    let resolveAllTime: () async -> (start: Date, end: Date)?
     /// ExportPreviewG, pushed inside this sheet. It gets the action its Export runs.
     let preview: (_ onExport: @escaping () -> Void) -> AnyView
     let onExport: () -> Void
-    /// LargeConfirmG: the sheet closes first and the shell asks over the Archive.
-    let onConfirmLargeExport: (ExportScaleGuard.Scale) -> Void
 
     @Environment(\.glassPalette) private var palette
     @Environment(\.dismiss) private var dismiss
@@ -371,28 +368,13 @@ struct ExportNowSheet: View {
     }
 
     private func selectAllTime() {
+        // Admission resolves the selected metrics without mutating saved date preferences.
         dateRangePreset = .allTime
-        Task {
-            guard let resolved = await resolveAllTime(), dateRangePreset == .allTime else { return }
-            startDate = resolved.start
-            endDate = resolved.end
-        }
     }
 
     private func exportTapped() {
-        let verdict = ExportScaleGuard.verdict(
-            startDate: startDate,
-            endDate: endDate,
-            granularDataEnabled: advancedSettings.effectiveDetailPolicy.includesCanonicalArchive,
-            formatCount: advancedSettings.exportFormats.count,
-            dailyNotesOnlyMode: advancedSettings.dailyNotesOnlyModeEnabled
-        )
-        switch verdict {
-        case .proceed: closeAndExport()
-        case .confirm(let scale):
-            dismiss()
-            onConfirmLargeExport(scale)
-        }
+        // The root owns discovery, resolved scale confirmation and history admission.
+        closeAndExport()
     }
 
     private func closeAndExport() {

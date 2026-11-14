@@ -892,14 +892,17 @@ final class ExportJourneyUITests: XCTestCase {
     }
 
     private func scrollDatePresetIntoView(_ preset: XCUIElement, in app: XCUIApplication) {
-        let scrollView = app.scrollViews.firstMatch
+        // The Archive remains mounted behind this sheet; use the export viewport's
+        // owner so its bounds and gestures belong to the controls under test.
+        let scrollView = app.scrollViews[UITestLaunchHelper.Export.contentScroll]
+        XCTAssertTrue(scrollView.waitForExistence(timeout: 5))
         let tabBar = app.tabBars.firstMatch
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
         // SwiftUI can report a row as hittable while its tap point is underneath
         // the floating export controls. Keep the entire row inside the clear
         // viewport, and scroll in either direction so a swipe cannot strand it
         // above the visible content.
-        for _ in 0..<6 {
+        for _ in 0..<16 {
             let viewport = scrollView.frame.intersection(app.frame)
             var visibleBottom = viewport.maxY
             if tabBar.exists { visibleBottom = min(visibleBottom, tabBar.frame.minY) }

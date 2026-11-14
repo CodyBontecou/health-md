@@ -1,5 +1,6 @@
 package com.healthmd.data.clinicianreport
 
+import com.healthmd.data.health.HealthConnectDataProvider
 import com.healthmd.domain.clinicianreport.*
 import com.healthmd.domain.model.*
 import com.healthmd.domain.repository.HealthRepository
@@ -23,7 +24,9 @@ class SystemClinicianReportDateProvider @Inject constructor() : ClinicianReportD
 }
 
 class DefaultClinicianReportDataSource @Inject constructor(
+    // Resolve device-local capture preferences only; never dispatch report reads through this repository.
     private val healthRepository: HealthRepository,
+    private val healthConnect: HealthConnectDataProvider,
     private val sourceLabelResolver: ClinicianReportSourceLabelResolver,
     private val dateProvider: ClinicianReportDateProvider,
 ) : ClinicianReportDataSource {
@@ -52,13 +55,13 @@ class DefaultClinicianReportDataSource @Inject constructor(
         )
         return try {
             val captureContext = healthRepository.resolveCaptureContext(zoneId)
-            val records = healthRepository.fetchHealthDataRange(
+            val records = healthConnect.fetchHealthDataRange(
                 dates = range.dates(),
                 dataTypes = dataTypes,
                 includeGranularData = true,
                 zoneId = captureContext.zoneId,
                 pinnedCalendarDays = true,
-                sleepDayAttributionOverride = captureContext.explicitSleepDayAttributionOverride,
+                sleepDayAttribution = captureContext.sleepDayAttribution,
             )
             adapt(normalized, zoneId, records)
         } catch (cancelled: CancellationException) {

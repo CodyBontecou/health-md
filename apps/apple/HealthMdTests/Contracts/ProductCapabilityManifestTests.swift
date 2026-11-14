@@ -141,6 +141,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "apple.wrist-temperature",
         "apple.hearing-and-symptoms",
         "apple.typed-whoop-provider-section",
+        "authorization.history-window-detection",
         "automation.api-recovery-authority",
         "automation.include-today",
         "automation.run-overlap-policy",
