@@ -453,7 +453,8 @@ struct ExportOrchestrator {
 
     /// Export health data for a list of dates.
     /// Each date manages its own security-scoped access via VaultManager's async method.
-    /// Suitable for manual/foreground exports.
+    /// Suitable for manual/foreground exports. Transfer materializers disable
+    /// `skipSuccessfulEmptyDays` to retain successful empty capture evidence.
     static func exportDates(
         _ dates: [Date],
         healthKitManager: HealthKitManager,
@@ -461,6 +462,7 @@ struct ExportOrchestrator {
         settings: AdvancedExportSettings,
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil,
         captureCalendar: Calendar? = nil,
+        skipSuccessfulEmptyDays: Bool = true,
         onProgress: ((Int, Int, String) -> Void)? = nil
     ) async -> ExportResult {
         let context: AppleSleepCaptureContext
@@ -478,10 +480,31 @@ struct ExportOrchestrator {
                     settings: settings,
                     externalIntegrations: externalIntegrations,
                     captureCalendar: captureCalendar,
+                    skipSuccessfulEmptyDays: skipSuccessfulEmptyDays,
                     onProgress: onProgress
                 )
             }
         }
+    }
+
+    /// Manual daily files may omit a proven-empty successful capture. Keep the general
+    /// archive evidence contract intact for serializers, direct transfers and rollups.
+    static func hasManualDailyOutput(_ data: HealthData, externalRecords: [ExternalDailyRecord] = []) -> Bool {
+        // Preserve the original HealthKit admission rule, then retain provider output
+        // even when the archive contains no native records.
+        guard data.hasAnyData else { return false }
+        if !externalRecords.isEmpty || data.providers?.isEmpty == false { return true }
+        guard let archive = data.healthKitRecordArchive,
+              archive.captureStatus == .complete,
+              archive.records.isEmpty, archive.externalRecords.isEmpty,
+              archive.medicationInventoryRecords.isEmpty,
+              archive.integrityWarnings.isEmpty, data.partialFailures.isEmpty,
+              archive.queryResults.allSatisfy({
+                  $0.status == .success && $0.recordCount == 0 && $0.error == nil
+              }) else { return data.hasAnyData }
+        var summary = data
+        summary.healthKitRecordArchive = nil
+        return summary.hasAnyData
     }
 
     private static func exportDatesWithQueryController(
@@ -491,6 +514,7 @@ struct ExportOrchestrator {
         settings: AdvancedExportSettings,
         externalIntegrations: ExternalIntegrationDailyRecordProviding?,
         captureCalendar: Calendar?,
+        skipSuccessfulEmptyDays: Bool,
         onProgress: ((Int, Int, String) -> Void)?
     ) async -> ExportResult {
         let awakeActivityID = UUID()
@@ -618,6 +642,7 @@ struct ExportOrchestrator {
                 sourceTimeZone: sourceTimeZone,
                 externalIntegrations: stagesWakeDateProviders ? externalIntegrations : nil,
                 acceptedDestination: acceptedProviderDestination,
+                skipSuccessfulEmptyDays: skipSuccessfulEmptyDays,
                 onProgress: onProgress
             )
         }
@@ -673,6 +698,7 @@ struct ExportOrchestrator {
                     timeZone: sourceTimeZone,
                     captureCalendar: captureCalendar
                 )
+                partialFailures.append(contentsOf: healthData.partialFailures)
                 let externalRecords: [ExternalDailyRecord]
                 if healthData.hasAnyData,
                    hasProviderSideEffects,
@@ -687,7 +713,9 @@ struct ExportOrchestrator {
                 } else {
                     externalRecords = []
                 }
-                partialFailures.append(contentsOf: healthData.partialFailures)
+                if skipSuccessfulEmptyDays && !hasManualDailyOutput(healthData, externalRecords: externalRecords) {
+                    throw ExportError.noHealthData
+                }
                 // HealthKitManager has already applied the frozen selection. Reuse
                 // one snapshot for loose-file and ZIP staging renders instead of
                 // filtering a potentially dense archive for each destination.
@@ -938,6 +966,7 @@ struct ExportOrchestrator {
         sourceTimeZone: TimeZone,
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil,
         acceptedDestination: AppleLooseDailyRangeDestination? = nil,
+        skipSuccessfulEmptyDays: Bool = false,
         onProgress: ((Int, Int, String) -> Void)?
     ) async -> ExportResult {
         // The outer caller can share the manager with other phases. A failed
@@ -1059,10 +1088,11 @@ struct ExportOrchestrator {
                     metricSelection: frozenSettings.metricSelection,
                     timeZone: sourceTimeZone
                 )
+                var providerRecords: [ExternalDailyRecord] = []
                 if isSelected, !isSummaryOnly, record.hasAnyData, let externalIntegrations {
                     var providerCalendar = Calendar(identifier: .gregorian)
                     providerCalendar.timeZone = sourceTimeZone
-                    let providerRecords = await externalIntegrations.fetchDailyRecords(for: date, calendar: providerCalendar)
+                    providerRecords = await externalIntegrations.fetchDailyRecords(for: date, calendar: providerCalendar)
                     record.providers = HealthProviderSections.normalized(from: providerRecords)
                     providerSidecars.append(contentsOf: try vaultManager.materializeExternalDailyRecords(providerRecords,
                         healthSubfolder: effectiveSettingsSnapshot.healthSubfolder ?? ""))
@@ -1076,7 +1106,9 @@ struct ExportOrchestrator {
                 // Drain Foundation render intermediates before staging this day's
                 // details and retaining the summary projection for range preparation.
                 let hasRenderableData = autoreleasepool {
-                    record.preparedExport(settings: frozenSettings).hasAnyData
+                    let prepared = record.preparedExport(settings: frozenSettings)
+                    return isSummaryOnly || !skipSuccessfulEmptyDays ? prepared.hasAnyData
+                        : hasManualDailyOutput(prepared.filteredData, externalRecords: providerRecords)
                 }
                 // A successful capture is range provenance even when the selected metrics are
                 // empty. Keep it for range-v9 source_dates/days_counted, while selecting daily
