@@ -786,6 +786,8 @@ struct GlassAppShell: View {
             // Without its own subfolder the Mac applies its local setting, which the iPhone can't see.
             guard let subfolder = profile.settings.healthSubfolder else { return .label(root) }
             return .files(root: root, healthSubfolder: subfolder, settings: profile.settings)
+        case .googleDrive:
+            return .label(destination)
         case .apiEndpoint:
             let url = store?.apiEndpoint(id: profile.apiEndpointID)?.endpointURLString
             return ArchiveOutputPath.endpointLine(url.flatMap(URL.init(string:)))
@@ -827,6 +829,8 @@ struct GlassAppShell: View {
             return syncService.macDestinationStatus?.destinationPathForDisplay
                 ?? syncService.macDestinationStatus?.destinationDisplayName
                 ?? String(localized: "Connected Mac")
+        case .googleDrive:
+            return "Google Drive"
         case .apiEndpoint:
             return apiExportSettings.displayName
         case .agentDataGateway:
@@ -1174,6 +1178,7 @@ struct GlassExportPreviewSheet: View {
         switch exportTargetSelection {
         case .localIPhoneFolder: return .localFile
         case .connectedMac: return .connectedMac
+        case .googleDrive: return .googleDrive
         case .apiEndpoint: return .apiEndpoint
         case .agentDataGateway: return .agentDataGateway
         }

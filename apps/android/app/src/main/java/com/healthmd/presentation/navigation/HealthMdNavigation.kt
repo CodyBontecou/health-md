@@ -75,6 +75,7 @@ import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.common.LocalFloatingActionClearance
 import com.healthmd.presentation.common.LocalUsesNavigationRail
 import com.healthmd.presentation.onboarding.OnboardingScreen
+import com.healthmd.presentation.onboarding.OnboardingStep
 import com.healthmd.presentation.paywall.PaywallScreen
 import com.healthmd.presentation.release.AndroidReleaseNotes
 import com.healthmd.presentation.release.ReleaseNotesGate
@@ -138,7 +139,6 @@ fun HealthMdNavigation(
     // Keep setup, automation editing, and completed exports reachable. Export
     // entry points enforce paid access once the first free action is consumed.
 
-    var createFirstAutomation by rememberSaveable { mutableStateOf(false) }
     val navController = rememberNavController()
     val coroutineScope = rememberCoroutineScope()
     val appContext = LocalContext.current
@@ -328,16 +328,14 @@ fun HealthMdNavigation(
                 val isDebugMarketingCapture = BuildConfig.DEBUG && initialRoute == SubRoutes.ONBOARDING
                 OnboardingScreen(
                     onComplete = {
-                        createFirstAutomation = true
+                        // Onboarding configured the existing "Daily note" automation; show it.
                         navController.navigate(NavDestination.SCHEDULE.route) {
                             popUpTo(SubRoutes.ONBOARDING) { inclusive = true }
-                            // Replayed from App & support, the Archive is already below.
                             launchSingleTop = true
                         }
                     },
                     onUseSharedSetup = { navController.navigate(SubRoutes.SHARED_SETUP) },
-                    initialPage = if (isDebugMarketingCapture) 1 else 0,
-                    allowAutomaticAdvance = !isDebugMarketingCapture,
+                    initialStep = if (isDebugMarketingCapture) OnboardingStep.PACKS else OnboardingStep.WELCOME,
                 )
             }
 
@@ -440,6 +438,11 @@ fun HealthMdNavigation(
                             }
                         },
                         onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) { popUpTo(route) { inclusive = true } } },
+                        onReviewFrontmatterConflict = { focus ->
+                            navController.navigate("${SubRoutes.FRONTMATTER_CUSTOMIZATION}?focus=${android.net.Uri.encode(focus)}") {
+                                popUpTo(route) { inclusive = true }
+                            }
+                        },
                         onNavigateToSchedule = { navController.navigate(NavDestination.SCHEDULE.route) {
                             popUpTo(route) { inclusive = true }
                             launchSingleTop = true
@@ -472,8 +475,6 @@ fun HealthMdNavigation(
                     }
                     val schedule: @Composable () -> Unit = {
                         AutomationsScreen(
-                            createOnArrival = createFirstAutomation,
-                            onCreationRequestConsumed = { createFirstAutomation = false },
                             onOpenAutomation = { id ->
                                 if (twoPane) {
                                     selectedAutomation = id
@@ -800,9 +801,12 @@ fun HealthMdNavigation(
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(SubRoutes.FRONTMATTER_CUSTOMIZATION) {
+            composable("${SubRoutes.FRONTMATTER_CUSTOMIZATION}?focus={focus}",
+                arguments = listOf(navArgument("focus") { type = NavType.StringType; nullable = true; defaultValue = null }),
+            ) { entry ->
                 FrontmatterCustomizationScreen(
                     configuration = settings.formatCustomization.frontmatterConfig,
+                    initialFocusTag = entry.arguments?.getString("focus"),
                     onConfigurationChanged = { config ->
                         settingsViewModel.performConfigurationChange {
                             settingsViewModel.updateFormatCustomization(

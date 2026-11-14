@@ -2,7 +2,7 @@
 
 Use this prompt only to inspect the Health.md Play Console state in a browser. Repository files are the source of truth for listing copy and release numbers.
 
-This prompt is **read-only**. Do not click Save, upload an asset or AAB, create/edit a release, change a track, promote an artifact, submit review, change production availability, or otherwise mutate Play Console—even if the browser operator gives a general approval. Return a field-by-field change plan instead. Release and metadata mutation are owned exclusively by the protected phone workflows described in `PLAY_STORE_COMMANDS.md`. The Wear workflows are deferred and must not be run for the current release.
+This prompt is **read-only**. Do not click Save, upload an asset or AAB, create/edit a release, change a track, promote an artifact, submit review, change production availability, or otherwise mutate Play Console—even if the browser operator gives a general approval. Return a field-by-field change plan instead. Release uploads, promotion, metadata edits, and review submission are owned by the protected phone workflows described in `PLAY_STORE_COMMANDS.md`. An explicit request to publish an already-approved managed-publishing batch uses the separate [final publishing procedure](PLAY_STORE_COMMANDS.md#approved-build-final-managed-publishing-action), outside this read-only audit prompt. The Wear workflows are deferred and must not be run for the current release.
 
 ---
 

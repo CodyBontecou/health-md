@@ -280,6 +280,8 @@ class ExportSchedulerTransitionRecoveryTest {
             generationFactory = generationFactory,
             runCoordinator = ScheduledExportRunCoordinator(),
             transitionObserver = transitionObserver,
+            googleDriveSelectionStore = mockk(relaxed = true),
+            googleDriveDestinationStore = mockk(relaxed = true),
         )
     }
 

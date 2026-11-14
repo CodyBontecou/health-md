@@ -22,11 +22,15 @@ final class GlassAutomationSettingsDerivationTests: XCTestCase {
 
     // MARK: - Frontmatter field groups
 
-    func testEveryDefaultFieldLandsInANamedGroup() {
-        let other = FrontmatterConfiguration.defaultFields
-            .filter { FrontmatterFieldGroup.group(for: $0.originalKey) == .other }
-            .map(\.originalKey)
-        XCTAssertEqual(other, [])
+    func testExtendedFieldsUseTheirMetricCategory() {
+        for (key, group) in [("physical_effort", FrontmatterFieldGroup.activity),
+                             ("running_speed", .mobility), ("running_power_w", .mobility),
+                             ("wrist_temperature", .vitals), ("vitamin_c_mg", .nutrition),
+                             ("iron_mg", .nutrition), ("vo2_max_age_seconds", .activity)] {
+            XCTAssertEqual(FrontmatterFieldGroup.group(for: key), group, key)
+        }
+        XCTAssertEqual(FrontmatterFieldGroup.group(for: "symptom_headache"), .other)
+        XCTAssertEqual(FrontmatterFieldGroup.group(for: "menstrual_flow"), .other)
     }
 
     func testAmbiguousPrefixesResolveToTheirOwnGroup() {

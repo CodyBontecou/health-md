@@ -37,6 +37,7 @@ final class ExportProfileCoordinator: ObservableObject {
 
     let profileStore: ExportProfileStore
     let destinationStore: ProfileDestinationStore
+    let googleDriveDestinationStore: GoogleDriveDestinationStore
     /// Phase 3: scheduled entries bound to profiles. Owned here so bootstrap
     /// migration (legacy schedule → Default profile entry) and profile
     /// deletion (entry cleanup) stay coupled.
@@ -71,6 +72,7 @@ final class ExportProfileCoordinator: ObservableObject {
     init(
         profileStore: ExportProfileStore,
         destinationStore: ProfileDestinationStore,
+        googleDriveDestinationStore: GoogleDriveDestinationStore? = nil,
         scheduledEntryStore: ScheduledExportEntryStore,
         settings: AdvancedExportSettings,
         vaultManager: VaultManager,
@@ -83,6 +85,7 @@ final class ExportProfileCoordinator: ObservableObject {
     ) {
         self.profileStore = profileStore
         self.destinationStore = destinationStore
+        self.googleDriveDestinationStore = googleDriveDestinationStore ?? GoogleDriveDestinationStore()
         self.scheduledEntryStore = scheduledEntryStore
         self.settings = settings
         self.vaultManager = vaultManager
@@ -96,7 +99,8 @@ final class ExportProfileCoordinator: ObservableObject {
 
         bootstrapIfNeeded(initialTarget: initialTarget)
 
-        guard let activeID = profileStore.activeProfileID ?? profileStore.profiles.first?.id else {
+        guard profileStore.unknownProfileRecordCount == 0 || profileStore.activeProfileID != nil,
+              let activeID = profileStore.activeProfileID ?? profileStore.profiles.first?.id else {
             return
         }
         activate(profileID: activeID, adoptVault: true)
@@ -108,7 +112,17 @@ final class ExportProfileCoordinator: ObservableObject {
     /// binding the user's current vault folder and API endpoint so behavior
     /// is identical to the pre-profile single-destination state.
     private func bootstrapIfNeeded(initialTarget: ExportTargetSelection) {
-        guard profileStore.profiles.isEmpty else { return }
+        if profileStore.unknownProfileRecordCount > 0, profileStore.activeProfileID == nil {
+            // Unknown/corrupt profile authority must never be replaced by a synthesized Default or
+            // permit a legacy schedule to run live settings under another destination.
+            var legacy = ExportSchedule.load()
+            if legacy.isEnabled {
+                legacy.isEnabled = false
+                legacy.save()
+            }
+            return
+        }
+        guard profileStore.profiles.isEmpty, profileStore.unknownProfileRecordCount == 0 else { return }
 
         var folderVaultID: UUID?
         if let persisted = vaultManager.persistedVaultSnapshot() {
@@ -463,7 +477,9 @@ final class ExportProfileCoordinator: ObservableObject {
     }
 
     /// Called when API endpoint settings change while a profile is active.
-    /// Upserts the endpoint and binds it to the active profile.
+    /// Edits the active profile's bound endpoint in place (keeping its name, so
+    /// the change reaches every automation that shares it), or saves and binds a
+    /// new one named after its host.
     func apiEndpointDidChange() {
         guard let activeID = profileStore.activeProfileID,
               !isProfileExecutionBlocked(activeID) else { return }
@@ -473,12 +489,136 @@ final class ExportProfileCoordinator: ObservableObject {
         guard !trimmedURL.isEmpty else { return }
 
         let token = apiExportSettings.bearerToken.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let boundID = profileStore.profile(id: activeID)?.apiEndpointID,
+           let bound = destinationStore.apiEndpoint(id: boundID),
+           destinationStore.updateAPIEndpoint(
+               id: bound.id,
+               name: bound.name,
+               endpointURLString: trimmedURL,
+               bearerToken: token.isEmpty ? nil : token
+           ) {
+            return
+        }
+        let existingName = destinationStore.apiEndpoints.first {
+            $0.endpointURLString.caseInsensitiveCompare(trimmedURL) == .orderedSame
+        }?.name
         let endpoint = destinationStore.upsertAPIEndpoint(
-            name: trimmedURL,
+            name: existingName ?? (URL(string: trimmedURL)?.host ?? trimmedURL),
             endpointURLString: trimmedURL,
             bearerToken: token.isEmpty ? nil : token
         )
         profileStore.setAPIEndpointBinding(profileID: activeID, endpointID: endpoint.id)
+    }
+
+    /// Revokes/removes one local Drive authority without deleting remote files. Every profile
+    /// referencing it becomes explicitly unbound and its schedule is paused; no fallback target
+    /// is selected.
+    func disconnectGoogleDrive(
+        destinationID: UUID,
+        manager: GoogleDriveConnectionManager? = nil,
+        commitAllowed: @MainActor () -> Bool = {
+            !UserDefaults.standard.bool(forKey: ConfigurationProtectionManager.storageKey)
+        }
+    ) async throws {
+        try Task.checkCancellation()
+        guard commitAllowed() else { throw CancellationError() }
+        let manager = manager ?? GoogleDriveConnectionManager(destinationStore: googleDriveDestinationStore)
+        try await manager.disconnect(destinationID: destinationID, commitAllowed: commitAllowed)
+        // Detach only after revocation and current admission. No suspension between this check
+        // and any profile/schedule writes; a denied delayed revocation leaves them untouched.
+        try Task.checkCancellation()
+        guard commitAllowed() else { throw CancellationError() }
+        for profile in profileStore.profiles where profile.googleDriveDestinationID == destinationID {
+            _ = profileStore.setGoogleDriveBinding(profileID: profile.id, destinationID: nil)
+            _ = scheduledEntryStore.update(profileID: profile.id) { $0.isEnabled = false }
+        }
+    }
+
+    /// Points a profile at a connected Google Drive folder and makes it upload there.
+    /// Used by onboarding, which configures the Default automation directly.
+    @discardableResult
+    func bindGoogleDrive(_ destinationID: UUID, toProfile profileID: UUID) -> Bool {
+        googleDriveDestinationStore.reload()
+        guard googleDriveDestinationStore.destination(id: destinationID) != nil,
+              !isProfileExecutionBlocked(profileID),
+              profileStore.updateTarget(id: profileID, target: .googleDrive),
+              profileStore.setGoogleDriveBinding(profileID: profileID, destinationID: destinationID) else { return false }
+        if profileStore.activeProfileID == profileID { activeTarget = .googleDrive }
+        return true
+    }
+
+    // MARK: - Saved API endpoints
+
+    /// Creates a saved endpoint, or edits `editingID` in place so the change
+    /// applies to every automation bound to it. Returns the endpoint id, or nil
+    /// when the URL is empty or already used by another saved endpoint.
+    @discardableResult
+    func saveAPIEndpoint(
+        editingID: UUID?,
+        name: String,
+        endpointURLString: String,
+        bearerToken: String?
+    ) -> UUID? {
+        if let editingID {
+            guard destinationStore.updateAPIEndpoint(
+                id: editingID,
+                name: name,
+                endpointURLString: endpointURLString,
+                bearerToken: bearerToken
+            ) else { return nil }
+            readoptActiveEndpointIfBound(to: editingID)
+            return editingID
+        }
+        return importAPIEndpointSelection(
+            name: name,
+            endpointURLString: endpointURLString,
+            bearerToken: bearerToken
+        )
+    }
+
+    /// Points a profile at a saved endpoint and makes it send to the API.
+    @discardableResult
+    func bindAPIEndpoint(_ endpointID: UUID, toProfile profileID: UUID) -> Bool {
+        guard destinationStore.apiEndpoint(id: endpointID) != nil,
+              !isProfileExecutionBlocked(profileID),
+              profileStore.updateTarget(id: profileID, target: .apiEndpoint),
+              profileStore.setAPIEndpointBinding(profileID: profileID, endpointID: endpointID) else { return false }
+        if profileStore.activeProfileID == profileID {
+            activeTarget = .apiEndpoint
+            readoptActiveEndpointIfBound(to: endpointID)
+        }
+        return true
+    }
+
+    /// Deletes a saved endpoint and unbinds every automation that used it.
+    /// When the active profile or the live settings pointed at it, the live
+    /// settings are cleared so nothing is ever sent to a different endpoint.
+    func deleteAPIEndpoint(id: UUID) {
+        guard let endpoint = destinationStore.apiEndpoint(id: id) else { return }
+        let liveMatches = apiExportSettings.endpointURLString
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .caseInsensitiveCompare(endpoint.endpointURLString) == .orderedSame
+        let affected = profileStore.profiles.filter { $0.apiEndpointID == id }.map(\.id)
+        for profileID in affected {
+            profileStore.setAPIEndpointBinding(profileID: profileID, endpointID: nil)
+        }
+        destinationStore.deleteAPIEndpoint(id: id)
+        if liveMatches || affected.contains(where: { $0 == profileStore.activeProfileID }) {
+            apiExportSettings.endpointURLString = ""
+            apiExportSettings.bearerToken = ""
+        }
+    }
+
+    /// Names of the automations bound to a saved endpoint, in list order.
+    func profileNames(usingAPIEndpoint id: UUID) -> [String] {
+        profileStore.profiles.filter { $0.apiEndpointID == id }.map(\.name)
+    }
+
+    private func readoptActiveEndpointIfBound(to endpointID: UUID) {
+        guard let activeID = profileStore.activeProfileID,
+              let active = profileStore.profile(id: activeID),
+              active.apiEndpointID == endpointID else { return }
+        adoptAPIEndpoint(for: active)
     }
 
     /// Imports a newly configured Agent Data gateway into the shared
@@ -539,6 +679,7 @@ final class ExportProfileCoordinator: ObservableObject {
         name: String,
         target: ExportTargetSelection,
         folderVaultID: UUID? = nil,
+        googleDriveDestinationID: UUID? = nil,
         apiEndpointID: UUID? = nil,
         agentDataGatewayID: UUID? = nil,
         settings newSettings: ExportSettingsSnapshot? = nil
@@ -551,7 +692,8 @@ final class ExportProfileCoordinator: ObservableObject {
             settings: newSettings ?? liveSnapshot(keepingFieldsOf: source),
             target: target,
             folderVaultID: folderVaultID,
-            apiEndpointID: target == .apiEndpoint ? apiEndpointID : nil
+            apiEndpointID: target == .apiEndpoint ? apiEndpointID : nil,
+            googleDriveDestinationID: googleDriveDestinationID
         )
         if target == .agentDataGateway {
             let resolvedGatewayID = agentDataGatewayID
@@ -583,10 +725,15 @@ final class ExportProfileCoordinator: ObservableObject {
     /// Live creation-form overlap preview: names of existing profiles whose
     /// exports would write the same files as a candidate with this target,
     /// folder binding, and the flushed live settings the form will save.
-    func overlapPreviewNames(target: ExportTargetSelection, folderVaultID: UUID?) -> [String] {
+    func overlapPreviewNames(
+        target: ExportTargetSelection,
+        folderVaultID: UUID?,
+        googleDriveDestinationID: UUID? = nil
+    ) -> [String] {
         overlapPreviewNames(
             target: target,
             folderVaultID: folderVaultID,
+            googleDriveDestinationID: googleDriveDestinationID,
             settings: liveSnapshot(keepingFieldsOf: profileStore.activeProfile)
         )
     }
@@ -597,6 +744,7 @@ final class ExportProfileCoordinator: ObservableObject {
     func overlapPreviewNames(
         target: ExportTargetSelection,
         folderVaultID: UUID?,
+        googleDriveDestinationID: UUID? = nil,
         settings: ExportSettingsSnapshot,
         editingProfileID: UUID? = nil
     ) -> [String] {
@@ -609,7 +757,8 @@ final class ExportProfileCoordinator: ObservableObject {
                 settings: settings,
                 destinationRootKey: destinationRootKey(
                     target: target,
-                    folderVaultID: folderVaultID
+                    folderVaultID: folderVaultID,
+                    googleDriveDestinationID: googleDriveDestinationID
                 )
             )
         ]
@@ -630,7 +779,8 @@ final class ExportProfileCoordinator: ObservableObject {
             settings: liveSnapshot(keepingFieldsOf: source),
             target: source.target,
             folderVaultID: source.folderVaultID,
-            apiEndpointID: source.apiEndpointID
+            apiEndpointID: source.apiEndpointID,
+            googleDriveDestinationID: source.googleDriveDestinationID
         )
         if source.target == .agentDataGateway,
            let bindingID = destinationStore.agentDataGatewayBinding(profileID: source.id) {
@@ -728,6 +878,7 @@ final class ExportProfileCoordinator: ObservableObject {
         target: ExportTargetSelection,
         folderVaultID: UUID?,
         apiEndpointID: UUID?,
+        googleDriveDestinationID: UUID? = nil,
         agentDataGatewayID: UUID? = nil,
         settings newSettings: ExportSettingsSnapshot
     ) -> ExportProfile? {
@@ -742,6 +893,10 @@ final class ExportProfileCoordinator: ObservableObject {
         _ = profileStore.setAPIEndpointBinding(
             profileID: id,
             endpointID: target == .apiEndpoint ? apiEndpointID : nil
+        )
+        _ = profileStore.setGoogleDriveBinding(
+            profileID: id,
+            destinationID: target == .googleDrive ? googleDriveDestinationID : nil
         )
         destinationStore.setAgentDataGatewayBinding(
             profileID: id,
@@ -792,6 +947,7 @@ final class ExportProfileCoordinator: ObservableObject {
                 destinationRootKey: destinationRootKey(
                     target: profile.target,
                     folderVaultID: profile.folderVaultID,
+                    googleDriveDestinationID: profile.googleDriveDestinationID,
                     liveVaultRoot: liveVaultRoot
                 )
             )
@@ -813,6 +969,7 @@ final class ExportProfileCoordinator: ObservableObject {
     private func destinationRootKey(
         target: ExportTargetSelection,
         folderVaultID: UUID?,
+        googleDriveDestinationID: UUID? = nil,
         liveVaultRoot: String? = nil
     ) -> String? {
         switch target {
@@ -828,6 +985,10 @@ final class ExportProfileCoordinator: ObservableObject {
         case .apiEndpoint, .agentDataGateway:
             // Upload destinations never write local files.
             return nil
+        case .googleDrive:
+            guard googleDriveDestinationStore.destination(id: googleDriveDestinationID) != nil,
+                  let googleDriveDestinationID else { return nil }
+            return "google-drive:\(googleDriveDestinationID.uuidString.lowercased())"
         }
     }
 }

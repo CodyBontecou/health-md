@@ -52,6 +52,7 @@ import com.healthmd.presentation.export.FloatingExportActionBar
 import com.healthmd.presentation.navigation.AppNavigationLayout
 import com.healthmd.presentation.navigation.NavDestination
 import com.healthmd.presentation.onboarding.*
+import com.healthmd.domain.onboarding.HealthPack
 import com.healthmd.presentation.paywall.PaywallScreen
 import com.healthmd.presentation.schedule.*
 import com.healthmd.presentation.settings.ConfigurationProtectionSettingsCard
@@ -181,82 +182,108 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
     }
 
     @Test
-    fun onboardingActionsRemainReachableThroughTheWholePager() {
+    fun onboardingActionsRemainReachableThroughEveryStep() {
         val actions = mutableListOf<String>()
-        val pages = listOf(
-            OnboardingPage.WELCOME,
-            OnboardingPage.HEALTH_ACCESS,
-            OnboardingPage.FOLDER_SETUP,
-            OnboardingPage.INCLUDED_ACCESS,
-            OnboardingPage.READY,
-        )
         compose.setContent {
             TestViewport {
-                val pager = rememberPagerState(pageCount = { pages.size })
-                val scope = rememberCoroutineScope()
+                var step by remember { mutableStateOf(OnboardingStep.WELCOME) }
+                var packs by remember { mutableStateOf(HealthPack.defaults) }
                 var folderName by remember { mutableStateOf<String?>(null) }
-                val canContinue = when (pages[pager.currentPage]) {
-                    OnboardingPage.HEALTH_ACCESS -> false
-                    OnboardingPage.FOLDER_SETUP -> folderName != null
-                    else -> true
-                }
-                OnboardingLayout(
-                    pages = pages,
-                    pagerState = pager,
-                    canContinue = canContinue,
-                    onBack = { scope.launch { pager.animateScrollToPage(pager.currentPage - 1) } },
-                    onContinue = { scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } },
-                    onSkip = { scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } },
-                    onGrantHealthAccess = { actions += "health" },
-                    onSelectFolder = {
-                        actions += "folder"
-                        folderName = "A long selected folder name for accessible exports"
-                    },
-                    onComplete = { actions += "complete" },
-                ) { page ->
-                    when (page) {
-                        OnboardingPage.WELCOME -> WelcomePage(onUseSharedSetup = { actions += "shared" })
-                        OnboardingPage.HEALTH_ACCESS -> HealthAccessPage(
-                            hasPermissions = false,
-                            actionError = HealthConnectActionError.PERMISSION_DENIED,
-                            onDismissError = {},
-                        )
-                        OnboardingPage.FOLDER_SETUP -> StorageSetupPage(
-                            folderName = folderName,
-                            onSelectFolder = {
-                                actions += "folder"
-                                folderName = "A long selected folder name for accessible exports"
-                            },
-                        )
-                        OnboardingPage.INCLUDED_ACCESS -> IncludedAccessPage()
-                        OnboardingPage.READY -> ReadyPage()
-                    }
+                val next = { step = OnboardingFlow.next(step) }
+                val back: () -> Unit = { OnboardingFlow.previous(step)?.let { step = it } }
+                when (step) {
+                    OnboardingStep.WELCOME -> WelcomeStep(onStart = next, onUseSharedSetup = { actions += "shared" })
+                    OnboardingStep.PACKS -> PacksStep(
+                        selected = packs,
+                        unavailable = emptySet(),
+                        onToggle = { packs = if (it in packs) packs - it else packs + it },
+                        onToggleAll = { packs = HealthPack.entries.toSet() },
+                        onContinue = next,
+                        onBack = back,
+                    )
+                    OnboardingStep.HEALTH -> HealthStep(
+                        selected = packs,
+                        healthConnectAvailable = true,
+                        needsSetup = false,
+                        actionError = HealthConnectActionError.PERMISSION_DENIED,
+                        onDismissError = {},
+                        onConnect = { actions += "health" },
+                        onSkip = next,
+                        onBack = back,
+                    )
+                    OnboardingStep.FOLDER -> FolderStep(
+                        destination = OnboardingDestination.LOCAL_FOLDER,
+                        folderName = folderName,
+                        subfolder = "health",
+                        apiEndpoint = null,
+                        metricCount = HealthPack.metricCount(packs),
+                        onSelectDestination = {},
+                        onPickFolder = {
+                            actions += "folder"
+                            folderName = "A long selected folder name for accessible exports"
+                        },
+                        onAddEndpoint = {},
+                        onEditEndpoint = {},
+                        onContinue = next,
+                        onSkip = next,
+                        onBack = back,
+                    )
+                    OnboardingStep.FIRST_NOTE -> FirstNoteStep(
+                        note = NotePreviewState.Sample(
+                            SampleReason.NO_DATA,
+                            OnboardingSampleNote.days(OnboardingFlow.firstNoteDates(java.time.LocalDate.of(2026, 11, 12)), packs),
+                        ),
+                        selectedDay = 6,
+                        showRaw = false,
+                        action = FirstNoteAction.Finish,
+                        isSaving = false,
+                        saveFailed = false,
+                        onSelectDay = {},
+                        onToggleRaw = { actions += "raw" },
+                        onPrimary = next,
+                        onContinueWithoutSaving = next,
+                        onBack = back,
+                    )
+                    OnboardingStep.DAILY -> DailyStep(
+                        savedNoteCount = null,
+                        destinationLabel = folderName,
+                        offer = DailyOffer.ENABLE,
+                        trialOffer = null,
+                        purchasesAvailable = false,
+                        isBusy = false,
+                        purchaseFailed = false,
+                        onStartTrial = {},
+                        onEnable = { actions += "daily" },
+                        onNotNow = { actions += "manual" },
+                    )
                 }
             }
         }
 
         scrollAndTap(R.string.shared_setup_use)
+        tap(R.string.onboarding_get_started)
+        compose.onNodeWithContentDescription(text(R.string.onboarding_back)).assertFullyVisible()
+        compose.onNodeWithTag(OnboardingTestTags.PRIMARY_ACTION).assertFullyVisible()
+        compose.onAllNodesWithTag(OnboardingTestTags.PACK)[6].performScrollTo().performTouchInput { click() }
         tap(R.string.onboarding_continue)
         // The useful action is visible immediately, rather than a disabled Continue.
-        node(R.string.onboarding_continue).assertDoesNotExist()
-        compose.onNodeWithContentDescription(text(R.string.onboarding_back)).assertFullyVisible()
+        node(R.string.onboarding_health_continue).assertFullyVisible()
         node(R.string.onboarding_skip).assertFullyVisible()
-        tap(R.string.onboarding_health_grant_button)
+        tap(R.string.onboarding_health_continue)
         compose.onNodeWithContentDescription(text(R.string.onboarding_back)).performTouchInput { click() }
         tap(R.string.onboarding_continue)
-        tap(R.string.onboarding_skip)
+        tap(R.string.onboarding_skip_for_now)
         capture("folder-intro")
-        tap(R.string.onboarding_storage_select_button)
-        scrollAndTap(R.string.export_folder_change)
-        tap(R.string.onboarding_continue)
-        // The included-access channel's final feature is also reachable at the largest scales.
-        compose.onNodeWithText(text(R.string.fdroid_onboarding_no_play_services))
-            .performScrollTo().assertFullyVisible()
-        tap(R.string.onboarding_continue)
-        capture("ready-intro")
-        tap(R.string.onboarding_ready_start_button)
+        tap(R.string.onboarding_folder_choose)
+        tap(R.string.onboarding_folder_show_notes)
+        compose.onNodeWithTag(OnboardingTestTags.SAMPLE_NOTICE).assertExists()
+        compose.onNodeWithTag(OnboardingTestTags.RAW_TOGGLE).performScrollTo().performTouchInput { click() }
+        tap(R.string.onboarding_note_finish)
+        capture("daily-intro")
+        tap(R.string.onboarding_daily_enable)
+        tap(R.string.onboarding_daily_not_now)
 
-        assertEquals(listOf("shared", "health", "folder", "folder", "complete"), actions)
+        assertEquals(listOf("shared", "health", "folder", "raw", "daily", "manual"), actions)
     }
 
     @Test
@@ -304,55 +331,46 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
 
     @Test
     fun readingLayoutKeepsFontSizeAndWidensTheExplanation() {
-        var continued = 0
+        var connected = 0
         compose.setContent {
             TestViewport {
-                val pages = listOf(OnboardingPage.WELCOME, OnboardingPage.HEALTH_ACCESS,
-                    OnboardingPage.FOLDER_SETUP, OnboardingPage.READY)
-                val pager = rememberPagerState(initialPage = 1, pageCount = { pages.size })
-                var connected by remember { mutableStateOf(false) }
-                OnboardingLayout(
-                    pages = pages,
-                    pagerState = pager,
-                    canContinue = connected,
-                    onBack = {},
-                    onContinue = { continued++ },
+                HealthStep(
+                    selected = HealthPack.defaults,
+                    healthConnectAvailable = true,
+                    needsSetup = false,
+                    actionError = null,
+                    onDismissError = {},
+                    onConnect = { connected++ },
                     onSkip = {},
-                    onGrantHealthAccess = { connected = true },
-                    onSelectFolder = {},
-                    onComplete = {},
-                ) { page ->
-                    if (page == OnboardingPage.HEALTH_ACCESS) HealthAccessPage(connected, null, {})
-                }
+                    onBack = {},
+                )
             }
         }
         capture("health-intro")
-        node(R.string.onboarding_health_grant_button).assertFullyVisible().assertIsEnabled()
+        node(R.string.onboarding_health_continue).assertFullyVisible().assertIsEnabled()
         val reading = GeistAdaptiveLayout.readingFirst(display.width.toFloat(), display.height.toFloat(), display.fontScale)
         val hero = compose.onNodeWithTag(OnboardingTestTags.HERO)
         if (reading) hero.assertDoesNotExist() else hero.assertExists()
 
-        val subtitle = compose.onNodeWithText(text(R.string.onboarding_health_subtitle))
-        subtitle.performScrollTo()
+        val body = compose.onNodeWithText(
+            text(R.string.onboarding_health_body).replace("%1\$s", text(R.string.onboarding_health_allow_all)),
+        )
+        body.performScrollTo()
         val results = mutableListOf<TextLayoutResult>()
-        subtitle.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(results) }
+        body.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(results) }
         assertEquals(GeistType.copy16.fontSize, results.single().layoutInput.style.fontSize)
         assertEquals(display.fontScale, results.single().layoutInput.density.fontScale)
         if (reading) {
-            assertEquals(TextAlign.Start, results.single().layoutInput.style.textAlign)
-            val body = compose.onNodeWithTag(OnboardingTestTags.BODY).getUnclippedBoundsInRoot()
-            val textBounds = subtitle.getUnclippedBoundsInRoot()
+            val column = compose.onNodeWithTag(OnboardingTestTags.BODY).getUnclippedBoundsInRoot()
+            val textBounds = body.getUnclippedBoundsInRoot()
             assertTrue("Explanatory copy uses the reading width, not nested gutters",
-                textBounds.right - textBounds.left >= body.right - body.left - 33.dp)
+                textBounds.right - textBounds.left >= column.right - column.left - 33.dp)
         }
-        compose.onNodeWithText(text(R.string.onboarding_health_feature_3)).performScrollTo()
-        node(R.string.onboarding_health_grant_button).assertFullyVisible()
+        compose.onNodeWithText(text(R.string.onboarding_health_change_anytime)).performScrollTo()
+        node(R.string.onboarding_health_continue).assertFullyVisible()
         capture("health-details")
-        tap(R.string.onboarding_health_grant_button)
-        node(R.string.onboarding_health_grant_button).assertDoesNotExist()
-        node(R.string.onboarding_skip).assertDoesNotExist()
-        tap(R.string.onboarding_continue)
-        assertEquals(1, continued)
+        tap(R.string.onboarding_health_continue)
+        assertEquals(1, connected)
     }
 
     @Test

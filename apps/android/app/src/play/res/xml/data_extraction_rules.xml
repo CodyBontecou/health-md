@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
+        <exclude domain="sharedpref" path="health_md_google_drive_account_authority.xml" />
         <exclude domain="sharedpref" path="health_md_api_export_credentials.xml" />
         <exclude domain="sharedpref" path="health_md_oauth_tokens.xml" />
         <exclude domain="sharedpref" path="wear-sync-private.xml" />
@@ -9,6 +10,7 @@
         <exclude domain="file" path="datastore/onboarding_analytics.preferences_pb" />
     </cloud-backup>
     <device-transfer>
+        <exclude domain="sharedpref" path="health_md_google_drive_account_authority.xml" />
         <exclude domain="sharedpref" path="health_md_api_export_credentials.xml" />
         <exclude domain="sharedpref" path="health_md_oauth_tokens.xml" />
         <exclude domain="sharedpref" path="wear-sync-private.xml" />
