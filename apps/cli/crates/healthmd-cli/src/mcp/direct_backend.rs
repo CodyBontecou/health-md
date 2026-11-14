@@ -1252,6 +1252,27 @@ mod tests {
     use super::*;
     use healthmd_client::direct::WakeEnrollment;
 
+    #[tokio::test]
+    async fn encrypted_android_denial_reaches_mcp_without_receipt_corruption() {
+        for malformed in [false, true] {
+            let (error, job_id) =
+                crate::direct_denial_test_support::encrypted_denial(malformed).await;
+            let mapped = backend_error(&error, Some(job_id));
+            assert_eq!(mapped.job_id, Some(job_id));
+            if malformed {
+                assert_eq!(mapped.code, "healthmd_integrity_error");
+            } else {
+                assert_eq!(mapped.code, "healthmd_export_rejected");
+                assert!(!mapped.retryable);
+                assert!(mapped.message.contains("quota_exhausted"));
+                assert!(mapped.message.contains("preparing"));
+                assert!(mapped.message.contains("billing"));
+                assert!(!mapped.message.contains("integrity"));
+            }
+            assert!(!mapped.message.contains("synthetic-private"));
+        }
+    }
+
     #[test]
     fn android_export_rejection_is_not_mcp_integrity_failure() {
         use healthmd_protocol::v2::{ErrorCode, ExportPhase};

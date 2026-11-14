@@ -46,7 +46,11 @@ class DailyNoteInjector {
         }
 
         val dateString = customization.dateFormat.format(data.date)
-        val injectionContent = buildInjectionContent(data, dateString, settings, customization)
+        val injectionContent = try {
+            buildInjectionFragment(data, settings, customization)
+        } catch (_: IllegalArgumentException) {
+            return Pair(InjectionResult.FAILED, null)
+        }
         if (injectionContent.isBlank()) return Pair(InjectionResult.SKIPPED, null)
 
         if (existingContent == null && !settings.createIfMissing) {
@@ -116,7 +120,8 @@ class DailyNoteInjector {
                 customFields=emptyMap(),placeholderFields=emptyList()))
         val names = HealthDataFields.extract(selected, rendering.unitConverter, rendering.timeFormat,
             rendering.includeLegacyAndroidAliases, rendering.includeAndroidNativeFields)
-            .filter { it.value != null }.mapNotNull { rendering.frontmatterConfig.outputKey(it.key) }
+            .filter { it.value != null && customization.frontmatterConfig.isFieldEnabled(it.key) }
+            .mapNotNull { rendering.frontmatterConfig.outputKey(it.key) }
         val recordDetail = if (settings.injectMarkdownSections) detail else ExportDetailSelection.SUMMARY
         val record = JsonExporter().export(selected, rendering, detail = recordDetail)
         val markdown = if(settings.injectMarkdownSections) markdownExporter.export(selected,false,true,rendering,
@@ -126,39 +131,45 @@ class DailyNoteInjector {
             ObsidianBasesExporter().export(selected,rendering),markdown,names,settings.injectMarkdownSections)
     }
 
-    private fun buildInjectionContent(
+    fun buildInjectionFragment(
         data: HealthData,
-        dateString: String,
         settings: DailyNoteInjectionSettings,
-        customization: FormatCustomization,
-    ): String = buildString {
-        val frontmatterValues = buildFrontmatterValues(data, dateString, customization)
-        if (frontmatterValues.isNotEmpty()) {
-            append("---\n")
-            for ((key, value) in frontmatterValues) {
-                append("$key: $value\n")
+        customization: FormatCustomization = FormatCustomization(),
+    ): String {
+        val dateString = customization.dateFormat.format(data.date)
+        return buildString {
+            val frontmatterValues = buildFrontmatterValues(data, dateString, customization)
+            if (frontmatterValues.isNotEmpty()) {
+                append("---\n")
+                for ((key, value) in frontmatterValues) {
+                    append("$key: $value\n")
+                }
+                append("---\n\n")
             }
-            append("---\n\n")
-        }
 
-        if (settings.injectMarkdownSections) {
-            val sectionCustomization = customization.copy(
-                markdownTemplate = customization.markdownTemplate.copy(
-                    style = MarkdownTemplateStyle.STANDARD,
-                ),
-            )
-            append(
-                markdownExporter.export(
-                    data = data,
-                    includeMetadata = false,
-                    groupByCategory = true,
-                    customization = sectionCustomization,
-                    includeGranularData = false,
-                ).trimEnd(),
-            )
-            append("\n")
+            if (settings.injectMarkdownSections) {
+                val sectionCustomization = customization.copy(
+                    markdownTemplate = customization.markdownTemplate.copy(
+                        style = MarkdownTemplateStyle.STANDARD,
+                    ),
+                )
+                append(
+                    markdownExporter.export(
+                        data = data,
+                        includeMetadata = false,
+                        groupByCategory = true,
+                        customization = sectionCustomization,
+                        includeGranularData = false,
+                    ).trimEnd(),
+                )
+                append("\n")
+            }
         }
     }
+
+    /** Applies the existing preamble/frontmatter-aware merger exactly once. */
+    fun mergeFragment(existingContent: String, fragment: String): String =
+        markdownMerger.merge(existingContent, fragment)
 
     private fun buildFrontmatterValues(
         data: HealthData,
@@ -166,9 +177,14 @@ class DailyNoteInjector {
         customization: FormatCustomization,
     ): Map<String, String> {
         val values = LinkedHashMap<String, String>()
+        fun addValue(key: String, value: String) {
+            require(key !in setOf("healthmd_injection_kind", "healthmd_daily_injection_v1", "healthmd_daily_injection_v2") &&
+                !values.containsKey(key)) { "Conflicting daily-note property keys" }
+            values[key] = value
+        }
         val frontmatterConfig = customization.frontmatterConfig
         if (frontmatterConfig.includeDate) {
-            values[frontmatterConfig.customDateKey] = dateString
+            addValue(frontmatterConfig.customDateKey, dateString)
         }
 
         for (field in HealthDataFields.extract(
@@ -180,7 +196,7 @@ class DailyNoteInjector {
         )) {
             val value = field.value ?: continue
             val outputKey = frontmatterConfig.outputKey(field.key) ?: continue
-            values[outputKey] = value.toString()
+            addValue(outputKey, value.toString())
         }
 
         return values

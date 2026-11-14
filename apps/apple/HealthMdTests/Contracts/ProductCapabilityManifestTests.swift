@@ -39,6 +39,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
                 "account.optional-native-sign-in",
                 "account.selected-portable-profile-sync",
                 "account.local-revision-approval",
+                "destination.google-drive",
             ]
         )
         XCTAssertEqual(Set(states.keys), Self.allCapabilities)
@@ -194,6 +195,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
                 "account.local-revision-approval",
                 "apple.ads-purchase-attribution",
                 "account.clinic-sync-requests",
+                "destination.google-drive",
             ])
     }
 

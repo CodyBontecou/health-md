@@ -471,6 +471,10 @@ This is the Dark theme. The Light theme uses the same token names with different
 
 The Signal carousel keeps its footer fixed at standard text sizes in tall windows. At the reading font scale or in a window shorter than the small breakpoint, the carousel and footer share a scrolling column. Each carousel page retains one viewport of reading space and its own scrolling content. Purchase, Restore, and legal links must remain reachable without reducing text size or hiding disclosures.
 
+## Provider connection buttons
+
+Google Drive authorization uses an outlined pill on `background-100`, `gray-1000` text and a `gray-700` outline, with the official full-color Drive product logo preserved without tinting. It retains the 48dp control minimum, existing button typography and spacing, and native pressed/disabled states. Keep the action label explicit (Connect or Reauthorize Google Drive). This neutral provider treatment distinguishes external authorization from Health.md’s purple primary actions in both themes.
+
 ## Colors
 
 `background-100` is the page surface and `background-200` the card and list-group surface. The `gray-*` steps are tonal containers and text: `gray-100`–`gray-300` are container fills (navigation bar, chips, inputs), `gray-500` is the outline-variant used for dividers and chip borders, `gray-700` is the outline and the disabled-text token, `gray-900` is secondary text and `gray-1000` primary text. `gray-alpha-*` remain for translucent overlays and scrims. The `brand-*` tonal palette carries primary actions (`brand-primary` on `brand-on-primary`), primary containers such as the Export now button and hero cards (`brand-subtle` on `brand-on-subtle`), and selection. `secondary-container` fills selected chips, segmented buttons, navigation indicators and tonal buttons. `tertiary-container` with `on-tertiary-container` marks offers and cautions that are not errors, such as the paywall's Best value pill and the Export now large-export note. Semantic accents keep their meaning: `green` success, `red` errors, `amber` warnings, plus `blue`, `teal`, `purple` and `pink` for automation identity and charts.

@@ -39,6 +39,8 @@ For explicitly requested physical-device deployment or QA, target the Pixel 7 de
 
 Use `./gradlew :app:installPlayDebug` and pass the serial to install the default Google Play channel on the physical device. Use `:app:assembleFdroidDebug` only when explicitly validating the F-Droid channel.
 
+For deterministic Argent or adb journeys, install the isolated `e2e` app and launch it with the [UI test mode](docs/testing/argent-test-mode.md) extras; it serves synthetic health data and never touches the real app's data.
+
 ## Agent verification
 
 Use the root [test selection guide](../../docs/testing-strategy.md) for focused

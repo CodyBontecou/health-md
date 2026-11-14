@@ -35,7 +35,7 @@
       "requiredBindings": [
         "Text(LocalizedStringKey(category.name))",
         "ForEach(Array(fieldCategories.enumerated()), id: \\.element.name)",
-        "return (name: category.name, fields: fields)",
+        "FrontmatterFieldGroup.grouped(config.fields).map { ($0.group.title, $0.fields) }",
         "placeholder: LocalizedStringKey(\"\\(renameTargetKey ?? \"\")\")",
         "key: key,",
         "value: FrontmatterFieldPresentation.customValue(value)",

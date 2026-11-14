@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import worker from "../src/index";
 import { getSession, issueSession, purgeExpiredAuditEvents } from "../src/auth";
+import { encryptIdentity, keyedLookup } from "../src/crypto";
 import { processAccountDeletionById, processAccountDeletions, purgeExpiredDeletionReceipts,
   requestAccountDeletion } from "../src/lifecycle";
 import maintenanceWorker from "../src/maintenance-worker";
@@ -25,7 +26,7 @@ function deletionInput(extra: Record<string, unknown> = {}): Record<string, unkn
   return { confirmation: "DELETE", statusToken: deletionStatusToken(), ...extra };
 }
 
-async function setup() {
+async function setup(withPassword = false) {
   const directory = mkdtempSync(join(tmpdir(), "healthmd-account-lifecycle-"));
   roots.push(directory);
   const created = createVmEnvironment({
@@ -43,8 +44,22 @@ async function setup() {
   created.env.AUTH_SIGNUP_MODE = "invite";
   created.env.AUTH_EMAIL_FROM = "Health.md Cloud <cloud@healthmd.app>";
   created.env.RESEND_API_KEY = "synthetic-provider-secret";
-  await createSingleUserAccount(created.env, "synthetic-owner", "owner@example.test",
-    "synthetic-password-not-for-production");
+  if (withPassword) {
+    await createSingleUserAccount(created.env, "synthetic-owner", "owner@example.test",
+      "synthetic-password-not-for-production");
+  } else {
+    // These cases authenticate with email-link sessions. Seed a fresh encrypted
+    // email account without deriving an unused password verifier for each case.
+    // Keep independent account IDs, keys and databases for isolation checks.
+    const id = randomUUID();
+    const email = "owner@example.test";
+    const encrypted = await encryptIdentity(email, created.env.IDENTITY_KEY_B64, id);
+    const lookup = await keyedLookup(email, created.env.IDENTITY_KEY_B64, "email-lookup-v1");
+    created.db.connection.prepare(`INSERT INTO users
+      (id, email_lookup, email_ciphertext, email_iv, status, created_at)
+      VALUES (?, ?, ?, ?, 'active', ?)`).run(id, lookup,
+      encrypted.ciphertext, encrypted.iv, new Date().toISOString());
+  }
   const user = created.db.connection.prepare("SELECT id FROM users").get() as { id: string };
   return { ...created, userId: user.id };
 }
@@ -73,11 +88,15 @@ afterEach(() => {
 });
 
 it("uses a fresh email-link session as deletion step-up and durably queues erasure", async () => {
-  const { env, db, userId } = await setup();
+  // Retain real password bootstrap and credential-cascade coverage once, while
+  // the remaining email-link lifecycle cases use their own account fixture.
+  const { env, db, userId } = await setup(true);
   const queued: LifecycleMessage[] = [];
   env.LIFECYCLE_QUEUE = { send: async (message: LifecycleMessage) => { queued.push(message); } } as
     unknown as Queue<LifecycleMessage>;
   try {
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM password_credentials").get())
+      .toMatchObject({ n: 1 });
     const cookie = await session(env, userId);
     const token = await request(env, "/api/ingest-tokens", "POST", { name: "Synthetic phone" }, cookie);
     const bearer = (await token.json() as { token: string }).token;
@@ -128,6 +147,8 @@ it("uses a fresh email-link session as deletion step-up and durably queues erasu
       unknown as MessageBatch<LifecycleMessage>, env);
     expect({ acknowledged, retried }).toEqual({ acknowledged: true, retried: false });
     expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users").get()).toMatchObject({ n: 0 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM password_credentials").get())
+      .toMatchObject({ n: 0 });
     expect(db.connection.prepare("SELECT COUNT(*) AS n FROM exports").get()).toMatchObject({ n: 0 });
     expect(db.connection.prepare("SELECT completed_at FROM account_deletions WHERE id = ?")
       .get(deletionId)).toMatchObject({ completed_at: expect.any(String) });

@@ -88,7 +88,7 @@ Operators use Git and GitHub Actions, not local Play mutation tools:
 4. Dispatch `Android Promote production` from the same tag with the exact phone version and code.
 5. Confirm the workflow-reported Google Play lifecycle is in review, approved, or published.
 
-See `PLAY_STORE_COMMANDS.md` for the checklist and `PLAY_CONSOLE_BROWSER_PROMPT.md` for read-only Console auditing.
+See [the command-line operator runbook](PLAY_STORE_COMMANDS.md#command-line-operator-runbook) for exact `gh` commands, existing-build selection, and publication verification. With managed publishing enabled, an approved build still needs the [final Console publishing action](PLAY_STORE_COMMANDS.md#approved-build-final-managed-publishing-action); promotion workflow success alone does not mean it is live. `PLAY_CONSOLE_BROWSER_PROMPT.md` remains the separate read-only audit procedure.
 
 ## Troubleshooting
 
