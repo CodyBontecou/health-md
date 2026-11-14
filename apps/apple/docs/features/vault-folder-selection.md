@@ -94,6 +94,8 @@ Filename supports:
 - `{weekday}` → `Tuesday`
 - `{monthName}` → `May`
 - `{quarter}` → `Q2`
+- `{week}` → ISO week number, zero-padded (`01`–`53`)
+- `{weekYear}` → ISO week-numbering year (`2026`)
 
 Folder organization supports the same date placeholders except it is used as a path.
 
@@ -142,3 +144,10 @@ Folder organization supports the same date placeholders except it is used as a p
 - `VaultManager.exportHealthData(...)` creates directories as needed before writing files.
 - Successful exports retain a transient exact file URL for the in-app Markdown viewer (or Quick Look for binary formats) and its exact parent folder for the document picker. Health.md does not use an unsupported Files-app deep link.
 - `AdvancedExportSettings.formatFolderPath(for:)` and `filename(for:format:)` apply the date placeholders used in path previews and exports.
+
+ISO weeks start on Monday and week 1 contains January 4. Use **By Year and Week**
+(`{weekYear}/Week {week}`) for weekly folders: January 1, 2027 resolves to
+`2026/Week 53`, while `{year}` stays `2027`. Week tokens use the export owner-day
+timezone, independently of locale or the device calendar. Existing templates and
+daily export schema versions are unchanged. Keep `{date}` in daily filenames to
+avoid collisions between days in the same week.
