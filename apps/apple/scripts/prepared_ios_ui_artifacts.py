@@ -41,7 +41,7 @@ def pack(derived: Path, source: str, archive: Path) -> str:
     metadata = json.dumps({"version": 1, "receipt": receipt, "files": inventory}).encode()
     if len(metadata) > 4 * 1024 * 1024:
         raise ValueError("prepared artifact inventory is too large")
-    with tarfile.open(archive, "w:gz") as bundle:
+    with tarfile.open(archive, "w:gz", compresslevel=1) as bundle:
         info = tarfile.TarInfo("qualification.json")
         info.size = len(metadata)
         bundle.addfile(info, io.BytesIO(metadata))

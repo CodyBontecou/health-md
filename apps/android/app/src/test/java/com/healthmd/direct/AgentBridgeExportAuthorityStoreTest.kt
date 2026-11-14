@@ -409,6 +409,48 @@ class AgentBridgeExportAuthorityStoreTest {
         }
     }
 
+    @Test
+    fun warmedLedgerValidationStillAuthenticatesEachReadAndRejectsChangedSignedState() {
+        for (mode in listOf("missing-key", "changed-key", "bad-mac", "signed-invalid-version", "signed-duplicate-grant")) {
+            AgentBridgeExportPlanningFixture().use { f ->
+                f.enrolled()
+                repeat(2) { f.store.access { assertThat(requireNotNull(it).state.grants).hasSize(1) } }
+                val calls = f.keys.calls
+                when (mode) {
+                    "missing-key" -> f.keys.key = null
+                    "changed-key" -> f.keys.key = SecretKeySpec(ByteArray(32) { 0x55 }, "HmacSHA256")
+                    "bad-mac" -> Files.write(ledger(f), bytes(f).decodeToString().replaceFirst("\"mac\":\"", "\"mac\":\"f").toByteArray())
+                    "signed-invalid-version" -> rewriteWithSyntheticMac(f) { JsonObject(it + ("version" to JsonPrimitive(2))) }
+                    else -> rewriteWithSyntheticMac(f) { state ->
+                        val grants = state.getValue("grants").jsonArray
+                        JsonObject(state + ("grants" to JsonArray(grants.toList() + grants[0])))
+                    }
+                }
+                val before = bytes(f)
+                var admitted = false
+                f.expect(if (mode == "missing-key") AgentBridgeErrorCode.PERMISSION_REQUIRED else AgentBridgeErrorCode.BINDING_CHANGED) {
+                    f.store.access { admitted = true }
+                }
+                assertThat(admitted).isFalse()
+                assertThat(f.keys.calls).isGreaterThan(calls)
+                assertThat(bytes(f)).isEqualTo(before)
+            }
+        }
+    }
+
+    @Test
+    fun warmedLedgerReturnsFreshStateAndObservesDurableRevocation() {
+        AgentBridgeExportPlanningFixture().use { f ->
+            f.enrolled()
+            val detached = f.store.access { requireNotNull(it).state }
+            // Decoded collection mutation must never alter the next read's state.
+            (detached.grants as MutableList).clear()
+            f.store.access { assertThat(requireNotNull(it).state.grants).hasSize(1) }
+            f.store.revoke(f.native, f.peer, f.delegation().authorityId, 1)
+            f.store.access { assertThat(requireNotNull(it).state.grants.single().revoked).isTrue() }
+        }
+    }
+
     private fun ledger(f: AgentBridgeExportPlanningFixture): Path = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
     private fun bytes(f: AgentBridgeExportPlanningFixture) = Files.readAllBytes(ledger(f))
     private fun rewriteWithSyntheticMac(f: AgentBridgeExportPlanningFixture, mutate: (JsonObject) -> JsonObject) {

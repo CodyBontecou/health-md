@@ -41,10 +41,25 @@ capture_focus_failure() {
     local status=$?
     # Only the disposable hosted AVD may expose platform window identities. Do
     # not collect window titles or other apps' state on a developer's device.
-    if [[ "${GITHUB_ACTIONS:-}" == true ]]; then
-        echo 'Hosted AVD focus at instrumentation failure:' >&2
-        adb -s emulator-5554 shell dumpsys -t 2 window \
-            | sed -n '/mCurrentFocus=/p; /mFocusedApp=/p' >&2 || true
+    if [[ "${GITHUB_ACTIONS:-}" == true ]] && \
+        [[ "$(timeout 10 adb -s emulator-5554 shell getprop ro.boot.qemu 2>/dev/null | tr -d '\r')" == 1 ]] && \
+        mkdir -p build/logs; then
+        # A launcher can ANR after HOME readiness and before instrumentation.
+        # Retain its platform reason, rather than guessing from a focus failure.
+        # Diagnostics neither recover a running test nor change its exit status.
+        {
+            echo 'Hosted AVD focus at instrumentation failure:'
+            timeout 10 adb -s emulator-5554 shell dumpsys -t 2 window \
+                | sed -n '/mCurrentFocus=/p; /mFocusedApp=/p' || true
+            echo 'Last platform ANR:'
+            timeout 10 adb -s emulator-5554 shell dumpsys -t 2 activity lastanr \
+                | head -n 160 || true
+            echo 'Recent platform input errors:'
+            timeout 10 adb -s emulator-5554 logcat -d -v threadtime \
+                'ActivityManager:E' 'InputDispatcher:E' 'WindowManager:E' '*:S' \
+                | tail -n 160 || true
+        } > build/logs/instrumentation-platform-failure.log 2>&1 || true
+        cat build/logs/instrumentation-platform-failure.log >&2 || true
     fi
     exit "$status"
 }

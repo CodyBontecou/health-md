@@ -1,10 +1,20 @@
 import org.gradle.api.tasks.testing.Test
 
+// CI opts into two app-class workers after compilation, within its existing
+// --max-workers=2 budget. Developer invocations retain Gradle's default profile.
+def appTestForks = System.getenv('HEALTHMD_CI_APP_TEST_FORKS')
+if (appTestForks != null && appTestForks != '2') {
+    throw new GradleException('HEALTHMD_CI_APP_TEST_FORKS must be 2 when configured')
+}
+
 // Cache compilation and lint, but execute every JVM test for each CI invocation.
 // Some policy/contract tests read repository files outside their declared inputs.
 allprojects {
     tasks.withType(Test).configureEach {
         outputs.doNotCacheIf('CI JVM tests must execute against current repository files') { true }
         outputs.upToDateWhen { false }
+        if (appTestForks == '2' && project.path == ':app') {
+            maxParallelForks = 2
+        }
     }
 }
