@@ -231,6 +231,41 @@ final class DailyNoteInjectorTests: XCTestCase {
         }
     }
 
+    func testDriveNightPatchRetainsSelectedPropertiesThroughSerializedPolicy() throws {
+        let directory = makeTempDir()
+        defer { cleanup(directory) }
+        var data = HealthData(date: Self.testDate)
+        data.workouts = [WorkoutData(workoutType: .running, startTime: Self.testDate,
+            duration: 1800, calories: 250, distance: 5000, avgHeartRate: 145)]
+        let existing = "---\nworkout_minutes: 99 # keep\n---\nMy journal.\n"
+        for settings in [Self.enabledCreateSettings, Self.sectionsCreateSettings] {
+            let collector = DailyNoteInjector.ScopedNightPatches()
+            let result = DailyNoteInjector.$scopedNightPatches.withValue(collector) {
+                DailyNoteInjector.inject(healthData: data, into: directory, settings: settings,
+                    customization: Self.workoutCountCustomization, metricSelection: Self.workoutsOnly)
+            }
+            guard case .updated = result else { return XCTFail("Expected a materialized Drive note") }
+            let file = directory.appendingPathComponent(settings.formatFilename(for: Self.testDate) + ".md")
+            let fragment = try Data(contentsOf: file)
+            let patch = try XCTUnwrap(collector.patches[Self.testDate])
+            let policy = GoogleDriveDailyNotePolicy(recordProfile: "apple-v8",
+                injectSections: settings.injectMarkdownSections, patch: patch)
+            let retained = try JSONDecoder().decode(GoogleDriveDailyNotePolicy.self,
+                from: JSONEncoder().encode(policy))
+            let merged = try GoogleDriveFinalByteMerger.merge(baseline: Data(existing.utf8),
+                fragment: fragment, intent: .dailyNoteMerge, dailyNotePolicy: retained)
+            let header = try XCTUnwrap(MarkdownMerger.splitFrontmatter(from: String(decoding: merged, as: UTF8.self))).frontmatter
+            XCTAssertTrue(header.contains("My workout count: 1"))
+            XCTAssertTrue(header.contains("workout_minutes: 99 # keep"))
+            XCTAssertFalse(header.contains("\nworkout_count:"))
+            XCTAssertFalse(header.contains("\nworkout_calories:"))
+            XCTAssertTrue(String(decoding: merged, as: UTF8.self).contains("My journal."))
+            XCTAssertEqual(retained, policy)
+            XCTAssertEqual(retained.patch, patch)
+            try FileManager.default.removeItem(at: file)
+        }
+    }
+
     func testInject_adversarialFieldSelectionMatrix() throws {
         var data = HealthData(date: Self.testDate)
         data.activity.steps = 42 // Present but not selected as a source metric.

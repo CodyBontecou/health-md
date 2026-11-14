@@ -28,6 +28,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.healthmd.presentation.drive.GoogleDriveSettingsCard
 import com.healthmd.R
 import com.healthmd.data.health.HealthConnectIntentLauncher
 import com.healthmd.data.health.HealthConnectManager
@@ -212,6 +213,8 @@ fun SettingsScreen(
             ),
         )
 
+        GoogleDriveSettingsCard()
+
         val dataRows = buildList<@Composable (Shape) -> Unit> {
             // Health Connect has no iOS row: HealthKit access lives in the system Health app.
             add { shape ->
@@ -291,6 +294,7 @@ fun SettingsScreen(
         SettingsGroup(title = stringResource(R.string.settings_section_data), rows = dataRows)
 
         // As on iOS, each App row opens App & support, which owns these controls.
+
         val appSupportSelected = selectedEntry == SettingsEntry.APP_SUPPORT
         SettingsGroup(
             title = stringResource(R.string.settings_section_app),

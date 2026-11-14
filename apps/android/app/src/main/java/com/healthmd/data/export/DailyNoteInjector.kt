@@ -47,7 +47,7 @@ class DailyNoteInjector {
 
         val dateString = customization.dateFormat.format(data.date)
         val injectionContent = try {
-            buildInjectionContent(data, dateString, settings, customization)
+            buildInjectionFragment(data, settings, customization)
         } catch (_: IllegalArgumentException) {
             return Pair(InjectionResult.FAILED, null)
         }
@@ -131,39 +131,45 @@ class DailyNoteInjector {
             ObsidianBasesExporter().export(selected,rendering),markdown,names,settings.injectMarkdownSections)
     }
 
-    private fun buildInjectionContent(
+    fun buildInjectionFragment(
         data: HealthData,
-        dateString: String,
         settings: DailyNoteInjectionSettings,
-        customization: FormatCustomization,
-    ): String = buildString {
-        val frontmatterValues = buildFrontmatterValues(data, dateString, customization)
-        if (frontmatterValues.isNotEmpty()) {
-            append("---\n")
-            for ((key, value) in frontmatterValues) {
-                append("$key: $value\n")
+        customization: FormatCustomization = FormatCustomization(),
+    ): String {
+        val dateString = customization.dateFormat.format(data.date)
+        return buildString {
+            val frontmatterValues = buildFrontmatterValues(data, dateString, customization)
+            if (frontmatterValues.isNotEmpty()) {
+                append("---\n")
+                for ((key, value) in frontmatterValues) {
+                    append("$key: $value\n")
+                }
+                append("---\n\n")
             }
-            append("---\n\n")
-        }
 
-        if (settings.injectMarkdownSections) {
-            val sectionCustomization = customization.copy(
-                markdownTemplate = customization.markdownTemplate.copy(
-                    style = MarkdownTemplateStyle.STANDARD,
-                ),
-            )
-            append(
-                markdownExporter.export(
-                    data = data,
-                    includeMetadata = false,
-                    groupByCategory = true,
-                    customization = sectionCustomization,
-                    includeGranularData = false,
-                ).trimEnd(),
-            )
-            append("\n")
+            if (settings.injectMarkdownSections) {
+                val sectionCustomization = customization.copy(
+                    markdownTemplate = customization.markdownTemplate.copy(
+                        style = MarkdownTemplateStyle.STANDARD,
+                    ),
+                )
+                append(
+                    markdownExporter.export(
+                        data = data,
+                        includeMetadata = false,
+                        groupByCategory = true,
+                        customization = sectionCustomization,
+                        includeGranularData = false,
+                    ).trimEnd(),
+                )
+                append("\n")
+            }
         }
     }
+
+    /** Applies the existing preamble/frontmatter-aware merger exactly once. */
+    fun mergeFragment(existingContent: String, fragment: String): String =
+        markdownMerger.merge(existingContent, fragment)
 
     private fun buildFrontmatterValues(
         data: HealthData,

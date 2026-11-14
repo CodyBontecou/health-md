@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val EXTRA_START_ROUTE = "com.healthmd.START_ROUTE"
         const val EXTRA_PROMPT_SCHEDULED_RECOVERY = "com.healthmd.PROMPT_SCHEDULED_RECOVERY"
+        const val EXTRA_GOOGLE_DRIVE_OPERATION_ID = "com.healthmd.GOOGLE_DRIVE_OPERATION_ID"
         /** Wake id of a tapped clinic sync request notification. */
         const val EXTRA_CLINIC_SYNC_WAKE_ID = "com.healthmd.CLINIC_SYNC_WAKE_ID"
         private const val STATE_HANDLED_MYSELF_CLAIM = "myselfClaim.handledIntent"
@@ -54,6 +55,8 @@ class MainActivity : ComponentActivity() {
     private var myselfClaimRequestId by mutableStateOf(0L)
     private var startRoute by mutableStateOf<String?>(null)
     private var scheduledRecoveryPromptRequestId by mutableStateOf(0L)
+    internal var googleDriveOperationId by mutableStateOf<String?>(null)
+        private set
     private var handledExternalIntent = false
 
     @Inject
@@ -210,8 +213,15 @@ class MainActivity : ComponentActivity() {
             }
         }
         startRoute = intent?.getStringExtra(EXTRA_START_ROUTE)
+        intent?.getStringExtra(EXTRA_GOOGLE_DRIVE_OPERATION_ID)
+            ?.takeIf { it.matches(Regex("[A-Za-z0-9._-]{1,128}")) }
+            ?.let { googleDriveOperationId = it }
         if (intent?.getBooleanExtra(EXTRA_PROMPT_SCHEDULED_RECOVERY, false) == true) {
             scheduledRecoveryPromptRequestId = System.currentTimeMillis()
         }
+    }
+
+    internal fun consumeGoogleDriveOperationId(operationId: String) {
+        if (googleDriveOperationId == operationId) googleDriveOperationId = null
     }
 }

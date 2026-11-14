@@ -7,11 +7,14 @@ import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.SavedAPIEndpoint
+import com.healthmd.domain.model.SavedAPIEndpointRules
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.security.SecureRandom
 import javax.inject.Inject
+import javax.inject.Singleton
 
 data class APIExportRequestConfiguration(
     val endpointUrl: String,
@@ -90,9 +93,15 @@ interface APIExportCredentialStore {
         APIExportEndpoint.fingerprint(endpointUrl)
 }
 
+/**
+ * Legacy single API credential plus the saved endpoints' tokens, in one Keystore-backed file.
+ * A request to a saved endpoint's URL carries only that endpoint's token; other URLs keep the
+ * legacy Authorization and custom headers.
+ */
+@Singleton
 class EncryptedAPIExportCredentialStore @Inject constructor(
     @ApplicationContext context: Context,
-) : APIExportCredentialStore {
+) : APIExportCredentialStore, SavedAPIEndpointPersistence {
     private val credentialLock = Any()
     private val preferences: SharedPreferences by lazy {
         val masterKey = MasterKey.Builder(context)
@@ -180,8 +189,13 @@ class EncryptedAPIExportCredentialStore @Inject constructor(
     ): APIExportRequestConfiguration? = withContext(Dispatchers.IO) {
         synchronized(credentialLock) {
             val endpoint = APIExportEndpoint.normalizedOrNull(endpointUrl) ?: return@synchronized null
-            val authorization = preferences.getString(AUTHORIZATION_KEY, null)
-            val headers = preferences.getString(REQUEST_HEADERS_KEY, null)
+            val saved = SavedAPIEndpointRules.byUrl(readSavedEndpointsLocked(), endpoint)
+            val authorization = if (saved != null) {
+                preferences.getString(savedAuthorizationKey(saved.id), null)
+            } else {
+                preferences.getString(AUTHORIZATION_KEY, null)
+            }
+            val headers = if (saved != null) emptyList() else preferences.getString(REQUEST_HEADERS_KEY, null)
                 ?.let { stored -> runCatching { APIExportHeaders.parse(stored) }.getOrDefault(emptyList()) }
                 .orEmpty()
             val fingerprint = APIExportDestinationFingerprint.create(
@@ -202,6 +216,33 @@ class EncryptedAPIExportCredentialStore @Inject constructor(
     override suspend fun destinationFingerprint(endpointUrl: String): String? =
         requestConfiguration(endpointUrl)?.destinationFingerprint
 
+    override suspend fun readSavedEndpoints(): List<SavedAPIEndpoint> = withContext(Dispatchers.IO) {
+        synchronized(credentialLock) { readSavedEndpointsLocked() }
+    }
+
+    override suspend fun writeSavedEndpoints(endpoints: List<SavedAPIEndpoint>) = withContext(Dispatchers.IO) {
+        synchronized(credentialLock) {
+            preferences.edit { putString(SAVED_ENDPOINTS_KEY, savedJson.encodeToString(savedListSerializer, endpoints)) }
+        }
+    }
+
+    override suspend fun readSavedEndpointAuthorization(id: String): String? = withContext(Dispatchers.IO) {
+        synchronized(credentialLock) { preferences.getString(savedAuthorizationKey(id), null) }
+    }
+
+    override suspend fun writeSavedEndpointAuthorization(id: String, authorization: String?) = withContext(Dispatchers.IO) {
+        synchronized(credentialLock) {
+            preferences.edit {
+                if (authorization == null) remove(savedAuthorizationKey(id)) else putString(savedAuthorizationKey(id), authorization)
+            }
+        }
+    }
+
+    private fun readSavedEndpointsLocked(): List<SavedAPIEndpoint> =
+        preferences.getString(SAVED_ENDPOINTS_KEY, null)
+            ?.let { runCatching { savedJson.decodeFromString(savedListSerializer, it) }.getOrNull() }
+            .orEmpty()
+
     private fun fingerprintSalt(): ByteArray {
         preferences.getString(FINGERPRINT_SALT_KEY, null)?.let { encoded ->
             runCatching { Base64.decode(encoded, Base64.NO_WRAP) }.getOrNull()?.let { return it }
@@ -218,6 +259,10 @@ class EncryptedAPIExportCredentialStore @Inject constructor(
         private const val AUTHORIZATION_KEY = "authorization"
         private const val REQUEST_HEADERS_KEY = "request_headers"
         private const val FINGERPRINT_SALT_KEY = "destination_fingerprint_salt"
+        private const val SAVED_ENDPOINTS_KEY = "saved_endpoints"
+        private fun savedAuthorizationKey(id: String) = "saved_endpoint_authorization.$id"
+        private val savedJson = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+        private val savedListSerializer = kotlinx.serialization.builtins.ListSerializer(SavedAPIEndpoint.serializer())
 
         fun normalizeAuthorization(value: String): String? =
             APIExportAuthorization.normalizeOrNull(value)

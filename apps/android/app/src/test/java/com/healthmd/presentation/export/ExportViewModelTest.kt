@@ -259,6 +259,7 @@ class ExportViewModelTest {
         val exportRepository = FakeExportRepository()
         val historyRepository = FakeExportHistoryRepository()
         val profileRepository = mockk<ExportProfileRepository>()
+        every { profileRepository.hasOpaqueProfileState } returns kotlinx.coroutines.flow.flowOf(false)
         coEvery { profileRepository.activeSharedSetupV2ExecutionAccess() } returns
             SharedSetupV2ProfileExecutionAccess.DestinationRebindRequired
         val viewModel = createViewModel(
@@ -421,6 +422,9 @@ class ExportViewModelTest {
                 settings: ExportSettings,
                 target: ExportTarget,
                 expectedDestinationFingerprint: String?,
+                googleDriveDestinationId: String?,
+                googleDriveProfileId: String?,
+                googleDriveOperationId: String?,
                 allowInteractiveRouteConsent: Boolean,
             ): ExportResult {
                 rawExportCalls++
@@ -811,7 +815,70 @@ class ExportViewModelTest {
         assertThat(viewModel.uiState.value.isPurchased).isFalse()
     }
 
+    /** Onboarding's "Save 7 notes to Google Drive/…" is this manual export with a Drive-bound profile. */
+    @Test
+    fun driveBoundProfileExportsThroughTheDriveOrchestratorRecordsHistoryAndConsumesTheFreeExport() = runTest {
+        io.mockk.mockkObject(com.healthmd.data.drive.GoogleDriveConfiguration)
+        try {
+            every { com.healthmd.data.drive.GoogleDriveConfiguration.isConfigured(any()) } returns true
+            val today = LocalDate.now()
+            val destination = com.healthmd.data.drive.GoogleDriveDestination(
+                id = "drive-1", accountReferenceId = "account-1", permissionId = "perm", folderId = "folder",
+                accountLabel = "Google account", folderLabel = "Health",
+                capabilities = com.healthmd.data.drive.GoogleDriveFolderCapabilities(canAddChildren = true),
+                lastValidatedAtEpochMillis = 0L,
+            )
+            val profile = com.healthmd.domain.model.ExportProfile(
+                id = "daily", name = "Daily note", settingsSnapshotJson = "{}", target = ExportTarget.GOOGLE_DRIVE,
+                destinationId = "drive-1", createdAtEpochMillis = 0L, updatedAtEpochMillis = 0L,
+            )
+            val profiles = mockk<ExportProfileRepository> {
+                every { hasOpaqueProfileState } returns kotlinx.coroutines.flow.flowOf(false)
+                coEvery { activeSharedSetupV2ExecutionAccess() } returns SharedSetupV2ProfileExecutionAccess.Allowed
+                coEvery { getActiveProfile() } returns profile
+            }
+            val orchestrator = mockk<com.healthmd.data.drive.GoogleDriveExportOrchestrator>(relaxed = true)
+            coEvery {
+                orchestrator.exportDates(any(), any(), "drive-1", "daily", "manual", any(), any(), any())
+            } answers {
+                ExportResult(1, 1, target = ExportTarget.GOOGLE_DRIVE, artifactCount = 1,
+                    retryDriveOperationIds = mapOf(today to arg<String>(5)))
+            }
+            val history = FakeExportHistoryRepository()
+            val settings = FakeSettingsRepository(
+                initialSettings = ExportSettings(exportTarget = ExportTarget.GOOGLE_DRIVE, scheduledExportTarget = ExportTarget.GOOGLE_DRIVE),
+                initialFolderUri = null,
+            )
+            val viewModel = createViewModel(
+                healthRepository = FakeHealthRepository(hasPermissions = true),
+                settingsRepository = settings,
+                exportProfileRepository = profiles,
+                entitlementRepository = FakeBillingRepository(initialUnlocked = false, verifiedAccess = true),
+                exportHistoryRepository = history,
+                googleDriveExportOrchestrator = orchestrator,
+                googleDriveSelectedId = "drive-1",
+                googleDriveDestinationStore = mockk(relaxed = true) { coEvery { find("drive-1") } returns destination },
+            )
+            advanceUntilIdle()
+            viewModel.setDateRange(today, today)
+
+            viewModel.startExport()
+            advanceUntilIdle()
+
+            io.mockk.coVerify(exactly = 1) {
+                orchestrator.exportDates(any(), any(), "drive-1", "daily", "manual", any(), any(), any())
+            }
+            assertThat(history.entries.single().target).isEqualTo(ExportTarget.GOOGLE_DRIVE)
+            assertThat(history.entries.single().targetLabel).isEqualTo("Health")
+            assertThat(settings.getFreeExportsUsed()).isEqualTo(1)
+            io.mockk.coVerify { orchestrator.acknowledgeAfterHistory(any()) }
+        } finally {
+            io.mockk.unmockkObject(com.healthmd.data.drive.GoogleDriveConfiguration)
+        }
+    }
+
     private fun allowedProfileRepository() = mockk<ExportProfileRepository> {
+        every { hasOpaqueProfileState } returns kotlinx.coroutines.flow.flowOf(false)
         coEvery { activeSharedSetupV2ExecutionAccess() } returns
             SharedSetupV2ProfileExecutionAccess.Allowed
     }
@@ -825,6 +892,9 @@ class ExportViewModelTest {
         exportHistoryRepository: ExportHistoryRepository = FakeExportHistoryRepository(),
         apiEndpointExportRunner: APIEndpointExportRunner? = null,
         rawSnapshotService: RawSnapshotService? = null,
+        googleDriveExportOrchestrator: com.healthmd.data.drive.GoogleDriveExportOrchestrator = mockk(relaxed = true),
+        googleDriveSelectedId: String? = null,
+        googleDriveDestinationStore: com.healthmd.data.drive.GoogleDriveDestinationStore = mockk(relaxed = true),
     ): ExportViewModel {
         val fileExportManager = mockk<FileExportManager>(relaxed = true)
         every { fileExportManager.getFolderDisplayName(any()) } returns "Health.md"
@@ -841,6 +911,11 @@ class ExportViewModelTest {
             fileExportManager = fileExportManager,
             apiEndpointExportRunner = apiEndpointExportRunner,
             rawSnapshotExportRunner = rawSnapshotService,
+            googleDriveExportOrchestrator = googleDriveExportOrchestrator,
+            googleDriveSelectionStore = mockk(relaxed = true) {
+                every { destinationId } returns kotlinx.coroutines.flow.flowOf(googleDriveSelectedId)
+            },
+            googleDriveDestinationStore = googleDriveDestinationStore,
         )
     }
 }

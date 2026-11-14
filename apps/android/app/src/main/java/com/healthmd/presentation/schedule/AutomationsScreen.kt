@@ -23,6 +23,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -109,20 +115,12 @@ fun AutomationsScreen(
     onOpenHistory: () -> Unit = {},
     modifier: Modifier = Modifier,
     selectedAutomationId: String? = null,
-    createOnArrival: Boolean = false,
-    onCreationRequestConsumed: () -> Unit = {},
     profilesViewModel: ExportProfilesViewModel = hiltViewModel(),
     schedulesViewModel: ProfileSchedulesViewModel = hiltViewModel(),
     scheduleViewModel: ScheduleViewModel = hiltViewModel(),
     recentViewModel: AutomationRecentViewModel = hiltViewModel(),
 ) {
     val protection = LocalConfigurationProtection.current
-    LaunchedEffect(createOnArrival) {
-        if (createOnArrival) {
-            onCreationRequestConsumed()
-            if (protection.enabled) protection.onBlockedChange() else profilesViewModel.startCreation()
-        }
-    }
     val state by profilesViewModel.uiState.collectAsStateWithLifecycle()
     LaunchedEffect(state.detailProfileId) {
         state.detailProfileId?.let { id ->
@@ -196,6 +194,8 @@ fun AutomationsScreen(
                         settings = settings,
                         recentDays = recent[row.profile.id].orEmpty(),
                         selected = row.profile.id == selectedAutomationId,
+                        hasScheduleAccess = schedule.isPurchased || schedule.clinicDestinationAuthorized,
+                        onTryFree = onNavigateToPaywall,
                         onToggle = { enabled -> guarded { schedulesViewModel.setEnabled(row.profile.id, enabled) } },
                         onOpen = { onOpenAutomation(row.profile.id) },
                     )
@@ -248,6 +248,8 @@ private fun AutomationCard(
     settings: ExportSettings,
     recentDays: List<CoverageStatus>,
     selected: Boolean,
+    hasScheduleAccess: Boolean,
+    onTryFree: () -> Unit,
     onToggle: (Boolean) -> Unit,
     onOpen: () -> Unit,
 ) {
@@ -275,7 +277,17 @@ private fun AutomationCard(
                 color = colors.primary,
                 modifier = Modifier.weight(1f),
             )
-            if (entry != null) {
+            if (!hasScheduleAccess) {
+                // Without paid access the automation only runs on demand: never a live switch.
+                Text(
+                    stringResource(R.string.automations_manual),
+                    style = GeistType.label12,
+                    color = colors.secondary,
+                    modifier = Modifier
+                        .background(colors.gray.c300, RoundedCornerShape(GeistRadii.small))
+                        .padding(horizontal = GeistSpacing.space3 - 2.dp, vertical = GeistSpacing.space1 + 2.dp),
+                )
+            } else if (entry != null) {
                 val switchLabel = stringResource(R.string.automations_switch_named, name)
                 AppSwitch(
                     checked = entry.isEnabled,
@@ -284,12 +296,24 @@ private fun AutomationCard(
                 )
             }
         }
-        Text(
+        val destination = AutomationSentence.destination(profile, LocalAppFolderName.current)
+            ?: stringResource(
+                // An API automation whose saved endpoint was deleted sends nowhere until rebound.
+                if (profile.target == ExportTarget.API_ENDPOINT) R.string.endpoint_not_configured
+                else R.string.automation_destination_selected_folder,
+            )
+        if (!hasScheduleAccess) {
+            val metrics = settings.metricSelection.enabledCount
+            Text(
+                text = pluralStringResource(R.plurals.automations_writes_metrics, metrics, metrics, destination),
+                style = GeistType.copy16,
+                color = colors.secondary,
+            )
+        } else Text(
             text = automationSummary(
                 settings = settings,
                 entry = entry,
-                destination = AutomationSentence.destination(profile, LocalAppFolderName.current)
-                    ?: stringResource(R.string.automation_destination_selected_folder),
+                destination = destination,
                 sends = profile.target != ExportTarget.DEVICE_FOLDER,
                 tokenStyle = SpanStyle(color = colors.brandPrimary, fontWeight = FontWeight.Medium),
             ),
@@ -305,11 +329,57 @@ private fun AutomationCard(
                 AutomationRecentStrip(recentDays, Modifier.align(Alignment.CenterVertically))
             }
             Text(
-                nextRunLabel(entry),
+                // "Next · …" only appears when the schedule can actually run.
+                if (hasScheduleAccess) nextRunLabel(entry) else stringResource(R.string.automations_manual),
                 style = GeistType.label12,
                 color = colors.secondary,
                 modifier = Modifier.align(Alignment.CenterVertically).padding(start = GeistSpacing.space2),
             )
+        }
+        if (!hasScheduleAccess) {
+            ScheduleOffNotice(hour = entry?.hour ?: 8, minute = entry?.minute ?: 0, onTryFree = onTryFree)
+        }
+    }
+}
+
+/** A6: the schedule needs a subscription; it never shows a next run without access. */
+@Composable
+private fun ScheduleOffNotice(hour: Int, minute: Int, onTryFree: () -> Unit) {
+    val colors = LocalGeistColors.current
+    val context = LocalContext.current
+    val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+    val time = java.time.LocalTime.of(hour.coerceIn(0, 23), minute.coerceIn(0, 59)).format(
+        DateTimeFormatter.ofPattern(
+            DateFormat.getBestDateTimePattern(locale, if (DateFormat.is24HourFormat(context)) "Hm" else "hm"),
+            locale,
+        ),
+    )
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(colors.amber.c100, RoundedCornerShape(GeistRadii.medium))
+            .padding(start = GeistSpacing.space3, top = GeistSpacing.space3, bottom = GeistSpacing.space3, end = GeistSpacing.space2),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
+    ) {
+        Box(
+            Modifier.size(34.dp).background(colors.amber.c300, RoundedCornerShape(10.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.Schedule, contentDescription = null, tint = colors.amber.c900, modifier = Modifier.size(18.dp))
+        }
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.automations_daily_off, time), style = GeistType.label14, color = colors.amber.c1000)
+            Text(stringResource(R.string.automations_needs_subscription), style = GeistType.copy13, color = colors.amber.c900)
+        }
+        Button(
+            onClick = onTryFree,
+            shape = RoundedCornerShape(GeistRadii.full),
+            colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.background100),
+            contentPadding = PaddingValues(horizontal = GeistSpacing.space4),
+            modifier = Modifier.heightIn(min = GeistSizes.minimumTouchTarget),
+        ) {
+            Text(stringResource(R.string.automations_try_free), style = GeistType.button14)
         }
     }
 }
