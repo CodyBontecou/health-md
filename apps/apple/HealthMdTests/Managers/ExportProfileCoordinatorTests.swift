@@ -134,7 +134,7 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         let store = ExportProfileStore(userDefaults: defaults)
         Self.retainedInstances.append(store)
         let profile = try XCTUnwrap(store.add(name: "Persisted", settings: original, target: .localIPhoneFolder))
-        let before = defaults.data(forKey: "exportProfiles.list")
+        let before = defaults.data(forKey: ExportProfilePersistence.envelopeKey)
         settings.filenameFormat = "unrelated-live-{date}"
         vault.healthSubfolder = "unrelated-live-folder"
         let coordinator = makeCoordinator(settings: settings, vaultManager: vault)
@@ -143,7 +143,7 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         XCTAssertEqual(vault.healthSubfolder, "frozen-profile")
         XCTAssertEqual(coordinator.profileStore.profile(id: profile.id)?.settings, original)
         XCTAssertEqual(coordinator.profileStore.profile(id: profile.id)?.configurationRevision, 1)
-        XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), before)
+        XCTAssertEqual(defaults.data(forKey: ExportProfilePersistence.envelopeKey), before)
     }
 
     func testNativeProfileCaptureAndSwitchFreezeOutputSubfolderIndependentlyOfLiveVault() throws {
@@ -173,11 +173,11 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.profileStore.profile(id: activeID)?.settings.healthSubfolder, "edited-subfolder")
         XCTAssertGreaterThan(try XCTUnwrap(coordinator.profileStore.profile(id: activeID)?.configurationRevision), revision)
         let flushed = try XCTUnwrap(coordinator.profileStore.profile(id: activeID))
-        let bytes = defaults.data(forKey: "exportProfiles.list")
+        let bytes = defaults.data(forKey: ExportProfilePersistence.envelopeKey)
         coordinator.flushEdits(); coordinator.flushEdits()
         try await Task.sleep(for: .seconds(1))
         XCTAssertEqual(coordinator.profileStore.profile(id: activeID), flushed)
-        XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), bytes)
+        XCTAssertEqual(defaults.data(forKey: ExportProfilePersistence.envelopeKey), bytes)
     }
 
     func testStartupDoesNotFillLegacyMissingSubfolderFromCurrentVault() async throws {
@@ -185,14 +185,14 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         let store = ExportProfileStore(userDefaults: defaults)
         Self.retainedInstances.append(store)
         let profile = try XCTUnwrap(store.add(name: "Legacy", settings: ExportSettingsSnapshot.from(settings), target: .localIPhoneFolder))
-        let before = defaults.data(forKey: "exportProfiles.list")
+        let before = defaults.data(forKey: ExportProfilePersistence.envelopeKey)
         vault.healthSubfolder = "unrelated-live-folder"
         let coordinator = makeCoordinator(settings: settings, vaultManager: vault)
         try await Task.sleep(for: .seconds(1)) // Startup notifications must not become native edits.
         XCTAssertNil(coordinator.profileStore.profile(id: profile.id)?.settings.healthSubfolder)
         XCTAssertEqual(coordinator.profileStore.profile(id: profile.id)?.configurationRevision, 1)
         XCTAssertEqual(vault.healthSubfolder, "unrelated-live-folder")
-        XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), before)
+        XCTAssertEqual(defaults.data(forKey: ExportProfilePersistence.envelopeKey), before)
     }
 
     func testEditorFrozenSubfolderUpdatesOnlyTheSelectedProfileAndActiveOutput() async throws {

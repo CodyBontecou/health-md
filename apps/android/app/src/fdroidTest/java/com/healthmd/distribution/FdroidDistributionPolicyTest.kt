@@ -9,8 +9,8 @@ import com.healthmd.domain.distribution.DistributionChannel
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.export.ExportAccountingPolicy
 import com.healthmd.domain.model.ExportResult
-import com.healthmd.presentation.onboarding.OnboardingPage
-import com.healthmd.presentation.onboarding.onboardingPages
+import com.healthmd.presentation.onboarding.DailyOffer
+import com.healthmd.presentation.onboarding.OnboardingFlow
 import io.mockk.mockk
 import java.io.File
 import kotlinx.coroutines.test.runTest
@@ -51,10 +51,10 @@ class FdroidDistributionPolicyTest {
     }
 
     @Test
-    fun onboardingUsesIncludedAccessStepInsteadOfPaywall() {
-        val pages = onboardingPages(policy)
-
-        assertThat(pages).contains(OnboardingPage.INCLUDED_ACCESS)
+    fun onboardingMakeItDailyEnablesTheScheduleWithoutATrial() {
+        // Included access: "Make it daily" turns the schedule on directly, with no trial copy.
+        assertThat(OnboardingFlow.dailyOffer(policy, hasPaidAccess = false)).isEqualTo(DailyOffer.ENABLE)
+        assertThat(OnboardingFlow.dailyOffer(policy, hasPaidAccess = true)).isEqualTo(DailyOffer.ENABLE)
     }
 
     @Test
@@ -81,6 +81,7 @@ class FdroidDistributionPolicyTest {
             "com.android.installreferrer",
             "com.google.android.play",
             "com.google.android.gms.wearable",
+            "com.google.android.gms.auth",
             "com.healthmd.data.health.oauth",
             "com.healthmd.data.health.providers.cloud",
             "com.healthmd.data.health.providers.direct",

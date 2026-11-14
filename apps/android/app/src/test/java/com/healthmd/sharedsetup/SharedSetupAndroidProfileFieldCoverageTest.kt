@@ -49,7 +49,7 @@ class SharedSetupAndroidProfileFieldCoverageTest {
     fun ledgerExactlyCoversSerializableAndSupplementalProfileFields() {
         val ledger = ledgerObject()
         assertEquals("healthmd.shared_setup.android_profile_field_coverage", ledger.getValue("schema").jsonPrimitive.content)
-        assertEquals(1, ledger.getValue("schema_version").jsonPrimitive.content.toInt())
+        assertEquals(5, ledger.getValue("schema_version").jsonPrimitive.content.toInt())
 
         val target = ledger.getValue("target_contract").jsonObject
         assertEquals("healthmd.shared_setup", target.getValue("schema").jsonPrimitive.content)
@@ -158,8 +158,10 @@ class SharedSetupAndroidProfileFieldCoverageTest {
         }
     }
 
-    private fun rows(ledger: kotlinx.serialization.json.JsonObject): List<FieldRow> =
-        ledger.getValue("fields").jsonArray.map { element ->
+    private fun rows(ledger: kotlinx.serialization.json.JsonObject): List<FieldRow> {
+        // Revision 2 classifies local Drive fields without rewriting the frozen original audit
+        // or widening the public healthmd.shared_setup v2 grammar.
+        return ledger.getValue("fields").jsonArray.map { element ->
             val value = element.jsonObject
             assertEquals(
                 "Coverage row keys changed without updating the executable reader",
@@ -177,6 +179,7 @@ class SharedSetupAndroidProfileFieldCoverageTest {
                 evidence = value.getValue("evidence").jsonPrimitive.content,
             )
         }
+    }
 
     @Test
     fun recoverySupplementIsPrivateOnlyAndPinsHistoricalInventory() {
@@ -274,7 +277,7 @@ class SharedSetupAndroidProfileFieldCoverageTest {
     }
 
     /** Mirrors the established Android root-fixture lookup used by Shared Setup contract tests. */
-    private fun ledgerFile(relativePath: String = BASE_PATH): File {
+    private fun ledgerFile(relativePath: String = CURRENT_PATH): File {
         var directory: File? = File(requireNotNull(System.getProperty("user.dir"))).absoluteFile
         while (directory != null) {
             val candidate = File(
@@ -343,7 +346,10 @@ class SharedSetupAndroidProfileFieldCoverageTest {
     }
 
     private companion object {
+        /** Frozen v1 ledger that the recovery supplement records as its audited base inventory. */
         const val BASE_PATH = "packages/contracts/shared-setup/v2/android-profile-field-coverage.json"
+        /** Current revision (adds local Drive fields) used for the executable descriptor audit. */
+        const val CURRENT_PATH = "packages/contracts/shared-setup/v2/android-profile-field-coverage-v5.json"
         const val SUPPLEMENT_PATH = "packages/contracts/portability-inventory/android-agent-recovery/v1/inventory.json"
         const val HISTORICAL_BASE_PATH = "packages/contracts/portability-inventory/android-agent-recovery/v1/historical-base.json"
         const val BASE_SHA256 = "4a539e7e22006bd0f06e63c3dda7a82f41c6fac0d536249573a37eccec8ae789"

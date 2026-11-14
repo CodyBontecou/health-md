@@ -24,6 +24,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -119,20 +120,20 @@ class ExportProfileRepositoryTest {
     @Test
     fun `configuration read rejects malformed duplicate or missing rows without repair`() = runTest {
         val profile = repository.add("Selected", configurationSnapshot("selected-{date}"), ExportTarget.DEVICE_FOLDER)
-        val rows = Json.parseToJsonElement(requireNotNull(dataStore.data.first()[PROFILES_KEY])).jsonArray
-        val duplicate = JsonArray(listOf(rows[0], rows[0])).toString()
-        val malformed = JsonArray(listOf(JsonObject(rows[0].jsonObject + ("configurationRevision" to JsonPrimitive("1"))))).toString()
+        val rows = storedRecords()
+        val duplicate = envelope(JsonArray(listOf(rows[0], rows[0])))
+        val malformed = envelope(JsonArray(listOf(JsonObject(rows[0].jsonObject + ("configurationRevision" to JsonPrimitive("1"))))))
         for (raw in listOf(duplicate, malformed, "invalid")) {
-            dataStore.edit { it[PROFILES_KEY] = raw }
+            dataStore.edit { it[V2_PROFILES_KEY] = raw }
             assertThat(repository.readConfigurationProfile(profile.id, 1)).isNull()
             if (raw != duplicate) {
                 assertThat(repository.updateProfile(profile.id, settingsSnapshotJson = configurationSnapshot("replacement-{date}"))).isFalse()
             }
-            assertThat(dataStore.data.first()[PROFILES_KEY]).isEqualTo(raw)
+            assertThat(dataStore.data.first()[V2_PROFILES_KEY]).isEqualTo(raw)
         }
-        dataStore.edit { it.remove(PROFILES_KEY) }
+        dataStore.edit { it.remove(V2_PROFILES_KEY) }
         assertThat(repository.readConfigurationProfile(profile.id, 1)).isNull()
-        assertThat(dataStore.data.first()[PROFILES_KEY]).isNull()
+        assertThat(dataStore.data.first()[V2_PROFILES_KEY]).isNull()
     }
 
     @Test
@@ -197,12 +198,12 @@ class ExportProfileRepositoryTest {
     @Test
     fun `legacy profile revision defaults without a read migration write`() = runTest {
         val first = seededProfile()
-        val rows = Json.parseToJsonElement(requireNotNull(dataStore.data.first()[PROFILES_KEY])).jsonArray
-        val legacy = JsonArray(rows.map { JsonObject(it.jsonObject.filterKeys { key -> key != "configurationRevision" }) }).toString()
-        dataStore.edit { it[PROFILES_KEY] = legacy }
+        val rows = storedRecords()
+        val legacy = envelope(JsonArray(rows.map { JsonObject(it.jsonObject.filterKeys { key -> key != "configurationRevision" }) }))
+        dataStore.edit { it[V2_PROFILES_KEY] = legacy }
         val reloaded = ExportProfileRepository(dataStore, mockk<Context>(relaxed = true))
         assertThat(reloaded.profileById(first.id)?.configurationRevision).isEqualTo(1)
-        assertThat(dataStore.data.first()[PROFILES_KEY]).isEqualTo(legacy)
+        assertThat(dataStore.data.first()[V2_PROFILES_KEY]).isEqualTo(legacy)
         assertThat(reloaded.updateProfile(first.id, settingsSnapshotJson = "snapshot-a")).isTrue()
         assertThat(repository.profileById(first.id)?.configurationRevision).isEqualTo(2)
     }
@@ -211,15 +212,15 @@ class ExportProfileRepositoryTest {
     fun `invalid or exhausted profile revisions reject edits without changing persisted bytes`() = runTest {
         val first = seededProfile()
         for (revision in listOf(-1, 0, Int.MAX_VALUE)) {
-            val rows = Json.parseToJsonElement(requireNotNull(dataStore.data.first()[PROFILES_KEY])).jsonArray
-            val before = JsonArray(rows.map { JsonObject(it.jsonObject + ("configurationRevision" to JsonPrimitive(revision))) }).toString()
-            dataStore.edit { it[PROFILES_KEY] = before }
+            val rows = storedRecords()
+            val before = envelope(JsonArray(rows.map { JsonObject(it.jsonObject + ("configurationRevision" to JsonPrimitive(revision))) }))
+            dataStore.edit { it[V2_PROFILES_KEY] = before }
             assertThat(repository.updateProfile(first.id, settingsSnapshotJson = "changed")).isFalse()
             assertThat(repository.bindFolder(first.id, "content://synthetic/tree/changed", "Changed")).isFalse()
             assertThat(repository.rename(first.id, "Changed")).isNull()
             assertThat(repository.applyEditorUpdate(first.id, "Changed", "changed", ExportTarget.DEVICE_FOLDER,
                 null, null, null)).isNull()
-            assertThat(dataStore.data.first()[PROFILES_KEY]).isEqualTo(before)
+            assertThat(dataStore.data.first()[V2_PROFILES_KEY]).isEqualTo(before)
             assertThat(repository.profileById(first.id)?.configurationRevision).isEqualTo(revision)
         }
     }
@@ -376,6 +377,58 @@ class ExportProfileRepositoryTest {
     }
 
     @Test
+    fun `v2 envelope preserves opaque records across known profile mutations`() = runTest {
+        dataStore.edit { preferences ->
+            preferences[stringPreferencesKey("export_profiles_v2")] =
+                """{"version":2,"records":[{"id":"future","kind":"future_destination","payload":{"kept":true}}]}"""
+        }
+
+        assertThat(repository.getProfiles()).isEmpty()
+        assertThat(repository.hasOpaqueProfiles()).isTrue()
+        val added = repository.add("Drive", "snapshot", ExportTarget.GOOGLE_DRIVE, destinationId = "drive-1")
+        assertThat(repository.profileById(added.id)?.target).isEqualTo(ExportTarget.GOOGLE_DRIVE)
+
+        val raw = dataStore.data.first()[stringPreferencesKey("export_profiles_v2")].orEmpty()
+        assertThat(raw).contains("future_destination")
+        assertThat(raw).contains("\"kept\":true")
+    }
+
+    @Test
+    fun `v2 migration leaves the legacy payload untouched for older binaries`() = runTest {
+        val legacy = ExportProfile(
+            id = "legacy-1",
+            name = "Legacy",
+            settingsSnapshotJson = "snapshot",
+            target = ExportTarget.DEVICE_FOLDER,
+            createdAtEpochMillis = 1,
+            updatedAtEpochMillis = 1,
+        )
+        val legacyRaw = Json.encodeToString(ListSerializer(ExportProfile.serializer()), listOf(legacy))
+        dataStore.edit { preferences ->
+            preferences[stringPreferencesKey("export_profiles")] = legacyRaw
+            preferences[stringPreferencesKey("export_profiles_active_id")] = legacy.id
+        }
+
+        val drive = repository.add("Drive", "snapshot", ExportTarget.GOOGLE_DRIVE, destinationId = "drive-1")
+        assertThat(repository.getProfiles().map { it.id }).containsExactly("legacy-1", drive.id).inOrder()
+        val preferences = dataStore.data.first()
+        assertThat(preferences[stringPreferencesKey("export_profiles")]).isEqualTo(legacyRaw)
+        assertThat(preferences[stringPreferencesKey("export_profiles_active_id")]).isEqualTo("legacy-1")
+        assertThat(preferences[stringPreferencesKey("export_profiles_v2")]).contains("GOOGLE_DRIVE")
+    }
+
+    @Test
+    fun `corrupt profile root blocks default migration instead of overwriting profiles`() = runTest {
+        dataStore.edit { preferences ->
+            preferences[stringPreferencesKey("export_profiles_v2")] = "{not-json"
+        }
+
+        assertThat(repository.hasOpaqueProfiles()).isTrue()
+        assertThat(repository.migrateDefaultIfNeeded("snapshot", ExportTarget.DEVICE_FOLDER)).isNull()
+        assertThat(dataStore.data.first()[stringPreferencesKey("export_profiles_v2")]).isEqualTo("{not-json")
+    }
+
+    @Test
     fun `editor update rejects blank names and unknown ids without changing anything`() = runTest {
         val profile = seededProfile(name = "Daily")
 
@@ -408,7 +461,16 @@ class ExportProfileRepositoryTest {
         assertThat(unchanged.settingsSnapshotJson).isEqualTo("snapshot-a")
     }
 
+    /** Native writes use the v2 envelope; revision tests edit its records in place. */
+    private suspend fun storedRecords(): JsonArray =
+        Json.parseToJsonElement(requireNotNull(dataStore.data.first()[V2_PROFILES_KEY]))
+            .jsonObject.getValue("records").jsonArray
+
+    private fun envelope(records: JsonArray): String =
+        JsonObject(mapOf("version" to JsonPrimitive(2), "records" to records)).toString()
+
     private companion object {
         val PROFILES_KEY = stringPreferencesKey("export_profiles")
+        val V2_PROFILES_KEY = stringPreferencesKey("export_profiles_v2")
     }
 }

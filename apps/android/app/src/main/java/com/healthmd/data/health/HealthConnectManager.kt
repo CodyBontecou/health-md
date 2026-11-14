@@ -24,6 +24,8 @@ import com.healthmd.direct.protocol.AgentBridgeErrorCode
 import androidx.health.connect.client.permission.HealthPermission
 import com.healthmd.data.isHealthConnectRateLimit
 import com.healthmd.domain.model.*
+import com.healthmd.testing.TestMode
+import com.healthmd.testing.TestModeHealthFixtures
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -85,6 +87,7 @@ class HealthConnectManager(
      * Check if Health Connect is available on this device.
      */
     fun isAvailable(): Boolean {
+        if (TestMode.isActive) return true
         val status = HealthConnectClient.getSdkStatus(context)
         return status == HealthConnectClient.SDK_AVAILABLE
     }
@@ -125,6 +128,7 @@ class HealthConnectManager(
      * Check if Health Connect needs to be installed or updated.
      */
     fun needsInstall(): Boolean {
+        if (TestMode.isActive) return false
         val status = HealthConnectClient.getSdkStatus(context)
         return status == HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED
     }
@@ -135,6 +139,7 @@ class HealthConnectManager(
      * so we only require that at least one has been granted.
      */
     suspend fun hasAllPermissions(): Boolean {
+        if (TestMode.isActive) return TestMode.healthAuthorized
         val granted = healthConnectClient.permissionController.getGrantedPermissions()
         return granted.any { it in permissionPlan().foregroundPermissions }
     }
@@ -174,6 +179,7 @@ class HealthConnectManager(
      * If the provider does not expose the feature, there is no permission we can request.
      */
     suspend fun hasBackgroundReadPermission(): Boolean {
+        if (TestMode.isActive) return TestMode.healthAuthorized
         val plan = permissionPlan()
         when (plan.backgroundReadAvailability) {
             HealthConnectFeatureAvailability.UNAVAILABLE -> return false
@@ -190,6 +196,7 @@ class HealthConnectManager(
      * 30-day historical window, so they need the dedicated history permission.
      */
     suspend fun hasHistoricalReadPermission(): Boolean {
+        if (TestMode.isActive) return TestMode.healthAuthorized
         val plan = permissionPlan()
         when (plan.historicalReadAvailability) {
             HealthConnectFeatureAvailability.UNAVAILABLE -> return false
@@ -225,13 +232,19 @@ class HealthConnectManager(
     /**
      * Returns the set of currently granted permissions for debugging.
      */
-    suspend fun getGrantedPermissions(): Set<String> =
-        healthConnectClient.permissionController.getGrantedPermissions()
+    suspend fun getGrantedPermissions(): Set<String> = when {
+        !TestMode.isActive -> healthConnectClient.permissionController.getGrantedPermissions()
+        TestMode.healthAuthorized -> permissions
+        else -> emptySet()
+    }
 
     /**
      * Find the earliest date that has any health data in Health Connect.
      */
     suspend fun getEarliestDataDate(): LocalDate? {
+        if (TestMode.isActive) {
+            return if (TestMode.healthAuthorized) TestModeHealthFixtures.earliestDate() else null
+        }
         val zone = ZoneId.systemDefault()
         return try {
             val response = healthConnectClient.readRecords(
@@ -266,11 +279,18 @@ class HealthConnectManager(
         return !um.isUserUnlocked
     }
 
+    /** [TestMode] never reads Health Connect: synthetic days when authorized, empty otherwise. */
+    private fun testModeDay(date: LocalDate): HealthData {
+        val inHistory = !date.isBefore(TestModeHealthFixtures.earliestDate()) && !date.isAfter(LocalDate.now())
+        return if (TestMode.healthAuthorized && inHistory) TestModeHealthFixtures.day(date) else HealthData(date)
+    }
+
     /**
      * Fetch health data for a single date.
      * Throws [SecurityException] if Health Connect is inaccessible (e.g. device locked).
      */
     suspend fun fetchHealthData(date: LocalDate): HealthData {
+        if (TestMode.isActive) return testModeDay(date)
         val zone = ZoneId.systemDefault()
         val startTime = date.atStartOfDay(zone).toInstant()
         val endTime = date.plusDays(1).atStartOfDay(zone).toInstant()
@@ -325,6 +345,7 @@ class HealthConnectManager(
         zoneId: ZoneId = ZoneId.systemDefault(),
         detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData),
     ) {
+        if (TestMode.isActive) return
         val run = currentCoroutineContext()[InteractiveRouteConsent] ?: return
         try {
             val sortedDates = dates.distinct().sorted()
@@ -387,6 +408,7 @@ class HealthConnectManager(
         detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData),
     ): List<HealthData> {
         if (dates.isEmpty()) return emptyList()
+        if (TestMode.isActive) return dates.map { testModeDay(it).filtered(selection) }
 
         val requestedDates = dates.toSet()
         val dataByDate = dates.associateWith { HealthData(it) }.toMutableMap()
@@ -613,6 +635,7 @@ class HealthConnectManager(
     ): List<HealthData> {
         if (dates.isEmpty()) return emptyList()
         require(selection.hasAny) { "At least one widget health record family is required." }
+        if (TestMode.isActive) return dates.map(::testModeDay)
 
         val requestedDates = dates.toSet()
         val dataByDate = dates.associateWith { HealthData(it) }.toMutableMap()

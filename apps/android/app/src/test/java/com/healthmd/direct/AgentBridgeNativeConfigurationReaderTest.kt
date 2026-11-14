@@ -3166,7 +3166,7 @@ class AgentBridgeNativeConfigurationReaderTest {
                 AgentBridgeSettingsPolicyProfile(2, selected.id, "profile"), AgentBridgeSettingsPolicyProfile(1, AgentBridgeExportPlanningFixture.id(99), "profile"))) {
                 f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { reader.readPublishedConfiguration(policy) }
             }
-            backing.edit { it[intPreferencesKey("export_profiles")] = 7 }
+            backing.edit { it[intPreferencesKey("export_profiles_v2")] = 7 }
             f.expect(AgentBridgeErrorCode.BINDING_CHANGED) { reader.readPublishedConfiguration(AgentBridgeSettingsPolicyProfile(1, selected.id, "profile")) }
         }
     }

@@ -11,6 +11,21 @@ import XCTest
 
 // Static customizations to avoid macOS 26 deinit crash.
 private enum CSVContractCustomizations {
+    static let workoutCountOnly: FormatCustomization = {
+        let c = FormatCustomization()
+        for index in c.frontmatterConfig.fields.indices {
+            c.frontmatterConfig.fields[index].isEnabled =
+                c.frontmatterConfig.fields[index].originalKey == "workout_count"
+        }
+        return c
+    }()
+    static let workoutsOnly: MetricSelectionState = {
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.enabledMetrics.insert("workouts")
+        return selection
+    }()
+
     static let metric: FormatCustomization = {
         let c = FormatCustomization()
         c.unitPreference = .metric
@@ -25,6 +40,22 @@ private enum CSVContractCustomizations {
 }
 
 final class CSVExporterContractTests: XCTestCase {
+    func testFrontmatterFieldSelectionDoesNotFilterCSVWorkoutRows() throws {
+        for data in [ExportFixtures.fullDay,
+                     ExportFixtures.fullDay.filtered(by: CSVContractCustomizations.workoutsOnly)] {
+            let baseline = try data.toCSVThrowing(customization: CSVContractCustomizations.metric)
+            let selected = try data.toCSVThrowing(customization: CSVContractCustomizations.workoutCountOnly)
+            XCTAssertEqual(selected, baseline)
+            let (_, allRows) = parseCSV(data, customization: CSVContractCustomizations.workoutCountOnly)
+            let workoutRows = rows(for: "Workouts", in: allRows)
+            XCTAssertTrue(workoutRows.contains { $0.count > 2 && $0[2].contains("Duration") })
+            XCTAssertTrue(workoutRows.contains { $0.count > 2 && $0[2].contains("Calories") })
+        }
+        let (_, selectedRows) = parseCSV(ExportFixtures.fullDay.filtered(by: CSVContractCustomizations.workoutsOnly),
+                                        customization: CSVContractCustomizations.workoutCountOnly)
+        XCTAssertTrue(rows(for: "Sleep", in: selectedRows).isEmpty)
+        XCTAssertTrue(rows(for: "Heart", in: selectedRows).isEmpty)
+    }
 
     // MARK: - Helpers
 

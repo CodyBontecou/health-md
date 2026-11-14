@@ -230,6 +230,7 @@ class ProductCapabilityManifestTest {
             "export.whoop-resource-selection",
             "export.whoop-physiological-cycle-steps",
             "setup.share-portable-configuration",
+            "destination.google-drive",
             "core.shared-rust-profile-engine",
             "support.local-reporting-fallback",
         )

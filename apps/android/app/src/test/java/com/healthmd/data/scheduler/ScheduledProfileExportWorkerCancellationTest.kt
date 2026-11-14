@@ -357,7 +357,7 @@ class ScheduledProfileExportWorkerCancellationTest {
             assertThat(harness.history.captured.exportMode).isEqualTo(ExportMode.RAW_SNAPSHOT)
             assertThat(harness.history.captured.target).isEqualTo(target)
             coVerify(exactly = 1) {
-                harness.rawRunner.exportRange(any(), any(), any(), target, null, false)
+                harness.rawRunner.exportRange(any(), any(), any(), target, expectedDestinationFingerprint = null, allowInteractiveRouteConsent = false)
             }
             coVerify(exactly = 0) { harness.apiRunner.exportDates(any(), any(), any(), any(), any(), any(), any()) }
             coVerify(exactly = 0) { harness.exportRepository.exportHealthData(any(), any()) }
@@ -371,7 +371,8 @@ class ScheduledProfileExportWorkerCancellationTest {
     @Test
     fun `delayed raw cadence and Today Refresh do not capture intervening days`() = runTest {
         val today = LocalDate.now(ZoneId.of("UTC"))
-        for (target in ExportTarget.entries.filter { it != ExportTarget.API_ENDPOINT }) {
+        // Google Drive raw exports intentionally upload one range bundle, not per-owner-date ranges.
+        for (target in ExportTarget.entries.filter { it != ExportTarget.API_ENDPOINT && it != ExportTarget.GOOGLE_DRIVE }) {
             val harness = rawHarness(
                 target = target,
                 todayRefresh = true,
@@ -396,7 +397,8 @@ class ScheduledProfileExportWorkerCancellationTest {
         val today = LocalDate.now(ZoneId.of("UTC"))
         val first = today.minusDays(10)
         val second = today.minusDays(7)
-        for (target in ExportTarget.entries.filter { it != ExportTarget.API_ENDPOINT }) {
+        // Google Drive raw exports intentionally upload one range bundle, not per-owner-date ranges.
+        for (target in ExportTarget.entries.filter { it != ExportTarget.API_ENDPOINT && it != ExportTarget.GOOGLE_DRIVE }) {
             val pending = ScheduledProfilePendingExport(
                 id = "separated-raw-retry",
                 agentDataGatewayUrl = "https://gateway.example.test",
@@ -440,7 +442,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         val rejected = harness.worker.doWork()
         assertThat(rejected.outputData.getString(ScheduledProfileExportWorker.OUTPUT_PROFILE_ERROR))
             .isEqualTo("api_recovery_authority_required")
-        coVerify(exactly = 0) { harness.rawRunner.exportRange(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { harness.rawRunner.exportRange(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
         coVerify(exactly = 0) { harness.healthRepository.hasBackgroundReadPermission() }
         coVerify(exactly = 0) { harness.entryStore.recordSuccess(any(), any(), any(), any()) }
         coVerify(exactly = 0) { harness.apiRunner.exportDates(any(), any(), any(), any(), any(), any(), any()) }
@@ -521,7 +523,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         assertThat(rejected.outputData.getString(ScheduledProfileExportWorker.OUTPUT_PROFILE_ERROR))
             .isEqualTo("api_recovery_authority_required")
         coVerify(exactly = 0) { harness.healthRepository.hasBackgroundReadPermission() }
-        coVerify(exactly = 0) { harness.rawRunner.exportRange(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { harness.rawRunner.exportRange(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -533,7 +535,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         assertThat(harness.worker.doWork()).isEqualTo(ListenableWorker.Result.success())
 
         coVerify(exactly = 0) { harness.healthRepository.hasBackgroundReadPermission() }
-        coVerify(exactly = 0) { harness.rawRunner.exportRange(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { harness.rawRunner.exportRange(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
         coVerify(exactly = 0) { harness.apiRunner.exportDates(any(), any(), any(), any(), any(), any(), any()) }
     }
 
@@ -542,7 +544,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         val harness = rawHarness(todayRefresh = true) {
             ExportResult(0, 1, exportMode = ExportMode.RAW_SNAPSHOT)
         }
-        coEvery { harness.rawRunner.exportRange(any(), any(), any(), any(), any(), any()) } coAnswers {
+        coEvery { harness.rawRunner.exportRange(any(), any(), any(), any(), any(), any(), any(), any(), any()) } coAnswers {
             coEvery { harness.entryStore.entry(harness.entry.profileId) } returns
                 harness.entry.copy(recoveryGeneration = 1L)
             ExportResult(0, 1, exportMode = ExportMode.RAW_SNAPSHOT)
@@ -875,7 +877,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         val rawStart = slot<LocalDate>()
         val rawEnd = slot<LocalDate>()
         val rawRanges = mutableListOf<Pair<LocalDate, LocalDate>>()
-        coEvery { rawRunner.exportRange(capture(rawStart), capture(rawEnd), any(), target, null, false) } coAnswers {
+        coEvery { rawRunner.exportRange(capture(rawStart), capture(rawEnd), any(), target, expectedDestinationFingerprint = null, allowInteractiveRouteConsent = false) } coAnswers {
             rawRanges += rawStart.captured to rawEnd.captured
             result(rawStart.captured.datesUntil(rawEnd.captured.plusDays(1)).toList())
         }
@@ -1074,6 +1076,7 @@ class ScheduledProfileExportWorkerCancellationTest {
                 snapshotFactory = snapshotFactory,
                 folderAdoption = folderAdoption,
                 profileScheduler = Lazy { profileScheduler },
+                googleDriveExportOrchestrator = mockk(relaxed = true),
                 entitlementRepository = FakeBillingRepository(initialUnlocked = true),
                 distributionPolicy = DistributionPolicy.play(),
                 apiCredentialStore = credentials,

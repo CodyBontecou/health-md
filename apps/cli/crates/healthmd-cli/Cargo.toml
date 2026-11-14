@@ -83,5 +83,8 @@ toml_edit.workspace = true
 url = { workspace = true, optional = true }
 uuid.workspace = true
 
+[dev-dependencies]
+secrecy.workspace = true
+
 [lints]
 workspace = true

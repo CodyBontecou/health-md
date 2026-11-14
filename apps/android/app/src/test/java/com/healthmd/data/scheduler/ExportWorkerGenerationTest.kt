@@ -666,6 +666,9 @@ class ExportWorkerGenerationTest {
                 timeCalculator = ScheduledExportTimeCalculator(),
                 stateStore = stateStore,
                 exportScheduler = Lazy { exportScheduler },
+                googleDriveExportOrchestrator = mockk(relaxed = true),
+                googleDriveSelectionStore = mockk(relaxed = true),
+                googleDriveDestinationStore = mockk(relaxed = true),
                 entitlementRepository = FakeBillingRepository(initialUnlocked = true),
                 distributionPolicy = DistributionPolicy.play(),
             )
