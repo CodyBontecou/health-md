@@ -223,6 +223,10 @@ fun ExportConfigurationSection(
                         singleLine = true,
                     )
                     HelperText(stringResource(R.string.filename_template_tokens))
+                    SecondaryButton(
+                        text = stringResource(R.string.folder_organization_by_year_week_label),
+                        onClick = { onFolderStructureChanged(ExportSettings.YEAR_WEEK_FOLDER_TEMPLATE) },
+                    )
                 }
             },
             @Composable { shape: Shape ->
