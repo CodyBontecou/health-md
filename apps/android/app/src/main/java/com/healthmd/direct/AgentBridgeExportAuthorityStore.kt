@@ -73,6 +73,10 @@ internal class AgentBridgeExportAuthorityStore private constructor(
 ) {
     private val root = parent.resolve(DIRECTORY_NAME)
     private var observedRootIdentity: Any? = null // Same-instance fence only; no anti-rollback/fresh-open claim.
+    // One bounded memo of pure structural checks, guarded by processLock. Never cache a
+    // decoded transaction or live authority. Each read still reopens and authenticates
+    // the current ledger with the current protected key before consulting these bytes.
+    private var validatedStateCanonical: ByteArray? = null
     private val json = Json { encodeDefaults = true; ignoreUnknownKeys = false; isLenient = false; coerceInputValues = false }
 
     fun initialize(native: AgentBridgeExportNativeAuthorization) = initializeNew(native, true) { key() }
@@ -304,6 +308,7 @@ internal class AgentBridgeExportAuthorityStore private constructor(
     private fun read(key: SecretKey): AgentBridgeExportLedger = try {
         readChecked(key)
     } catch (_: Exception) {
+        validatedStateCanonical = null
         // A malformed stored record is corrupt issuer state, not a remote request error.
         fail(AgentBridgeErrorCode.BINDING_CHANGED)
     }
@@ -324,8 +329,12 @@ internal class AgentBridgeExportAuthorityStore private constructor(
         val file = json.decodeFromString<AgentBridgeExportLedgerFile>(canonical.decodeToString())
         demand(canonical.contentEquals(canonical(json.encodeToString(file)))) // Unknown/coerced/missing fields fail closed.
         demand(Regex("[0-9a-f]{64}").matches(file.mac))
-        demand(MessageDigest.isEqual(file.mac.toByteArray(), mac(key, canonical(json.encodeToString(file.state))).toByteArray()))
-        validate(file.state)
+        val stateCanonical = canonical(json.encodeToString(file.state))
+        demand(MessageDigest.isEqual(file.mac.toByteArray(), mac(key, stateCanonical).toByteArray()))
+        if (validatedStateCanonical?.contentEquals(stateCanonical) != true) {
+            validate(file.state)
+            validatedStateCanonical = stateCanonical.copyOf()
+        }
         return file.state
     }
     private fun validate(state: AgentBridgeExportLedger) {

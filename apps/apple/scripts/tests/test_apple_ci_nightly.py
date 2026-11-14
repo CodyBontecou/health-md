@@ -19,7 +19,8 @@ class NativeDiagnosticTests(unittest.TestCase):
         for command in ('xcodebuild', 'make coverage', 'make test-ios', 'simctl'):
             self.assertNotIn(command, workflow)
         makefile = (REPO / 'apps/apple/Makefile').read_text()
-        self.assertIn('test: test-ios test-macos', makefile)
+        self.assertIn('test: test-macos', makefile)
+        self.assertIn('test-platforms: test-ios test-macos', makefile)
         self.assertIn('coverage: prepare-healthmd-core-rust', makefile)
         self.assertIn('-enableCodeCoverage YES', makefile)
 

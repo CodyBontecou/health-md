@@ -13,6 +13,33 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
     private static var retainedSettings: [AdvancedExportSettings] = []
     private static var retainedManagers: [VaultManager] = []
 
+    func testAcceptedWakePinMatchesPackagedAPIAndRejectsStaleAPIAuthority() async throws {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        let snapshot = try acceptedSnapshot(context: context, formats: [.json], selectionIDs: ["steps"])
+        let pin = try XCTUnwrap(snapshot.appleExportEnginePin)
+        let core = try await SystemAppleLooseDailyCoreExecutor().loadContext(pin: pin)
+        XCTAssertEqual(pin.coreAPIVersion, 5)
+        XCTAssertEqual(pin.coreAPIVersion, core.buildInfo.coreApiVersion)
+        XCTAssertNoThrow(try pin.validateCompatibility(buildInfo: core.buildInfo, registrySnapshot: core.registry))
+        var stale = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(pin)) as? [String: Any])
+        stale["core_api_version"] = 4
+        let stalePin = try JSONDecoder().decode(AppleExportEnginePin.self,
+            from: JSONSerialization.data(withJSONObject: stale))
+        XCTAssertThrowsError(try stalePin.validateCompatibility(buildInfo: core.buildInfo, registrySnapshot: core.registry))
+        var staleSnapshot = snapshot
+        staleSnapshot.appleExportEnginePin = stalePin
+        let day = HealthData(date: ExportFixtures.referenceDate,
+            timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 42))
+        do {
+            _ = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+                settingsSnapshot: staleSnapshot, surface: .localVaultWithoutSideEffects)
+            XCTFail("Stale API authority must not be reinterpreted as a current pin")
+        } catch {
+            XCTAssertEqual(error as? AppleLooseDailyExportPlannerError, .rustPlanningFailed)
+        }
+    }
+
     func testWakeDateAdmissionKeepsAppendUpdateAndDirectCompanionOptions() async throws {
         let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
         let day = HealthData(date: ExportFixtures.referenceDate,
@@ -1499,7 +1526,7 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         var historical = accepted
         let service = HealthMdCoreService()
         historical.appleExportEnginePin = try AppleExportEnginePin(engine: .rust, calendarTimeZoneIdentifier: zone.identifier,
-            buildInfo: service.buildInfo(), registrySnapshot: service.metricRegistry(profile: .appleHealthDataV8))
+            buildInfo: service.buildInfo(), registrySnapshot: service.metricRegistry(profile: .appleHealthDataV7))
         var defaultedPin = accepted
         let pinData = try JSONEncoder().encode(try XCTUnwrap(accepted.appleExportEnginePin))
         var pinObject = try XCTUnwrap(JSONSerialization.jsonObject(with: pinData) as? [String: Any])
@@ -1933,7 +1960,7 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         ]
         let encoded: [String: Any] = [
             "engine": "rust", "profile": "apple_health_data_v11", "public_schema": "healthmd.health_data",
-            "public_schema_version": 11, "core_api_version": 4, "semantic_input_version": 2,
+            "public_schema_version": 11, "core_api_version": 5, "semantic_input_version": 2,
             "canonical_model_version": 2, "render_input_version": 2, "artifact_plan_version": 2,
             "registry_version": registryVersion, "registry_sha256": registryVersion == 3
                 ? HealthMdWorkoutRangeRegistryContract.registrySHA256 : HealthMdSleepProfileContract.registrySHA256,
@@ -1991,7 +2018,7 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         ]
         let pin = try JSONDecoder().decode(AppleExportEnginePin.self, from: Data("""
             {"engine":"rust","profile":"apple_health_data_v11","public_schema":"healthmd.health_data",
-             "public_schema_version":11,"core_api_version":4,"semantic_input_version":2,
+             "public_schema_version":11,"core_api_version":5,"semantic_input_version":2,
              "canonical_model_version":2,"render_input_version":2,"artifact_plan_version":2,
              "registry_version":2,"registry_sha256":"709df0ae9f583e82627bc5439c4385905a5d85000e4322a0384cfe96b35a8f78",
              "semantic_profile_revision":1,"render_profile_revision":2,
