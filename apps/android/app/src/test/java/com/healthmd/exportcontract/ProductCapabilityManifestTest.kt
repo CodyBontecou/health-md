@@ -40,8 +40,12 @@ class ProductCapabilityManifestTest {
         assertEquals(appleCapabilities + setOf("source.private-platform-database", "apple.ads-purchase-attribution"), idsWithState(states, "unavailable"))
         assertEquals(
             setOf(
+                "cloud.opt-in-export-receiver",
+                "cloud.read-only-mcp",
+                "account.optional-native-sign-in",
+                "account.selected-portable-profile-sync",
+                "account.local-revision-approval",
                 "account.clinic-sync-requests",
-                "cloud.opt-in-export-receiver", "cloud.read-only-mcp",
                 "core.shared-rust-profile-engine",
                 "destination.google-drive",
                 "automation.api-recovery-authority",
@@ -218,9 +222,13 @@ class ProductCapabilityManifestTest {
         )
 
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
+            "cloud.opt-in-export-receiver",
+            "cloud.read-only-mcp",
+            "account.optional-native-sign-in",
+            "account.selected-portable-profile-sync",
+            "account.local-revision-approval",
             "support.native-review-introduction",
             "account.clinic-sync-requests",
-                "cloud.opt-in-export-receiver", "cloud.read-only-mcp",
             "source.private-platform-database",
             "apple.ads-purchase-attribution",
             "automation.api-recovery-authority",

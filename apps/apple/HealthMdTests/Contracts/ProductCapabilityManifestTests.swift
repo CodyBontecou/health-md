@@ -32,9 +32,14 @@ final class ProductCapabilityManifestTests: XCTestCase {
             Self.ids(with: .planned, in: states),
             [
                 "account.clinic-sync-requests",
-                "cloud.opt-in-export-receiver", "cloud.read-only-mcp",
+                "cloud.opt-in-export-receiver",
+                "cloud.read-only-mcp",
                 "core.shared-rust-profile-engine",
-                "setup.share-portable-configuration", "destination.google-drive",
+                "setup.share-portable-configuration",
+                "account.optional-native-sign-in",
+                "account.selected-portable-profile-sync",
+                "account.local-revision-approval",
+                "destination.google-drive",
             ]
         )
         XCTAssertEqual(Set(states.keys), Self.allCapabilities)
@@ -179,7 +184,19 @@ final class ProductCapabilityManifestTests: XCTestCase {
         sharedCapabilities
             .union(appleCapabilities)
             .union(androidCapabilities)
-            .union(["source.private-platform-database", "apple.ads-purchase-attribution", "core.shared-rust-profile-engine", "setup.share-portable-configuration", "destination.google-drive", "account.clinic-sync-requests"])
+            .union([
+                "source.private-platform-database",
+                "core.shared-rust-profile-engine",
+                "setup.share-portable-configuration",
+                "cloud.opt-in-export-receiver",
+                "cloud.read-only-mcp",
+                "account.optional-native-sign-in",
+                "account.selected-portable-profile-sync",
+                "account.local-revision-approval",
+                "apple.ads-purchase-attribution",
+                "account.clinic-sync-requests",
+                "destination.google-drive",
+            ])
     }
 
     private enum ManifestError: Error {

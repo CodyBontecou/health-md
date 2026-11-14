@@ -18,6 +18,9 @@ class CloudRepairLinkTest {
             "healthmd://cloud/requests/", "healthmd://cloud/%72equests",
             "healthmd://cloud/requests?date=2026-04-01",
             "healthmd://cloud/requests#token", "healthmd://user@cloud/requests",
+            "healthmd://pair?code=12345678901234567890",
+            "healthmd://cloud/requests?pairing_code=12345678901234567890",
+            "healthmd://cloud/requests/pair", "healthmd://direct/requests",
             "healthmd://cloud:443/requests", "https://account.healthmd.app/repair",
             " healthmd://cloud/requests", "healthmd://cloud/requests\n",
         ).forEach { raw ->

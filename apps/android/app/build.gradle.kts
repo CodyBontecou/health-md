@@ -1,4 +1,5 @@
 import java.util.Properties
+import org.gradle.api.tasks.testing.Test
 
 plugins {
     alias(libs.plugins.android.application)
@@ -7,6 +8,20 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+}
+
+tasks.withType<Test>().configureEach {
+    dependsOn(":healthmd-core:checkHealthMdCoreKotlinBindings")
+    val hostLibrary = project(":healthmd-core").layout.buildDirectory.file(
+        "rust-target/bindings-host/debug/${System.mapLibraryName("healthmd_core_uniffi")}",
+    )
+    // Bind tests to the same library used to regenerate/verify committed UniFFI
+    // bindings, rather than an Android ABI or an unrelated installed library.
+    inputs.file(hostLibrary)
+    systemProperty(
+        "uniffi.component.healthmd_core_uniffi.libraryOverride",
+        hostLibrary.get().asFile.absolutePath,
+    )
 }
 
 // Load signing properties from local.properties
@@ -320,6 +335,9 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.compose.ui.test.junit4)
     testImplementation(libs.work.testing)
+    // The Android AAR has no desktop libjnidispatch. Keep desktop JNA confined
+    // to the JVM test runtime; application/device packaging retains the AAR.
+    testRuntimeOnly("net.java.dev.jna:jna:${libs.versions.jna.get()}@jar")
     testImplementation("com.networknt:json-schema-validator:1.5.9")
     androidTestImplementation(libs.truth)
     androidTestImplementation(libs.androidx.test.ext)

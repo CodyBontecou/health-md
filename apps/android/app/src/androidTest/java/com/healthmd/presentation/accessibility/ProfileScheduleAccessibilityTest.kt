@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.semantics.Role
@@ -17,6 +18,8 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import kotlinx.coroutines.delay
 import com.healthmd.R
 import com.healthmd.data.scheduler.ScheduledProfileCadenceUnit
 import com.healthmd.data.scheduler.ScheduledProfileEntry
@@ -51,6 +54,25 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
         fun displays() = accessibilityDisplays()
+    }
+
+    @Test
+    fun nativeVisibilityWaitAdmitsTheWholeControlAfterOwnerResize() {
+        val ownerHeight = mutableStateOf(16.dp)
+        setContent {
+            Dialog(onDismissRequest = {}) {
+                LaunchedEffect(Unit) {
+                    delay(1_500)
+                    ownerHeight.value = 64.dp
+                }
+                Box(Modifier.width(120.dp).height(ownerHeight.value)) {
+                    Box(Modifier.requiredSize(96.dp, 48.dp).testTag("native-owner-control"))
+                }
+            }
+        }
+        val control = compose.onNodeWithTag("native-owner-control")
+        awaitNativeControlVisible(control, "control while native owner resizes")
+        control.assertMinimumTouchTarget().assertInNativeOwner()
     }
 
     @Test
