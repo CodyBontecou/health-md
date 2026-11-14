@@ -28,6 +28,8 @@ import kotlinx.coroutines.currentCoroutineContext
 import com.healthmd.domain.model.BloodPressureSample
 import com.healthmd.domain.model.SleepStageEntry
 import com.healthmd.domain.model.TimestampedSample
+import com.healthmd.rawexport.HealthConnectRecordCatalog
+import com.healthmd.rawexport.RawHealthConnectMapper
 import com.healthmd.rawexport.ExerciseRouteConsentCoordinator
 import com.healthmd.rawexport.ExerciseRouteConsentGateway
 import com.healthmd.rawexport.InteractiveRouteConsent
@@ -195,22 +197,35 @@ class HealthConnectManager(
             return if (TestMode.healthAuthorized) TestModeHealthFixtures.earliestDate() else null
         }
         val zone = ZoneId.systemDefault()
-        return try {
-            val response = healthConnectClient.readRecords(
-                ReadRecordsRequest(
-                    recordType = StepsRecord::class,
-                    timeRangeFilter = TimeRangeFilter.before(Instant.now()),
-                    ascendingOrder = true,
-                    pageSize = 1,
-                )
-            )
-            response.records.firstOrNull()?.startTime
-                ?.atZone(zone)
-                ?.toLocalDate()
+        val granted = try {
+            healthConnectClient.permissionController.getGrantedPermissions()
         } catch (error: Exception) {
             error.rethrowIfActionableExportFailure()
-            null
+            return null
         }
+        val end = Instant.now()
+        var earliest: Instant? = null
+        for (descriptor in HealthConnectRecordCatalog.records) {
+            if (descriptor.readPermission !in granted) continue
+            if (descriptor.featureGate?.let { !isFeatureAvailable(it.feature) } == true) continue
+            try {
+                val response = healthConnectClient.readRecords(
+                    ReadRecordsRequest(
+                        recordType = descriptor.recordClass,
+                        timeRangeFilter = TimeRangeFilter.before(end),
+                        ascendingOrder = true,
+                        pageSize = 1,
+                    )
+                )
+                val start = response.records.firstOrNull()?.let {
+                    RawHealthConnectMapper.startTime(it)
+                }
+                if (start != null && (earliest == null || start < earliest)) earliest = start
+            } catch (error: Exception) {
+                error.rethrowIfActionableExportFailure()
+            }
+        }
+        return earliest?.atZone(zone)?.toLocalDate()
     }
 
     /**

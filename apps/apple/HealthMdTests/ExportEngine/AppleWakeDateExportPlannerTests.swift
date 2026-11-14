@@ -1527,6 +1527,63 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
     }
 
+    func testWakeDateRangeWithOnlyEmptyAggregateProjectionsProducesNoSummary() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "Asia/Kathmandu"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let first = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 1)))
+        let second = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: first))
+        // Provider daily artifacts/sidecars have already been staged. The retained
+        // range corpus has capture dates, but no native values to summarize.
+        let projections = [first, second].map {
+            HealthData(date: $0, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds))
+        }
+        let requested = try HealthRollupRangeRequest(startDate: first, endDate: second,
+            calendarTimeZoneIdentifier: zone.identifier)
+        let snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
+            selectionIDs: ["steps"], rangeSummary: true)
+        guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().planRange(
+            healthData: projections, dailyOutputOwnerDates: [], requestedRange: requested,
+            settingsSnapshot: snapshot, surface: .localVaultRangeWithProviderSidecars) else {
+            return XCTFail("An empty aggregate corpus must retain the accepted Rust authority")
+        }
+        XCTAssertEqual(operation.authority, .rust)
+        XCTAssertEqual(operation.pin, snapshot.appleExportEnginePin)
+        XCTAssertTrue(operation.artifacts.isEmpty, "No native metric means no range artifact")
+        // If one captured day later has a native value, both successful captures
+        // count toward range coverage, but only that day counts for the metric.
+        var mixed = projections
+        mixed[1].activity.steps = 42
+        guard case .planned(let covered) = try await AppleLooseDailyExportPlanner().planRange(
+            healthData: mixed, dailyOutputOwnerDates: [], requestedRange: requested,
+            settingsSnapshot: snapshot, surface: .localVaultRangeWithProviderSidecars) else {
+            return XCTFail("Mixed coverage must retain the accepted range authority")
+        }
+        XCTAssertEqual(covered.pin, operation.pin)
+        XCTAssertEqual(covered.artifacts.count, ExportFormat.allCases.count)
+        let json = try XCTUnwrap(covered.artifacts.first { $0.format == .json })
+        let root = try XCTUnwrap(JSONSerialization.jsonObject(with: json.artifact.inlineData) as? [String: Any])
+        XCTAssertEqual(root["source_dates"] as? [String], ["2026-07-01", "2026-07-02"])
+        XCTAssertEqual(root["days_expected"] as? Int, 2)
+        XCTAssertEqual(root["days_counted"] as? Int, 2)
+        XCTAssertEqual(root["coverage_percent"] as? Double, 100)
+        let metrics = try XCTUnwrap(root["metrics"] as? [[String: Any]])
+        XCTAssertEqual(metrics.count, 1)
+        XCTAssertEqual(metrics.first?["canonical_key"] as? String, "steps")
+        XCTAssertEqual(metrics.first?["primary_value"] as? String, "42")
+        XCTAssertEqual(metrics.first?["days_counted"] as? Int, 1)
+        // Empty captures still cannot be used to fabricate requested daily files.
+        do {
+            _ = try await AppleLooseDailyExportPlanner().planRange(healthData: projections,
+                dailyOutputOwnerDates: ["2026-07-01"], requestedRange: requested,
+                settingsSnapshot: snapshot, surface: .localVaultRangeWithProviderSidecars)
+            XCTFail("A requested empty daily artifact must still reject")
+        } catch {
+            XCTAssertEqual(error as? AppleLooseDailyExportPlannerError, .rustPlanningFailed)
+        }
+    }
+
     func testWakeDateRangeSummaryPreservesFailedBoundsAndSuccessfulEmptyDay() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)

@@ -57,6 +57,36 @@ final class AgentDataGatewayExportRunnerTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testProductionMaterializerPreservesSuccessfulEmptyArchiveEvidence() async throws {
+        let date = HealthKitFixtures.referenceDate
+        let settings = makeSettings(formats: [.json])
+        settings.includeGranularData = true
+        settings.includeDataDictionary = false
+        settings.metricSelection.deselectAll()
+        settings.metricSelection.enabledMetrics = ["steps"]
+        let manager = HealthKitManager(store: FakeHealthStore(), userDefaults: makeIsolatedDefaults())
+        var uploaded = 0
+        let outcome = await AgentDataGatewayExportRunner.export(dates: [date], healthKitManager: manager,
+            settings: settings, destination: try makeDestination(),
+            uploader: { manifest, file, _ in
+                do {
+                    let bytes = try Data(contentsOf: file)
+                    let document = try XCTUnwrap(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+                    XCTAssertNotNil(document["healthkit_record_archive"])
+                    XCTAssertEqual(manifest.sha256, AgentDataIngestManifest.sha256(of: bytes))
+                    uploaded += 1
+                    return AgentDataIngestUploadOutcome(result: .accepted, attempts: 1, byteCount: manifest.byteCount)
+                } catch {
+                    XCTFail("\(error)")
+                    return AgentDataIngestUploadOutcome(result: .rejected(.manifestIncomplete), attempts: 1, byteCount: manifest.byteCount)
+                }
+            })
+        XCTAssertEqual(uploaded, 1)
+        XCTAssertEqual(outcome.export.successCount, 1, "\(outcome.export.failedDateDetails)")
+        XCTAssertTrue(outcome.uploads.didUploadAllEligibleArtifacts)
+    }
+
     // MARK: - End-to-end with the real engine + a real loopback gateway
 
     /// The real folder-destination engine materializes artifacts into the

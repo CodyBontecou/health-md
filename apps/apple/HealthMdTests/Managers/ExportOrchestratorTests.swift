@@ -460,7 +460,113 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
-    func testPinnedForegroundRangeRetainsSuccessfulEmptyCaptureWithoutDailyArtifact() async throws {
+    func testManualProviderOnlyDaysKeepSidecarsAndNormalizedSections() async throws {
+        guard ConnectedAppsFeature.isEnabled else { throw XCTSkip("Requires Connected Apps test host") }
+        let date = HealthKitFixtures.referenceDate
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let next = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: date))
+        for attribution in [SleepDayAttribution.nightBegins, .morningEnds] {
+            for includesRange in [false, true] {
+                let dates = includesRange ? [date, next] : [date]
+                let store = FakeHealthStore()
+                let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+                manager.setSleepDayAttribution(attribution)
+                let (vault, files) = makeVaultManager(vaultPath: "/tmp/ProviderOnly-\(UUID())")
+                let settings = makeExportSettings(formats: [.json], rollupPeriods: includesRange ? [.range] : [])
+                settings.executionSleepCaptureContext = nil
+                settings.exportTimeZoneOverride = zone
+                settings.includeGranularData = true
+                settings.metricSelection.deselectAll()
+                settings.metricSelection.enabledMetrics = ["steps"]
+                settings.includeDataDictionary = false
+                let providers = MorningProviderRangeProbe()
+                let result = await ExportOrchestrator.exportDates(dates, healthKitManager: manager,
+                    vaultManager: vault, settings: settings, externalIntegrations: providers)
+
+                XCTAssertEqual(providers.accepted?.calendars.count, dates.count, "Provider admission must precede empty-day filtering")
+                XCTAssertEqual(result.successCount, dates.count, "\(result.failedDateDetails)")
+                XCTAssertEqual(result.externalRecordFileCount, dates.count)
+                XCTAssertEqual(result.rollupFileCount, 0, "Provider values have no native roll-up rule")
+                XCTAssertEqual(result.looseAggregateFileCount, dates.count)
+                XCTAssertEqual(files.files.count, dates.count * 2)
+                XCTAssertEqual(providers.bindCount, 1)
+                XCTAssertEqual(providers.liveFetchCount, 0)
+                let accepted = try XCTUnwrap(providers.accepted)
+                XCTAssertEqual(accepted.calendars, Array(repeating: zone.identifier, count: dates.count))
+                XCTAssertFalse(accepted.completionSignals.isEmpty)
+                XCTAssertTrue(accepted.completionSignals.allSatisfy { $0 })
+                for day in dates {
+                    let owner = HealthKitDailyOwnershipMetadata.ownerDate(for: day, calendarTimeZoneIdentifier: zone.identifier)
+                    let daily = try XCTUnwrap(files.files.first {
+                        $0.key.hasSuffix("/" + owner + ".json") && !$0.key.contains("/integrations/")
+                    }?.value)
+                    let document = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(daily.utf8)) as? [String: Any])
+                    XCTAssertNotNil((document["providers"] as? [String: Any])?["whoop"])
+                    XCTAssertNil((document["activity"] as? [String: Any])?["steps"])
+                    XCTAssertEqual(document["schema_version"] as? Int, attribution == .morningEnds ? 11 : 8)
+                    let sidecar = try XCTUnwrap(files.files.first {
+                        $0.key.contains("/integrations/") && $0.key.hasSuffix("/" + owner + ".json")
+                    }?.value)
+                    let decoder = JSONDecoder()
+                    decoder.dateDecodingStrategy = .iso8601
+                    let record = try decoder.decode(ExternalDailyRecord.self, from: Data(sidecar.utf8))
+                    XCTAssertEqual(record.date, owner)
+                    XCTAssertEqual(record.provider, .whoop)
+                    XCTAssertEqual(record.payloads.count, 1)
+                    XCTAssertFalse(sidecar.contains("morning_ends"), "Sidecars retain independent capture semantics")
+                }
+            }
+        }
+    }
+
+    @MainActor
+    func testManualLosslessEmptyDaysProduceNoDailyFiles() async throws {
+        for periods: Set<HealthRollupPeriod> in [[], [.range]] {
+            let date = HealthKitFixtures.referenceDate
+            let manager = HealthKitManager(store: FakeHealthStore(), userDefaults: makeIsolatedDefaults())
+            let (vault, files) = makeVaultManager(vaultPath: "/tmp/ManualEmptyDays-\(UUID().uuidString)")
+            let settings = makeExportSettings(formats: [.json], rollupPeriods: periods)
+            settings.includeGranularData = true
+            settings.metricSelection.deselectAll()
+            settings.metricSelection.enabledMetrics = ["steps"]
+            settings.exportTimeZoneOverride = TimeZone(identifier: "UTC")
+
+            let result = await ExportOrchestrator.exportDates([date], healthKitManager: manager,
+                vaultManager: vault, settings: settings)
+
+            XCTAssertEqual(result.successCount, 0)
+            XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData])
+            XCTAssertEqual(result.completedDates, [date])
+            XCTAssertFalse(files.files.keys.contains { $0.hasSuffix("/2026-03-15.json") })
+            if periods.isEmpty { XCTAssertTrue(files.files.isEmpty) }
+        }
+    }
+
+    @MainActor
+    func testManualDailyEmptinessPreservesArchiveEvidenceAndFailures() {
+        let date = HealthKitFixtures.referenceDate
+        let ownership = HealthKitDailyOwnershipMetadata(ownerDate: "2026-03-15",
+            intervalStart: date, intervalEnd: date.addingTimeInterval(86_400),
+            calendarTimeZoneIdentifier: "UTC")
+        for status in HealthKitQueryResultStatus.allCases {
+            let archive = HealthKitRecordArchive(captureStatus: status == .success ? .complete : .partial,
+                dailyOwnership: ownership, queryManifest: HealthKitQueryManifest(results: [
+                    HealthKitQueryResult(identifier: "steps", operation: "sample_query", metricIDs: ["steps"],
+                        interval: HealthKitQueryInterval(startDate: date, endDate: date.addingTimeInterval(86_400)),
+                        status: status, recordCount: 0)
+                ]))
+            var data = HealthData(date: date, healthKitRecordArchive: archive)
+            XCTAssertTrue(data.hasAnyData, "Archive/transfer evidence must remain exportable")
+            XCTAssertEqual(ExportOrchestrator.hasManualDailyOutput(data), status != .success)
+            data.activity.steps = 0
+            XCTAssertTrue(ExportOrchestrator.hasManualDailyOutput(data), "Explicit zero is data")
+        }
+    }
+
+    @MainActor
+    func testPinnedForegroundLosslessRangeRetainsSuccessfulEmptyCaptureWithoutDailyArtifact() async throws {
         UserDefaults.standard.set(
             "shadow",
             forKey: AppleExportEnginePolicyResolver.userDefaultsKey
@@ -485,7 +591,7 @@ final class ExportOrchestratorTests: XCTestCase {
             vaultPath: "/tmp/ExportOrchestratorPinnedEmptyRangeVault"
         )
         let settings = makeExportSettings(formats: [.json], rollupPeriods: [.range])
-        settings.includeGranularData = false
+        settings.includeGranularData = true
         settings.metricSelection.deselectAll()
         settings.metricSelection.enabledMetrics = ["steps"]
         let timezone = try XCTUnwrap(TimeZone(identifier: "UTC"))
