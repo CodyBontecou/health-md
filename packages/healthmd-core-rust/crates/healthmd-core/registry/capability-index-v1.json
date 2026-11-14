@@ -120,6 +120,7 @@
     "automation.discard-pending-recovery",
     "automation.api-recovery-authority",
     "automation.cancel-active-export",
+    "destination.google-drive",
     "automation.run-overlap-policy",
     "apple.hearing-and-symptoms",
     "android.activity-intensity",
@@ -159,5 +160,5 @@
   "schema": "healthmd.capability_index",
   "schema_version": 1,
   "source_inventory_path": "packages/contracts/product-capabilities.json",
-  "source_inventory_sha256": "7800b05e785d72a9ea699dbf559d5d8eb872652977931e5c2834624056811a58"
+  "source_inventory_sha256": "0e6685e0f33117138c31f6db13ad94a62e5aaf96834893fa75759dd74c287b7f"
 }
