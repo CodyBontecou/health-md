@@ -459,6 +459,8 @@ struct FilenameFormatEditor: View {
         ("Day", "{day}", "dd"),
         ("Month Name", "{monthName}", "January, February…"),
         ("Weekday", "{weekday}", "Monday, Tuesday…"),
+        ("ISO Week", "{week}", "01–53"),
+        ("ISO Week Year", "{weekYear}", "2026"),
         ("Quarter", "{quarter}", "Q1, Q2, Q3, Q4")
     ]
 
@@ -647,8 +649,8 @@ struct FilenameFormatEditor: View {
     private var previewFilename: String {
         let format = tempFormat.isEmpty ? AdvancedExportSettings.defaultFilenameFormat : tempFormat
         let dateFormatter = DateFormatter()
-        var result = format
         let date = Date()
+        var result = ISOWeekDateTokens.apply(to: format, for: date, timeZone: .current)
 
         // {date} -> yyyy-MM-dd
         dateFormatter.dateFormat = "yyyy-MM-dd"
@@ -702,6 +704,7 @@ struct FolderStructureEditor: View {
         ("By Year", "{year}", "2025/…"),
         ("By Year & Month", "{year}/{month}", "2025/02/…"),
         ("By Year & Month Name", "{year}/{monthName}", "2025/February/…"),
+        ("By Year and Week", ISOWeekDateTokens.folderTemplate, "2026/Week 53/…"),
         ("By Year & Quarter", "{year}/{quarter}", "2025/Q1/…")
     ]
 
@@ -712,6 +715,8 @@ struct FolderStructureEditor: View {
         ("Month Name", "{monthName}", "February"),
         ("Day", "{day}", "04"),
         ("Weekday", "{weekday}", "Tuesday"),
+        ("ISO Week", "{week}", "01–53"),
+        ("ISO Week Year", "{weekYear}", "2026"),
         ("Quarter", "{quarter}", "Q1, Q2, Q3, Q4")
     ]
 
@@ -926,7 +931,7 @@ struct FolderStructureEditor: View {
             return "\(formatFolder)2025-02-04.md"
         }
 
-        var result = tempStructure
+        var result = ISOWeekDateTokens.apply(to: tempStructure, for: date, timeZone: .current)
 
         // {year} -> yyyy
         dateFormatter.dateFormat = "yyyy"
