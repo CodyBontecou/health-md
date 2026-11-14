@@ -126,7 +126,8 @@ fun SettingsScreen(
 
         // The plan: restore or manage it in Subscription; F-Droid includes full access.
         val subscriptionStatus = if (distributionPolicy.purchasesAvailable) {
-            val subscription: SubscriptionViewModel = hiltViewModel()
+            // Read-only: must not clear a pending paywall error or start store refreshes.
+            val subscription: SubscriptionStatusViewModel = hiltViewModel()
             subscription.status.collectAsStateWithLifecycle().value
         } else {
             null

@@ -70,9 +70,17 @@ class PlayEntitlementSnapshotTest {
         assertThat(cancelled.activePurchase).isEqualTo(ActivePurchase(PurchasePlan.YEARLY, isAutoRenewing = false))
     }
 
-    @Test fun lifetimeIsPresentedOverASubscriptionAndNeverRenews() {
-        val snapshot = playEntitlementSnapshot(listOf(purchase(PurchasePlan.WEEKLY), purchase(PurchasePlan.LIFETIME)))
+    @Test fun lifetimeIsPresentedOverACanceledSubscriptionAndNeverRenews() {
+        val snapshot = playEntitlementSnapshot(listOf(
+            purchase(PurchasePlan.WEEKLY, autoRenewing = false), purchase(PurchasePlan.LIFETIME)))
         assertThat(snapshot.activePurchase).isEqualTo(ActivePurchase(PurchasePlan.LIFETIME, isAutoRenewing = false))
+        assertThat(snapshot.hasLifetime).isTrue()
+    }
+
+    @Test fun aStillRenewingSubscriptionIsPresentedBesideLifetimeSoItStaysManageable() {
+        val snapshot = playEntitlementSnapshot(listOf(purchase(PurchasePlan.WEEKLY), purchase(PurchasePlan.LIFETIME)))
+        assertThat(snapshot.activePurchase).isEqualTo(ActivePurchase(PurchasePlan.WEEKLY, isAutoRenewing = true))
+        assertThat(snapshot.hasLifetime).isTrue()
     }
 
     @Test fun pendingPurchaseIsNotPresentedAsOwned() {
@@ -83,9 +91,12 @@ class PlayEntitlementSnapshotTest {
     @Test fun activeSubscriptionTokenIsKeptOnlyForTheOwnedSubscription() {
         assertThat(playEntitlementSnapshot(listOf(purchase(PurchasePlan.WEEKLY))).activeSubscriptionToken)
             .isEqualTo("test-token-WEEKLY")
-        // Lifetime wins the presentation, so no subscription token is offered for switching.
+        // Lifetime wins over a canceled subscription, so no subscription token is kept.
+        assertThat(playEntitlementSnapshot(listOf(purchase(PurchasePlan.WEEKLY, autoRenewing = false),
+            purchase(PurchasePlan.LIFETIME))).activeSubscriptionToken).isNull()
+        // A still-renewing one beside Lifetime is presented, so its token is kept for the date read.
         assertThat(playEntitlementSnapshot(listOf(purchase(PurchasePlan.WEEKLY), purchase(PurchasePlan.LIFETIME)))
-            .activeSubscriptionToken).isNull()
+            .activeSubscriptionToken).isEqualTo("test-token-WEEKLY")
         assertThat(playEntitlementSnapshot(emptyList()).activeSubscriptionToken).isNull()
     }
 

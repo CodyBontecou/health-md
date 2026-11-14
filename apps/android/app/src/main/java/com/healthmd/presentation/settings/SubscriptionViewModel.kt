@@ -46,17 +46,39 @@ class SubscriptionViewModel @Inject constructor(
 
     val isPurchasing: StateFlow<Boolean> = purchaseRepository.isPurchasing
     val isRestoring: StateFlow<Boolean> = purchaseRepository.isRestoring
-    val purchaseError: StateFlow<BillingError?> = purchaseRepository.purchaseError
+    /** A switch that could not start because no Activity hosts this screen. */
+    private val launchError = MutableStateFlow<BillingError?>(null)
+    val purchaseError: StateFlow<BillingError?> =
+        combine(purchaseRepository.purchaseError, launchError) { store, local -> local ?: store }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, purchaseRepository.purchaseError.value)
 
     init {
+        // No refresh here: the screen's first resume refreshes (see [onScreenResumed]).
         purchaseRepository.clearError()
+    }
+
+    /**
+     * The screen resumed (first open, or back from Google Play). Re-reads ownership and allows the
+     * verified-date read, which sends the purchase token to myself.md only while this is visible.
+     */
+    fun onScreenResumed() {
+        if (!purchasesAvailable) return
+        purchaseRepository.setSubscriptionDatesRequested(true)
         refresh()
     }
 
-    fun refresh() {
-        if (!purchasesAvailable) return
-        entitlementRepository.refresh()
+    fun onScreenPaused() {
+        purchaseRepository.setSubscriptionDatesRequested(false)
+    }
+
+    override fun onCleared() {
+        purchaseRepository.setSubscriptionDatesRequested(false)
+    }
+
+    private fun refresh() {
+        // EntitlementRepository and PurchaseRepository may be the same store client; refresh once.
         purchaseRepository.refresh()
+        if (entitlementRepository !== purchaseRepository) entitlementRepository.refresh()
     }
 
     fun restore() {
@@ -64,12 +86,38 @@ class SubscriptionViewModel @Inject constructor(
         viewModelScope.launch { purchaseRepository.restorePurchase() }
     }
 
-    fun switchToYearly(activity: Activity) {
-        if (!purchasesAvailable || SubscriptionStatusPreview.status != null) return
-        viewModelScope.launch { purchaseRepository.launchYearlySwitch(activity) }
+    /**
+     * Starts the Weekly -> Yearly switch. [onResult] receives true once Play's purchase sheet has
+     * opened; on false [purchaseError] explains why, so the caller keeps its sheet open to show it.
+     */
+    fun switchToYearly(activity: Activity?, onResult: (Boolean) -> Unit = {}) {
+        if (!purchasesAvailable || SubscriptionStatusPreview.status != null) return onResult(false)
+        launchError.value = null
+        if (activity == null) {
+            launchError.value = BillingError.PURCHASE_FAILED
+            return onResult(false)
+        }
+        viewModelScope.launch { onResult(purchaseRepository.launchYearlySwitch(activity)) }
     }
 
-    fun clearError() = purchaseRepository.clearError()
+    fun clearError() {
+        launchError.value = null
+        purchaseRepository.clearError()
+    }
+}
+
+/**
+ * The Settings hub's plan row: read-only status with no side effects. Unlike
+ * [SubscriptionViewModel] it never clears a pending paywall error, triggers a store refresh, or
+ * requests the verified date.
+ */
+@HiltViewModel
+class SubscriptionStatusViewModel @Inject constructor(
+    purchaseRepository: PurchaseRepository,
+) : ViewModel() {
+    val status: StateFlow<SubscriptionStatus> =
+        SubscriptionStatusPreview.status?.let { MutableStateFlow(it).asStateFlow() }
+            ?: purchaseRepository.subscriptionStatus
 }
 
 /** The screen's primary action for a status. */

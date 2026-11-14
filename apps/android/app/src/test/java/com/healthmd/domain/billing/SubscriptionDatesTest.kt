@@ -35,6 +35,8 @@ class SubscriptionDatesTest {
         assertThat(YearlySwitchEligibility.eligible(weekly, null)).isNull()
         for (status in listOf(
             weekly.copy(isAutoRenewing = false),
+            // Lifetime or grandfathered access beside Weekly: a paid upgrade gains nothing.
+            weekly.copy(hasIncludedAccess = true),
             yearly,
             SubscriptionStatus.Lifetime,
             SubscriptionStatus.IncludedAccess,
@@ -54,6 +56,33 @@ class SubscriptionDatesTest {
             .isEqualTo("https://play.google.com/store/account/subscriptions?sku=health_md_premium_weekly&package=com.healthmd.android")
         for (status in listOf(SubscriptionStatus.Lifetime, SubscriptionStatus.Free, SubscriptionStatus.Unknown, SubscriptionStatus.IncludedAccess)) {
             assertThat(PlaySubscriptionLinks.forStatus(status, pkg)).isEqualTo(PlaySubscriptionLinks.SUBSCRIPTION_CENTER)
+        }
+    }
+
+    @Test fun serverCancelDowngradesALocallyRenewingStatusAndKeepsTheDate() {
+        for (canceled in listOf(
+            answer(state = "canceled").copy(autoRenewing = false),
+            answer(state = "active").copy(autoRenewing = false),
+            answer(state = "canceled"),
+        )) {
+            assertThat(SubscriptionDates.apply(yearly, canceled, now))
+                .isEqualTo(yearly.copy(isAutoRenewing = false, periodEndMillis = later))
+        }
+    }
+
+    @Test fun serverRenewingNeverOverridesALocalCancelAndUnusableAnswersAddNothing() {
+        val localCancel = yearly.copy(isAutoRenewing = false)
+        assertThat(SubscriptionDates.apply(localCancel, answer(), now))
+            .isEqualTo(localCancel.copy(periodEndMillis = later))
+        assertThat(SubscriptionDates.apply(yearly, answer(), now)).isEqualTo(yearly.copy(periodEndMillis = later))
+        // A mismatched or stale answer neither dates nor downgrades.
+        for (unusable in listOf(
+            null,
+            answer(product = PurchasePlan.WEEKLY.productId).copy(autoRenewing = false),
+            answer(state = "expired").copy(autoRenewing = false),
+            answer(expires = now).copy(autoRenewing = false),
+        )) {
+            assertThat(SubscriptionDates.apply(yearly, unusable, now)).isEqualTo(yearly)
         }
     }
 }

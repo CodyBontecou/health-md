@@ -81,13 +81,19 @@ object SubscriptionLapse {
     }
 
     /**
-     * Picks the plan to present when several completed purchases are owned. Lifetime first
-     * (it needs no management), then the longer subscription, then weekly.
+     * Picks the plan to present when several completed purchases are owned. A subscription that
+     * still renews comes first even beside Lifetime: it keeps billing, so its Manage path must stay
+     * reachable (the caller marks it as having included access). Then Lifetime, which needs no
+     * management, then a canceled subscription. Yearly ranks before Weekly within each group.
      */
     fun primary(owned: List<ActivePurchase>): ActivePurchase? =
-        owned.minByOrNull { PRIORITY.indexOf(it.plan) }
+        owned.minByOrNull { rank(it) }
 
-    private val PRIORITY = listOf(PurchasePlan.LIFETIME, PurchasePlan.YEARLY, PurchasePlan.WEEKLY)
+    private fun rank(purchase: ActivePurchase): Int = when {
+        purchase.plan == PurchasePlan.LIFETIME -> 2
+        purchase.isAutoRenewing -> if (purchase.plan == PurchasePlan.YEARLY) 0 else 1
+        else -> if (purchase.plan == PurchasePlan.YEARLY) 3 else 4
+    }
 }
 
 /** Google Play's answer for one purchase token, as relayed by myself.md. No token is held. */
@@ -118,6 +124,21 @@ object SubscriptionDates {
         if (verified.productId != status.plan.productId || verified.state !in DATED_STATES) return null
         return expires.takeIf { it > nowMillis }
     }
+
+    /**
+     * [status] with the admitted server date. When the server, asked for this token and local
+     * renewal state, reports the plan no longer renews, that wins over the local Play cache, so a
+     * plan canceled elsewhere never shows a "Next billing date" or the retention sheet. Only ever
+     * downgrades: a stale server "renewing" never overrides a fresh local cancel.
+     */
+    fun apply(status: SubscriptionStatus.Subscribed, verified: VerifiedPlaySubscription?, nowMillis: Long): SubscriptionStatus.Subscribed {
+        val end = periodEnd(status, verified, nowMillis) ?: return status.copy(periodEndMillis = null)
+        val canceledOnServer = verified != null && (!verified.autoRenewing || verified.state == "canceled")
+        return status.copy(
+            periodEndMillis = end,
+            isAutoRenewing = status.isAutoRenewing && !canceledOnServer,
+        )
+    }
 }
 
 /** The in-app Weekly -> Yearly switch, priced only from Play's ProductDetails. No token is held here. */
@@ -128,10 +149,14 @@ data class YearlySwitchOffer(
     val recurringFormattedPrice: String,
 )
 
-/** Who may see the switch offer: an active, renewing Weekly subscriber only. */
+/**
+ * Who may see the switch offer: an active, renewing Weekly subscriber without permanent access.
+ * Someone who also owns Lifetime or grandfathered access gains nothing from a paid upgrade.
+ */
 object YearlySwitchEligibility {
     fun eligible(status: SubscriptionStatus, offer: YearlySwitchOffer?): YearlySwitchOffer? = offer?.takeIf {
-        status is SubscriptionStatus.Subscribed && status.plan == PurchasePlan.WEEKLY && status.isAutoRenewing
+        status is SubscriptionStatus.Subscribed && status.plan == PurchasePlan.WEEKLY && status.isAutoRenewing &&
+            !status.hasIncludedAccess
     }
 }
 

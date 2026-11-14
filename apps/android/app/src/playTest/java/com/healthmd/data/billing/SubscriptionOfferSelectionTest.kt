@@ -113,6 +113,18 @@ class SubscriptionOfferSelectionTest {
         assertThat(selectYearlySwitchOffer(details(offer))).isSameInstanceAs(offer)
     }
 
+    @Test fun yearlySwitchOfferAcceptsPlayConsolesSinglePaymentPhase() {
+        // docs/retention-messages.md asks for a "Single payment" phase, which Play reports as
+        // NON_RECURRING (cycle count 0, as the single-payment trial sees it).
+        for (cycles in listOf(0, 1)) {
+            val single = switchPhase(19_990_000, ProductDetails.RecurrenceMode.NON_RECURRING, cycles)
+            val offer = switchOffer(single, yearly)
+            assertThat(selectYearlySwitchOffer(details(offer))).isEqualTo(offer)
+        }
+        assertThat(selectYearlySwitchOffer(details(switchOffer(
+            switchPhase(19_990_000, ProductDetails.RecurrenceMode.NON_RECURRING, 2), yearly)))).isNull()
+    }
+
     @Test fun yearlySwitchOfferIsHiddenRatherThanMisdescribed() {
         for (invalid in listOf(
             switchOffer(intro, yearly, id = "trial-7d"),

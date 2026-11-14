@@ -62,9 +62,17 @@ class SubscriptionLapseTest {
             .isEqualTo(SubscriptionStatus.Subscribed(PurchasePlan.WEEKLY, isAutoRenewing = true, hasIncludedAccess = true))
     }
 
-    @Test fun primaryPrefersLifetimeThenYearlyThenWeekly() {
-        assertThat(SubscriptionLapse.primary(listOf(weekly, lifetime, yearlyCanceled))).isEqualTo(lifetime)
-        assertThat(SubscriptionLapse.primary(listOf(weekly, yearlyCanceled))).isEqualTo(yearlyCanceled)
+    @Test fun primaryPrefersARenewingSubscriptionThenLifetimeThenACanceledOne() {
+        val yearlyRenewing = yearlyCanceled.copy(isAutoRenewing = true)
+        val weeklyCanceled = weekly.copy(isAutoRenewing = false)
+        // Still billing beside Lifetime: it must stay manageable, so it is presented.
+        assertThat(SubscriptionLapse.primary(listOf(lifetime, weekly))).isEqualTo(weekly)
+        assertThat(SubscriptionLapse.primary(listOf(weekly, lifetime, yearlyCanceled))).isEqualTo(weekly)
+        assertThat(SubscriptionLapse.primary(listOf(weekly, yearlyRenewing, lifetime))).isEqualTo(yearlyRenewing)
+        // Nothing left to manage: Lifetime outranks a canceled subscription.
+        assertThat(SubscriptionLapse.primary(listOf(yearlyCanceled, lifetime, weeklyCanceled))).isEqualTo(lifetime)
+        assertThat(SubscriptionLapse.primary(listOf(weeklyCanceled, yearlyCanceled))).isEqualTo(yearlyCanceled)
+        assertThat(SubscriptionLapse.primary(listOf(weekly, yearlyCanceled))).isEqualTo(weekly)
         assertThat(SubscriptionLapse.primary(emptyList())).isNull()
     }
 

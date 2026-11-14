@@ -15,6 +15,7 @@ import com.android.billingclient.api.QueryProductDetailsResult
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.PurchasesResponseListener
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.domain.billing.BillingError
 import com.healthmd.domain.billing.PlaySubscriptionVerifier
 import com.healthmd.domain.billing.SubscriptionStatus
 import com.healthmd.domain.billing.VerifiedPlaySubscription
@@ -176,6 +177,7 @@ class BillingRevocationTest {
             VerifiedPlaySubscription(PurchasePlan.YEARLY.productId, "active", NOW + DAY, autoRenewing = true)
         }
         val fixture = fixture(backgroundScope, cached = false, purchases = listOf(purchase(PurchasePlan.YEARLY)), verifier = verifier)
+        fixture.repository.setSubscriptionDatesRequested(true)
         fixture.repository.restorePurchase()
         runCurrent()
         assertThat(fixture.repository.subscriptionStatus.value)
@@ -193,6 +195,7 @@ class BillingRevocationTest {
         val fixture = fixture(backgroundScope, cached = false, legacyGrant = true,
             purchases = listOf(purchase(PurchasePlan.YEARLY)),
             verifier = { VerifiedPlaySubscription(PurchasePlan.YEARLY.productId, "active", NOW + DAY, true) })
+        fixture.repository.setSubscriptionDatesRequested(true)
         fixture.repository.restorePurchase()
         runCurrent()
         assertThat(fixture.repository.subscriptionStatus.value).isEqualTo(
@@ -215,6 +218,7 @@ class BillingRevocationTest {
         )) {
             val fixture = fixture(backgroundScope, cached = false, purchases = listOf(purchase(PurchasePlan.YEARLY)),
                 verifier = { answer })
+            fixture.repository.setSubscriptionDatesRequested(true)
             fixture.repository.restorePurchase()
             runCurrent()
             assertThat((fixture.repository.subscriptionStatus.value as SubscriptionStatus.Subscribed).periodEndMillis).isNull()
@@ -226,6 +230,7 @@ class BillingRevocationTest {
         var now = NOW
         val fixture = fixture(backgroundScope, cached = false, purchases = listOf(purchase(PurchasePlan.WEEKLY)),
             verifier = { calls++; null }, now = { now })
+        fixture.repository.setSubscriptionDatesRequested(true)
         fixture.repository.restorePurchase()
         runCurrent()
         fixture.repository.restorePurchase()
@@ -254,6 +259,7 @@ class BillingRevocationTest {
                     calls++
                     if (calls == 1) answer else VerifiedPlaySubscription(PurchasePlan.WEEKLY.productId, "active", NOW + DAY, true)
                 }, now = { now })
+            fixture.repository.setSubscriptionDatesRequested(true)
             fixture.repository.restorePurchase()
             runCurrent()
             assertThat((fixture.repository.subscriptionStatus.value as SubscriptionStatus.Subscribed).periodEndMillis).isNull()
@@ -267,6 +273,55 @@ class BillingRevocationTest {
             assertThat(calls).isEqualTo(2)
             assertThat((fixture.repository.subscriptionStatus.value as SubscriptionStatus.Subscribed).periodEndMillis).isEqualTo(NOW + DAY)
         }
+    }
+
+    @Test fun purchaseTokenIsSentOnlyWhileTheSubscriptionScreenRequestsDates() = runTest {
+        val sent = mutableListOf<String>()
+        val fixture = fixture(backgroundScope, cached = false, purchases = listOf(purchase(PurchasePlan.YEARLY)),
+            verifier = { token ->
+                sent += token
+                VerifiedPlaySubscription(PurchasePlan.YEARLY.productId, "active", NOW + DAY, autoRenewing = true)
+            })
+        // App start, headless verifyAccess, restore and reconcile all take full snapshots.
+        fixture.repository.restorePurchase()
+        fixture.repository.verifyAccess()
+        runCurrent()
+        assertThat(sent).isEmpty()
+        assertThat((fixture.repository.subscriptionStatus.value as SubscriptionStatus.Subscribed).periodEndMillis).isNull()
+
+        fixture.repository.setSubscriptionDatesRequested(true)
+        runCurrent()
+        assertThat(sent).containsExactly("token-YEARLY")
+        assertThat((fixture.repository.subscriptionStatus.value as SubscriptionStatus.Subscribed).periodEndMillis)
+            .isEqualTo(NOW + DAY)
+
+        fixture.repository.setSubscriptionDatesRequested(false)
+        fixture.repository.restorePurchase()
+        runCurrent()
+        assertThat(sent).hasSize(1)
+    }
+
+    @Test fun serverCancelOverridesAStaleLocalRenewingFlag() = runTest {
+        val fixture = fixture(backgroundScope, cached = false, purchases = listOf(purchase(PurchasePlan.WEEKLY)),
+            verifier = { VerifiedPlaySubscription(PurchasePlan.WEEKLY.productId, "canceled", NOW + DAY, autoRenewing = false) })
+        fixture.repository.setSubscriptionDatesRequested(true)
+        fixture.repository.restorePurchase()
+        runCurrent()
+        // Canceled on the web: no "Next billing date" and no retention sheet for it.
+        assertThat(fixture.repository.subscriptionStatus.value).isEqualTo(
+            SubscriptionStatus.Subscribed(PurchasePlan.WEEKLY, isAutoRenewing = false, periodEndMillis = NOW + DAY),
+        )
+    }
+
+    @Test fun lifetimeOwnerKeepsAManagePathForAStillRenewingSubscription() = runTest {
+        val fixture = fixture(backgroundScope, cached = false,
+            purchases = listOf(purchase(PurchasePlan.LIFETIME), purchase(PurchasePlan.WEEKLY)))
+        assertThat(fixture.repository.restorePurchase()).isTrue()
+        // Weekly still bills, so it is presented (with included access), never hidden behind Lifetime.
+        assertThat(fixture.repository.subscriptionStatus.value).isEqualTo(
+            SubscriptionStatus.Subscribed(PurchasePlan.WEEKLY, isAutoRenewing = true, hasIncludedAccess = true),
+        )
+        assertThat(fixture.repository.isPermanentlyUnlocked.value).isTrue()
     }
 
     @Test fun emptySnapshotAfterARememberedSubscriptionReportsALapse() = runTest {
@@ -352,6 +407,16 @@ class BillingRevocationTest {
         listener.onProductDetailsResponse(ok, catalog)
 
         assertThat(launch.await()).isFalse()
+        verify(exactly = 0) { fixture.client.launchBillingFlow(any(), any()) }
+        // The sheet stays open on false; the reason must be there to show.
+        assertThat(fixture.repository.purchaseError.value).isEqualTo(BillingError.PRODUCT_UNAVAILABLE)
+    }
+
+    @Test fun yearlySwitchWithoutAnEligibleOfferExplainsInsteadOfFailingSilently() = runTest {
+        val fixture = fixture(backgroundScope, cached = false, purchases = listOf(purchase(PurchasePlan.WEEKLY)))
+        fixture.repository.restorePurchase()
+        assertThat(fixture.repository.launchYearlySwitch(mockk<Activity>(relaxed = true))).isFalse()
+        assertThat(fixture.repository.purchaseError.value).isNotNull()
         verify(exactly = 0) { fixture.client.launchBillingFlow(any(), any()) }
     }
 

@@ -33,6 +33,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -118,11 +119,25 @@ class BillingRepositoryImpl(
 
     /** The owned subscription's token from the latest snapshot. Memory only; never logged. */
     private var activeSubscriptionToken: String? = null
-    /** One server answer, keyed by the token it was read for, so a plan change re-reads. */
-    private var verifiedPeriod: Pair<String, VerifiedPlaySubscription>? = null
+    /** The status from the store snapshot alone, before any server answer is applied. */
+    private var localStatus: SubscriptionStatus = SubscriptionStatus.Unknown
+    /**
+     * One server answer, keyed by the token and the local renewal state it was read for, so a plan
+     * change, a cancel or a resubscribe re-reads instead of trusting an answer from before it.
+     */
+    private var verifiedPeriod: Pair<PeriodReadKey, VerifiedPlaySubscription>? = null
     private var periodReadJob: Job? = null
-    /** Token and time of the last failed read; failures retry hourly, not every refresh. */
-    private var failedPeriodRead: Pair<String, Long>? = null
+    /** Key and time of the last failed read; failures retry hourly, not every refresh. */
+    private var failedPeriodRead: Pair<PeriodReadKey, Long>? = null
+    /** Settings › Subscription is on screen; only then is the token sent to myself.md. */
+    private var subscriptionDatesRequested = false
+
+    private data class PeriodReadKey(val token: String, val locallyRenewing: Boolean) {
+        override fun toString(): String = "PeriodReadKey(locallyRenewing=$locallyRenewing)"
+    }
+
+    private fun periodReadKey(status: SubscriptionStatus.Subscribed): PeriodReadKey? =
+        activeSubscriptionToken?.let { PeriodReadKey(it, status.isAutoRenewing) }
 
     init {
         scope.launch {
@@ -375,16 +390,21 @@ class BillingRepositoryImpl(
     }
 
     /**
-     * Takes Play's `switch-yearly-1y` offer as a Weekly -> Yearly replacement. Moving up charges
-     * now with the unused Weekly time credited (WITH_TIME_PRORATION), exactly as the card says.
-     * Does nothing unless the subscriber is eligible and Play has just re-confirmed the terms.
+     * Takes Play's `switch-yearly-1y` offer as a Weekly -> Yearly replacement with
+     * WITH_TIME_PRORATION: Yearly starts immediately and Play converts the unused Weekly time into
+     * extra Yearly time, so nothing is charged at the switch; the first-year offer payment is taken
+     * when that credited time runs out. Does nothing unless the subscriber is eligible and Play has
+     * just re-confirmed the terms. Every false return sets [purchaseError].
      */
     override suspend fun launchYearlySwitch(activity: Activity): Boolean {
         val result = withPurchaseLaunchAdmission(_isPurchasing) { markFlowLaunched ->
             _purchaseError.value = null
-            val displayed = YearlySwitchEligibility.eligible(_subscriptionStatus.value, _yearlySwitchOffer.value)
-                ?: return@withPurchaseLaunchAdmission false
+            val displayed = YearlySwitchEligibility.eligible(_subscriptionStatus.value, _yearlySwitchOffer.value) ?: run {
+                _purchaseError.value = BillingError.PRODUCT_UNAVAILABLE
+                return@withPurchaseLaunchAdmission false
+            }
             val oldToken = activeSubscriptionToken ?: run {
+                _purchaseError.value = BillingError.SERVICE_UNAVAILABLE
                 refresh()
                 return@withPurchaseLaunchAdmission false
             }
@@ -399,6 +419,7 @@ class BillingRepositoryImpl(
             if (activeSubscriptionToken != oldToken ||
                 YearlySwitchEligibility.eligible(_subscriptionStatus.value, _yearlySwitchOffer.value) == null
             ) {
+                _purchaseError.value = BillingError.PRODUCT_UNAVAILABLE
                 return@withPurchaseLaunchAdmission false
             }
             if (_yearlySwitchOffer.value != displayed) {
@@ -721,48 +742,60 @@ class BillingRepositoryImpl(
         val status = SubscriptionLapse.status(
             active = active,
             rememberedPlan = remembered,
-            hasIncludedAccess = prefs.getBoolean(KEY_LEGACY_UNLOCK_GRANTED, false),
+            // Lifetime counts as included access beside a still-renewing subscription, so that
+            // subscription stays manageable without the "features will stop" retention sheet.
+            hasIncludedAccess = prefs.getBoolean(KEY_LEGACY_UNLOCK_GRANTED, false) ||
+                (active?.plan != PurchasePlan.LIFETIME && prefs.getBoolean(KEY_IS_UNLOCKED, false)),
         )
+        localStatus = status
         _subscriptionStatus.value = withPeriodEnd(status)
-        readPeriodEndIfNeeded(status)
+        readPeriodEndIfNeeded()
     }
 
-    /** Adds the cached server date when it was read for the token owned right now. */
+    override fun setSubscriptionDatesRequested(requested: Boolean) {
+        subscriptionDatesRequested = requested
+        if (requested) readPeriodEndIfNeeded()
+    }
+
+    /** Applies the cached server answer when it was read for the token and renewal state owned now. */
     private fun withPeriodEnd(status: SubscriptionStatus): SubscriptionStatus {
         if (status !is SubscriptionStatus.Subscribed) return status
-        val token = activeSubscriptionToken ?: return status
-        val cached = verifiedPeriod?.takeIf { it.first == token }?.second
-        return status.copy(periodEndMillis = SubscriptionDates.periodEnd(status, cached, clock()))
+        val key = periodReadKey(status) ?: return status
+        val cached = verifiedPeriod?.takeIf { it.first == key }?.second
+        return SubscriptionDates.apply(status, cached, clock())
     }
 
     /**
-     * One server read per token: renewals move the date, so the cache is dropped once the date
-     * passes. Failures leave the status undated and retry at most hourly.
+     * One server read per token and renewal state, only while Settings › Subscription is on
+     * screen: renewals move the date, so the cache is dropped once the date passes. Failures leave
+     * the status undated and retry at most hourly.
      */
-    private fun readPeriodEndIfNeeded(status: SubscriptionStatus) {
+    private fun readPeriodEndIfNeeded() {
+        if (!subscriptionDatesRequested) return
         val verifier = subscriptionVerifier ?: return
-        if (status !is SubscriptionStatus.Subscribed) return
-        val token = activeSubscriptionToken ?: return
-        val cached = verifiedPeriod?.takeIf { it.first == token }?.second
+        val status = localStatus as? SubscriptionStatus.Subscribed ?: return
+        val key = periodReadKey(status) ?: return
+        val cached = verifiedPeriod?.takeIf { it.first == key }?.second
         if (cached != null && SubscriptionDates.periodEnd(status, cached, clock()) != null) return
         if (periodReadJob?.isActive == true) return
-        failedPeriodRead?.let { (failedToken, at) ->
-            if (failedToken == token && clock() - at < PERIOD_READ_RETRY_MS) return
+        failedPeriodRead?.let { (failedKey, at) ->
+            if (failedKey == key && clock() - at < PERIOD_READ_RETRY_MS) return
         }
         periodReadJob = scope.launch {
-            val verified = verifier.verify(token)
+            val verified = verifier.verify(key.token)
+            // A reset or a new snapshot while the read was in flight makes this answer stale.
+            if (!isActive || periodReadKey(localStatus as? SubscriptionStatus.Subscribed ?: return@launch) != key) {
+                return@launch
+            }
             // A transport success can still be unusable (wrong product/state or no future date).
             // Apply the same hourly backoff as a failed read rather than retrying every refresh.
             if (verified == null || SubscriptionDates.periodEnd(status, verified, clock()) == null) {
-                failedPeriodRead = token to clock()
+                failedPeriodRead = key to clock()
                 return@launch
             }
             failedPeriodRead = null
-            verifiedPeriod = token to verified
-            val current = _subscriptionStatus.value
-            if (activeSubscriptionToken == token && current is SubscriptionStatus.Subscribed) {
-                _subscriptionStatus.value = withPeriodEnd(current)
-            }
+            verifiedPeriod = key to verified
+            _subscriptionStatus.value = withPeriodEnd(localStatus)
         }
     }
 
@@ -788,7 +821,11 @@ class BillingRepositoryImpl(
             .remove(KEY_LEGACY_UNLOCK_GRANTED)
             .remove(KEY_REMEMBERED_SUBSCRIPTION)
             .apply()
+        // Cancel before clearing so an in-flight read cannot write the old token's date back.
+        periodReadJob?.cancel()
+        periodReadJob = null
         activeSubscriptionToken = null
+        localStatus = SubscriptionStatus.Unknown
         verifiedPeriod = null
         failedPeriodRead = null
         _yearlySwitchOffer.value = null

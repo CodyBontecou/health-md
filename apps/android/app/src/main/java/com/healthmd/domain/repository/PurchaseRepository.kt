@@ -41,7 +41,17 @@ interface PurchaseRepository {
 
     fun refresh()
 
-    /** Replaces the active Weekly subscription with the switch offer. False when not possible now. */
+    /**
+     * Whether Settings › Subscription is on screen. The server-verified renewal/end date is read
+     * (sending the purchase token to myself.md) only while it is; app start, headless exports,
+     * restore and reconcile never send the token.
+     */
+    fun setSubscriptionDatesRequested(requested: Boolean) {}
+
+    /**
+     * Replaces the active Weekly subscription with the switch offer. False when not possible now;
+     * every false return leaves [purchaseError] set so the caller can explain it.
+     */
     suspend fun launchYearlySwitch(activity: Activity): Boolean = false
 
     suspend fun launchPurchase(activity: Activity, plan: PurchasePlan = PurchasePlan.LIFETIME): Boolean

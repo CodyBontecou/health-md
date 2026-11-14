@@ -50,7 +50,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -93,10 +95,11 @@ fun SubscriptionScreen(
     val locale = LocalConfiguration.current.locales[0]
     var showsBeforeYouGo by rememberSaveable { mutableStateOf(false) }
 
-    // Returning from Google Play re-reads ownership, so a cancel shows on the way back.
+    // Each resume (first open, or back from Google Play) re-reads ownership once, so a cancel
+    // shows on the way back. The verified-date read runs only while this screen is resumed.
     LifecycleResumeEffect(viewModel) {
-        viewModel.refresh()
-        onPauseOrDispose { }
+        viewModel.onScreenResumed()
+        onPauseOrDispose { viewModel.onScreenPaused() }
     }
 
     val ui = subscriptionUi(status)
@@ -130,7 +133,10 @@ fun SubscriptionScreen(
                 SubscriptionAction.MANAGE_OR_CANCEL -> SubscriptionPrimary(
                     label = stringResource(R.string.m3_subscription_manage_or_cancel),
                     note = ui.actionNote,
-                    onClick = { showsBeforeYouGo = true },
+                    onClick = {
+                        viewModel.clearError()
+                        showsBeforeYouGo = true
+                    },
                     tag = "subscription.manage",
                 )
                 SubscriptionAction.MANAGE_IN_PLAY -> SubscriptionPrimary(
@@ -161,9 +167,13 @@ fun SubscriptionScreen(
             periodEnd = periodEnd,
             switchOffer = switchOffer,
             switchEnabled = !isPurchasing,
+            // Shown inside the sheet: a failed switch keeps it open (with any new terms) instead
+            // of closing onto an error hidden behind it.
+            error = billingErrorText(error),
             onSwitchToYearly = {
-                showsBeforeYouGo = false
-                (context as? android.app.Activity)?.let(viewModel::switchToYearly)
+                viewModel.switchToYearly(context.findActivity()) { launched ->
+                    if (launched) showsBeforeYouGo = false
+                }
             },
             onContinueToCancel = {
                 showsBeforeYouGo = false
@@ -376,6 +386,8 @@ internal fun BeforeYouGoSheet(
     switchOffer: YearlySwitchOffer? = null,
     switchEnabled: Boolean = true,
     onSwitchToYearly: () -> Unit = {},
+    /** Why the last switch attempt could not start; shown above the actions. */
+    error: String? = null,
 ) {
     val colors = LocalGeistColors.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -391,6 +403,7 @@ internal fun BeforeYouGoSheet(
             switchOffer = switchOffer,
             switchEnabled = switchEnabled,
             onSwitchToYearly = onSwitchToYearly,
+            error = error,
         )
     }
 }
@@ -408,6 +421,8 @@ internal fun BeforeYouGoContent(
     switchOffer: YearlySwitchOffer? = null,
     switchEnabled: Boolean = true,
     onSwitchToYearly: () -> Unit = {},
+    /** Why the last switch attempt could not start; shown above the actions. */
+    error: String? = null,
 ) {
     val colors = LocalGeistColors.current
     Column(
@@ -458,6 +473,17 @@ internal fun BeforeYouGoContent(
                 .padding(horizontal = GeistSpacing.space6)
                 .padding(top = GeistSpacing.space4, bottom = GeistSpacing.space6),
         ) {
+            error?.let {
+                Text(
+                    it,
+                    style = GeistType.copy14,
+                    color = colors.error,
+                    modifier = Modifier
+                        .padding(bottom = GeistSpacing.space3)
+                        .semantics { liveRegion = LiveRegionMode.Polite }
+                        .testTag("subscription.switchError"),
+                )
+            }
             // Equal size and weight: neither choice is visually demoted.
             Column(
                 verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
@@ -591,3 +617,10 @@ private fun openPlaySubscriptions(context: Context, url: String) {
 
 private const val TERMS_URL = "https://healthmd.app/terms-of-service.html"
 private const val PRIVACY_URL = "https://healthmd.app/privacy-policy.html"
+
+/** The hosting Activity behind Compose's (possibly wrapped) context, for Play's purchase sheet. */
+private tailrec fun Context.findActivity(): android.app.Activity? = when (this) {
+    is android.app.Activity -> this
+    is android.content.ContextWrapper -> baseContext.findActivity()
+    else -> null
+}

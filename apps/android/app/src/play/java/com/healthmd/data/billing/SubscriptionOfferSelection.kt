@@ -52,11 +52,23 @@ internal fun selectYearlySwitchOffer(details: ProductDetails): ProductDetails.Su
     val phases = offer.pricingPhases.pricingPhaseList
     if (phases.size != 2) return null
     val (intro, recurring) = phases
-    if (intro.billingPeriod != "P1Y" || intro.billingCycleCount != 1 ||
-        intro.recurrenceMode != ProductDetails.RecurrenceMode.FINITE_RECURRING) return null
+    if (intro.billingPeriod != "P1Y" || !isSingleFirstYear(intro)) return null
     if (recurring.billingPeriod != "P1Y" ||
         recurring.recurrenceMode != ProductDetails.RecurrenceMode.INFINITE_RECURRING) return null
     if (intro.priceCurrencyCode != recurring.priceCurrencyCode) return null
     if (intro.priceAmountMicros <= 0 || intro.priceAmountMicros >= recurring.priceAmountMicros) return null
     return offer
+}
+
+/**
+ * One discounted first year. Play Console's "Single payment" phase (what
+ * docs/retention-messages.md asks for) arrives as NON_RECURRING, which bills once by definition
+ * ([isSevenDayFreeTrial] sees its cycle count as 0; 1 is accepted too). A "Discounted recurring
+ * payment" phase of one cycle arrives as FINITE_RECURRING x 1. Both mean exactly one P1Y at the
+ * offer price.
+ */
+private fun isSingleFirstYear(phase: ProductDetails.PricingPhase): Boolean = when (phase.recurrenceMode) {
+    ProductDetails.RecurrenceMode.FINITE_RECURRING -> phase.billingCycleCount == 1
+    ProductDetails.RecurrenceMode.NON_RECURRING -> phase.billingCycleCount in 0..1
+    else -> false
 }
