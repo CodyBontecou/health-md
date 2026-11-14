@@ -70,6 +70,9 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
         }
     }
 
+    // These end-to-end renderer assertions run in the app-hosted suite. The
+    // Foundation-only client harness has no HealthData/exporter dependency.
+    #if !HEALTHMD_FOUNDATION_CLIENT_TESTS
     func testCycleStepsSurviveSelectedFetchAndExportWithoutChangingAppleSteps() async throws {
         ExternalIntegrationURLProtocolStub.setHandler { request in
             XCTAssertEqual(request.url?.path, "/developer/v2/cycle")
@@ -130,6 +133,8 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
         XCTAssertTrue(native.contains("\"zone_durations\""))
         XCTAssertFalse(native.contains("\"zone_duration\""))
     }
+
+    #endif
 
     func testSelectedResourcesOnlyContactTheirEndpointsAndRetainAllPages() async throws {
         var paths: [String] = []

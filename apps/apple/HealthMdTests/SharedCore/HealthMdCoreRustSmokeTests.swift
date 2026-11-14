@@ -46,7 +46,8 @@ final class HealthMdCoreRustSmokeTests: XCTestCase {
     }
 
     func testV10RegistryIsDistinctWithoutChangingV8PrimaryMetrics() throws {
-        let old = try service.metricRegistry(profile: .appleHealthDataV8)
+        let old = try service.metricRegistryAtAuthority(profile: .appleHealthDataV8,
+            registrySHA256: "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99")
         let current = try service.metricRegistry(profile: .appleHealthDataV10)
         XCTAssertEqual(current.profileId, "apple_health_data_v10")
         XCTAssertEqual(current.publicSchemaVersion, 10)

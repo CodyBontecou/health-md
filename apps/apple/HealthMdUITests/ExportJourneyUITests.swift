@@ -253,7 +253,7 @@ final class ExportJourneyUITests: XCTestCase {
             XCTFail("Vault setup must render the local Files provider")
             return
         }
-        let testVault = setupFiles.staticTexts["TestVault"].firstMatch
+        let testVault = setupFiles.cells.containing(.staticText, identifier: "TestVault").firstMatch
         if !testVault.waitForExistence(timeout: 2) {
             let appContainer = setupFiles.cells.containing(.staticText, identifier: "Health.md").firstMatch
             guard appContainer.waitForExistence(timeout: 5) else {
@@ -270,12 +270,40 @@ final class ExportJourneyUITests: XCTestCase {
             XCTFail("Files must expose the synthetic TestVault folder")
             return
         }
+        // Tapping a filename in the provider's icon view need not enter its folder.
+        // Select the cell and observe navigation before Open can select a parent.
         testVault.tap()
+        // SDK27 Files exposes the current folder as an actions-menu button.
+        let selectedFolderTitle = app.navigationBars.buttons["TestVault, Actions Menu"].firstMatch
+        guard selectedFolderTitle.waitForExistence(timeout: 10) else {
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "Synthetic TestVault navigation hierarchy"
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+            let screenshot = XCTAttachment(screenshot: app.screenshot())
+            screenshot.name = "Synthetic TestVault navigation"
+            screenshot.lifetime = .keepAlways
+            add(screenshot)
+            XCTFail("Files must enter TestVault before selecting the export destination")
+            return
+        }
         openFolder.tap()
         let pickerDismissed = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == false"), object: openFolder
         )
-        XCTAssertEqual(XCTWaiter.wait(for: [pickerDismissed], timeout: 10), .completed)
+        let dismissalResult = XCTWaiter.wait(for: [pickerDismissed], timeout: 10)
+        if dismissalResult != .completed {
+            let hierarchy = XCTAttachment(string: app.debugDescription)
+            hierarchy.name = "Synthetic vault picker dismissal hierarchy"
+            hierarchy.lifetime = .keepAlways
+            add(hierarchy)
+            let screenshot = XCTAttachment(screenshot: app.screenshot())
+            screenshot.name = "Synthetic vault picker dismissal"
+            screenshot.lifetime = .keepAlways
+            add(screenshot)
+        }
+        XCTAssertEqual(dismissalResult, .completed)
+        XCTAssertTrue(vaultBadge.label.contains("TestVault"), "Files must select the synthetic vault, not its parent")
 
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
@@ -895,6 +923,40 @@ final class ExportJourneyUITests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    func testDateRangePresets_selectedCustomRemainsEnabledAfterLeavingAndReopeningExport() throws {
+        let app = UITestLaunchHelper.firstRunExportApp()
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
+        app.launch()
+        let custom = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
+        scrollDatePresetIntoView(custom, in: app)
+        XCTAssertTrue(custom.isEnabled)
+        custom.tap()
+        let start = app.descendants(matching: .any)[UITestLaunchHelper.Export.customStartDatePicker]
+        let end = app.descendants(matching: .any)[UITestLaunchHelper.Export.customEndDatePicker]
+        XCTAssertTrue(start.waitForExistence(timeout: 3))
+        XCTAssertTrue(end.waitForExistence(timeout: 3))
+        XCTAssertEqual(custom.value as? String, "Selected")
+
+        app.buttons["glass.classicExport.done"].tap()
+        XCTAssertTrue(custom.waitForNonExistence(timeout: 5))
+        // The classic editor is a debug-only sheet in the current shell.
+        // Relaunch with the same persisted settings to exercise reentry.
+        app.terminate()
+        app.launch()
+        scrollDatePresetIntoView(custom, in: app)
+        XCTAssertTrue(custom.isEnabled, "Selected Custom must not become a disabled preset on reentry")
+        XCTAssertEqual(custom.value as? String, "Selected")
+        custom.tap() // Deliberately do not select Today first.
+        XCTAssertTrue(start.waitForExistence(timeout: 3))
+        XCTAssertTrue(end.waitForExistence(timeout: 3))
+        XCTAssertTrue(start.isEnabled)
+        XCTAssertTrue(end.isEnabled)
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Custom selector after export reentry"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
 
     private func sleepDayAttributionPicker(in app: XCUIApplication) -> XCUIElement {
         // Reveal an anchor below the picker so it clears the sticky export action bar.

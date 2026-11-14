@@ -183,6 +183,18 @@ final class ExportProfilesJourneyUITests: XCTestCase {
     // MARK: - Journey C: per-profile schedules
 
     func testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter() {
+        checkProfileSchedule(refreshInterval: nil)
+    }
+
+    func testQA_ProfileThirtyMinuteRefreshPersistsWithWeeklyCadence() {
+        checkProfileSchedule(refreshInterval: "Every 30 minutes")
+    }
+
+    func testQA_ProfileHourlyRefreshPersistsWithWeeklyCadence() {
+        checkProfileSchedule(refreshInterval: "Every hour")
+    }
+
+    private func checkProfileSchedule(refreshInterval: String?) {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
 
@@ -214,7 +226,7 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         snap("10-weekly-cadence-saved")
 
         // Minute choices survive save/reopen and do not change completed-day cadence.
-        for label in ["Every 30 minutes", "Every hour"] {
+        if let label = refreshInterval {
             scheduleRow.tap()
             XCTAssertTrue(enabledToggle.waitUntilExists(timeout: 5), "editor must reopen before editing refresh")
             // The glass schedule sheet scrolls in a plain ScrollView, not a Form list.

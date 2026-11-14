@@ -15,7 +15,7 @@ For the **single-owner, unbacked Health.md Cloud pilot** only, the optional comp
 
 The URL is stored in private app preferences. Authorization and custom header values are stored separately with Android EncryptedSharedPreferences backed by Android Keystore. Export settings and encrypted secrets are excluded from Android backup/device transfer, UI labels, export history, logs, and WorkManager input. Because URL query parameters are part of the settings URL, put API keys and other secrets in encrypted request headers instead. Saved header values are not displayed again; entering new custom headers replaces the complete saved custom-header set.
 
-Compatibility exports accept HTTP and HTTPS. HTTP sends health data and configured headers without transport encryption. Standard redirects are followed, including redirects between HTTP and HTTPS, so only configure URLs whose full redirect chain you trust. OkHttp removes `Authorization` when a redirect changes origin, but other custom headers can be forwarded.
+Compatibility exports accept HTTP and HTTPS. HTTP sends health data and configured headers without transport encryption. A request follows at most five redirects, and only when a `307` or `308` preserves the POST on the exact same scheme, host, and port. Method-changing, credential-bearing, cross-host, cross-port, and HTTP↔HTTPS redirects are returned as HTTP failures before the app sends health bytes or any configured header to the target.
 
 Raw API Snapshots require HTTPS and reject every redirect. This prevents replaying the streamed artifact, Authorization, or custom headers to another or plaintext origin. URL fragments and embedded username/password values remain rejected for both products.
 
@@ -52,7 +52,7 @@ The body is a JSON envelope:
 
 `records` contains the frozen Android/iOS-compatible daily JSON export shape after applying selected metrics and Detailed Time-Series settings. Dates with no readable data are omitted from `records` and included in `failed_date_details`.
 
-Any final `2xx` response is successful. Redirects use OkHttp’s standard behavior: `301`, `302`, and `303` can change the redirected POST to GET, while `307` and `308` preserve the POST method and JSON body. Network failures, HTTP 408/429, and server `5xx` responses are eligible for bounded WorkManager retry; invalid configuration and ordinary `4xx` responses are not.
+Any final `2xx` response is successful. Only same-origin `307` and `308` responses may preserve and resend the immutable POST, for at most five hops; every other redirect is an HTTP rejection. Network failures, HTTP 408/429, and server `5xx` responses are eligible for bounded WorkManager retry; invalid configuration and ordinary `4xx` responses are not.
 
 Any valid end-to-end request header can be configured, including `Authorization`, `X-API-Key`, vendor-specific version headers, and custom `Accept` or `User-Agent` values. The request body always remains JSON.
 
@@ -87,4 +87,4 @@ Failed scheduled work records its destination type and a salted one-way fingerpr
 
 ## Privacy
 
-API Endpoint export intentionally transmits selected health data to the configured service. For compatibility exports, use only endpoints and redirect chains you control, prefer HTTPS, minimize selected metrics, and disable Detailed Time-Series unless needed. Raw snapshots always require HTTPS and reject redirects, but can include stable source IDs, free text, FHIR resources, and precise exercise routes. The receiving service controls its own logging, storage, and retention behavior.
+API Endpoint export intentionally transmits selected health data to the configured service. For compatibility exports, use only endpoints and same-origin redirect chains you control, prefer HTTPS, minimize selected metrics, and disable Detailed Time-Series unless needed. Raw snapshots always require HTTPS and reject redirects, but can include stable source IDs, free text, FHIR resources, and precise exercise routes. The receiving service controls its own logging, storage, and retention behavior.
