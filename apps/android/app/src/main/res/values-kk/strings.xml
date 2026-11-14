@@ -229,7 +229,7 @@
     <string name="section_write_mode">Жазу режимі</string>
     <string name="section_filename_template">Файл атауының үлгісі</string>
     <string name="filename_template_hint">{date}</string>
-    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}</string>
+    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}, {week}, {weekYear}</string>
     <string name="section_format_options">Пішім параметрлері</string>
     <string name="toggle_include_frontmatter">Frontmatter қосу</string>
     <string name="toggle_group_by_category">Санат бойынша топтау</string>

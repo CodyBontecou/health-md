@@ -239,7 +239,7 @@
     <string name="section_write_mode">লেখার মোড</string>
     <string name="section_filename_template">ফাইলনাম টেমপ্লেট</string>
     <string name="filename_template_hint">{date}</string>
-    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}</string>
+    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}, {week}, {weekYear}</string>
     <string name="section_format_options">ফরম্যাট বিকল্পসমূহ</string>
     <string name="toggle_include_frontmatter">ফ্রন্টম্যাটার অন্তর্ভুক্ত করুন</string>
     <string name="toggle_group_by_category">ক্যাটাগরি দ্বারা গ্রুপ করুন</string>

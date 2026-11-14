@@ -33,6 +33,7 @@ Sorts exports into date-based subfolders under your destination — pick a prese
    - **By Year** — `2026/`
    - **By Month** — `05/`
    - **By Year/Month** — `2026/05/`
+   - **By Year and Week** — sets the custom template `{weekYear}/Week {week}`
 2. Or type a custom template using placeholders like `{year}/{quarter}`.
 3. Preview an export to see the resolved path before writing.
 
@@ -77,3 +78,8 @@ MyVault/
 ## Implementation notes
 
 `ExportSettings.formatFolderPath` resolves `folderStructure` when non-empty, else the `FolderOrganization` preset mapping (`FLAT` → none, `BY_YEAR` → `{year}`, `BY_MONTH` → `{month}`, `BY_YEAR_MONTH` → `{year}/{month}`); an empty resolution exports flat. `aggregateSubfolderPath` joins the user subfolder (default `health`) with the resolved date path. Folder creation happens through the Storage Access Framework — provider support for nested document creation determines what works on Drive/OneDrive-style providers.
+
+**By Year and Week** is a template preset, including in automation/profile editors;
+it keeps the existing persisted folder enum and Shared Setup v2 enum unchanged.
+January 1, 2027 resolves to `2026/Week 53`; January 4 resolves to `2027/Week 01`.
+The non-empty custom template takes precedence over the selected legacy preset.
