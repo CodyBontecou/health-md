@@ -536,6 +536,7 @@ private data class OutputDraft(
 
     val isValid: Boolean
         get() = hasValidPaths && when (target) {
+            ExportTarget.GOOGLE_DRIVE -> true
             ExportTarget.DEVICE_FOLDER -> true
             ExportTarget.API_ENDPOINT -> APIExportEndpoint.isConfigured(apiEndpointUrl)
             ExportTarget.AGENT_DATA_GATEWAY -> AgentDataGatewayEndpoint.isConfigured(agentDataGatewayUrl)
@@ -617,6 +618,7 @@ private fun ProfileOutputPage(
                             stringResource(
                                 when (target) {
                                     ExportTarget.DEVICE_FOLDER -> R.string.m3_profiles_editor_target_device
+                                    ExportTarget.GOOGLE_DRIVE -> R.string.google_drive_title
                                     ExportTarget.API_ENDPOINT -> R.string.m3_profiles_editor_target_api
                                     ExportTarget.AGENT_DATA_GATEWAY -> R.string.export_preview_gateway_destination
                                 },
@@ -651,6 +653,7 @@ private fun ProfileOutputPage(
                                 }
                             }
                         }
+                        ExportTarget.GOOGLE_DRIVE -> Text(stringResource(R.string.google_drive_title), style = GeistType.copy14, color = colors.secondary)
                         ExportTarget.API_ENDPOINT -> UrlField(
                             value = draft.apiEndpointUrl,
                             label = stringResource(R.string.api_export_endpoint_url_label),

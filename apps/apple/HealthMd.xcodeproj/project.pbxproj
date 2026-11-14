@@ -246,6 +246,8 @@
 				iOS/Views/IndividualTrackingView.swift,
 				iOS/Views/MetricSelectionView.swift,
 				iOS/Views/OnboardingView.swift,
+				iOS/Views/OnboardingSteps.swift,
+				iOS/NewExperience/Settings/GlassAPIEndpointEditorSheet.swift,
 				iOS/Views/PaywallView.swift,
 				iOS/Views/ScheduleSettingsView.swift,
 				macOS/Info.plist,
@@ -1319,6 +1321,7 @@
 			baseConfigurationReference = C11C00000000000000000001 /* NativeLicensing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				GOOGLE_DRIVE_REDIRECT_SCHEME = "com.codybontecou.obsidianhealth.google-drive-unconfigured";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -1386,6 +1389,7 @@
 			baseConfigurationReference = C11C00000000000000000001 /* NativeLicensing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				GOOGLE_DRIVE_REDIRECT_SCHEME = "com.codybontecou.obsidianhealth.google-drive-unconfigured";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -1669,6 +1673,7 @@
 			baseConfigurationReference = C11C00000000000000000001 /* NativeLicensing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				GOOGLE_DRIVE_REDIRECT_SCHEME = "com.codybontecou.obsidianhealth.google-drive-unconfigured";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -1916,6 +1921,7 @@
 			baseConfigurationReference = C11C00000000000000000001 /* NativeLicensing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				GOOGLE_DRIVE_REDIRECT_SCHEME = "com.codybontecou.obsidianhealth.google-drive-unconfigured";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;

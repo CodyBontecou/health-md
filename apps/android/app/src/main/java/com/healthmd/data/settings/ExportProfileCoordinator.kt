@@ -2,6 +2,7 @@ package com.healthmd.data.settings
 
 import androidx.annotation.VisibleForTesting
 import com.healthmd.data.scheduler.ScheduledProfileSnapshotFactory
+import com.healthmd.data.drive.GoogleDriveSelectionStore
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportProfileRules
 import com.healthmd.domain.model.ExportSettings
@@ -45,6 +46,7 @@ class ExportProfileCoordinator @Inject constructor(
     private val profileRepository: ExportProfileRepository,
     private val settingsRepository: SettingsRepository,
     private val snapshotFactory: ScheduledProfileSnapshotFactory,
+    private val googleDriveSelectionStore: GoogleDriveSelectionStore,
 ) {
     /** Owns the app-lifetime edit observer; overridable in tests before [ensureStarted]. */
     @VisibleForTesting
@@ -75,6 +77,10 @@ class ExportProfileCoordinator @Inject constructor(
 
     private suspend fun bootstrapAndApply(): Boolean = mutex.withLock {
         val current = settingsRepository.getExportSettings()
+        if (profileRepository.getProfiles().isEmpty() && profileRepository.hasOpaqueProfiles()) {
+            if (current.scheduleEnabled) settingsRepository.updateExportSettings(current.copy(scheduleEnabled = false))
+            return@withLock false
+        }
         if (profileRepository.getProfiles().isEmpty()) {
             val target = current.scheduledExportTarget
             val endpointUrl = current.apiEndpointUrl.takeIf { it.isNotBlank() }
@@ -96,7 +102,9 @@ class ExportProfileCoordinator @Inject constructor(
             Timber.w("Blocked imported profile remains inert during bootstrap")
             return@withLock false
         }
-        applyProfile(active, settingsRepository.getExportSettings())
+        val applied = applyProfile(active, settingsRepository.getExportSettings())
+        if (applied) adoptDestinationBinding(active)
+        applied
     }
 
     /**
@@ -117,7 +125,7 @@ class ExportProfileCoordinator @Inject constructor(
             // even if the initiating screen leaves.
             return withContext(NonCancellable) {
                 val applied = applyProfile(profile, settingsRepository.getExportSettings())
-                if (applied) adoptFolderBinding(profile)
+                if (applied) adoptDestinationBinding(profile)
                 applied
             }
         }
@@ -146,7 +154,7 @@ class ExportProfileCoordinator @Inject constructor(
                 }
                 return@withContext false
             }
-            adoptFolderBinding(profile)
+            adoptDestinationBinding(profile)
             true
         }
     }
@@ -195,18 +203,20 @@ class ExportProfileCoordinator @Inject constructor(
                 }
                 return@withContext false
             }
-            adoptFolderBinding(successor)
+            adoptDestinationBinding(successor)
             true
         }
     }
 
     /** Adopts the profile's bound folder as the live device folder (nil binding keeps the
      * current selection, matching the iOS unbound-vault rule). */
-    private suspend fun adoptFolderBinding(profile: ExportProfile) {
-        val folderUri = profile.folderUri?.takeIf { it.isNotBlank() } ?: return
-        val current = settingsRepository.getExportFolderUri()
-        if (current != folderUri) {
-            settingsRepository.saveExportFolderUri(folderUri)
+    private suspend fun adoptDestinationBinding(profile: ExportProfile) {
+        profile.folderUri?.takeIf { it.isNotBlank() }?.let { folderUri ->
+            val current = settingsRepository.getExportFolderUri()
+            if (current != folderUri) settingsRepository.saveExportFolderUri(folderUri)
+        }
+        if (profile.target == com.healthmd.domain.model.ExportTarget.GOOGLE_DRIVE) {
+            googleDriveSelectionStore.select(profile.destinationId)
         }
     }
 
@@ -243,6 +253,27 @@ class ExportProfileCoordinator @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * Onboarding connected a Google Drive folder: targets live settings at Drive, freezes them into
+     * the active profile, binds [destinationId] to it, and selects it so manual and scheduled runs
+     * use it. Returns false (nothing bound) when there is no active profile or it is blocked.
+     */
+    suspend fun googleDriveDestinationWasSelected(destinationId: String): Boolean = mutex.withLock {
+        val active = profileRepository.getActiveProfile() ?: return false
+        if (profileRepository.isSharedSetupV2Blocked(active.id)) return false
+        settingsRepository.updateExportSettingsAtomically { current ->
+            current.copy(
+                exportTarget = com.healthmd.domain.model.ExportTarget.GOOGLE_DRIVE,
+                scheduledExportTarget = com.healthmd.domain.model.ExportTarget.GOOGLE_DRIVE,
+            )
+        }
+        flushEditsLocked()
+        if (!profileRepository.bindGoogleDriveDestination(active.id, destinationId)) return false
+        // The connect flow already selected it; this keeps manual export on the bound folder.
+        googleDriveSelectionStore.selectIfAllowed(destinationId)
+        true
     }
 
     /** Freezes current live settings into the active profile (debounce expiry, exports). */
