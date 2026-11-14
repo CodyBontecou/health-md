@@ -84,19 +84,29 @@ class RegistryCapabilityScopeTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "reviewed registry revision"):
                     importer.build_registry(self.apple, self.android, known)
 
-    def test_existing_metric_availability_still_comes_from_live_governance(self):
+    def test_current_availability_updates_index_without_rewriting_frozen_registry(self):
         manifest = copy.deepcopy(self.manifest)
         activity = next(item for item in manifest["capabilities"] if item["id"] == "export.activity-basics")
         activity["platforms"]["android"]["state"] = "unavailable"
         rebuilt = self.build(manifest)
+        self.assertEqual(self.committed, rebuilt)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "capabilities.json"
+            path.write_text(json.dumps(manifest))
+            with patch.multiple(importer, CAPABILITY_MANIFEST=path, REPO=Path(directory)):
+                index = importer.build_capability_index()
         self.assertNotIn(
-            "export.activity-basics", rebuilt["available_capability_ids_by_platform"]["android"]
+            "export.activity-basics", index["available_capability_ids_by_platform"]["android"]
         )
-        self.assertIn("export.activity-basics", rebuilt["known_capability_ids"])
+        self.assertIn("export.activity-basics", index["known_capability_ids"])
 
 
 class NativeRegistryImportTest(unittest.TestCase):
     def setUp(self) -> None:
+        self.original_capability_index = IMPORTER.CAPABILITY_INDEX_PATH.read_bytes()
+        self.addCleanup(lambda: self.assertEqual(
+            self.original_capability_index, IMPORTER.CAPABILITY_INDEX_PATH.read_bytes()
+        ))
         self.registry = json.loads(IMPORTER.REGISTRY_PATH.read_text())
         self.capabilities = json.loads(IMPORTER.CAPABILITY_MANIFEST.read_text())
         self.apple = IMPORTER.APPLE_BASELINE.read_bytes()
@@ -121,6 +131,7 @@ class NativeRegistryImportTest(unittest.TestCase):
                     REPO=root,
                     REGISTRY_DIR=root,
                     REGISTRY_PATH=registry,
+                    CAPABILITY_INDEX_PATH=root / "capability-index-v1.json",
                     APPLE_BASELINE=apple,
                     ANDROID_BASELINE=android,
                     CAPABILITY_MANIFEST=capabilities,
@@ -129,6 +140,9 @@ class NativeRegistryImportTest(unittest.TestCase):
                 patch.object(sys, "argv", [str(SCRIPT), *(["--check"] if check else [])]),
                 contextlib.redirect_stdout(io.StringIO()),
             ):
+                IMPORTER.CAPABILITY_INDEX_PATH.write_bytes(
+                    IMPORTER.canonical_bytes(IMPORTER.build_capability_index())
+                )
                 IMPORTER.main()
             self.assertEqual(self.apple, apple.read_bytes())
             self.assertEqual(self.android, android.read_bytes())

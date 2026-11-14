@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+pub mod agent_direct;
 #[cfg(test)]
 mod direct_denial_test_support;
 

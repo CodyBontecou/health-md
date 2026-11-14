@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.AndroidExportProfile
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.model.APIExportEndpoint
@@ -22,6 +23,13 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import timber.log.Timber
+
+/** Non-secret frozen output configuration; contains no active-profile or destination authority. */
+internal data class ExportProfileConfigurationSnapshot(
+    val revision: Int,
+    val settings: AndroidExportSettingsSnapshot,
+    val executionBlocked: Boolean,
+)
 
 /**
  * DataStore-backed repository for export profiles (Android phase 6 parity).
@@ -62,6 +70,27 @@ class ExportProfileRepository @Inject constructor(
 
     suspend fun profileByName(name: String): ExportProfile? =
         ExportProfileRules.byName(getProfiles(), name)
+
+    /** One committed DataStore image supplies the exact row, revision and rebind state. No default,
+     * active-profile lookup, migration, preference edit, endpoint or credential read is performed. */
+    internal suspend fun readConfigurationProfile(id: String, expectedRevision: Int): ExportProfileConfigurationSnapshot? =
+        if (expectedRevision < 1) null else readConfigurationProfile(dataStore.data.first(), id, expectedRevision)
+
+    internal fun readConfigurationProfile(prefs: Preferences, id: String, expectedRevision: Int): ExportProfileConfigurationSnapshot? {
+        if (expectedRevision < 1) return null
+        // Any corrupt root or opaque/undecodable row fails closed, as the pre-envelope reader did.
+        val decoded = ExportProfilePersistence.decode(prefs)
+        if (decoded.blocksDefaultMigration) return null
+        val profile = decoded.profiles.singleOrNull { it.id == id }
+            ?.takeIf { it.configurationRevision == expectedRevision } ?: return null
+        val snapshot = AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson) ?: return null
+        val blocked = try {
+            prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
+        } catch (_: ClassCastException) {
+            return null // Malformed gate storage never grants execution.
+        }
+        return ExportProfileConfigurationSnapshot(expectedRevision, snapshot, id in blocked)
+    }
 
     /** Central non-secret execution gate for imported profiles awaiting local rebinding. */
     suspend fun sharedSetupV2ExecutionAccess(id: String): SharedSetupV2ProfileExecutionAccess =
@@ -184,7 +213,9 @@ class ExportProfileRepository @Inject constructor(
             if (index >= 0) {
                 val concreteFolderUri = folderUri
                     ?.takeIf { it.isNotBlank() && it.startsWith("content://", ignoreCase = true) }
+                val revision = existing[index].nextConfigurationRevision() ?: return@edit
                 val updated = existing[index].copy(
+                    configurationRevision = revision,
                     folderUri = folderUri?.takeIf { it.isNotBlank() },
                     folderDisplayName = folderDisplayName?.takeIf { it.isNotBlank() },
                     updatedAtEpochMillis = System.currentTimeMillis(),
@@ -224,7 +255,9 @@ class ExportProfileRepository @Inject constructor(
             val existing = decoded.profiles
             val index = existing.indexOfFirst { it.id == id }
             if (index >= 0) {
+                val revision = existing[index].nextConfigurationRevision() ?: return@edit
                 val updated = existing[index].copy(
+                    configurationRevision = revision,
                     settingsSnapshotJson = settingsSnapshotJson ?: existing[index].settingsSnapshotJson,
                     target = target ?: existing[index].target,
                     apiEndpointUrl = apiEndpointUrl ?: existing[index].apiEndpointUrl,
@@ -251,7 +284,12 @@ class ExportProfileRepository @Inject constructor(
             val existing = decoded.profiles
             val index = existing.indexOfFirst { it.id == id }
             if (index >= 0) {
-                val updated = existing[index].copy(apiEndpointUrl = null, updatedAtEpochMillis = System.currentTimeMillis())
+                val revision = existing[index].nextConfigurationRevision() ?: return@edit
+                val updated = existing[index].copy(
+                    configurationRevision = revision,
+                    apiEndpointUrl = null,
+                    updatedAtEpochMillis = System.currentTimeMillis(),
+                )
                 ExportProfilePersistence.writeNative(prefs, decoded, existing.toMutableList().apply { set(index, updated) })
                 applied = true
             }
@@ -285,7 +323,9 @@ class ExportProfileRepository @Inject constructor(
             val index = existing.indexOfFirst { it.id == id }
             if (index >= 0) {
                 val others = existing.filterIndexed { i, _ -> i != index }
+                val revision = existing[index].nextConfigurationRevision() ?: return@edit
                 val updated = existing[index].copy(
+                    configurationRevision = revision,
                     name = ExportProfileRules.uniquifyName(rawName, others),
                     settingsSnapshotJson = settingsSnapshotJson,
                     target = target,
@@ -331,7 +371,9 @@ class ExportProfileRepository @Inject constructor(
             val existing = decoded.profiles
             val index = existing.indexOfFirst { it.id == id }
             if (index >= 0) {
+                val revision = existing[index].nextConfigurationRevision() ?: return@edit
                 val updated = existing[index].copy(
+                    configurationRevision = revision,
                     target = ExportTarget.GOOGLE_DRIVE,
                     destinationId = destinationId,
                     updatedAtEpochMillis = System.currentTimeMillis(),
@@ -361,7 +403,14 @@ class ExportProfileRepository @Inject constructor(
         val updated = decoded.profiles.map { profile ->
             if (profile.target == ExportTarget.GOOGLE_DRIVE && profile.destinationId == destinationId) {
                 affected += profile.id
-                profile.copy(destinationId = null, updatedAtEpochMillis = System.currentTimeMillis())
+                val revision = checkNotNull(profile.nextConfigurationRevision()) {
+                    "Export profile configuration revision is exhausted."
+                }
+                profile.copy(
+                    configurationRevision = revision,
+                    destinationId = null,
+                    updatedAtEpochMillis = System.currentTimeMillis(),
+                )
             } else profile
         }
         if (affected.isNotEmpty()) ExportProfilePersistence.writeNative(prefs, decoded, updated)
@@ -380,7 +429,9 @@ class ExportProfileRepository @Inject constructor(
             if (index >= 0) {
                 val others = existing.filterIndexed { i, _ -> i != index }
                 val unique = ExportProfileRules.uniquifyName(rawName, others)
+                val revision = existing[index].nextConfigurationRevision() ?: return@edit
                 val updated = existing[index].copy(
+                    configurationRevision = revision,
                     name = unique,
                     updatedAtEpochMillis = System.currentTimeMillis(),
                 )
@@ -519,7 +570,9 @@ class ExportProfileRepository @Inject constructor(
             val encodedSnapshot = runCatching {
                 AndroidExportSettingsSnapshotCodec.encodeCanonical(reboundSnapshot)
             }.getOrNull() ?: return@edit
+            val revision = profile.nextConfigurationRevision() ?: return@edit
             val updated = profile.copy(
+                configurationRevision = revision,
                 apiEndpointUrl = endpoint,
                 settingsSnapshotJson = encodedSnapshot,
                 updatedAtEpochMillis = System.currentTimeMillis(),

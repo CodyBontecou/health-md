@@ -252,11 +252,11 @@ final class AgentDataGatewayDestinationTests: XCTestCase {
             name: "LAN",
             endpointURLString: "http://127.0.0.1:8791"
         )
-        let profile = profileStore.add(
+        let profile = try XCTUnwrap(profileStore.add(
             name: "Gateway profile",
             settings: ExportSettingsSnapshot.from(AdvancedExportSettings(userDefaults: makeIsolatedDefaults())),
             target: .agentDataGateway
-        )
+        ))
 
         // The binding is native destination-store state; the ExportProfile
         // payload is unchanged.

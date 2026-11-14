@@ -48,6 +48,9 @@ data class ScheduledProfilePendingExport(
     val folderUri: String? = null,
     val folderDisplayName: String? = null,
     val durableOperationId: String? = null,
+    /** Private original authority, captured before any permission check or health read. */
+    val apiAuthorityJson: String? = null,
+    val apiJournalRequired: Boolean = false,
     /** Local Drive binding frozen with residual work; never part of portable setup. */
     val destinationId: String? = null,
     /** Accepted Morning refresh scope; legacy residuals retain their completed-day-only behavior. */
@@ -330,8 +333,11 @@ object ScheduledProfileOccurrenceMath {
                     .thenBy { it.id },
             )
             .firstNotNullOfOrNull { pending ->
-                val dates = if (pending.refreshSlotMillis != null) pending.ownerDates
-                    else pending.ownerDates.filterNot { it.isAfter(yesterday) }
+                val dates = if (pending.refreshSlotMillis != null || pending.target == ExportTarget.API_ENDPOINT &&
+                    (pending.apiAuthorityJson != null && pending.durableOperationId != null)
+                ) {
+                    pending.ownerDates
+                } else pending.ownerDates.filterNot { it.isAfter(yesterday) }
                 dates.takeIf { it.isNotEmpty() }?.let {
                     ScheduledProfileEntry.DueOccurrence(
                         entry = entry,

@@ -19,6 +19,23 @@ import java.time.ZoneId
 class ScheduledExportPendingRequestsTest {
 
     @Test
+    fun preparedFenceRequiresExactPendingAuthorityAndCannotReviveDiscardedDates() {
+        val date = LocalDate.ofEpochDay(10_000)
+        val initial = ExportSettings(pendingScheduledExportRequests = listOf(PendingScheduledExportRequest(
+            date, ExportTarget.API_ENDPOINT, apiAuthorityJson = "original", apiOperationId = "operation")))
+        val wrong = ScheduledExportPendingRequests.markAPIJournalRequired(initial, listOf(date), "replacement", "operation")
+        assertThat(wrong.pendingScheduledExportRequests.single().apiJournalRequired).isFalse()
+        val prepared = ScheduledExportPendingRequests.markAPIJournalRequired(initial, listOf(date), "original", "operation")
+        assertThat(prepared.pendingScheduledExportRequests.single().apiJournalRequired).isTrue()
+        val discarded = ScheduledExportPendingRequests.clearDates(prepared, listOf(date))
+        val late = ScheduledExportPendingRequests.markAPIJournalRequired(discarded, listOf(date), "original", "operation")
+        assertThat(late.pendingScheduledExportRequests).isEmpty()
+        val unverified = initial.copy(pendingScheduledExportRequests = listOf(initial.pendingScheduledExportRequests.single().copy(apiAuthorityJson = null)))
+        assertThat(ScheduledExportPendingRequests.markAPIJournalRequired(unverified, listOf(date), "original", "operation")
+            .pendingScheduledExportRequests.single().apiJournalRequired).isFalse()
+    }
+
+    @Test
     fun pendingRequests_mergesLegacyDatesWithExplicitRequests() {
         val explicitDate = LocalDate.parse("2026-06-02")
         val settings = ExportSettings(
@@ -445,6 +462,7 @@ class ScheduledExportPendingRequestsTest {
                     date = first,
                     exportTarget = ExportTarget.API_ENDPOINT,
                     apiOperationId = operationId,
+                    apiAuthorityJson = "original-authority",
                 ),
                 PendingScheduledExportRequest(
                     date = second,
@@ -460,6 +478,7 @@ class ScheduledExportPendingRequestsTest {
             destinationFingerprint = null,
             apiOperationId = operationId,
             resumeExistingApiOperation = true,
+            apiAuthorityJson = "original-authority",
         )
 
         assertThat(dates).containsExactly(first)

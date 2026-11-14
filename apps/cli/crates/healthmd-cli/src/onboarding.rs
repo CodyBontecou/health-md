@@ -50,6 +50,34 @@ impl fmt::Display for OnboardingError {
 
 impl std::error::Error for OnboardingError {}
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SetupDeviceSelectionError {
+    NotPaired,
+    Ambiguous,
+}
+
+/// Select one existing mobile identity without filtering by source platform or re-pairing.
+///
+/// # Errors
+///
+/// Rejects a missing explicit identity or ambiguous trust; empty trust returns no selection.
+pub fn select_setup_device(
+    trusted_ids: &[Uuid],
+    requested: Option<Uuid>,
+) -> Result<Option<Uuid>, SetupDeviceSelectionError> {
+    if let Some(id) = requested {
+        return trusted_ids
+            .contains(&id)
+            .then_some(Some(id))
+            .ok_or(SetupDeviceSelectionError::NotPaired);
+    }
+    match trusted_ids {
+        [] => Ok(None),
+        [id] => Ok(Some(*id)),
+        _ => Err(SetupDeviceSelectionError::Ambiguous),
+    }
+}
+
 /// Resolve the Codex configuration using `CODEX_HOME` or the current user's home directory.
 ///
 /// # Errors
@@ -382,6 +410,26 @@ mod tests {
         let second = configure_codex_at(&config, &executable, None, DEFAULT_DIRECT_PORT).unwrap();
         assert!(!second.changed);
         assert_eq!(first_bytes, fs::read_to_string(&config).unwrap());
+    }
+
+    #[test]
+    fn codex_selection_includes_android_and_refuses_ambiguous_mobile_trust() {
+        let ios = Uuid::new_v4();
+        let android = Uuid::new_v4();
+        assert_eq!(select_setup_device(&[], None), Ok(None));
+        assert_eq!(select_setup_device(&[android], None), Ok(Some(android)));
+        assert_eq!(
+            select_setup_device(&[ios, android], None),
+            Err(SetupDeviceSelectionError::Ambiguous)
+        );
+        assert_eq!(
+            select_setup_device(&[ios, android], Some(android)),
+            Ok(Some(android))
+        );
+        assert_eq!(
+            select_setup_device(&[android], Some(ios)),
+            Err(SetupDeviceSelectionError::NotPaired)
+        );
     }
 
     #[test]

@@ -98,23 +98,26 @@ class DirectCliReleaseReadinessTest {
         assertThat(manifest).contains("android.permission.CAMERA")
         assertThat(manifest).contains("android.hardware.camera.any")
         assertThat(manifest).contains("android:required=\"false\"")
-        // The static Cloud requests handoff is permitted; no pairing authority or
-        // wildcard healthmd route may be registered alongside it.
-        val data = DocumentBuilderFactory.newInstance().apply {
+        // The existing static Cloud handoff is not pairing/configuration authority.
+        // Keep a closed custom-scheme allowlist rather than forbidding unrelated app routes.
+        val xml = DocumentBuilderFactory.newInstance().apply {
             isNamespaceAware = true
-        }.newDocumentBuilder().parse(manifest.byteInputStream()).getElementsByTagName("data")
-        val namespace = "http://schemas.android.com/apk/res/android"
-        val healthmdRoutes = (0 until data.length).map { data.item(it) as Element }
-            .filter { it.getAttributeNS(namespace, "scheme") == "healthmd" }
-        assertThat(healthmdRoutes).hasSize(1)
-        val route = healthmdRoutes.single()
-        assertThat(route.attributes.length).isEqualTo(3)
-        assertThat(route.getAttributeNS(namespace, "host")).isEqualTo("cloud")
-        assertThat(route.getAttributeNS(namespace, "path")).isEqualTo("/requests")
-        val filter = route.parentNode as Element
-        assertThat(filter.getElementsByTagName("data").length).isEqualTo(1)
-        assertThat((filter.parentNode as Element).getAttributeNS(namespace, "name"))
-            .isEqualTo(".presentation.MainActivity")
+            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+        }.newDocumentBuilder().parse(manifest.byteInputStream())
+        val data = xml.getElementsByTagName("data")
+        val android = "http://schemas.android.com/apk/res/android"
+        val customRoutes = (0 until data.length).map { data.item(it) as Element }
+            .filter { it.getAttributeNS(android, "scheme") == "healthmd" }
+        assertThat(customRoutes).hasSize(1)
+        customRoutes.single().let { route ->
+            assertThat(route.attributes.length).isEqualTo(3)
+            assertThat(route.getAttributeNS(android, "host")).isEqualTo("cloud")
+            assertThat(route.getAttributeNS(android, "path")).isEqualTo("/requests")
+            val filter = route.parentNode as Element
+            assertThat(filter.getElementsByTagName("data").length).isEqualTo(1)
+            assertThat((filter.parentNode as Element).getAttributeNS(android, "name"))
+                .isEqualTo(".presentation.MainActivity")
+        }
 
         val build = read("app/build.gradle.kts")
         assertThat(build).contains("libs.androidx.camera.camera2")

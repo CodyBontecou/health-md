@@ -7,8 +7,8 @@ metric-registry-v1.json instead of parsing Swift, Kotlin, or generated documenta
 
 Registry v1's capability vocabulary is versioned migration evidence too. Unrelated new
 product/transport capabilities must not change its authority hash or invalidate retained
-semantic/render fixtures. Availability of captured IDs still follows live governance;
-a metric requiring a new capability needs a reviewed registry revision.
+semantic/render fixtures. Current availability follows live governance in the separate
+capability index; a metric requiring a new capability needs a reviewed registry revision.
 """
 
 from __future__ import annotations
@@ -29,6 +29,8 @@ SEMANTIC_CROSSWALK = WORKSPACE / "crates/healthmd-core/registry/native-baseline-
 CAPABILITY_MANIFEST = REPO / "packages/contracts/product-capabilities.json"
 REGISTRY_DIR = WORKSPACE / "crates/healthmd-core/registry"
 REGISTRY_PATH = REGISTRY_DIR / "metric-registry-v1.json"
+CAPABILITY_INDEX_PATH = REGISTRY_DIR / "capability-index-v1.json"
+FROZEN_CAPABILITY_BASELINE = REGISTRY_DIR / "native-baseline-capability-index-v1.json"
 APPLE_BASELINE = REGISTRY_DIR / "native-baseline-apple-v7.json"
 ANDROID_BASELINE = REGISTRY_DIR / "native-baseline-android-v4-v5.json"
 CAPABILITY_BASELINE = REGISTRY_DIR / "native-baseline-capabilities-v1.json"
@@ -649,15 +651,32 @@ def build_registry(
     )
     if known_capability_ids != baseline_ids:
         raise ValueError("Changed capability inventory requires a reviewed registry revision")
+    frozen_capabilities = json.loads(FROZEN_CAPABILITY_BASELINE.read_text())
     return {
         "schema": "healthmd.metric_registry",
         "schema_version": 1,
         "registry_version": 1,
-        **inventory,
+        "known_capability_ids": frozen_capabilities["known_capability_ids"],
+        "available_capability_ids_by_platform": frozen_capabilities["available_capability_ids_by_platform"],
         "categories": category_rows,
         "metrics": semantic_metrics,
         "profiles": profiles,
         "legacy_unavailable": {"android": android["unavailable_metrics"]},
+    }
+
+
+def build_capability_index() -> dict[str, Any]:
+    capabilities = json.loads(CAPABILITY_MANIFEST.read_text())["capabilities"]
+    return {
+        "schema": "healthmd.capability_index",
+        "schema_version": 1,
+        "source_inventory_path": str(CAPABILITY_MANIFEST.relative_to(REPO)),
+        "source_inventory_sha256": sha256(CAPABILITY_MANIFEST),
+        "known_capability_ids": [item["id"] for item in capabilities],
+        "available_capability_ids_by_platform": {
+            platform: [item["id"] for item in capabilities if item["platforms"][platform]["state"] == "available"]
+            for platform in ("apple", "android")
+        },
     }
 
 
@@ -671,10 +690,17 @@ def main() -> None:
     android = parse_android()
     known_capability_ids = json.loads(REGISTRY_PATH.read_text())["known_capability_ids"]
     registry = build_registry(apple, android, known_capability_ids)
+    frozen = json.loads(FROZEN_CAPABILITY_BASELINE.read_text())
+    frozen_sha = "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99"
+    if frozen.get("schema") != "healthmd.frozen_capability_index" or frozen.get("schema_version") != 1 or frozen.get("source_registry_sha256") != frozen_sha:
+        raise SystemExit("Invalid frozen capability evidence")
+    if hashlib.sha256(canonical_bytes(registry)).hexdigest() != frozen_sha:
+        raise SystemExit("Frozen metric registry bytes changed; use an independently versioned registry instead")
     outputs = {
         APPLE_BASELINE: apple_baseline,
         ANDROID_BASELINE: android,
         REGISTRY_PATH: registry,
+        CAPABILITY_INDEX_PATH: build_capability_index(),
     }
     if args.check:
         stale = [str(path.relative_to(REPO)) for path, value in outputs.items() if not path.exists() or path.read_bytes() != canonical_bytes(value)]

@@ -1,173 +1,131 @@
-/** FCM HTTP v1 push for delegated sync doorbells on Android.
- *
- * Service-account OAuth (RS256 JWT bearer grant) mints a short-lived access
- * token; messages are data-only with high priority, and the app posts the
- * visible notification itself.
- */
+/** Firebase HTTP-v1, notification-only. All OAuth state is request-local. */
+import { isObject, providerJson } from "./http";
+import { NOTIFICATION_TITLE } from "./state";
 
-export interface FcmServiceAccount {
+// Worker-v2 copy is independently specified; v1/delegated copy changes do not retarget it.
+const FCM_V2_NOTIFICATION_BODY = "A paired computer is requesting data. Tap to continue.";
+
+export const OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
+export const FCM_SCOPE = "https://www.googleapis.com/auth/firebase.messaging";
+const PROJECT_ID_RE = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
+const MAX_CONFIG_BYTES = 16 * 1024;
+
+export type FcmResult =
+  | { kind: "delivered" }
+  | { kind: "authorization_changed" }
+  | { kind: "unavailable"; code: "fcm_not_configured" | "fcm_config_invalid" }
+  | { kind: "undeliverable"; code: "fcm_oauth_failed" | "fcm_provider_failed" | "fcm_response_invalid" | "fcm_transport_failed" };
+
+interface Credentials {
   projectId: string;
   clientEmail: string;
-  privateKey: string;
+  privateKey: CryptoKey;
+  keyId?: string;
 }
 
-export interface SendFcmResult {
-  status: number;
-  reason?: string;
+function base64url(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function encodedJson(value: unknown): string {
+  return base64url(new TextEncoder().encode(JSON.stringify(value)));
 }
 
-const OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
-const FCM_SCOPE = "https://www.googleapis.com/auth/firebase.messaging";
-const ASSERTION_LIFETIME_SEC = 3600;
-let cachedAccessToken: { token: string; expiresAt: number; clientEmail: string } | null = null;
-
-function base64urlEncode(bytes: ArrayBuffer | Uint8Array): string {
-  const arr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-  let binary = "";
-  for (let i = 0; i < arr.byteLength; i += 1) binary += String.fromCharCode(arr[i]);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function base64urlEncodeJson(obj: unknown): string {
-  return base64urlEncode(new TextEncoder().encode(JSON.stringify(obj)));
-}
-
-function pemToPkcs8(pem: string): ArrayBuffer {
-  const stripped = pem
-    .replace(/-----BEGIN [^-]+-----/g, "")
-    .replace(/-----END [^-]+-----/g, "")
-    .replace(/\s+/g, "");
-  const binary = atob(stripped);
-  const out = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) out[i] = binary.charCodeAt(i);
-  return out.buffer;
-}
-
-/** Parse the service-account JSON secret; `null` when absent or incomplete. */
-export function parseServiceAccount(json: string | undefined): FcmServiceAccount | null {
-  if (!json) return null;
+async function credentialsFromJson(json: string): Promise<Credentials | null> {
   try {
-    const value = JSON.parse(json) as {
-      project_id?: unknown;
-      client_email?: unknown;
-      private_key?: unknown;
-    };
+    if (new TextEncoder().encode(json).byteLength > MAX_CONFIG_BYTES) return null;
+    const value: unknown = JSON.parse(json);
+    if (!isObject(value)) return null;
+    const { type, project_id, client_email, private_key, private_key_id, token_uri } = value;
     if (
-      typeof value.project_id !== "string" || value.project_id.length === 0
-      || typeof value.client_email !== "string" || value.client_email.length === 0
-      || typeof value.private_key !== "string" || value.private_key.length === 0
-    ) {
-      return null;
-    }
-    return {
-      projectId: value.project_id,
-      clientEmail: value.client_email,
-      privateKey: value.private_key,
+      type !== "service_account" || typeof project_id !== "string" || !PROJECT_ID_RE.test(project_id)
+      || typeof client_email !== "string" || client_email.length > 254
+      || !new RegExp(`^[a-z0-9-]{1,64}@${project_id}\\.iam\\.gserviceaccount\\.com$`).test(client_email)
+      || typeof private_key !== "string" || private_key.length > 8192
+      || (token_uri !== undefined && token_uri !== OAUTH_TOKEN_URL)
+      || (private_key_id !== undefined && (typeof private_key_id !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(private_key_id)))
+    ) return null;
+    const pem = /^-----BEGIN PRIVATE KEY-----\s+([A-Za-z0-9+/=\s]+)\s+-----END PRIVATE KEY-----\s*$/.exec(private_key);
+    if (!pem) return null;
+    const decoded = atob(pem[1].replace(/\s/g, ""));
+    const bytes = Uint8Array.from(decoded, (character) => character.charCodeAt(0));
+    const privateKey = await crypto.subtle.importKey("pkcs8", bytes,
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+    const algorithm = privateKey.algorithm;
+    if (!("modulusLength" in algorithm) || typeof algorithm.modulusLength !== "number"
+      || algorithm.modulusLength < 2048 || algorithm.modulusLength > 4096) return null;
+    return { projectId: project_id, clientEmail: client_email, privateKey, keyId: private_key_id };
+  } catch { return null; }
+}
+
+async function assertion(credentials: Credentials, now: number): Promise<string> {
+  const header = { alg: "RS256", typ: "JWT", ...(credentials.keyId ? { kid: credentials.keyId } : {}) };
+  const payload = { iss: credentials.clientEmail, scope: FCM_SCOPE, aud: OAUTH_TOKEN_URL, iat: now, exp: now + 3600 };
+  const input = `${encodedJson(header)}.${encodedJson(payload)}`;
+  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", credentials.privateKey, new TextEncoder().encode(input));
+  return `${input}.${base64url(new Uint8Array(signature))}`;
+}
+
+/** No data messages, dates, labels, IDs, images, URLs, analytics, or service-start directives. */
+export function fcmNotificationPayload(deliveryToken: string): Record<string, unknown> {
+  return { message: {
+    token: deliveryToken,
+    notification: { title: NOTIFICATION_TITLE, body: FCM_V2_NOTIFICATION_BODY },
+    android: {
+      priority: "HIGH", ttl: "300s", restricted_package_name: "com.healthmd.android",
+      notification: {
+        channel_id: "healthmd_direct_wake", click_action: "com.healthmd.DIRECT_CLI_WAKE",
+        visibility: "PRIVATE", tag: "healthmd-direct-wake", sound: "default",
+      },
+    },
+  } };
+}
+
+/** Admission is non-wire and mandatory: OAuth/key work is not notification
+ * authority. The caller must inspect its existing current private records.
+ */
+export async function sendFcmWake(
+  config: string | undefined, deliveryToken: string, now: number,
+  authorizeSend: () => Promise<boolean>,
+): Promise<FcmResult> {
+  if (!config) return { kind: "unavailable", code: "fcm_not_configured" };
+  const credentials = await credentialsFromJson(config);
+  if (!credentials) return { kind: "unavailable", code: "fcm_config_invalid" };
+  let sendUrl: string;
+  let sendOptions: RequestInit;
+  try {
+    const form = new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: await assertion(credentials, now) });
+    const oauth = await providerJson(OAUTH_TOKEN_URL, {
+      method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: form.toString(),
+    });
+    if (oauth.status !== 200) return { kind: "undeliverable", code: "fcm_oauth_failed" };
+    if (
+      !isObject(oauth.body) || oauth.body.token_type !== "Bearer"
+      || typeof oauth.body.expires_in !== "number" || !Number.isInteger(oauth.body.expires_in)
+      || oauth.body.expires_in < 1 || oauth.body.expires_in > 3600
+      || typeof oauth.body.access_token !== "string" || oauth.body.access_token.length > 4096
+      || !/^[A-Za-z0-9._~+/-]+=*$/.test(oauth.body.access_token)
+    ) return { kind: "undeliverable", code: "fcm_response_invalid" };
+    sendUrl = `https://fcm.googleapis.com/v1/projects/${credentials.projectId}/messages:send`;
+    sendOptions = {
+      method: "POST", headers: { authorization: `Bearer ${oauth.body.access_token}`, "content-type": "application/json" },
+      body: JSON.stringify(fcmNotificationPayload(deliveryToken)),
     };
   } catch {
-    return null;
+    return { kind: "undeliverable", code: "fcm_transport_failed" };
   }
-}
-
-/** Signed RS256 assertion for the OAuth JWT bearer grant. */
-export async function signServiceAccountAssertion(
-  account: FcmServiceAccount,
-  nowSec: number,
-): Promise<string> {
-  const header = { alg: "RS256", typ: "JWT" };
-  const claims = {
-    iss: account.clientEmail,
-    scope: FCM_SCOPE,
-    aud: OAUTH_TOKEN_URL,
-    iat: nowSec,
-    exp: nowSec + ASSERTION_LIFETIME_SEC,
-  };
-  const signingInput = `${base64urlEncodeJson(header)}.${base64urlEncodeJson(claims)}`;
-  const key = await crypto.subtle.importKey(
-    "pkcs8",
-    pemToPkcs8(account.privateKey),
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const signature = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    key,
-    new TextEncoder().encode(signingInput),
-  );
-  return `${signingInput}.${base64urlEncode(signature)}`;
-}
-
-async function accessToken(account: FcmServiceAccount, nowSec: number): Promise<string | null> {
-  if (
-    cachedAccessToken
-    && cachedAccessToken.clientEmail === account.clientEmail
-    && cachedAccessToken.expiresAt > nowSec + 60
-  ) {
-    return cachedAccessToken.token;
-  }
-  const assertion = await signServiceAccountAssertion(account, nowSec);
-  const response = await fetch(OAUTH_TOKEN_URL, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion,
-    }).toString(),
-  });
-  if (response.status !== 200) return null;
-  const body = (await response.json()) as { access_token?: unknown; expires_in?: unknown };
-  if (typeof body.access_token !== "string") return null;
-  const lifetime = typeof body.expires_in === "number" ? body.expires_in : 3600;
-  cachedAccessToken = {
-    token: body.access_token,
-    expiresAt: nowSec + lifetime,
-    clientEmail: account.clientEmail,
-  };
-  return body.access_token;
-}
-
-/** FCM HTTP v1 message body for one data-only, high-priority push. */
-export function fcmMessageBody(
-  fcmToken: string,
-  data: Record<string, string>,
-  ttlSec: number,
-): Record<string, unknown> {
-  return {
-    message: {
-      token: fcmToken,
-      data,
-      android: { priority: "HIGH", ttl: `${ttlSec}s` },
-    },
-  };
-}
-
-export async function sendFcmData(
-  account: FcmServiceAccount,
-  fcmToken: string,
-  data: Record<string, string>,
-  ttlSec: number,
-  nowSec: number = Math.floor(Date.now() / 1000),
-): Promise<SendFcmResult> {
-  const token = await accessToken(account, nowSec);
-  if (!token) return { status: 503, reason: "oauth_unavailable" };
-
-  const response = await fetch(
-    `https://fcm.googleapis.com/v1/projects/${encodeURIComponent(account.projectId)}/messages:send`,
-    {
-      method: "POST",
-      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-      body: JSON.stringify(fcmMessageBody(fcmToken, data, ttlSec)),
-    },
-  );
-  if (response.status === 200) return { status: 200 };
-
-  let reason: string | undefined;
+  // After signing/OAuth/serialization, before starting the FCM request. Storage
+  // failures propagate to the router's fixed storage error, not provider errors.
+  if (!await authorizeSend()) return { kind: "authorization_changed" };
   try {
-    const body = (await response.json()) as { error?: { status?: string } };
-    reason = body.error?.status;
+    const delivery = await providerJson(sendUrl, sendOptions);
+    if (delivery.status !== 200) return { kind: "undeliverable", code: "fcm_provider_failed" };
+    if (!isObject(delivery.body) || typeof delivery.body.name !== "string"
+      || !new RegExp(`^projects/${credentials.projectId}/messages/[A-Za-z0-9%:_-]{1,512}$`).test(delivery.body.name)) {
+      return { kind: "undeliverable", code: "fcm_response_invalid" };
+    }
+    // Provider acceptance only, not proof of display, tap, unlock, or read authorization.
+    return { kind: "delivered" };
   } catch {
-    // Non-JSON FCM response body; leave reason unset.
+    return { kind: "undeliverable", code: "fcm_transport_failed" };
   }
-  return { status: response.status, reason };
 }

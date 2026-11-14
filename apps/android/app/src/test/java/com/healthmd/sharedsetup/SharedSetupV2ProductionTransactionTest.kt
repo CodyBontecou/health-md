@@ -22,6 +22,7 @@ import com.healthmd.domain.model.MetricSelectionState
 import com.healthmd.domain.model.WriteMode
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import java.time.LocalDate
 import java.time.ZoneId
@@ -362,7 +363,11 @@ class SharedSetupV2ProductionTransactionTest {
     }
 
     private suspend fun sharedDocument(): SharedSetupV2 {
-        val scheduleStore = ScheduledProfileEntryStore(dataStore, mockk<Context>(relaxed = true))
+        // The schedule store's discard fence lives in private no-backup storage.
+        val scheduleContext = mockk<Context>(relaxed = true) {
+            every { noBackupFilesDir } returns temporaryFolder.root.resolve("no-backup").apply { mkdirs() }
+        }
+        val scheduleStore = ScheduledProfileEntryStore(dataStore, scheduleContext)
         val source = RepositorySharedSetupV2ExportSource(
             profileRepository, scheduleStore, "test",
             adapter::preservedAppleExtensionsByProfileId,

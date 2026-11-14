@@ -84,6 +84,13 @@ struct GlassCLIDestinationScreen: View {
 
                 if directCLIService.hasPairedCLI { pairedSection }
 
+                GlassPanel {
+                    VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
+                        Text("Agent export permissions").glassFont(.body)
+                        AgentExportPermissionsSetupControls()
+                    }
+                }
+
                 note(String(localized: "Nearby discovers pairing on the same network and never falls back to Manual IP. Health.md never auto-pairs from links opened by other apps."))
 
                 if let error = directCLIService.lastError {

@@ -30,12 +30,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         )
         XCTAssertEqual(
             Self.ids(with: .planned, in: states),
-            [
-                "account.clinic-sync-requests",
-                "cloud.opt-in-export-receiver", "cloud.read-only-mcp",
-                "core.shared-rust-profile-engine",
-                "setup.share-portable-configuration", "destination.google-drive",
-            ]
+            Self.plannedCapabilities
         )
         XCTAssertEqual(Set(states.keys), Self.allCapabilities)
         XCTAssertEqual(
@@ -133,6 +128,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "export.agent-data-gateway",
         "export.scheduled-today-refresh",
         "core.shared-rust-metric-registry",
+        "automation.discard-pending-recovery",
         "automation.cancel-active-export",
         "automation.discard-pending-recovery",
         "direct.full_public_authorized_corpus",
@@ -175,11 +171,32 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "export.sleep-session-detail",
     ]
 
+    private static let plannedCapabilities: Set<String> = [
+        "account.clinic-sync-requests",
+        "cloud.opt-in-export-receiver",
+        "cloud.read-only-mcp",
+        "setup.share-portable-configuration",
+        "core.shared-rust-profile-engine",
+        "destination.google-drive",
+        "agent.export.explicit-settings",
+        "agent.export.zero-health-plan",
+        "agent.export.bound-execution",
+        "direct.source-aware-queries",
+        "direct.scoped-source-projection",
+        "agent.host-recipes",
+        "agent.native-profile-controls",
+        "agent.host-schedule-controls",
+        "agent.native-schedule-destination-controls",
+        "agent.export.zip-packaging",
+        "agent.export.profile-dictionary",
+    ]
+
     private static var allCapabilities: Set<String> {
         sharedCapabilities
             .union(appleCapabilities)
             .union(androidCapabilities)
-            .union(["source.private-platform-database", "apple.ads-purchase-attribution", "core.shared-rust-profile-engine", "setup.share-portable-configuration", "destination.google-drive", "account.clinic-sync-requests"])
+            .union(plannedCapabilities)
+            .union(["source.private-platform-database", "apple.ads-purchase-attribution"])
     }
 
     private enum ManifestError: Error {

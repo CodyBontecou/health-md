@@ -43,6 +43,7 @@ class ScheduledExportStateStore @Inject constructor(
                 putString(KEY_ADMISSION_OPERATION_ID, admission.operationId)
                 putString(KEY_ADMISSION_WORK_REQUEST_ID, admission.workRequestId.toString())
                 putString(KEY_ADMISSION_PHASE, ScheduledExportAdmissionPhase.ACTIVE.name)
+                putString(KEY_ADMISSION_API_AUTHORITY, admission.apiAuthorityJson)
                 putString(KEY_PENDING_ARM_OCCURRENCE_ID, nextOccurrence.id)
             }
         }
@@ -279,6 +280,7 @@ class ScheduledExportStateStore @Inject constructor(
             workRequestId = UUID.fromString(
                 requireNotNull(safeString(KEY_ADMISSION_WORK_REQUEST_ID)),
             ),
+            apiAuthorityJson = safeString(KEY_ADMISSION_API_AUTHORITY),
             phase = ScheduledExportAdmissionPhase.valueOf(
                 requireNotNull(safeString(KEY_ADMISSION_PHASE)),
             ),
@@ -430,6 +432,7 @@ class ScheduledExportStateStore @Inject constructor(
         const val KEY_ADMISSION_OPERATION_ID = "admission_v2_operation_id"
         const val KEY_ADMISSION_WORK_REQUEST_ID = "admission_v2_work_request_id"
         const val KEY_ADMISSION_PHASE = "admission_v2_phase"
+        const val KEY_ADMISSION_API_AUTHORITY = "admission_v2_api_authority"
         const val KEY_PENDING_ARM_OCCURRENCE_ID = "admission_v2_pending_arm_occurrence_id"
 
         val OCCURRENCE_KEYS = setOf(
@@ -463,6 +466,7 @@ class ScheduledExportStateStore @Inject constructor(
                 add(KEY_ADMISSION_OPERATION_ID)
                 add(KEY_ADMISSION_WORK_REQUEST_ID)
                 add(KEY_ADMISSION_PHASE)
+                add(KEY_ADMISSION_API_AUTHORITY)
             }
     }
 }

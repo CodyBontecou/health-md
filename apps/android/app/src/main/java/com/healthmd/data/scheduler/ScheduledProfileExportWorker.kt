@@ -22,6 +22,7 @@ import com.healthmd.diagnostics.DiagnosticValue
 import com.healthmd.R
 import com.healthmd.data.export.AgentDataGatewayExportRunner
 import com.healthmd.data.export.APIEndpointExportRunner
+import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotExportRunner
@@ -33,6 +34,7 @@ import com.healthmd.data.drive.serialId
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.APIRecoveryExecution
 import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
 import com.healthmd.domain.model.ExportFailureReason
@@ -110,6 +112,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     private val googleDriveExportOrchestrator: GoogleDriveExportOrchestrator,
     private val entitlementRepository: EntitlementRepository,
     private val distributionPolicy: DistributionPolicy,
+    private val apiCredentialStore: APIExportCredentialStore? = null,
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -190,6 +193,20 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             ?: return Result.success() // Nothing actionable (no boundary passed or fully caught up).
         var profile = due.pendingExport?.asFrozenProfile(storedProfile) ?: storedProfile
         val current = settingsRepository.getExportSettings()
+        // Pin API recovery authority before any new occurrence inspects providers.
+        // A pending occurrence may use only its original saved authority.
+        val newAPIAuthority = if (profile.target == ExportTarget.API_ENDPOINT && due.pendingExport == null) {
+            val credentials = apiCredentialStore ?: return authorityFailure()
+            val configuration = runCatchingCancellable {
+                credentials.requestConfiguration(profile.apiEndpointUrl.orEmpty())
+            }.getOrNull() ?: return authorityFailure()
+            val binding = scheduledAPIProfileBinding(storedProfile)
+            if (storedProfile.target != ExportTarget.API_ENDPOINT ||
+                APIExportEndpoint.normalizedOrNull(storedProfile.apiEndpointUrl.orEmpty()) != configuration.endpointUrl
+            ) return authorityFailure()
+            runCatchingCancellable { credentials.createRecoveryAuthority(configuration.endpointUrl, binding) }
+                .getOrNull() ?: return authorityFailure()
+        } else null
         val freshProfile = if (due.pendingExport == null) {
             try {
                 snapshotFactory.captureForNewOccurrence(storedProfile, current, entry.zone, healthRepository)
@@ -200,7 +217,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             profile = freshProfile
             if (due.pendingExport == null) {
                 val accepted = com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson)
-                if (accepted?.providerCaptureAuthority != null) {
+                if (profile.target != ExportTarget.API_ENDPOINT && accepted?.providerCaptureAuthority != null) {
                     val pending = ScheduledProfilePendingExport(id = operationId(profileId, due),
                         ownerEpochDays = due.exportDates.map(LocalDate::toEpochDay).distinct().sorted(),
                         fireAtMillis = due.fireAtMillis, settingsSnapshotJson = profile.settingsSnapshotJson,
@@ -213,7 +230,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 }
             }
         }
-        val settings = freshProfile?.let { snapshotFactory.restoreForRun(it, current, entry.lookbackDays) }
+        var settings = freshProfile?.let { snapshotFactory.restoreForRun(it, current, entry.lookbackDays) }
         if (settings == null) {
             Timber.e("Profile snapshot invalid, disabling entry profileId=%s", profileId)
             recordHistory(
@@ -236,6 +253,55 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         }
 
         val dates = due.exportDates
+        if (profile.target == ExportTarget.API_ENDPOINT) {
+            val credentials = apiCredentialStore ?: return authorityFailure()
+            val binding = scheduledAPIProfileBinding(storedProfile)
+            val configuration = runCatchingCancellable {
+                credentials.requestConfiguration(profile.apiEndpointUrl.orEmpty())
+            }.getOrNull() ?: return authorityFailure()
+            if (storedProfile.target != ExportTarget.API_ENDPOINT ||
+                APIExportEndpoint.normalizedOrNull(storedProfile.apiEndpointUrl.orEmpty()) != configuration.endpointUrl
+            ) return authorityFailure()
+            val authority = if (due.pendingExport != null) due.pendingExport?.apiAuthorityJson
+                else newAPIAuthority
+            if (!runCatchingCancellable {
+                credentials.matchesRecoveryAuthority(authority, configuration, binding)
+            }.getOrDefault(false)) return authorityFailure()
+            if (due.pendingExport == null) {
+                val pending = ScheduledProfilePendingExport(
+                    id = operationId(profileId, due), ownerEpochDays = dates.map(LocalDate::toEpochDay),
+                    fireAtMillis = due.fireAtMillis, settingsSnapshotJson = profile.settingsSnapshotJson,
+                    target = profile.target, profileName = profile.name, apiEndpointUrl = profile.apiEndpointUrl,
+                    durableOperationId = "profile-api-${operationId(profileId, due)}",
+                    apiAuthorityJson = authority,
+                )
+                if (!entryStore.admitAPIExport(profileId, entry.recoveryGeneration, pending)) return Result.retry()
+                due = due.copy(pendingExport = pending)
+            }
+            val pending = requireNotNull(due.pendingExport)
+            val pendingOperationId = pending.durableOperationId ?: return authorityFailure()
+            val frozenSettings = requireNotNull(settings)
+            settings = frozenSettings.copy(
+                executionAPIRecoveryRequired = true,
+                executionAPIRecovery = APIRecoveryExecution(
+                    authority, binding, pendingOperationId, profile.settingsSnapshotJson,
+                    requireExistingJournal = pending.apiJournalRequired,
+                    onJournalPrepared = {
+                        entryStore.markAPIJournalRequired(profileId, entry.recoveryGeneration, pending.id,
+                            requireNotNull(authority), pendingOperationId)
+                    },
+                ) {
+                    val latest = entryStore.entry(profileId)
+                    val currentProfile = profileRepository.profileById(profileId)
+                    latest?.isEnabled == true && latest.recoveryGeneration == entry.recoveryGeneration &&
+                        latest.pendingExports.any { it.id == pending.id && it.apiAuthorityJson == authority } &&
+                        currentProfile != null && scheduledAPIProfileBinding(currentProfile) == binding &&
+                        currentProfile.target == ExportTarget.API_ENDPOINT &&
+                        APIExportEndpoint.normalizedOrNull(currentProfile.apiEndpointUrl.orEmpty()) == configuration.endpointUrl &&
+                        !profileRepository.isSharedSetupV2Blocked(profileId)
+                },
+            )
+        }
         // Today Refresh bookkeeping: the occurrence may carry today's partial file alongside
         // completed-day catch-up. Refresh-only runs must not advance the completed-day frontier.
         val refreshSlotMillis = due.refreshSlotMillis
@@ -266,14 +332,40 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         }
 
         val acceptedPending = due.pendingExport
-        val storedFolderReady = if (profile.target == ExportTarget.DEVICE_FOLDER && acceptedPending?.durableOperationId != null) {
+        val acceptedOperationId = acceptedPending?.durableOperationId
+        val acceptedSettings = requireNotNull(settings)
+        val storedFolderReady = if (profile.target == ExportTarget.DEVICE_FOLDER && acceptedOperationId != null) {
             folderAdoption.withProfileFolder(profile) {
-                exportRepository.hasResumableDurableScheduledFolderOperation(acceptedPending.durableOperationId,
-                    dates, settings, profile.settingsSnapshotJson)
+                exportRepository.hasResumableDurableScheduledFolderOperation(acceptedOperationId,
+                    dates, acceptedSettings, profile.settingsSnapshotJson)
             }
         } else false
-        val hasBackgroundRead = if (storedFolderReady ||
-            (profile.target == ExportTarget.API_ENDPOINT && acceptedPending?.durableOperationId != null)) true else runCatchingCancellable {
+        val storedAPIReady = if (profile.target == ExportTarget.API_ENDPOINT &&
+            settings.exportMode == ExportMode.COMPATIBILITY && acceptedPending?.durableOperationId != null) {
+            try {
+                apiEndpointExportRunner.hasResumableDurableOperation(dates, settings,
+                    acceptedPending.durableOperationId, profile.settingsSnapshotJson)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { return authorityFailure() }
+        } else false
+        if (storedAPIReady) {
+            // A crash may have published bytes before the parent marker. Preserve the
+            // proven prepared state before replay, including every later residual retry.
+            val pending = requireNotNull(acceptedPending)
+            val execution = settings.executionAPIRecovery ?: return authorityFailure()
+            if (!execution.isStillAuthorized() ||
+                (!pending.apiJournalRequired && !execution.onJournalPrepared()) ||
+                !execution.isStillAuthorized()) return authorityFailure()
+            due = due.copy(pendingExport = pending.copy(apiJournalRequired = true))
+            settings = settings.copy(executionAPIRecovery = APIRecoveryExecution(
+                execution.authorityJson, execution.profileBinding, execution.operationId,
+                execution.settingsSnapshotJson, requireExistingJournal = true,
+                onJournalPrepared = execution.onJournalPrepared,
+                isStillAuthorized = execution.isStillAuthorized,
+            ))
+        }
+        val hasBackgroundRead = if (storedFolderReady || storedAPIReady ||
+            (profile.target == ExportTarget.API_ENDPOINT && acceptedPending?.apiJournalRequired == true)) true else runCatchingCancellable {
             healthRepository.forCaptureOperation(settings).hasBackgroundReadPermission()
         }.getOrDefault(false)
         if (!hasBackgroundRead) {
@@ -375,7 +467,9 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                                 onProgress = exportProgress,
                                 durableOperationId = durableOperationId,
                                 durableSettingsSnapshotJson = snapshotJson,
-                                requireExistingDurableOperation = pendingOperationId != null,
+                                // Admission precedes journal preparation. Only the durable
+                                // prepared fence forbids creating the original journal.
+                                requireExistingDurableOperation = storedAPIReady || due.pendingExport?.apiJournalRequired == true,
                             )
                         }
                     ExportTarget.GOOGLE_DRIVE -> profile.destinationId?.let { destinationId ->
@@ -389,11 +483,15 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                         target = ExportTarget.GOOGLE_DRIVE)
 
                     ExportTarget.AGENT_DATA_GATEWAY ->
+                        if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                            exportRawDates(dates, settings, target)
+                        } else {
                         agentDataGatewayExportRunner.exportDates(
                             dates = dates,
                             settings = settings.copy(exportTarget = ExportTarget.AGENT_DATA_GATEWAY),
                             onProgress = exportProgress,
                         )
+                        }
                 }
             }
         } catch (_: kotlinx.coroutines.CancellationException) {
@@ -423,12 +521,14 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         }
 
         kotlin.coroutines.coroutineContext.ensureActive()
-        if (entryStore.entry(profileId)?.recoveryGeneration != entry.recoveryGeneration) {
+        if (entryStore.entry(profileId)?.recoveryGeneration != entry.recoveryGeneration ||
+            settings.executionAPIRecovery?.isStillAuthorized?.invoke() == false
+        ) {
             return Result.success()
         }
         if (result.wasCancelled) {
             val remainingDates = cancellationRemainingDates(dates, target, settings.exportMode, result)
-            val replacements = if (hasCompletedDayWork) {
+            val replacements = if (hasCompletedDayWork || target == ExportTarget.API_ENDPOINT) {
                 residualPendingExports(
                     profile = profile,
                     due = due,
@@ -492,6 +592,9 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 completedPendingID = due.pendingExport?.id,
                 expectedRecoveryGeneration = entry.recoveryGeneration,
             )
+            if (target == ExportTarget.API_ENDPOINT && settings.exportMode == ExportMode.RAW_SNAPSHOT &&
+                entryStore.entry(profileId)?.pendingExports?.none { it.id == due.pendingExport?.id } == true
+            ) rawSnapshotExportRunner.discardCompletedDurableOperation(durableOperationId)
             if (historyRecorded && target == ExportTarget.GOOGLE_DRIVE) {
                 result.retryDriveOperationIds.values.toSet().forEach {
                     googleDriveExportOrchestrator.acknowledgeAfterHistory(it)
@@ -512,15 +615,14 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
 
         if (!result.isFullSuccess) {
             val remainingDates = cancellationRemainingDates(dates, target, settings.exportMode, result)
-            val replacements = if (hasCompletedDayWork || due.pendingExport?.refreshSlotMillis != null) {
+            val replacements = if (hasCompletedDayWork || target == ExportTarget.API_ENDPOINT || due.pendingExport?.refreshSlotMillis != null) {
                 residualPendingExports(
                     profile = profile,
                     due = due,
                     remainingDates = remainingDates,
                     result = result,
-                    fallbackDurableOperationId = durableOperationId.takeUnless {
-                        settings.exportMode == ExportMode.RAW_SNAPSHOT
-                    },
+                    fallbackDurableOperationId = durableOperationId.takeIf { target == ExportTarget.API_ENDPOINT ||
+                        settings.exportMode != ExportMode.RAW_SNAPSHOT },
                 )
             } else {
                 emptyList()
@@ -551,8 +653,10 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 return Result.failure()
             }
             // Reconciliation already arms the next ordinary slot. Raw refresh-only failures
-            // must not back off into another capture of this same slot or claim it succeeded.
-            if (!hasCompletedDayWork && settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+            // avoid recapture for folders. API retries retain their immutable recovery authority.
+            if (!hasCompletedDayWork && settings.exportMode == ExportMode.RAW_SNAPSHOT &&
+                target == ExportTarget.DEVICE_FOLDER
+            ) {
                 return Result.success()
             }
             return if (runAttemptCount < MAX_WORKER_ATTEMPTS) Result.retry() else Result.failure()
@@ -560,10 +664,15 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         return Result.success()
     }
 
+    private fun authorityFailure(): Result = Result.failure(
+        workDataOf(OUTPUT_PROFILE_ERROR to "api_recovery_authority_required"),
+    )
+
     private fun ExportResult.requiresGoogleDriveReauthorization(): Boolean =
         target == ExportTarget.GOOGLE_DRIVE && failedDateDetails.any {
             it.errorDetails == GoogleDriveErrorId.REAUTHORIZATION_REQUIRED.serialId
         }
+
     /** Raw providers accept ranges, but recovery and delayed refreshes can request separated days. */
     private suspend fun exportRawDates(
         dates: List<LocalDate>,
@@ -649,7 +758,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         due: ScheduledProfileEntry.DueOccurrence,
         remainingDates: Set<LocalDate>,
         result: ExportResult,
-        fallbackDurableOperationId: String? = null,
+        fallbackDurableOperationId: String? = due.pendingExport?.durableOperationId,
     ): List<ScheduledProfilePendingExport> {
         val operationByDate = result.retryOperationIds + result.retryFolderOperationIds + result.retryDriveOperationIds
         val refreshZone = if (due.pendingExport?.refreshSlotMillis != null)
@@ -658,9 +767,9 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         val refreshDate = due.refreshSlotMillis?.let {
             Instant.ofEpochMilli(it).atZone(refreshZone).toLocalDate()
         }
-        // Raw refresh failures retry on the next slot, not through a compatibility journal.
-        // Keep compatibility journal date groups unchanged; their exact batch plan is durable.
-        val recoveryDates = if (result.exportMode == ExportMode.RAW_SNAPSHOT) {
+        // Raw folder refreshes can recapture on the next slot. Raw API recovery must keep its
+        // exact original range (including today's partial date), like compatibility journals.
+        val recoveryDates = if (result.exportMode == ExportMode.RAW_SNAPSHOT && profile.target != ExportTarget.API_ENDPOINT) {
             remainingDates.filterNot { it == refreshDate }
         } else {
             remainingDates.toList()
@@ -692,6 +801,9 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 folderUri = profile.folderUri,
                 folderDisplayName = profile.folderDisplayName,
                 durableOperationId = operationID,
+                apiAuthorityJson = due.pendingExport?.apiAuthorityJson,
+                apiJournalRequired = due.pendingExport?.apiJournalRequired == true ||
+                    dates.any { it in result.retryOperationIds },
                 destinationId = profile.destinationId,
                 refreshSlotMillis = due.refreshSlotMillis?.takeIf { refreshDate in dates },
             )

@@ -39,7 +39,7 @@ private enum IPhoneDirectQueryError: Error {
         case .invalidRequest: "The direct query request is invalid or unsupported."
         case .queryUnavailable: "The iPhone could not complete the direct query."
         case .limitedHistoryAuthorization: "Apple Health access is limited by date. Choose an explicit authorized range or grant full history access before requesting all available history."
-        case .historyAuthorizationUnverified: "Apple Health full-history access could not be verified for this scope. Choose an explicit date range, or use OS 27 or later and complete a full-history authorization assessment before requesting all available history."
+        case .historyAuthorizationUnverified: "Apple Health full-history access could not be verified for this scope. Full-history authorization boundaries are unavailable in this build. Choose an explicit date range."
         case .requestInProgress: "Another direct iPhone operation is already active."
         case .protectedDataUnavailable: "Unlock iPhone before starting a direct query."
         case .healthKitNotAuthorized: "Authorize the selected Health access before starting a direct query."

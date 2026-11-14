@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{future::Future, time::Duration};
 
 use healthmd_protocol::{MAXIMUM_PACKET_BYTES, wire::SyncPacket};
 use socket2::{SockRef, TcpKeepalive};
@@ -69,6 +69,43 @@ impl PacketConnection {
             .await
             .map_err(connection_error)?;
         self.stream.flush().await.map_err(connection_error)
+    }
+
+    /// The bridge rechecks the original peer's current trust after each readiness wait, then writes
+    /// without another await. Already-submitted bytes cannot be recalled on rejection.
+    pub(crate) async fn send_guarded<F, Fut>(
+        &mut self,
+        packet: &SyncPacket,
+        mut authorize: F,
+    ) -> Result<(), ClientError>
+    where
+        F: FnMut() -> Fut + Send,
+        Fut: Future<Output = Result<(), ClientError>> + Send,
+    {
+        let payload = serde_json::to_vec(packet).map_err(|_| ClientError::MalformedPacket)?;
+        if payload.is_empty() || payload.len() > self.maximum_packet_bytes {
+            return Err(ClientError::FrameTooLarge);
+        }
+        let length = u64::try_from(payload.len())
+            .map_err(|_| ClientError::FrameTooLarge)?
+            .to_be_bytes();
+        for mut remaining in [length.as_slice(), payload.as_slice()] {
+            while !remaining.is_empty() {
+                self.stream.writable().await.map_err(connection_error)?;
+                authorize().await?;
+                match self.stream.try_write(remaining) {
+                    Ok(0) => {
+                        return Err(connection_error(std::io::Error::from(
+                            std::io::ErrorKind::WriteZero,
+                        )));
+                    }
+                    Ok(written) => remaining = &remaining[written..],
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => (),
+                    Err(error) => return Err(connection_error(error)),
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Receive one bounded eight-byte-length-prefixed Swift JSON packet.

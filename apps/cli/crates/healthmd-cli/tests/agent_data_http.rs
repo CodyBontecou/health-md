@@ -25,6 +25,7 @@ use std::{
     net::TcpStream,
     path::PathBuf,
     process::{Child, Command, Stdio},
+    sync::Mutex,
     thread,
     time::Duration,
 };
@@ -36,6 +37,11 @@ use tempfile::TempDir;
 const PROTOCOL_VERSION: &str = "2025-11-25";
 const RESPONSE_TIMEOUT: Duration = Duration::from_secs(30);
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(30);
+// A sibling subprocess can temporarily inherit a live probe's open-file description.
+// Keep all probes closed before another thread spawns: otherwise the copied listener
+// can make a failed child's port appear ready until the sibling reaches exec.
+static HTTP_SERVER_STARTUP: Mutex<()> = Mutex::new(());
+
 /// `CURSOR_RESPONSE_OVERHEAD_BYTES`: pages at or below this bound cannot carry a data chunk.
 const CHUNK_OVERHEAD_BYTES: usize = 2_048;
 
@@ -575,34 +581,37 @@ impl HttpMcpServer {
     fn spawn(corpus: &Corpus, grant: &std::path::Path, ports: [u16; 2]) -> Self {
         let mut attempts = Vec::new();
         for (attempt, port) in ports.iter().enumerate() {
-            if std::net::TcpListener::bind(("127.0.0.1", *port)).is_err() {
-                continue;
-            }
-            let index = corpus
-                .root
-                .path()
-                .join("indexes")
-                .join(format!("http-index-{port}-{attempt}.json"));
-            let mut child = Command::new(env!("CARGO_BIN_EXE_healthmd"))
-                .args([
-                    "mcp",
-                    "serve-data",
-                    "--serve-transport",
-                    "streamable-http",
-                    "--bind",
-                    &format!("127.0.0.1:{port}"),
-                    "--directory",
-                ])
-                .arg(corpus.root.path().join("exports"))
-                .arg("--grant")
-                .arg(grant)
-                .arg("--index")
-                .arg(&index)
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn()
-                .expect("healthmd mcp serve-data should launch");
+            let mut child = {
+                let _startup = HTTP_SERVER_STARTUP.lock().expect("HTTP startup lock");
+                if std::net::TcpListener::bind(("127.0.0.1", *port)).is_err() {
+                    continue;
+                }
+                let index = corpus
+                    .root
+                    .path()
+                    .join("indexes")
+                    .join(format!("http-index-{port}-{attempt}.json"));
+                Command::new(env!("CARGO_BIN_EXE_healthmd"))
+                    .args([
+                        "mcp",
+                        "serve-data",
+                        "--serve-transport",
+                        "streamable-http",
+                        "--bind",
+                        &format!("127.0.0.1:{port}"),
+                        "--directory",
+                    ])
+                    .arg(corpus.root.path().join("exports"))
+                    .arg("--grant")
+                    .arg(grant)
+                    .arg("--index")
+                    .arg(&index)
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .spawn()
+                    .expect("healthmd mcp serve-data should launch")
+            };
             if wait_for_listener(&mut child, *port) {
                 return Self {
                     child,
@@ -766,6 +775,30 @@ fn wait_for_listener(child: &mut Child, port: u16) -> bool {
 // ---------------------------------------------------------------------------
 // Scenarios
 // ---------------------------------------------------------------------------
+
+#[test]
+fn http_startup_skips_an_occupied_candidate_without_using_its_listener() {
+    let corpus = Corpus::build();
+    let sentinel = {
+        let _startup = HTTP_SERVER_STARTUP.lock().expect("HTTP startup lock");
+        std::net::TcpListener::bind(("127.0.0.1", 0)).expect("owned occupied candidate")
+    };
+    sentinel
+        .set_nonblocking(true)
+        .expect("nonblocking sentinel");
+    let occupied = sentinel.local_addr().expect("sentinel address").port();
+    let alternate = if occupied == 48_281 { 48_283 } else { 48_281 };
+    let mut server = HttpMcpServer::spawn(&corpus, &corpus.grant_bulk(), [occupied, alternate]);
+    assert_eq!(server.port, alternate);
+    assert_eq!(
+        server.initialize()["result"]["protocolVersion"],
+        json!(PROTOCOL_VERSION)
+    );
+    assert!(
+        matches!(sentinel.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock),
+        "readiness must not connect to the unrelated occupied listener"
+    );
+}
 
 #[test]
 fn http_initialize_performs_the_handshake_and_exposes_only_the_five_data_tools() {

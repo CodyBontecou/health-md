@@ -109,6 +109,10 @@ extension AppleLooseDailyCoreExecuting {
 }
 
 nonisolated struct SystemAppleLooseDailyCoreExecutor: AppleLooseDailyCoreExecuting, Sendable {
+    let profile: CoreMetricRegistryProfile
+
+    init(profile: CoreMetricRegistryProfile = .appleHealthDataV10) { self.profile = profile }
+
     static func registry(for pin: AppleExportEnginePin) async throws -> CoreMetricRegistrySnapshot {
         try await SystemAppleLooseDailyCoreExecutor().runDetached {
             try HealthMdCoreService().metricRegistryAtAuthority(
@@ -120,7 +124,7 @@ nonisolated struct SystemAppleLooseDailyCoreExecutor: AppleLooseDailyCoreExecuti
     }
 
     func loadContext() async throws -> AppleLooseDailyCoreContext {
-        try await loadContext(profile: .appleHealthDataV10)
+        try await loadContext(profile: self.profile)
     }
 
     func loadContext(profile: CoreMetricRegistryProfile) async throws -> AppleLooseDailyCoreContext {

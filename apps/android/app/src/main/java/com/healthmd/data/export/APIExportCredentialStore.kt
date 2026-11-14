@@ -91,6 +91,15 @@ interface APIExportCredentialStore {
 
     suspend fun destinationFingerprint(endpointUrl: String): String? =
         APIExportEndpoint.fingerprint(endpointUrl)
+
+    suspend fun createRecoveryAuthority(endpointUrl: String, profileBinding: String?): String? =
+        requestConfiguration(endpointUrl)?.let { APIRecoveryAuthorities.create(it, profileBinding) }
+
+    suspend fun matchesRecoveryAuthority(
+        authorityJson: String?,
+        configuration: APIExportRequestConfiguration,
+        profileBinding: String?,
+    ): Boolean = APIRecoveryAuthorities.matches(authorityJson, configuration, profileBinding)
 }
 
 /**
@@ -196,7 +205,7 @@ class EncryptedAPIExportCredentialStore @Inject constructor(
                 preferences.getString(AUTHORIZATION_KEY, null)
             }
             val headers = if (saved != null) emptyList() else preferences.getString(REQUEST_HEADERS_KEY, null)
-                ?.let { stored -> runCatching { APIExportHeaders.parse(stored) }.getOrDefault(emptyList()) }
+                ?.let(APIExportHeaders::parse)
                 .orEmpty()
             val fingerprint = APIExportDestinationFingerprint.create(
                 salt = fingerprintSalt(),
@@ -215,6 +224,43 @@ class EncryptedAPIExportCredentialStore @Inject constructor(
 
     override suspend fun destinationFingerprint(endpointUrl: String): String? =
         requestConfiguration(endpointUrl)?.destinationFingerprint
+
+    override suspend fun createRecoveryAuthority(endpointUrl: String, profileBinding: String?): String? =
+        withContext(Dispatchers.IO) {
+            synchronized(credentialLock) {
+                val endpoint = APIExportEndpoint.normalizedOrNull(endpointUrl) ?: return@synchronized null
+                // Resolve exactly like requestConfiguration so a saved endpoint's own token is bound.
+                val saved = SavedAPIEndpointRules.byUrl(readSavedEndpointsLocked(), endpoint)
+                val authorization = if (saved != null) {
+                    preferences.getString(savedAuthorizationKey(saved.id), null)
+                } else {
+                    preferences.getString(AUTHORIZATION_KEY, null)
+                }
+                val headers = if (saved != null) {
+                    emptyList()
+                } else {
+                    preferences.getString(REQUEST_HEADERS_KEY, null)?.let(APIExportHeaders::parse).orEmpty()
+                }
+                val key = fingerprintSalt()
+                val fingerprint = APIExportDestinationFingerprint.create(key, endpoint, authorization, headers)
+                    ?: return@synchronized null
+                APIRecoveryAuthorities.create(
+                    APIExportRequestConfiguration(endpoint, authorization, headers, fingerprint),
+                    profileBinding,
+                    key,
+                )
+            }
+        }
+
+    override suspend fun matchesRecoveryAuthority(
+        authorityJson: String?,
+        configuration: APIExportRequestConfiguration,
+        profileBinding: String?,
+    ): Boolean = withContext(Dispatchers.IO) {
+        synchronized(credentialLock) {
+            APIRecoveryAuthorities.matches(authorityJson, configuration, profileBinding, fingerprintSalt())
+        }
+    }
 
     override suspend fun readSavedEndpoints(): List<SavedAPIEndpoint> = withContext(Dispatchers.IO) {
         synchronized(credentialLock) { readSavedEndpointsLocked() }
@@ -245,12 +291,14 @@ class EncryptedAPIExportCredentialStore @Inject constructor(
 
     private fun fingerprintSalt(): ByteArray {
         preferences.getString(FINGERPRINT_SALT_KEY, null)?.let { encoded ->
-            runCatching { Base64.decode(encoded, Base64.NO_WRAP) }.getOrNull()?.let { return it }
+            val decoded = Base64.decode(encoded, Base64.NO_WRAP)
+            check(decoded.size == 32) { "API credential evidence key is invalid." }
+            return decoded
         }
         val generated = ByteArray(32).also { SecureRandom().nextBytes(it) }
-        preferences.edit {
-            putString(FINGERPRINT_SALT_KEY, Base64.encodeToString(generated, Base64.NO_WRAP))
-        }
+        check(preferences.edit()
+            .putString(FINGERPRINT_SALT_KEY, Base64.encodeToString(generated, Base64.NO_WRAP))
+            .commit()) { "API credential evidence key could not be persisted." }
         return generated
     }
 

@@ -9,6 +9,8 @@ const val TRANSPORT_PROTOCOL_VERSION: Int = 1
 const val ANDROID_PAIRING_PROTOCOL_VERSION: Int = 2
 const val SHARED_PAIRING_PROTOCOL_VERSION: Int = 3
 const val ANDROID_APPLICATION_PROTOCOL_VERSION: Int = 2
+/** Actual native hello and accepted-owner negotiation share this list. Extension4 remains off. */
+val ANDROID_NATIVE_APPLICATION_VERSIONS: List<Int> get() = listOf(ANDROID_APPLICATION_PROTOCOL_VERSION)
 const val MAXIMUM_PACKET_BYTES: Int = 2 * 1024 * 1024
 const val MAXIMUM_CHUNK_BYTES: Int = 512 * 1024
 const val MINIMUM_PARTITION_BYTES: Long = 32L * 1024 * 1024

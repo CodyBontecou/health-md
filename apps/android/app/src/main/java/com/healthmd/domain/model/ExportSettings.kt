@@ -76,8 +76,12 @@ data class PendingScheduledExportRequest(
      * Kept as JSON so corrupt durable metadata remains detectable and can fail closed.
      */
     val settingsSnapshotJson: String? = null,
-    /** Durable prepared-body journal for API delivery. Missing preserves pre-journal behavior. */
+    /** Private, bounded original endpoint/credential/profile evidence; absent legacy work is unverified. */
+    val apiAuthorityJson: String? = null,
+    /** Durable prepared-body or raw-artifact operation identity. */
     val apiOperationId: String? = null,
+    /** Once prepared/attempted, missing immutable bytes must never trigger recapture. */
+    val apiJournalRequired: Boolean = false,
     /** Durable exact-artifact journal for a scheduled device-folder commit. */
     val folderOperationId: String? = null,
     /** Durable private Drive journal. Credentials and remote authority are excluded. */
@@ -116,6 +120,20 @@ data class PendingScheduledExportRequest(
             "A scheduled retry cannot reference multiple destination operations."
         }
     }
+}
+
+/** Request-local recovery guard. Never serialized as a preference or passed to a renderer. */
+class APIRecoveryExecution(
+    val authorityJson: String?,
+    val profileBinding: String?,
+    val operationId: String,
+    val settingsSnapshotJson: String?,
+    val requireExistingJournal: Boolean = false,
+    /** Must durably fence missing recovery material before the first external delivery. */
+    val onJournalPrepared: suspend () -> Boolean = { true },
+    val isStillAuthorized: suspend () -> Boolean,
+) {
+    override fun toString(): String = "APIRecoveryExecution(redacted)"
 }
 
 @Serializable
@@ -203,6 +221,11 @@ data class ExportSettings(
      * user preference. */
     @Transient
     val executionEngineAuthorityIsFrozen: Boolean = false,
+    /** Scheduled API work must prove its original authority, even before a journal exists. */
+    @Transient
+    val executionAPIRecoveryRequired: Boolean = false,
+    @Transient
+    val executionAPIRecovery: APIRecoveryExecution? = null,
     /** Operation-only capture authority; never encoded as a mutable/portable preference. */
     @Transient
     val executionSleepCaptureContext: AndroidCaptureContext? = null,

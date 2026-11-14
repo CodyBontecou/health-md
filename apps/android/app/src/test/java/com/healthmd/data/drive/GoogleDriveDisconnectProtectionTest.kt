@@ -66,6 +66,8 @@ class GoogleDriveDisconnectProtectionTest {
         managed = GoogleDriveManagedObjectStore(dataStore)
         selection = GoogleDriveSelectionStore(dataStore)
         val context = mockk<Context>()
+        // Scheduled recovery admission keeps its discard fence in private no-backup storage.
+        every { context.noBackupFilesDir } returns temporaryFolder.newFolder("no-backup")
         profiles = ExportProfileRepository(dataStore, context)
         schedules = ScheduledProfileEntryStore(dataStore, context)
         settings = SettingsRepositoryImpl(dataStore, context)
@@ -149,7 +151,12 @@ class GoogleDriveDisconnectProtectionTest {
         }
         val before = snapshot()
         assertThat(disconnectService(guardedStore).disconnect(destination.id) { }).isFalse()
-        val expected = before.toMutableMap().apply { put(ConfigurationProtectionPersistence.enabledKey, true) }
+        // Enabling protection also commits its native invalidation revision; nothing else changes.
+        val protectionRevision = stringPreferencesKey("native_configuration_protection_revision_v1")
+        val expected = before.toMutableMap().apply {
+            put(ConfigurationProtectionPersistence.enabledKey, true)
+            put(protectionRevision, checkNotNull(snapshot()[protectionRevision]))
+        }
         assertUnchanged(expected)
         assertThat(selection.selectIfAllowed(null)).isFalse()
         assertThat(destinations.remove(destination.id)).isFalse()

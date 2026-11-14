@@ -26,6 +26,17 @@ internal object ExportProfilePersistence {
         val blocksDefaultMigration: Boolean get() = corruptRoot || opaque
     }
 
+    /**
+     * Kotlin's integer serializer accepts quoted numbers; native revision pins do not. A record
+     * with a non-integer `configurationRevision` stays opaque (preserved, never interpreted).
+     */
+    private fun decodeRecord(record: JsonElement): ExportProfile? = runCatching {
+        (record as? JsonObject)?.get("configurationRevision")?.let { revision ->
+            require(revision is JsonPrimitive && !revision.isString && revision.intOrNull != null)
+        }
+        strictJson.decodeFromJsonElement(ExportProfile.serializer(), record)
+    }.getOrNull()
+
     private fun hasEnvelope(prefs: Preferences): Boolean = prefs.asMap().containsKey(profilesKey)
 
     fun activeId(prefs: Preferences): String? =
@@ -53,7 +64,7 @@ internal object ExportProfilePersistence {
             val known = mutableListOf<ExportProfile>()
             var opaque = false
             records.forEach { record ->
-                val profile = runCatching { strictJson.decodeFromJsonElement(ExportProfile.serializer(), record) }.getOrNull()
+                val profile = decodeRecord(record)
                 if (profile == null || known.any { it.id == profile.id }) opaque = true else known += profile
             }
             Decoded(known, records.toList(), opaque = opaque)
@@ -64,7 +75,7 @@ internal object ExportProfilePersistence {
     fun requireTransactionProfiles(prefs: Preferences): List<ExportProfile> {
         val decoded = decode(prefs)
         require(!decoded.blocksDefaultMigration)
-        decoded.records.forEach { strictJson.decodeFromJsonElement(ExportProfile.serializer(), it) }
+        decoded.records.forEach { requireNotNull(decodeRecord(it)) }
         return decoded.profiles
     }
 
@@ -73,7 +84,7 @@ internal object ExportProfilePersistence {
         val remaining = profiles.toMutableList()
         val seen = mutableSetOf<String>()
         val records = previous?.records.orEmpty().mapNotNull { record ->
-            val old = runCatching { strictJson.decodeFromJsonElement(ExportProfile.serializer(), record) }.getOrNull()
+            val old = decodeRecord(record)
             if (old == null || !seen.add(old.id)) record else {
                 val index = remaining.indexOfFirst { it.id == old.id }
                 if (index < 0) null else remaining.removeAt(index).let { updated ->
