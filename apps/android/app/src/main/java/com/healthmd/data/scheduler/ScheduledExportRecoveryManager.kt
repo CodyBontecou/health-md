@@ -9,6 +9,10 @@ import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.export.RecoveryDiscardFence
+import com.healthmd.data.drive.GoogleDriveDestinationRunner
+import com.healthmd.data.drive.GoogleDriveDestinationStore
+import com.healthmd.data.drive.GoogleDriveExportOrchestrator
+import com.healthmd.data.drive.GoogleDriveSelectionStore
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
@@ -58,6 +62,10 @@ class ScheduledExportRecoveryManager @Inject constructor(
     private val rawSnapshotService: RawSnapshotService? = null,
     private val apiCredentialStore: APIExportCredentialStore? = null,
     private val runCoordinator: ScheduledExportRunCoordinator = ScheduledExportRunCoordinator(),
+    private val googleDriveExportOrchestrator: GoogleDriveExportOrchestrator,
+    private val googleDriveDestinationRunner: GoogleDriveDestinationRunner,
+    private val googleDriveSelectionStore: GoogleDriveSelectionStore,
+    private val googleDriveDestinationStore: GoogleDriveDestinationStore,
     private val entitlementRepository: EntitlementRepository,
     private val distributionPolicy: DistributionPolicy,
     private val stateStore: ScheduledExportStateStore? = null,
@@ -137,7 +145,8 @@ class ScheduledExportRecoveryManager @Inject constructor(
     private fun apiRecoveryGroups(requests: List<PendingScheduledExportRequest>): Map<String, List<PendingScheduledExportRequest>> =
         requests.filter { it.exportTarget == ExportTarget.API_ENDPOINT }
             .groupBy { PendingRecoveryOperation(it.exportTarget, it.destinationFingerprint, it.enginePin,
-                it.settingsSnapshotJson, it.apiOperationId, it.folderOperationId, it.apiAuthorityJson, it.apiJournalRequired) }
+                it.settingsSnapshotJson, it.apiOperationId, it.folderOperationId, it.apiAuthorityJson, it.apiJournalRequired,
+                it.driveOperationId) }
             .mapNotNull { (operation, grouped) ->
                 val dates = grouped.map { it.date }.filter { !it.isAfter(LocalDate.now().minusDays(1)) }.distinct().sorted()
                 val id = operation.apiOperationId ?: dates.takeIf { it.isNotEmpty() }?.let {
@@ -253,6 +262,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
                         folderOperationId = request.folderOperationId,
                         apiAuthorityJson = request.apiAuthorityJson,
                         apiJournalRequired = request.apiJournalRequired,
+                        driveOperationId = request.driveOperationId,
                     )
                 }
 
@@ -278,6 +288,11 @@ class ScheduledExportRecoveryManager @Inject constructor(
                     )
                 } else null
                 if (!isDestinationReady(settings, target, destinationFingerprint, operation.apiAuthorityJson)) continue
+                val recoveryDriveDestinationId = if (target == ExportTarget.GOOGLE_DRIVE) {
+                    googleDriveSelectionStore.get()?.takeIf { selectedId ->
+                        googleDriveDestinationStore.find(selectedId)?.fingerprint == destinationFingerprint
+                    }
+                } else null
                 val restoredOutputSettings = runCatching {
                     if (settingsSnapshotJson == null) {
                         // Explicit old-request compatibility: output settings are read at recovery.
@@ -378,6 +393,8 @@ class ScheduledExportRecoveryManager @Inject constructor(
                             settings = targetSettings,
                             target = target,
                             expectedDestinationFingerprint = destinationFingerprint,
+                            googleDriveDestinationId = recoveryDriveDestinationId,
+                            googleDriveOperationId = operation.driveOperationId,
                         ) ?: ExportResult(
                             successCount = 0,
                             totalCount = 1,
@@ -410,17 +427,38 @@ class ScheduledExportRecoveryManager @Inject constructor(
                             expectedDestinationFingerprint = destinationFingerprint,
                             durableOperationId = durableApiOperationId,
                             durableSettingsSnapshotJson = settingsSnapshotJson,
+                        ) ?: ExportResult(
+                            successCount = 0,
+                            totalCount = targetDates.size,
+                            failedDateDetails = targetDates.map {
+                                FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR)
+                            },
+                            target = ExportTarget.API_ENDPOINT,
+                        ).also {
+                            Timber.w("API export service unavailable during scheduled recovery")
+                        }
+                        ExportTarget.GOOGLE_DRIVE -> recoveryDriveDestinationId?.let { destinationId ->
+                            googleDriveExportOrchestrator.exportDates(
+                                targetDates,
+                                targetSettings,
+                                destinationId,
+                                source = "retry",
+                                operationId = operation.driveOperationId ?: deterministicRecoveryOperationId(
+                                    targetDates,
+                                    destinationFingerprint,
+                                    enginePin,
+                                    settingsSnapshotJson,
+                                ),
+                                settingsSnapshotJson = settingsSnapshotJson,
+                            )
+                        } ?: ExportResult(
+                            successCount = 0,
+                            totalCount = targetDates.size,
+                            failedDateDetails = targetDates.map {
+                                FailedDateDetail(it, ExportFailureReason.NO_FOLDER_SELECTED)
+                            },
+                            target = ExportTarget.GOOGLE_DRIVE,
                         )
-                            ?: ExportResult(
-                                successCount = 0,
-                                totalCount = targetDates.size,
-                                failedDateDetails = targetDates.map {
-                                    FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR)
-                                },
-                                target = ExportTarget.API_ENDPOINT,
-                            ).also {
-                                Timber.w("API export service unavailable during scheduled recovery")
-                            }
                         ExportTarget.AGENT_DATA_GATEWAY -> agentDataGatewayExportRunner?.exportDates(
                             dates = targetDates,
                             settings = targetSettings,
@@ -494,9 +532,15 @@ class ScheduledExportRecoveryManager @Inject constructor(
                         settingsSnapshotJson = settingsSnapshotJson,
                         apiOperationIds = targetResult.retryOperationIds,
                         folderOperationIds = targetResult.retryFolderOperationIds,
+                        driveOperationIds = targetResult.retryDriveOperationIds,
                         freshCaptureRetryDates = targetResult.freshCaptureRetryDates,
                         apiAuthorityJson = operation.apiAuthorityJson,
                     )
+                }
+                if (targetResult.isFullSuccess && target == ExportTarget.GOOGLE_DRIVE) {
+                    targetResult.retryDriveOperationIds.values.toSet().forEach {
+                        googleDriveExportOrchestrator.acknowledgeAfterHistory(it)
+                    }
                 }
                 val allFailuresDetachedForFreshCapture =
                     targetResult.failedDateDetails.all { failure ->
@@ -694,6 +738,9 @@ class ScheduledExportRecoveryManager @Inject constructor(
             return ScheduledExportRecoveryBlocker.NO_EXPORT_FOLDER
         }
 
+        val driveGroups = groups.filter { it.first == ExportTarget.GOOGLE_DRIVE }
+        if (driveGroups.isNotEmpty()) return ScheduledExportRecoveryBlocker.NO_EXPORT_FOLDER
+
         val apiGroups = groups.filter { it.first == ExportTarget.API_ENDPOINT }
         if (apiGroups.isNotEmpty() && !APIExportEndpoint.isConfigured(settings.apiEndpointUrl)) {
             return ScheduledExportRecoveryBlocker.API_ENDPOINT_NOT_CONFIGURED
@@ -724,6 +771,9 @@ class ScheduledExportRecoveryManager @Inject constructor(
                     credentials.matchesRecoveryAuthority(apiAuthorityJson, configuration, null)
             }.getOrDefault(false)
         }
+        ExportTarget.GOOGLE_DRIVE -> googleDriveSelectionStore.get()
+            ?.let { googleDriveDestinationStore.find(it) }
+            ?.fingerprint == destinationFingerprint
         ExportTarget.AGENT_DATA_GATEWAY ->
             AgentDataGatewayEndpoint.isConfigured(settings.agentDataGatewayUrl) &&
                 destinationFingerprint == AgentDataGatewayEndpoint.fingerprint(settings.agentDataGatewayUrl)
@@ -746,16 +796,19 @@ class ScheduledExportRecoveryManager @Inject constructor(
         failedDateDetails = result.failedDateDetails,
         target = target,
         targetLabel = targetLabel(settings, target),
-        fileCount = if (target == ExportTarget.DEVICE_FOLDER) {
-            when {
+        fileCount = when (target) {
+            ExportTarget.DEVICE_FOLDER -> when {
                 settings.exportMode == ExportMode.RAW_SNAPSHOT -> result.artifactCount
                 result.usesDurableFolderJournal -> result.artifactCount
                 else -> result.successCount * settings.selectedExportFormats.size
             }
-        } else 0,
+            ExportTarget.GOOGLE_DRIVE -> result.artifactCount
+            ExportTarget.API_ENDPOINT, ExportTarget.AGENT_DATA_GATEWAY -> 0
+        },
         warningSummary = result.warningSummary(),
         exportMode = settings.exportMode,
         reconciliationKey = reconciliationKey,
+        driveOperationId = result.retryDriveOperationIds.values.firstOrNull(),
     )
 
     private fun scheduledReconciliationKey(
@@ -772,18 +825,18 @@ class ScheduledExportRecoveryManager @Inject constructor(
         "scheduled-${UUID.nameUUIDFromBytes(stable.toByteArray(StandardCharsets.UTF_8))}"
     }
 
-    private fun targetLabel(settings: ExportSettings, target: ExportTarget): String =
-        if (target == ExportTarget.API_ENDPOINT) {
-            APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
-        } else if (target == ExportTarget.AGENT_DATA_GATEWAY) {
-            AgentDataGatewayEndpoint.redactedDescription(settings.agentDataGatewayUrl)
-        } else buildString {
+    private fun targetLabel(settings: ExportSettings, target: ExportTarget): String = when (target) {
+        ExportTarget.API_ENDPOINT -> APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
+        ExportTarget.GOOGLE_DRIVE -> "Google Drive"
+        ExportTarget.AGENT_DATA_GATEWAY -> AgentDataGatewayEndpoint.redactedDescription(settings.agentDataGatewayUrl)
+        ExportTarget.DEVICE_FOLDER -> buildString {
             val subfolder = settings.subfolder.trim('/').takeIf { it.isNotBlank() }
             append(subfolder ?: EXPORT_FOLDER_ROOT_TARGET_LABEL)
             settings.formatFolderPath(LocalDate.now().minusDays(1))?.takeIf { it.isNotBlank() }?.let {
                 append("/").append(it.trim('/'))
             }
         }
+    }
 
     /** History is also returned through the automation broadcast API, so keep this invariant. */
     private fun ExportResult.warningSummary(): String? = when {
@@ -803,6 +856,7 @@ private data class PendingRecoveryOperation(
     val folderOperationId: String?,
     val apiAuthorityJson: String?,
     val apiJournalRequired: Boolean,
+    val driveOperationId: String?,
 )
 
 data class ScheduledExportRecoveryStatus(

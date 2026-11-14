@@ -34,6 +34,13 @@ struct GlassMetricsScreen: View {
 
     var body: some View {
         page
+            // Onboarding asks Apple Health only for the chosen packs; types enabled
+            // here later are requested when the page closes. The manager skips the
+            // sheet when every type already has a recorded decision.
+            .onDisappear {
+                let enabled = state.enabledMetrics
+                Task { _ = try? await healthKitManager.requestAuthorization(forMetricIDs: enabled) }
+            }
             .glassAutosave(
                 MetricSelectionSnapshot.from(state),
                 revert: { $0.apply(to: state) },

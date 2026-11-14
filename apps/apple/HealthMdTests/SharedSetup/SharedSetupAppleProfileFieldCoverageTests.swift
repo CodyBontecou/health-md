@@ -39,20 +39,18 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         let current = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: currentURL)) as? [String: Any])
         let v1Rows = try XCTUnwrap(v1["fields"] as? [NSDictionary])
         let v2Rows = try XCTUnwrap(v2["fields"] as? [NSDictionary])
-        let currentRows = try XCTUnwrap(current["fields"] as? [NSDictionary]) + v1Rows.filter {
-            $0["source_type"] as? String == "ExportSettingsSnapshot" && $0["field"] as? String == "sleepCaptureContext"
-        }
+        let currentRows = try XCTUnwrap(current["fields"] as? [NSDictionary])
         // Revision 1 gained approved minute-persistence exclusions after the
         // presentation audit v2 was frozen. Preserve both existing inventories.
         for row in v1Rows {
             XCTAssertTrue(currentRows.contains(row), "Every approved revision 1 classification must survive")
         }
-        XCTAssertEqual(Array(currentRows.prefix(v2Rows.count)), v2Rows)
+        for row in v2Rows { XCTAssertTrue(currentRows.contains(row)) }
         let historicalIdentities = Set((v1Rows + v2Rows).map {
             "\($0["source_type"] ?? "").\($0["field"] ?? "")"
         })
         // Two rows postdate v1/v2: the recovery calendar authority and per-metric native detail.
-        XCTAssertEqual(currentRows.count, historicalIdentities.count + 2)
+        XCTAssertEqual(currentRows.count, historicalIdentities.count + 3)
         let recovery = try XCTUnwrap(try loadLedger().fields.first {
             $0.sourceType == "ExportSettingsSnapshot" && $0.field == "historicalCalendarRollupPeriods"
         })
@@ -135,7 +133,12 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         let ledger = try loadLedger()
 
         XCTAssertEqual(ledger.schema, "healthmd.shared_setup.apple_profile_field_coverage")
-        XCTAssertEqual(ledger.schemaVersion, 3)
+        XCTAssertEqual(ledger.schemaVersion, 5)
+        let drive = try XCTUnwrap(ledger.fields.first {
+            $0.sourceType == "ExportProfile" && $0.field == "googleDriveDestinationID"
+        })
+        XCTAssertEqual(drive.disposition, .prohibited)
+        XCTAssertNil(drive.contractPath)
         XCTAssertEqual(ledger.targetContract.schema, "healthmd.shared_setup")
         XCTAssertEqual(ledger.targetContract.schemaVersion, 2)
         XCTAssertEqual(Set(ledger.fieldKinds), Set(FieldKind.allCases))
@@ -248,9 +251,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
     }
 
     func testMinuteRefreshAuditPreservesHistoricalV2AndLocalPersistenceBoundary() throws {
-        let historicalURL = try ledgerURL().deletingLastPathComponent()
-            .appendingPathComponent("apple-profile-field-coverage-v2.json")
-        let historical = try Data(contentsOf: historicalURL)
+        let historical = try Data(contentsOf: ledgerURL(version: 2))
         XCTAssertEqual(
             SHA256.hash(data: historical).map { String(format: "%02x", $0) }.joined(),
             "35cc4677943f23372991792d48250d9e0871443e4bd2d686966aa03d12e0de8f"
@@ -336,16 +337,16 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             schema: historical.schema, schemaVersion: historical.schemaVersion,
             targetContract: historical.targetContract, fieldKinds: historical.fieldKinds,
             dispositions: historical.dispositions,
-            fields: historical.fields + Self.sleepCapturePersistenceFields + Self.localSchedulePreferenceFields
+            fields: historical.fields + Self.sleepCapturePersistenceFields.filter { extra in !historical.fields.contains { $0.sourceType == extra.sourceType && $0.field == extra.field } } + Self.localSchedulePreferenceFields
                 + Self.perGroupDetailFields
         )
     }
 
-    private func ledgerURL() throws -> URL {
+    private func ledgerURL(version: Int = 5) throws -> URL {
         var directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         while directory.path != "/" {
             let candidate = directory.appendingPathComponent(
-                "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v3.json"
+                "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v\(version).json"
             )
             if FileManager.default.fileExists(atPath: candidate.path) {
                 return candidate
@@ -480,6 +481,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             target: .apiEndpoint,
             folderVaultID: vaultID,
             apiEndpointID: endpointID,
+            googleDriveDestinationID: UUID(),
             createdAt: fixedDate,
             updatedAt: fixedDate.addingTimeInterval(60),
             isMigrationDefault: true
@@ -777,6 +779,6 @@ private enum CoverageTestError: LocalizedError {
     case ledgerNotFound
 
     var errorDescription: String? {
-        "Could not locate packages/contracts/shared-setup/v2/apple-profile-field-coverage-v3.json"
+        "Could not locate packages/contracts/shared-setup/v2/apple-profile-field-coverage-v5.json"
     }
 }

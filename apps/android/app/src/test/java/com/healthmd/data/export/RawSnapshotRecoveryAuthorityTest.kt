@@ -261,6 +261,8 @@ class RawSnapshotRecoveryAuthorityTest {
         }
         fun runner() = RawSnapshotExportRunner(
             context, repository, apiClient, credentials, settingsRepository,
+            driveBundleFactory = mockk(relaxed = true), driveRunner = mockk(relaxed = true),
+            driveSelectionStore = mockk(relaxed = true),
             agentDataGatewayClient = mockk(),
         )
     }

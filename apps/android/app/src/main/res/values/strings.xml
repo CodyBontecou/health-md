@@ -802,38 +802,210 @@
     <string name="bullet_display_plus">Plus (+)</string>
 
     <!-- Onboarding -->
-    <string name="onboarding_welcome_title">Welcome to\nHealth.md</string>
-    <string name="onboarding_welcome_subtitle">Export your wellness journey as beautiful, portable markdown files</string>
-    <string name="onboarding_welcome_feature_1">Works with Obsidian, Notion, and any markdown app</string>
-    <string name="onboarding_welcome_feature_2">Your health data goes only to destinations you choose</string>
-    <string name="onboarding_welcome_feature_3">Automated exports keep your notes up to date</string>
 
-    <string name="onboarding_health_title">Your Health,\nYour Data</string>
-    <string name="onboarding_health_subtitle">Health.md needs permission to read your health data from Health Connect — but only to export it for you.</string>
-    <string name="onboarding_health_feature_1">Read-only access — we never modify your data</string>
-    <string name="onboarding_health_feature_2">Health exports use only destinations you choose</string>
-    <string name="onboarding_health_feature_3">No Health.md health-data cloud</string>
-    <string name="onboarding_health_grant_button">Connect Health Data</string>
     <string name="onboarding_health_connected">Health Connect linked</string>
 
-    <string name="onboarding_storage_title">Choose Your\nExport Location</string>
-    <string name="onboarding_storage_subtitle">Select where Health.md should save your exported health notes.</string>
-    <string name="onboarding_storage_hint_obsidian">If you use Obsidian, select your vault folder</string>
-    <string name="onboarding_storage_hint_anywhere">Or choose any folder — Documents, Downloads, wherever works for you</string>
-    <string name="onboarding_storage_select_button">Select Folder</string>
-    <string name="onboarding_storage_selected">Saving to: %s</string>
 
-    <string name="onboarding_ready_title">You\'re All Set!</string>
-    <string name="onboarding_ready_included_subtitle">Create an automation, then use Run now to generate your first export. Full Access is included.</string>
-    <string name="onboarding_ready_subtitle">Create an automation, then generate your first export for free. Paid access is needed for further exports.</string>
-    <string name="onboarding_ready_tip_1">Choose the metrics and folder for your automation</string>
-    <string name="onboarding_ready_tip_2">Use Run now to save your first health notes for free</string>
-    <string name="onboarding_ready_tip_3">Customize your export format in Settings</string>
-    <string name="onboarding_ready_start_button">Create My First Automation</string>
 
     <string name="onboarding_continue">Continue</string>
     <string name="onboarding_skip">Skip</string>
     <string name="onboarding_back">Back</string>
+
+    <!-- Onboarding v2: Welcome, Packs, Health Connect, Folder, First note, Make it daily -->
+    <string name="onboarding_progress">Step %1$d of %2$d</string>
+    <string name="onboarding_welcome_title_lead">Your health,</string>
+    <string name="onboarding_welcome_title_accent">as notes you own.</string>
+    <string name="onboarding_welcome_body">A daily Markdown note of your sleep, activity and heart data, saved to Obsidian or any folder you choose.</string>
+    <string name="onboarding_welcome_step_label">Step %1$d</string>
+    <string name="onboarding_welcome_step_1">Pick what to track</string>
+    <string name="onboarding_welcome_step_2">Choose a folder</string>
+    <string name="onboarding_welcome_step_3">See your past week</string>
+    <string name="onboarding_welcome_saved_badge">Saved to your vault</string>
+    <string name="onboarding_welcome_privacy">No account. Your data stays on your phone.</string>
+    <string name="onboarding_get_started">Get started</string>
+
+    <string name="onboarding_packs_title_lead">What goes in your</string>
+    <string name="onboarding_packs_title_accent">daily note?</string>
+    <string name="onboarding_packs_body">Health.md asks Health Connect only for these. You can add more anytime.</string>
+    <string name="onboarding_packs_select_all">Select all</string>
+    <string name="onboarding_packs_deselect_all">Deselect all</string>
+    <string name="onboarding_packs_selected">%1$d of %2$d packs</string>
+    <string name="onboarding_packs_none">Pick at least one pack</string>
+    <string name="onboarding_packs_next_hint">Health Connect asks next</string>
+    <string name="onboarding_packs_unavailable">Not available on this phone</string>
+    <plurals name="onboarding_packs_types">
+        <item quantity="one">%d type</item>
+        <item quantity="other">%d types</item>
+    </plurals>
+    <plurals name="onboarding_packs_metrics_selected">
+        <item quantity="one">%d metric selected</item>
+        <item quantity="other">%d metrics selected</item>
+    </plurals>
+    <string name="onboarding_pack_sleep">Sleep &amp; Recovery</string>
+    <string name="onboarding_pack_sleep_detail">Stages, HRV, resting HR</string>
+    <string name="onboarding_pack_activity">Activity</string>
+    <string name="onboarding_pack_activity_detail">Steps, energy, exercise, workouts</string>
+    <string name="onboarding_pack_heart">Heart</string>
+    <string name="onboarding_pack_heart_detail">Heart rate, blood oxygen, pressure</string>
+    <string name="onboarding_pack_body">Body</string>
+    <string name="onboarding_pack_body_detail">Weight, body fat, BMI, lean mass</string>
+    <string name="onboarding_pack_mind">Mind</string>
+    <string name="onboarding_pack_mind_detail">Mindful minutes and sessions</string>
+    <string name="onboarding_pack_nutrition">Nutrition</string>
+    <string name="onboarding_pack_nutrition_detail">Calories, macros, water, caffeine</string>
+    <string name="onboarding_pack_cycle">Cycle Tracking</string>
+    <string name="onboarding_pack_cycle_detail">Period, ovulation. Off by default</string>
+
+    <string name="onboarding_health_title_lead">Connect</string>
+    <string name="onboarding_health_title_accent">Health Connect</string>
+    <string name="onboarding_health_body">Next, Health Connect asks you to approve these. Tap %1$s. You can switch any of them off.</string>
+    <string name="onboarding_health_allow_all">Allow all</string>
+    <string name="onboarding_health_pack_chip">%1$s · %2$d</string>
+    <string name="onboarding_health_read_only">Read-only</string>
+    <string name="onboarding_health_on_phone">Stays on phone</string>
+    <string name="onboarding_health_change_anytime">Change anytime</string>
+    <string name="onboarding_health_continue">Continue to Health Connect</string>
+    <string name="onboarding_health_install">Install Health Connect</string>
+    <string name="onboarding_health_open_settings">Open Health Connect</string>
+    <string name="onboarding_skip_for_now">Skip for now</string>
+
+    <string name="onboarding_folder_title_lead">Where should your</string>
+    <string name="onboarding_folder_title_accent">notes live?</string>
+    <string name="onboarding_folder_body">One file per day, in your %1$s folder.</string>
+    <string name="onboarding_folder_preview_label">Folder preview</string>
+    <string name="onboarding_folder_preview_new">New</string>
+    <string name="onboarding_folder_preview_more">… %1$d more</string>
+    <string name="onboarding_folder_local">Local folder</string>
+    <string name="onboarding_folder_local_detail">Your Obsidian vault, or any folder on this phone</string>
+    <string name="onboarding_folder_recommended">Recommended</string>
+    <string name="onboarding_folder_api">API endpoint</string>
+    <string name="onboarding_folder_api_detail">Send each day as JSON to your URL</string>
+    <string name="onboarding_folder_drive">Google Drive</string>
+    <string name="onboarding_folder_drive_detail">Pick a Drive folder in the system picker</string>
+    <string name="onboarding_folder_drive_connect_detail">Upload straight to a folder in your Drive</string>
+    <string name="onboarding_folder_drive_body">One file per day, uploaded to the Drive folder you choose.</string>
+    <string name="onboarding_folder_drive_change">Change</string>
+    <string name="onboarding_folder_selected">Saving to %1$s</string>
+    <string name="onboarding_folder_change">Change folder</string>
+    <string name="onboarding_folder_choose">Choose folder</string>
+    <string name="onboarding_folder_show_notes">Show my notes</string>
+
+    <string name="onboarding_note_title_lead">Your week,</string>
+    <string name="onboarding_note_title_accent">in notes.</string>
+    <plurals name="onboarding_note_ready">
+        <item quantity="one">%d note ready. Tap a day to preview it.</item>
+        <item quantity="other">%d notes ready. Tap a day to preview it.</item>
+    </plurals>
+    <string name="onboarding_note_sample_title_lead">Here’s what a</string>
+    <string name="onboarding_note_sample_title_accent">note looks like</string>
+    <string name="onboarding_note_sample_no_data">Sample data. Real notes will use your Health Connect records.</string>
+    <string name="onboarding_note_sample_no_access">Sample data. Connect Health Connect to see your own notes.</string>
+    <string name="onboarding_note_sample_badge">Sample</string>
+    <string name="onboarding_note_chart_sleep">Sleep</string>
+    <string name="onboarding_note_chart_steps">Steps</string>
+    <string name="onboarding_note_chart_days">Last 7 days</string>
+    <string name="onboarding_note_average">avg %1$s</string>
+    <string name="onboarding_note_day_a11y">%1$s, %2$s</string>
+    <string name="onboarding_note_day_no_note">no note</string>
+    <string name="onboarding_note_empty_day">No Health Connect data for this day, so no note is written.</string>
+    <string name="onboarding_note_loading">Reading your last 7 days…</string>
+    <string name="onboarding_note_view_raw">View raw file</string>
+    <string name="onboarding_note_view_rendered">View formatted note</string>
+    <plurals name="onboarding_note_save">
+        <item quantity="one">Save %1$d note to %2$s</item>
+        <item quantity="other">Save %1$d notes to %2$s</item>
+    </plurals>
+    <plurals name="onboarding_note_send">
+        <item quantity="one">Send %1$d day to %2$s</item>
+        <item quantity="other">Send %1$d days to %2$s</item>
+    </plurals>
+    <string name="onboarding_note_range">Includes %1$s through %2$s.</string>
+    <string name="onboarding_note_free">Your first export is free and includes the past 7 days.</string>
+    <string name="onboarding_note_finish">Finish setup</string>
+    <string name="onboarding_note_finish_fine">Your free export stays unused until there’s data to write.</string>
+    <string name="onboarding_note_choose_folder">Choose a folder to save</string>
+    <string name="onboarding_note_free_used">Your free export has already been used. Start a trial on the next step to keep notes up to date.</string>
+    <string name="onboarding_note_save_failed">Your notes weren’t saved. Check Health Connect access and the destination, then try again.</string>
+    <string name="onboarding_note_continue_without_saving">Continue without saving</string>
+
+    <plurals name="onboarding_daily_saved">
+        <item quantity="one">%1$d note saved to %2$s</item>
+        <item quantity="other">%1$d notes saved to %2$s</item>
+    </plurals>
+    <string name="onboarding_daily_nothing_saved">Setup complete, with nothing exported yet</string>
+    <string name="onboarding_daily_title">Make it daily?</string>
+    <string name="onboarding_daily_body">Each morning Health.md writes yesterday’s note, so your vault stays up to date without opening the app.</string>
+    <string name="onboarding_daily_sentence">Every morning at %1$s, write yesterday’s note to %2$s</string>
+    <string name="onboarding_daily_destination_fallback">your folder</string>
+    <string name="onboarding_daily_timeline_today">Today · Allow background access, start free trial</string>
+    <string name="onboarding_daily_timeline_reminder">Day 5 · Reminder before you’re charged</string>
+    <string name="onboarding_daily_timeline_billing">Day 7 · Billed %1$s unless cancelled</string>
+    <string name="onboarding_daily_start_trial">Start 7-day free trial</string>
+    <string name="onboarding_daily_not_now">Not now, I’ll export manually</string>
+    <string name="onboarding_daily_cancel_anytime">Cancel anytime in Google Play › Subscriptions.</string>
+    <string name="onboarding_daily_enable">Turn on daily notes</string>
+    <string name="onboarding_daily_background_note">Health Connect asks for background access so notes are written while the app is closed.</string>
+    <string name="onboarding_daily_loading_price">Loading Google Play price…</string>
+    <string name="onboarding_daily_billing_unavailable">Google Play billing isn’t available right now. You can start a trial later from Automations.</string>
+    <string name="onboarding_daily_purchase_error">The trial didn’t start. Try again, or continue and export manually.</string>
+
+
+    <!-- Saved API endpoints: sheet, onboarding binding, automation picker -->
+    <string name="endpoint_sheet_new_title">New API endpoint</string>
+    <string name="endpoint_sheet_edit_title">Edit API endpoint</string>
+    <string name="endpoint_sheet_body">Health.md sends one JSON payload per day with a POST. Saved endpoints can be reused by any automation.</string>
+    <string name="endpoint_sheet_name">Name</string>
+    <string name="endpoint_sheet_name_required">Enter a name.</string>
+    <string name="endpoint_sheet_url">Endpoint URL</string>
+    <string name="endpoint_sheet_url_help">Use your server’s full URL. Health.md sends only to this address.</string>
+    <string name="endpoint_sheet_url_invalid">Enter a valid https:// URL.</string>
+    <string name="endpoint_sheet_url_duplicate">You already saved an endpoint with this URL.</string>
+    <string name="endpoint_sheet_token">Bearer token (optional)</string>
+    <string name="endpoint_sheet_token_saved">Saved token (leave blank to keep it)</string>
+    <string name="endpoint_sheet_token_help">Encrypted on this phone with the Android Keystore.</string>
+    <string name="endpoint_sheet_token_invalid">Enter a valid bearer token or Authorization value.</string>
+    <string name="endpoint_sheet_show_token">Show token</string>
+    <string name="endpoint_sheet_hide_token">Hide token</string>
+    <string name="endpoint_sheet_remove_token">Remove saved token</string>
+    <string name="endpoint_sheet_keep_token">Keep saved token</string>
+    <string name="endpoint_sheet_save">Save endpoint</string>
+    <string name="endpoint_sheet_delete">Delete endpoint</string>
+    <string name="endpoint_delete_title">Delete %1$s?</string>
+    <string name="endpoint_delete_body">Automations that send to this endpoint stop sending until you choose another destination. Nothing is sent anywhere else.</string>
+    <string name="endpoint_test_idle">Not tested yet. You can save without testing.</string>
+    <string name="endpoint_test_running">Testing connection…</string>
+    <string name="endpoint_test_ok">Connected · %1$s</string>
+    <string name="endpoint_test_status">Server answered %1$s. You can still save.</string>
+    <string name="endpoint_test_failed">Couldn’t reach the server. You can still save.</string>
+    <string name="endpoint_test_action">Test connection</string>
+    <string name="endpoint_test_again">Test again</string>
+    <string name="endpoint_edit">Edit</string>
+    <string name="endpoint_edit_named">Edit %1$s</string>
+    <string name="endpoint_saved_title">Saved endpoints</string>
+    <string name="endpoint_not_used">Not used yet</string>
+    <plurals name="endpoint_used_by">
+        <item quantity="one">Used by %1$s</item>
+        <item quantity="other">Used by %1$s</item>
+    </plurals>
+    <string name="endpoint_unsaved">Current endpoint (not saved)</string>
+    <string name="endpoint_new">New endpoint</string>
+    <string name="endpoint_shared_note">Endpoints are shared across automations. Editing one updates every automation that uses it.</string>
+    <string name="endpoint_not_configured">Endpoint not configured</string>
+    <string name="onboarding_folder_api_body">One JSON payload per day, sent to your URL.</string>
+    <string name="onboarding_folder_api_add">Add endpoint</string>
+    <string name="onboarding_folder_payload_label">Payload preview: a POST to %1$s with one day’s metrics</string>
+    <plurals name="onboarding_folder_payload_more">
+        <item quantity="one">… %d metric per day</item>
+        <item quantity="other">… %d metrics per day</item>
+    </plurals>
+    <string name="automations_manual">Manual</string>
+    <plurals name="automations_writes_metrics">
+        <item quantity="one">Writes %1$d metric to %2$s</item>
+        <item quantity="other">Writes %1$d metrics to %2$s</item>
+    </plurals>
+    <string name="automations_daily_off">Daily at %1$s is off</string>
+    <string name="automations_needs_subscription">Automatic notes need a subscription</string>
+    <string name="automations_try_free">Try free</string>
 
     <!-- P1 parity: billing/schedule/history/settings -->
     <string name="export_failure_paywall_label">Unlock required</string>
@@ -1510,10 +1682,6 @@
     <string name="about_source_code">Source code</string>
     <string name="about_license">AGPL-3.0 license</string>
     <string name="fdroid_full_access_included">Full access included</string>
-    <string name="fdroid_onboarding_access_title">Full access is included</string>
-    <string name="fdroid_onboarding_access_body">The official F-Droid build includes every local export and automation feature at no charge.</string>
-    <string name="fdroid_onboarding_no_purchase">No purchase, restore, price, or Play account is required.</string>
-    <string name="fdroid_onboarding_no_play_services">Scheduled exports work without Google Play Billing.</string>
     <string name="myself_claim_entry">Claim myself.md access</string>
     <string name="myself_claim_entry_subtitle">Verify an existing Google Play lifetime purchase.</string>
     <string name="myself_claim_title">myself.md access</string>
@@ -1577,6 +1745,30 @@
     <string name="agent_export_review_scope_note">This approval applies only to this request. It does not change saved export settings or approve future requests.</string>
     <string name="agent_export_review_allow">Allow this export</string>
     <string name="agent_export_review_confirm">Allow this exact export?</string>
+    <string name="google_drive_destination_label" translatable="false">Google Drive</string>
+    <string name="google_drive_title">Upload to Google Drive</string>
+    <string name="google_drive_description">Choose a writable Drive folder for direct device-to-Google exports.</string>
+    <string name="google_drive_connect">Connect Google Drive</string>
+    <string name="google_drive_reauthorize">Reauthorize</string>
+    <string name="google_drive_disconnect">Disconnect</string>
+    <string name="google_drive_configuration_missing">Google Drive is unavailable because this build has no public OAuth client configuration.</string>
+    <string name="google_drive_connected_destination">%1$s · %2$s</string>
+    <string name="google_drive_target_ready">Connected folder: %1$s</string>
+    <string name="google_drive_target_ready_generic">Connected Drive folder</string>
+    <string name="google_drive_target_not_connected">Connect a Drive folder in Settings before exporting.</string>
+    <string name="google_drive_privacy_note">Uses only Drive file access. Health data and authorization go directly between this device and Google; Health.md has no token or health-data server.</string>
+    <string name="google_drive_reauthorization_title">Google Drive authorization needed</string>
+    <string name="google_drive_reauthorization_message">Open Health.md to authorize the same account and resume the retained export.</string>
+    <string name="google_drive_error_reauthorization_required">Authorization is required before this export can resume.</string>
+    <string name="google_drive_error_account_mismatch">The authorized Google account does not match this destination.</string>
+    <string name="google_drive_error_folder_unavailable">The selected Drive folder is unavailable or no longer writable.</string>
+    <string name="google_drive_error_permission_denied">Google Drive denied this operation.</string>
+    <string name="google_drive_error_remote_conflict">The remote file changed, moved, was renamed, or is ambiguous. Nothing was force-replaced.</string>
+    <string name="google_drive_error_ambiguous_commit">Drive could not confirm whether the upload committed. The retained operation can be reconciled safely.</string>
+    <string name="google_drive_error_quota_exceeded">Google Drive storage quota is unavailable.</string>
+    <string name="google_drive_error_rate_limited">Google Drive is temporarily unavailable. The retained operation can retry.</string>
+    <string name="google_drive_error_checksum_mismatch">Drive could not verify the uploaded bytes.</string>
+    <string name="google_drive_error_partial_completion">Some files were verified before the operation stopped. Remaining files are retained for recovery.</string>
     <string name="post_export_first_title">Your first export is complete</string>
     <string name="post_export_first_body">Make your next export easier. Explore a daily schedule to keep saving new health notes without repeating these steps. Scheduled exports require lifetime access; manual exports use your free allowance.</string>
     <string name="post_export_third_title">Keep your health notes going</string>
@@ -1603,4 +1795,11 @@
     <string name="date_picker_show_calendar">Show calendar</string>
     <string name="date_picker_input_label">Date (YYYY-MM-DD)</string>
     <string name="date_picker_invalid_date">Enter a valid, available date in YYYY-MM-DD format.</string>
+    <string name="frontmatter_review_conflict">Review conflict</string>
+    <string name="frontmatter_conflict_duplicate_key">The key “%1$s” is used by:</string>
+    <string name="frontmatter_conflict_reserved_key">The key “%1$s” is reserved:</string>
+    <string name="frontmatter_key_conflict_title">Frontmatter key conflict</string>
+    <string name="frontmatter_key_conflict_toast">Frontmatter key conflict. Review Frontmatter Fields.</string>
+    <string name="frontmatter_key_conflict_inline">Choose a unique, non-reserved field name.</string>
+    <string name="frontmatter_key_conflict_message">Frontmatter key conflict. Give each enabled field a unique, non-reserved name in Frontmatter Fields. Your daily note was not changed.</string>
 </resources>

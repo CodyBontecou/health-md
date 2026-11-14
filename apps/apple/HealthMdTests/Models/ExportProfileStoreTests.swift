@@ -52,16 +52,28 @@ final class ExportProfileStoreTests: XCTestCase {
         return ExportSettingsSnapshot.from(settings)
     }
 
+    /// Native writes use the local v2 envelope; revision tests edit its records in place.
+    private var listKey: String { ExportProfilePersistence.envelopeKey }
+
+    private func storedRecords() throws -> [[String: Any]] {
+        let root = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(defaults.data(forKey: listKey))) as? [String: Any])
+        return try XCTUnwrap(root["records"] as? [[String: Any]])
+    }
+
+    private func envelope(_ records: [Any]) throws -> Data {
+        try JSONSerialization.data(withJSONObject: ["version": 2, "records": records], options: [.sortedKeys])
+    }
+
     func testActivationPreservesPersistedOutputBytesAndConfigurationRevisions() throws {
         let store = makeStore()
         let first = try XCTUnwrap(store.add(name: "First", settings: makeSnapshot(filenameFormat: "first-{date}"), target: .localIPhoneFolder))
         let second = try XCTUnwrap(store.add(name: "Second", settings: makeSnapshot(filenameFormat: "second-{date}"), target: .connectedMac))
-        let before = try XCTUnwrap(defaults.data(forKey: "exportProfiles.list"))
+        let before = try XCTUnwrap(defaults.data(forKey: listKey))
         for id in [second.id, first.id, first.id] {
             XCTAssertTrue(store.activate(id: id))
             XCTAssertEqual(store.activeProfileID, id)
-            XCTAssertEqual(defaults.string(forKey: "exportProfiles.activeProfileID"), id.uuidString)
-            XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), before)
+            XCTAssertEqual(defaults.string(forKey: ExportProfilePersistence.activeIDKey), id.uuidString)
+            XCTAssertEqual(defaults.data(forKey: listKey), before)
             XCTAssertEqual(store.profile(id: first.id)?.configurationRevision, 1)
             XCTAssertEqual(store.profile(id: second.id)?.configurationRevision, 1)
         }
@@ -72,7 +84,7 @@ final class ExportProfileStoreTests: XCTestCase {
         let selected = try XCTUnwrap(store.add(name: "Selected", settings: original, target: .localIPhoneFolder))
         let other = try XCTUnwrap(store.add(name: "Active", settings: makeSnapshot(filenameFormat: "other-{date}"), target: .connectedMac))
         XCTAssertTrue(store.activate(id: other.id))
-        let before = try XCTUnwrap(defaults.data(forKey: "exportProfiles.list"))
+        let before = try XCTUnwrap(defaults.data(forKey: listKey))
         let read = try XCTUnwrap(store.readConfigurationProfile(id: selected.id, expectedRevision: 1))
         XCTAssertEqual(read.settings, original)
         XCTAssertEqual(read.revision, 1)
@@ -80,7 +92,7 @@ final class ExportProfileStoreTests: XCTestCase {
         XCTAssertNil(store.readConfigurationProfile(id: UUID(), expectedRevision: 1))
         XCTAssertNil(store.readConfigurationProfile(id: selected.id, expectedRevision: 0))
         XCTAssertNil(store.readConfigurationProfile(id: selected.id, expectedRevision: 2))
-        XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), before)
+        XCTAssertEqual(defaults.data(forKey: listKey), before)
         XCTAssertEqual(store.activeProfileID, other.id)
 
         let editor = makeStore()
@@ -93,18 +105,18 @@ final class ExportProfileStoreTests: XCTestCase {
     func testConfigurationReadRejectsMalformedOrDuplicatePersistedRowsWithoutRepairingThem() throws {
         let store = makeStore()
         let profile = try XCTUnwrap(store.add(name: "Selected", settings: makeSnapshot(), target: .localIPhoneFolder))
-        let rows = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(defaults.data(forKey: "exportProfiles.list"))) as? [[String: Any]])
-        let duplicate = try JSONSerialization.data(withJSONObject: [rows[0], rows[0]])
+        let rows = try storedRecords()
+        let duplicate = try envelope([rows[0], rows[0]])
         var malformed = rows[0]; malformed["configurationRevision"] = "1"
-        let invalid = try JSONSerialization.data(withJSONObject: [malformed])
+        let invalid = try envelope([malformed])
         for raw in [duplicate, invalid, Data("invalid".utf8)] {
-            defaults.set(raw, forKey: "exportProfiles.list")
+            defaults.set(raw, forKey: listKey)
             XCTAssertNil(store.readConfigurationProfile(id: profile.id, expectedRevision: 1))
-            XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), raw)
+            XCTAssertEqual(defaults.data(forKey: listKey), raw)
         }
-        defaults.removeObject(forKey: "exportProfiles.list")
+        defaults.removeObject(forKey: listKey)
         XCTAssertNil(store.readConfigurationProfile(id: profile.id, expectedRevision: 1))
-        XCTAssertNil(defaults.object(forKey: "exportProfiles.list"))
+        XCTAssertNil(defaults.object(forKey: listKey))
     }
 
     func testConfigurationReadReflectsCurrentNativeRebindGateWithoutChangingProfileRevision() throws {
@@ -112,13 +124,13 @@ final class ExportProfileStoreTests: XCTestCase {
         let profile = try XCTUnwrap(store.add(name: "Selected", settings: makeSnapshot(), target: .localIPhoneFolder))
         let key = SharedSetupV2ProfileTransaction.blockedProfileIDsKey
         defaults.set(try SharedSetupV2ProfileTransaction.encodeBlockedProfileIDs([profile.id]), forKey: key)
-        let before = defaults.data(forKey: "exportProfiles.list")
+        let before = defaults.data(forKey: listKey)
         XCTAssertTrue(try XCTUnwrap(store.readConfigurationProfile(id: profile.id, expectedRevision: 1)).executionBlocked)
         defaults.set(Data("invalid".utf8), forKey: key)
         XCTAssertTrue(try XCTUnwrap(store.readConfigurationProfile(id: profile.id, expectedRevision: 1)).executionBlocked)
         defaults.removeObject(forKey: key)
         XCTAssertFalse(try XCTUnwrap(store.readConfigurationProfile(id: profile.id, expectedRevision: 1)).executionBlocked)
-        XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), before)
+        XCTAssertEqual(defaults.data(forKey: listKey), before)
     }
 
     func testConfigurationRevisionSurvivesReloadAndDoesNotReusePinsWhenSettingsReturn() throws {
@@ -159,13 +171,13 @@ final class ExportProfileStoreTests: XCTestCase {
     func testLegacyProfileRevisionDefaultsWithoutWritingAndMalformedRevisionDoesNotBecomeLegacy() throws {
         let store = makeStore()
         _ = store.add(name: "Legacy", settings: makeSnapshot(), target: .localIPhoneFolder)
-        var rows = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(defaults.data(forKey: "exportProfiles.list"))) as? [[String: Any]])
+        var rows = try storedRecords()
         rows[0].removeValue(forKey: "configurationRevision")
-        let legacy = try JSONSerialization.data(withJSONObject: rows)
-        defaults.set(legacy, forKey: "exportProfiles.list")
+        let legacy = try envelope(rows)
+        defaults.set(legacy, forKey: listKey)
         let reloaded = makeStore(), profile = try XCTUnwrap(reloaded.profiles.first)
         XCTAssertEqual(profile.configurationRevision, 1)
-        XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), legacy)
+        XCTAssertEqual(defaults.data(forKey: listKey), legacy)
         for invalid in [NSNull(), "1", true] as [Any] {
             var malformed = rows[0]; malformed["configurationRevision"] = invalid
             XCTAssertThrowsError(try JSONDecoder().decode(ExportProfile.self, from: JSONSerialization.data(withJSONObject: malformed)))
@@ -178,43 +190,50 @@ final class ExportProfileStoreTests: XCTestCase {
         let store = makeStore()
         let profile = try XCTUnwrap(store.add(name: "Daily", settings: makeSnapshot(), target: .localIPhoneFolder))
         let other = try XCTUnwrap(store.add(name: "Other", settings: profile.settings, target: .localIPhoneFolder))
-        let cachedProfiles = store.profiles
-        let cachedActiveID = store.activeProfileID
-        let rows = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(defaults.data(forKey: "exportProfiles.list"))) as? [[String: Any]])
+        let rows = try storedRecords()
         for invalid in [NSNull(), "1", true, "99999999999999999999999999999999999"] as [Any] {
             var row = rows[0]; row["configurationRevision"] = invalid
-            let before = try JSONSerialization.data(withJSONObject: [row, rows[1]])
-            defaults.set(before, forKey: "exportProfiles.list")
+            let before = try envelope([row, rows[1]])
+            defaults.set(before, forKey: listKey)
+            // The malformed row is retained opaquely: it is never edited, resurrected from the
+            // cached profile, or used as configuration, while the unrelated row stays usable.
             XCTAssertFalse(store.updateSettings(id: profile.id, settings: profile.settings))
             XCTAssertFalse(store.updateTarget(id: profile.id, target: .connectedMac))
             XCTAssertNil(store.rename(id: profile.id, to: "Changed"))
             XCTAssertFalse(store.setFolderBinding(profileID: profile.id, destinationID: UUID()))
             XCTAssertFalse(store.setAPIEndpointBinding(profileID: profile.id, endpointID: UUID()))
-            XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), before)
-            XCTAssertNil(store.add(name: "Unrelated", settings: profile.settings, target: .localIPhoneFolder))
             XCTAssertFalse(store.delete(id: profile.id))
-            XCTAssertFalse(store.activate(id: other.id))
             XCTAssertFalse(store.migrateDefaultProfileIfNeeded(settings: profile.settings, target: .connectedMac))
-            XCTAssertEqual(store.profiles, cachedProfiles)
-            XCTAssertEqual(store.activeProfileID, cachedActiveID)
-            XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), before)
+            XCTAssertNil(store.readConfigurationProfile(id: other.id, expectedRevision: 1))
+            XCTAssertNil(store.profile(id: profile.id))
+            XCTAssertEqual(store.profiles.map(\.id), [other.id])
+            XCTAssertEqual(defaults.data(forKey: listKey), before)
+
+            XCTAssertNotNil(store.add(name: "Unrelated", settings: profile.settings, target: .localIPhoneFolder))
+            let retained = try storedRecords().filter { ($0["id"] as? String) == profile.id.uuidString }
+            XCTAssertEqual(retained.count, 1)
+            XCTAssertEqual(
+                try JSONSerialization.data(withJSONObject: retained[0], options: [.sortedKeys, .fragmentsAllowed]),
+                try JSONSerialization.data(withJSONObject: row, options: [.sortedKeys, .fragmentsAllowed])
+            )
+            XCTAssertNil(store.profile(id: profile.id))
         }
     }
 
     func testExhaustedConfigurationRevisionRejectsEditsWithoutChangingPersistedProfile() throws {
         let store = makeStore()
         let profile = try XCTUnwrap(store.add(name: "Daily", settings: makeSnapshot(), target: .localIPhoneFolder))
-        var rows = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(defaults.data(forKey: "exportProfiles.list"))) as? [[String: Any]])
+        var rows = try storedRecords()
         rows[0]["configurationRevision"] = Int(Int32.max)
-        let before = try JSONSerialization.data(withJSONObject: rows)
-        defaults.set(before, forKey: "exportProfiles.list")
+        let before = try envelope(rows)
+        defaults.set(before, forKey: listKey)
         XCTAssertFalse(store.updateSettings(id: profile.id, settings: profile.settings))
         XCTAssertFalse(store.updateTarget(id: profile.id, target: .connectedMac))
         XCTAssertNil(store.rename(id: profile.id, to: "Changed"))
         XCTAssertFalse(store.setFolderBinding(profileID: profile.id, destinationID: UUID()))
         XCTAssertFalse(store.setAPIEndpointBinding(profileID: profile.id, endpointID: UUID()))
         XCTAssertTrue(store.setFolderBinding(profileID: profile.id, destinationID: nil))
-        XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), before)
+        XCTAssertEqual(defaults.data(forKey: listKey), before)
         XCTAssertEqual(store.profile(id: profile.id)?.configurationRevision, Int(Int32.max))
     }
 
@@ -229,13 +248,18 @@ final class ExportProfileStoreTests: XCTestCase {
         XCTAssertNil(store.profile(named: "Default"))
     }
 
-    func testCorruptedOrEmptyPersistedDataFallsBackToLegacyMode() {
+    func testCorruptedPersistedDataFailsClosedInsteadOfEnteringLegacyMode() {
         defaults.set(Data("not json".utf8), forKey: "exportProfiles.list")
 
         let store = makeStore()
 
-        XCTAssertFalse(store.hasProfiles)
+        XCTAssertTrue(store.hasProfiles)
         XCTAssertNil(store.activeProfile)
+        XCTAssertEqual(store.unknownProfileRecordCount, 1)
+        XCTAssertFalse(store.migrateDefaultProfileIfNeeded(
+            settings: makeSnapshot(),
+            target: .localIPhoneFolder
+        ))
     }
 
     func testDanglingActiveProfileIDIgnoredOnLoad() throws {
@@ -248,12 +272,13 @@ final class ExportProfileStoreTests: XCTestCase {
         let staleID = profile.id
         // Only one profile exists, so deletion is forbidden; simulate external
         // stale state directly instead.
-        defaults.set(staleID.uuidString, forKey: "exportProfiles.activeProfileID")
-        defaults.set(Data("garbage".utf8), forKey: "exportProfiles.list")
+        defaults.set(staleID.uuidString, forKey: "exportProfiles.v2.activeProfileID")
+        defaults.set(Data("garbage".utf8), forKey: "exportProfiles.v2.envelope")
 
         let reloaded = makeStore()
-        XCTAssertFalse(reloaded.hasProfiles)
+        XCTAssertTrue(reloaded.hasProfiles)
         XCTAssertNil(reloaded.activeProfile)
+        XCTAssertEqual(reloaded.unknownProfileRecordCount, 1)
     }
 
     // MARK: - Migration
@@ -300,6 +325,86 @@ final class ExportProfileStoreTests: XCTestCase {
         XCTAssertEqual(second.profiles, [sleep, weekly])
         XCTAssertEqual(second.activeProfileID, weekly.id)
         XCTAssertEqual(second.activeProfile?.name, "Weekly")
+    }
+
+    func testProfilePersistencePreservesUnknownRecordWithoutErasingKnownProfile() throws {
+        let known = ExportProfile(
+            name: "Known",
+            settings: makeSnapshot(),
+            target: .googleDrive,
+            createdAt: fixedNow,
+            updatedAt: fixedNow
+        )
+        let knownObject = try JSONSerialization.jsonObject(with: JSONEncoder().encode(known))
+        let unknown: [String: Any] = [
+            "id": UUID().uuidString,
+            "name": "Future",
+            "target": "future_destination",
+            "version": 99
+        ]
+        defaults.set(
+            try JSONSerialization.data(withJSONObject: [knownObject, unknown]),
+            forKey: "exportProfiles.list"
+        )
+
+        let store = makeStore()
+        XCTAssertEqual(store.profiles, [known])
+        XCTAssertEqual(store.unknownProfileRecordCount, 1)
+        _ = store.rename(id: known.id, to: "Renamed")
+
+        let reloaded = makeStore()
+        XCTAssertEqual(reloaded.profiles.map(\.name), ["Renamed"])
+        XCTAssertEqual(reloaded.unknownProfileRecordCount, 1)
+    }
+
+    func testOpaqueOnlyProfileStateBlocksLegacyModeAndDefaultMigration() throws {
+        defaults.set(
+            try JSONSerialization.data(withJSONObject: [[
+                "id": UUID().uuidString,
+                "name": "Future",
+                "target": "future_destination",
+                "version": 99
+            ]]),
+            forKey: "exportProfiles.list"
+        )
+
+        let store = makeStore()
+        XCTAssertTrue(store.hasProfiles)
+        XCTAssertNil(store.activeProfile)
+        XCTAssertEqual(store.unknownProfileRecordCount, 1)
+        XCTAssertFalse(store.migrateDefaultProfileIfNeeded(
+            settings: makeSnapshot(),
+            target: .localIPhoneFolder
+        ))
+        XCTAssertEqual(makeStore().unknownProfileRecordCount, 1)
+    }
+
+    func testDriveProfileUsesV2EnvelopeAndLeavesLegacyPayloadUntouched() throws {
+        let legacy = ExportProfile(
+            name: "Legacy",
+            settings: makeSnapshot(),
+            target: .localIPhoneFolder,
+            createdAt: fixedNow,
+            updatedAt: fixedNow
+        )
+        let legacyData = try JSONEncoder().encode([legacy])
+        defaults.set(legacyData, forKey: "exportProfiles.list")
+        defaults.set(legacy.id.uuidString, forKey: "exportProfiles.activeProfileID")
+
+        let store = makeStore()
+        let drive = try XCTUnwrap(store.add(
+            name: "Drive",
+            settings: makeSnapshot(),
+            target: .googleDrive,
+            googleDriveDestinationID: UUID()
+        ))
+
+        XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), legacyData)
+        let envelopeData = try XCTUnwrap(defaults.data(forKey: "exportProfiles.v2.envelope"))
+        let envelope = try XCTUnwrap(JSONSerialization.jsonObject(with: envelopeData) as? [String: Any])
+        XCTAssertEqual(envelope["version"] as? Int, 2)
+        XCTAssertEqual((envelope["records"] as? [Any])?.count, 2)
+        XCTAssertEqual(makeStore().profile(id: drive.id)?.target, .googleDrive)
     }
 
     func testProfilePersistsDetailedTimeSeriesWithoutLosslessArchive() throws {

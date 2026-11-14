@@ -108,19 +108,13 @@ class FrontmatterLocalizationTests(unittest.TestCase):
 
     def test_technical_keys_and_grouping_identities_are_not_localized(self):
         source = self.sources[VIEW].split('private var fieldCategories:', 1)[1].split('// MARK: - Frontmatter Field Row', 1)[0]
-        groups = re.findall(r'\("([^"]+)", \[([^\]]+)\]\)', source)
-        actual = [(name, re.findall(r'"([^"]+)"', prefixes)) for name, prefixes in groups]
-        self.assertEqual(actual, [
-            ("Sleep", ["sleep_"]),
-            ("Activity", ["steps", "active_", "basal_", "exercise_", "stand_", "flights_", "walking_running", "cycling", "swimming", "wheelchair"]),
-            ("Heart", ["resting_heart", "walking_heart", "average_heart", "heart_rate", "hrv"]),
-            ("Vitals", ["respiratory", "blood_oxygen", "body_temperature", "blood_pressure", "blood_glucose"]),
-            ("Body", ["weight", "height", "bmi", "body_fat", "lean_body", "waist"]),
-            ("Nutrition", ["dietary", "protein", "carbohydrates", "fat", "saturated", "fiber", "sugar", "sodium", "cholesterol", "water", "caffeine"]),
-            ("Mindfulness", ["mindful"]),
-            ("Mobility", ["walking_speed", "step_length", "double_support", "walking_asymmetry", "stair_", "six_min"]),
-            ("Hearing", ["headphone", "environmental"]), ("Workouts", ["workout"]),
-        ])
+        # Both editors use the shared grouping; it retains opaque technical keys
+        # while resolving localized section titles separately.
+        self.assertIn('FrontmatterFieldGroup.grouped(config.fields).map { ($0.group.title, $0.fields) }', source)
+        self.assertNotIn('categoryPrefixes', source)
+        grouping = (ROOT / "HealthMd/Shared/Models/FrontmatterFieldGroup.swift").read_text()
+        self.assertIn('HealthMetricExportMapping.frontmatterKeys(for: metric.id)', grouping)
+        self.assertIn('Dictionary(grouping: fields) { group(for: $0.originalKey) }', grouping)
         for binding in ['config.customFields[newFieldKey] = newFieldValue', 'config.placeholderFields.append(newPlaceholderKey)',
                         'config.fields[index].customKey = newKey', 'config.fields[index].customKey = config.fields[index].originalKey']:
             self.assertIn(binding, self.sources[VIEW])

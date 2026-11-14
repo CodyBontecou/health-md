@@ -135,6 +135,8 @@ class RecoveryDiscardFenceSchedulerTest {
         val history = FakeExportHistoryRepository()
         val health = FakeHealthRepository()
         val manager = ScheduledExportRecoveryManager(context, health, FakeExportRepository(), repository, history,
+            googleDriveExportOrchestrator = mockk(relaxed = true), googleDriveDestinationRunner = mockk(relaxed = true),
+            googleDriveSelectionStore = mockk(relaxed = true), googleDriveDestinationStore = mockk(relaxed = true),
             entitlementRepository = FakeBillingRepository(), distributionPolicy = DistributionPolicy.play(), stateStore = state,
             apiCredentialStore = credentials.takeIf { validPendingAuthority })
         return Harness(context, state, admission, next, pending, folder, repository, history, health, manager)

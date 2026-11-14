@@ -27,6 +27,10 @@ import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotExportRunner
 import com.healthmd.data.export.RawSnapshotService
+import com.healthmd.data.drive.GoogleDriveErrorId
+import com.healthmd.data.drive.GoogleDriveExportOrchestrator
+import com.healthmd.data.drive.GoogleDriveRecoveryWorker
+import com.healthmd.data.drive.serialId
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.model.APIExportEndpoint
@@ -63,6 +67,7 @@ import java.util.UUID
 
 internal fun scheduledProfileHistoryTargetLabel(profile: ExportProfile): String =
     when (profile.target) {
+        ExportTarget.GOOGLE_DRIVE -> "Google Drive"
         ExportTarget.DEVICE_FOLDER ->
             profile.folderDisplayName?.trim()?.takeIf { it.isNotEmpty() }
                 ?: EXPORT_FOLDER_ROOT_TARGET_LABEL
@@ -104,6 +109,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     private val snapshotFactory: ScheduledProfileSnapshotFactory,
     private val folderAdoption: ProfileFolderAdoptionScope,
     private val profileScheduler: dagger.Lazy<ScheduledProfileScheduler>,
+    private val googleDriveExportOrchestrator: GoogleDriveExportOrchestrator,
     private val entitlementRepository: EntitlementRepository,
     private val distributionPolicy: DistributionPolicy,
     private val apiCredentialStore: APIExportCredentialStore? = null,
@@ -217,7 +223,8 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                         fireAtMillis = due.fireAtMillis, settingsSnapshotJson = profile.settingsSnapshotJson,
                         target = profile.target, profileName = profile.name, apiEndpointUrl = profile.apiEndpointUrl,
                         agentDataGatewayUrl = profile.agentDataGatewayUrl, folderUri = profile.folderUri,
-                        folderDisplayName = profile.folderDisplayName, refreshSlotMillis = due.refreshSlotMillis)
+                        folderDisplayName = profile.folderDisplayName, destinationId = profile.destinationId,
+                        refreshSlotMillis = due.refreshSlotMillis)
                     if (!entryStore.admitOccurrence(entry, pending)) return Result.retry()
                     due = due.copy(pendingExport = pending)
                 }
@@ -387,6 +394,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         val durableOperationId = pendingOperationId ?: when (target) {
             ExportTarget.DEVICE_FOLDER -> "profile-folder-${due.pendingExport?.id ?: logicalOperationId}"
             ExportTarget.API_ENDPOINT -> "profile-api-${due.pendingExport?.id ?: logicalOperationId}"
+            ExportTarget.GOOGLE_DRIVE -> "profile-drive-${due.pendingExport?.id ?: logicalOperationId}"
             ExportTarget.AGENT_DATA_GATEWAY -> "profile-gateway-${due.pendingExport?.id ?: logicalOperationId}"
         }
         // Durable folder journals require a non-legacy engine pin (mirrors ExportWorker's
@@ -404,8 +412,23 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         }
         val result = try {
             ScheduledExportCancellationCoordinator.run(id) {
-                    val exportProgress = ScheduledExportProgressNotification.updater(applicationContext, id)
-                when (target) {
+                val exportProgress = ScheduledExportProgressNotification.updater(applicationContext, id)
+                if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                    val runRaw: suspend () -> ExportResult = {
+                        if (target == ExportTarget.GOOGLE_DRIVE) {
+                            rawSnapshotExportRunner.exportRange(
+                                startDate = dates.first(), endDate = dates.last(), settings = settings,
+                                target = target, googleDriveDestinationId = profile.destinationId,
+                                googleDriveProfileId = profile.id, googleDriveOperationId = durableOperationId,
+                            )
+                        } else {
+                            // Preserve the existing owner-date retry grouping for local/API raw exports.
+                            exportRawDates(dates, settings, target)
+                        }
+                    }
+                    if (target == ExportTarget.DEVICE_FOLDER) folderAdoption.withProfileFolder(profile) { runRaw() }
+                    else runRaw()
+                } else when (target) {
                     ExportTarget.DEVICE_FOLDER ->
                         // Per-profile folder: adopt the profile's binding around the run (the live
                         // folder URI is process-global plumbing; see ProfileFolderAdoptionScope).
@@ -449,6 +472,15 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                                 requireExistingDurableOperation = storedAPIReady || due.pendingExport?.apiJournalRequired == true,
                             )
                         }
+                    ExportTarget.GOOGLE_DRIVE -> profile.destinationId?.let { destinationId ->
+                        googleDriveExportOrchestrator.exportDates(
+                            dates = dates, settings = settings.copy(exportTarget = ExportTarget.GOOGLE_DRIVE),
+                            destinationId = destinationId, profileId = profile.id, source = "scheduled",
+                            operationId = durableOperationId, settingsSnapshotJson = snapshotJson,
+                        )
+                    } ?: ExportResult(0, dates.size,
+                        dates.map { FailedDateDetail(it, ExportFailureReason.NO_FOLDER_SELECTED) },
+                        target = ExportTarget.GOOGLE_DRIVE)
 
                     ExportTarget.AGENT_DATA_GATEWAY ->
                         if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
@@ -473,6 +505,9 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 target = target,
                 exportMode = settings.exportMode,
                 remainingDates = dates.toSet(),
+                retryDriveOperationIds = if (target == ExportTarget.GOOGLE_DRIVE) {
+                    dates.associateWith { durableOperationId }
+                } else emptyMap(),
             )
         } catch (error: Exception) {
             Timber.e(error, "Profile scheduled export failed profileId=%s", profileId)
@@ -541,7 +576,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             return Result.success()
         }
 
-        recordHistory(
+        val historyRecorded = recordHistory(
             profile = profile,
             dates = dates,
             result = result,
@@ -560,6 +595,11 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             if (target == ExportTarget.API_ENDPOINT && settings.exportMode == ExportMode.RAW_SNAPSHOT &&
                 entryStore.entry(profileId)?.pendingExports?.none { it.id == due.pendingExport?.id } == true
             ) rawSnapshotExportRunner.discardCompletedDurableOperation(durableOperationId)
+            if (historyRecorded && target == ExportTarget.GOOGLE_DRIVE) {
+                result.retryDriveOperationIds.values.toSet().forEach {
+                    googleDriveExportOrchestrator.acknowledgeAfterHistory(it)
+                }
+            }
         }
         val failedDates = result.failedDateDetails.mapTo(hashSetOf()) { it.date }
         val refreshSucceeded = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
@@ -606,6 +646,12 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 return Result.retry()
             }
             showFailureNotification(profile.name)
+            if (result.requiresGoogleDriveReauthorization()) {
+                result.retryDriveOperationIds.values.firstOrNull()?.let { operationId ->
+                    GoogleDriveRecoveryWorker.enqueue(applicationContext, operationId)
+                }
+                return Result.failure()
+            }
             // Reconciliation already arms the next ordinary slot. Raw refresh-only failures
             // avoid recapture for folders. API retries retain their immutable recovery authority.
             if (!hasCompletedDayWork && settings.exportMode == ExportMode.RAW_SNAPSHOT &&
@@ -621,6 +667,12 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     private fun authorityFailure(): Result = Result.failure(
         workDataOf(OUTPUT_PROFILE_ERROR to "api_recovery_authority_required"),
     )
+
+    private fun ExportResult.requiresGoogleDriveReauthorization(): Boolean =
+        target == ExportTarget.GOOGLE_DRIVE && failedDateDetails.any {
+            it.errorDetails == GoogleDriveErrorId.REAUTHORIZATION_REQUIRED.serialId
+        }
+
     /** Raw providers accept ranges, but recovery and delayed refreshes can request separated days. */
     private suspend fun exportRawDates(
         dates: List<LocalDate>,
@@ -668,6 +720,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         agentDataGatewayUrl = agentDataGatewayUrl,
         folderUri = folderUri,
         folderDisplayName = folderDisplayName,
+        destinationId = destinationId,
     )
 
     private fun cancellationRemainingDates(
@@ -683,6 +736,9 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             result.remainingDates +
                 result.retryOperationIds.keys +
                 result.retryFolderOperationIds.keys +
+                result.retryDriveOperationIds.keys.filter { date ->
+                    result.successCount == 0 || result.failedDateDetails.any { it.date == date }
+                } +
                 result.freshCaptureRetryDates
             ).filterTo(linkedSetOf()) { it in attemptedDates }
         if (explicit.isNotEmpty() || result.successCount >= result.totalCount) return explicit
@@ -704,7 +760,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         result: ExportResult,
         fallbackDurableOperationId: String? = due.pendingExport?.durableOperationId,
     ): List<ScheduledProfilePendingExport> {
-        val operationByDate = result.retryOperationIds + result.retryFolderOperationIds
+        val operationByDate = result.retryOperationIds + result.retryFolderOperationIds + result.retryDriveOperationIds
         val refreshZone = if (due.pendingExport?.refreshSlotMillis != null)
             requireNotNull(com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decodeOrNull(
                 profile.settingsSnapshotJson)?.sleepCaptureContext).zoneId else due.entry.zone
@@ -748,6 +804,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 apiAuthorityJson = due.pendingExport?.apiAuthorityJson,
                 apiJournalRequired = due.pendingExport?.apiJournalRequired == true ||
                     dates.any { it in result.retryOperationIds },
+                destinationId = profile.destinationId,
                 refreshSlotMillis = due.refreshSlotMillis?.takeIf { refreshDate in dates },
             )
         }
@@ -760,9 +817,9 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         failureReason: ExportFailureReason?,
         warning: String?,
         operationId: String,
-    ) {
-        if (dates.isEmpty()) return
-        runCatchingCancellable {
+    ): Boolean {
+        if (dates.isEmpty()) return false
+        return runCatchingCancellable {
             exportHistoryRepository.insertEntry(
                 ExportHistoryEntry(
                     timestamp = System.currentTimeMillis(),
@@ -780,9 +837,12 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                     exportMode = result.exportMode,
                     reconciliationKey = "profile-$operationId",
                     profileName = profile.name,
+                    driveOperationId = result.retryDriveOperationIds.values.firstOrNull(),
                 ),
             )
+            true
         }.onFailure { Timber.e(it, "Could not record profile export history") }
+            .getOrDefault(false)
     }
 
     private fun showFailureNotification(profileName: String) {

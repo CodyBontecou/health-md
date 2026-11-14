@@ -2,8 +2,8 @@ package com.healthmd.data.scheduler
 
 import android.content.Context
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.healthmd.data.export.RecoveryDiscardFence
@@ -199,6 +199,16 @@ class ScheduledProfileEntryStore @Inject constructor(
             })
         }
         return persisted && matched
+    }
+
+    /** Disconnect configuration only: preserve frontiers, minute intent and frozen residual work. */
+    internal fun disableForDisconnect(prefs: MutablePreferences, profileIds: List<String>) {
+        if (profileIds.isEmpty()) return
+        val existing = checkNotNull(decode(prefs[Keys.ENTRIES], prefs[Keys.MINUTE_INTENT])) {
+            "Scheduled profile entries are unavailable."
+        }
+        if (existing.none { it.profileId in profileIds && it.isEnabled }) return
+        persist(prefs, existing.map { if (it.profileId in profileIds) it.copy(isEnabled = false) else it })
     }
 
     /**

@@ -177,6 +177,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "cloud.read-only-mcp",
         "setup.share-portable-configuration",
         "core.shared-rust-profile-engine",
+        "destination.google-drive",
         "agent.export.explicit-settings",
         "agent.export.zero-health-plan",
         "agent.export.bound-execution",

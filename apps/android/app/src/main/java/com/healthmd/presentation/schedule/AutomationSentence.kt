@@ -37,6 +37,7 @@ object AutomationSentence {
     /** A privacy-safe destination: the folder name, or only the host of an endpoint. */
     fun destination(profile: ExportProfile): String? = when (profile.target) {
         ExportTarget.DEVICE_FOLDER -> profile.folderDisplayName?.trim()?.takeIf { it.isNotEmpty() }
+        ExportTarget.GOOGLE_DRIVE -> "Google Drive"
         ExportTarget.API_ENDPOINT -> host(profile.apiEndpointUrl)
         ExportTarget.AGENT_DATA_GATEWAY -> host(profile.agentDataGatewayUrl)
     }

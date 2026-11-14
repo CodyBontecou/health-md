@@ -30,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
@@ -40,6 +41,9 @@ import androidx.compose.ui.unit.dp
 import com.healthmd.R
 import com.healthmd.domain.model.CustomFrontmatterField
 import com.healthmd.domain.model.FrontmatterKeyStyle
+import com.healthmd.domain.model.FrontmatterConflictSource
+import com.healthmd.domain.model.FrontmatterConflictSection
+import com.healthmd.domain.model.HealthDataFields
 import com.healthmd.presentation.common.AppSwitch
 import com.healthmd.presentation.common.SecondaryButton
 import com.healthmd.presentation.theme.*
@@ -66,6 +70,14 @@ internal object FrontmatterCustomizationTags {
     fun delete(entry: String) = "$entry.delete"
     fun label(field: String) = "$field.label"
     fun currentValue(field: String) = "$field.currentValue"
+    // Route only canonical field IDs or fixed group tags, never user-defined names.
+    fun conflictTarget(source: FrontmatterConflictSource): String = when (source.section) {
+        FrontmatterConflictSection.METRIC -> if (source.originalKey in HealthDataFields.allKeys) outputKey(source.originalKey) else SEARCH
+        FrontmatterConflictSection.DATE -> DATE_KEY
+        FrontmatterConflictSection.TYPE -> TYPE_KEY
+        FrontmatterConflictSection.CUSTOM -> CUSTOM_KEY
+        FrontmatterConflictSection.PLACEHOLDER -> PLACEHOLDER_KEY
+    }
 }
 
 /** UI-only controls; the screen owns the existing configuration transforms and draft values. */
@@ -210,6 +222,7 @@ internal fun FrontmatterCustomizationTextField(
     context: String? = null,
     identifier: Boolean = true,
     imeAction: ImeAction = ImeAction.Done,
+    errorText: String? = null,
 ) {
     val colors = LocalGeistColors.current
     val description = listOfNotNull(context, label).joinToString(", ")
@@ -233,6 +246,7 @@ internal fun FrontmatterCustomizationTextField(
     }
     val shape = RoundedCornerShape(GeistRadii.extraSmall)
     val outline = when {
+        errorText != null -> colors.red.c900
         focused -> colors.brandPrimary
         enabled -> colors.gray.c700
         else -> colors.gray.c500
@@ -259,12 +273,19 @@ internal fun FrontmatterCustomizationTextField(
                 ) { innerField() }
             },
             modifier = Modifier.fillMaxWidth().heightIn(min = GeistSizes.minimumTouchTarget)
-                .testTag(tag).semantics { contentDescription = description }
+                .testTag(tag).semantics {
+                    contentDescription = description
+                    errorText?.let { error(it) }
+                }
                 .onSizeChanged { fieldWidth = it.width }
                 .onFocusChanged { focused = it.isFocused }
                 .clip(shape)
                 .border(if (focused) 2.dp else 1.dp, outline, shape),
         )
+        errorText?.let { message ->
+            Text(message, style = GeistType.copy13, color = colors.red.c900,
+                modifier = Modifier.fillMaxWidth().testTag("$tag.error"))
+        }
         if (fieldWidth > 0 && (valueOverflows || value.contains('\n'))) {
             // A separate wrapping reading surface also exposes long disabled values. It does
             // not make the single-line editing/touch target taller than a short viewport.
@@ -281,8 +302,10 @@ internal fun FrontmatterCustomizationMetric(
     shape: Shape,
     onEnabledChanged: (Boolean) -> Unit,
     onCustomKeyChanged: (String) -> Unit,
+    hasKeyConflict: Boolean = false,
+    modifier: Modifier = Modifier,
 ) {
-    FrontmatterCustomizationGroupRow(shape, contentPadding = false) {
+    FrontmatterCustomizationGroupRow(shape, modifier = modifier, contentPadding = false) {
         FrontmatterCustomizationToggle(
             label = field.originalKey, checked = field.isEnabled, onCheckedChange = onEnabledChanged,
             tag = FrontmatterCustomizationTags.metric(field.originalKey),
@@ -292,6 +315,7 @@ internal fun FrontmatterCustomizationMetric(
             label = stringResource(R.string.frontmatter_output_key), value = field.customKey,
             onValueChange = onCustomKeyChanged, enabled = field.isEnabled,
             context = field.originalKey, tag = FrontmatterCustomizationTags.outputKey(field.originalKey),
+            errorText = if (hasKeyConflict) stringResource(R.string.frontmatter_key_conflict_inline) else null,
             modifier = Modifier.padding(start = GeistSpacing.space4, end = GeistSpacing.space4, bottom = GeistSpacing.space4),
         )
     }

@@ -5443,6 +5443,7 @@ enum ExportError: LocalizedError, Equatable {
     case accessDenied
     case destinationChanged
     case markdownMergeRejected
+    case frontmatterKeyConflict
     case noFormatsSelected
     case dailyNotePathConflict(path: String)
     case invalidExportPath(path: String)
@@ -5457,6 +5458,8 @@ enum ExportError: LocalizedError, Equatable {
             return String(localized: "Cannot access the vault folder. Reconnect it in Files or re-select it.")
         case .destinationChanged:
             return String(localized: "The saved export folder now resolves to a different location. Health.md stopped before writing any files. Review the location in Files, then re-select the intended folder.")
+        case .frontmatterKeyConflict:
+            return FrontmatterConfiguration.keyConflictMessage
         case .markdownMergeRejected:
             return String(localized: "Health.md could not safely identify complete YAML properties in the existing Markdown file, so it left the file unchanged.")
         case .noFormatsSelected:

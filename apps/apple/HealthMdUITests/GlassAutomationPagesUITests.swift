@@ -307,12 +307,12 @@ final class GlassAutomationPagesUITests: XCTestCase {
             let url = URL(fileURLWithPath: directory).appendingPathComponent("\(name).png")
             try? XCUIScreen.main.screenshot().pngRepresentation.write(to: url)
         }
-        let connect = onboarding.buttons["Connect Apple Health"]
-        XCTAssertTrue(connect.waitForExistence(timeout: 10))
+        let start = onboarding.buttons["Get started"]
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
         shot("onboarding")
-        connect.tap()
-        // The request still happens on the Health step, after its explanation.
-        XCTAssertTrue(onboarding.staticTexts["Choose What Health.md Can Read"].waitForExistence(timeout: 5))
+        start.tap()
+        // Packs come first; the Health request follows its own explanation.
+        XCTAssertTrue(onboarding.buttons["onboarding.pack.sleep"].waitForExistence(timeout: 5))
         onboarding.terminate()
 
         let app = UITestLaunchHelper.configuredApp(
