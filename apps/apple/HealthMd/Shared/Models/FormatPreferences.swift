@@ -183,135 +183,144 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         case customDateKey, customTypeKey, customTypeValue, keyStyle, preservesExactFieldSet
     }
     
-    static let defaultFields: [CustomFrontmatterField] = [
+    private static let preferredFieldOrder: [String] = [
         // Sleep
-        CustomFrontmatterField(originalKey: "sleep_total_hours"),
-        CustomFrontmatterField(originalKey: "sleep_bedtime"),
-        CustomFrontmatterField(originalKey: "sleep_wake"),
-        CustomFrontmatterField(originalKey: "sleep_deep_hours"),
-        CustomFrontmatterField(originalKey: "sleep_rem_hours"),
-        CustomFrontmatterField(originalKey: "sleep_core_hours"),
-        CustomFrontmatterField(originalKey: "sleep_awake_hours"),
-        CustomFrontmatterField(originalKey: "sleep_in_bed_hours"),
+        "sleep_total_hours",
+        "sleep_bedtime",
+        "sleep_wake",
+        "sleep_deep_hours",
+        "sleep_rem_hours",
+        "sleep_core_hours",
+        "sleep_awake_hours",
+        "sleep_in_bed_hours",
         // Activity
-        CustomFrontmatterField(originalKey: "steps"),
-        CustomFrontmatterField(originalKey: "active_calories"),
-        CustomFrontmatterField(originalKey: "basal_calories"),
-        CustomFrontmatterField(originalKey: "exercise_minutes"),
-        CustomFrontmatterField(originalKey: "stand_time_minutes"),
-        CustomFrontmatterField(originalKey: "stand_hours"),
-        CustomFrontmatterField(originalKey: "flights_climbed"),
-        CustomFrontmatterField(originalKey: "walking_running_km"),
-        CustomFrontmatterField(originalKey: "walking_running_mi"),
-        CustomFrontmatterField(originalKey: "cycling_km"),
-        CustomFrontmatterField(originalKey: "cycling_mi"),
-        CustomFrontmatterField(originalKey: "swimming_m"),
-        CustomFrontmatterField(originalKey: "swimming_strokes"),
-        CustomFrontmatterField(originalKey: "wheelchair_pushes"),
-        CustomFrontmatterField(originalKey: "vo2_max"),
+        "steps",
+        "active_calories",
+        "basal_calories",
+        "exercise_minutes",
+        "stand_time_minutes",
+        "stand_hours",
+        "flights_climbed",
+        "walking_running_km",
+        "walking_running_mi",
+        "cycling_km",
+        "cycling_mi",
+        "swimming_m",
+        "swimming_strokes",
+        "wheelchair_pushes",
+        "vo2_max",
         // Heart
-        CustomFrontmatterField(originalKey: "resting_heart_rate"),
-        CustomFrontmatterField(originalKey: "walking_heart_rate"),
-        CustomFrontmatterField(originalKey: "average_heart_rate"),
-        CustomFrontmatterField(originalKey: "heart_rate_min"),
-        CustomFrontmatterField(originalKey: "heart_rate_max"),
-        CustomFrontmatterField(originalKey: "hrv_ms"),
+        "resting_heart_rate",
+        "walking_heart_rate",
+        "average_heart_rate",
+        "heart_rate_min",
+        "heart_rate_max",
+        "hrv_ms",
         // Vitals
-        CustomFrontmatterField(originalKey: "respiratory_rate"),
-        CustomFrontmatterField(originalKey: "respiratory_rate_avg"),
-        CustomFrontmatterField(originalKey: "respiratory_rate_min"),
-        CustomFrontmatterField(originalKey: "respiratory_rate_max"),
-        CustomFrontmatterField(originalKey: "blood_oxygen"),
-        CustomFrontmatterField(originalKey: "blood_oxygen_avg"),
-        CustomFrontmatterField(originalKey: "blood_oxygen_min"),
-        CustomFrontmatterField(originalKey: "blood_oxygen_max"),
-        CustomFrontmatterField(originalKey: "body_temperature"),
-        CustomFrontmatterField(originalKey: "body_temperature_avg"),
-        CustomFrontmatterField(originalKey: "body_temperature_min"),
-        CustomFrontmatterField(originalKey: "body_temperature_max"),
-        CustomFrontmatterField(originalKey: "blood_pressure_systolic"),
-        CustomFrontmatterField(originalKey: "blood_pressure_systolic_avg"),
-        CustomFrontmatterField(originalKey: "blood_pressure_systolic_min"),
-        CustomFrontmatterField(originalKey: "blood_pressure_systolic_max"),
-        CustomFrontmatterField(originalKey: "blood_pressure_diastolic"),
-        CustomFrontmatterField(originalKey: "blood_pressure_diastolic_avg"),
-        CustomFrontmatterField(originalKey: "blood_pressure_diastolic_min"),
-        CustomFrontmatterField(originalKey: "blood_pressure_diastolic_max"),
-        CustomFrontmatterField(originalKey: "blood_glucose"),
-        CustomFrontmatterField(originalKey: "blood_glucose_avg"),
-        CustomFrontmatterField(originalKey: "blood_glucose_min"),
-        CustomFrontmatterField(originalKey: "blood_glucose_max"),
+        "respiratory_rate",
+        "respiratory_rate_avg",
+        "respiratory_rate_min",
+        "respiratory_rate_max",
+        "blood_oxygen",
+        "blood_oxygen_avg",
+        "blood_oxygen_min",
+        "blood_oxygen_max",
+        "body_temperature",
+        "body_temperature_avg",
+        "body_temperature_min",
+        "body_temperature_max",
+        "blood_pressure_systolic",
+        "blood_pressure_systolic_avg",
+        "blood_pressure_systolic_min",
+        "blood_pressure_systolic_max",
+        "blood_pressure_diastolic",
+        "blood_pressure_diastolic_avg",
+        "blood_pressure_diastolic_min",
+        "blood_pressure_diastolic_max",
+        "blood_glucose",
+        "blood_glucose_avg",
+        "blood_glucose_min",
+        "blood_glucose_max",
         // Body
-        CustomFrontmatterField(originalKey: "weight_kg"),
-        CustomFrontmatterField(originalKey: "height_m"),
-        CustomFrontmatterField(originalKey: "bmi"),
-        CustomFrontmatterField(originalKey: "body_fat_percent"),
-        CustomFrontmatterField(originalKey: "lean_body_mass_kg"),
-        CustomFrontmatterField(originalKey: "waist_circumference_cm"),
+        "weight_kg",
+        "height_m",
+        "bmi",
+        "body_fat_percent",
+        "lean_body_mass_kg",
+        "waist_circumference_cm",
         // Nutrition
-        CustomFrontmatterField(originalKey: "dietary_calories"),
-        CustomFrontmatterField(originalKey: "protein_g"),
-        CustomFrontmatterField(originalKey: "carbohydrates_g"),
-        CustomFrontmatterField(originalKey: "fat_g"),
-        CustomFrontmatterField(originalKey: "saturated_fat_g"),
-        CustomFrontmatterField(originalKey: "fiber_g"),
-        CustomFrontmatterField(originalKey: "sugar_g"),
-        CustomFrontmatterField(originalKey: "sodium_mg"),
-        CustomFrontmatterField(originalKey: "cholesterol_mg"),
-        CustomFrontmatterField(originalKey: "water_l"),
-        CustomFrontmatterField(originalKey: "caffeine_mg"),
+        "dietary_calories",
+        "protein_g",
+        "carbohydrates_g",
+        "fat_g",
+        "saturated_fat_g",
+        "fiber_g",
+        "sugar_g",
+        "sodium_mg",
+        "cholesterol_mg",
+        "water_l",
+        "caffeine_mg",
         // Mindfulness
-        CustomFrontmatterField(originalKey: "mindful_minutes"),
-        CustomFrontmatterField(originalKey: "mindful_sessions"),
-        CustomFrontmatterField(originalKey: "mood_entries"),
-        CustomFrontmatterField(originalKey: "average_mood_valence"),
-        CustomFrontmatterField(originalKey: "average_mood_percent"),
-        CustomFrontmatterField(originalKey: "daily_mood_count"),
-        CustomFrontmatterField(originalKey: "daily_mood_percent"),
-        CustomFrontmatterField(originalKey: "momentary_emotion_count"),
-        CustomFrontmatterField(originalKey: "mood_labels"),
-        CustomFrontmatterField(originalKey: "mood_associations"),
+        "mindful_minutes",
+        "mindful_sessions",
+        "mood_entries",
+        "average_mood_valence",
+        "average_mood_percent",
+        "daily_mood_count",
+        "daily_mood_percent",
+        "momentary_emotion_count",
+        "mood_labels",
+        "mood_associations",
         // Mobility
-        CustomFrontmatterField(originalKey: "walking_speed"),
-        CustomFrontmatterField(originalKey: "step_length_cm"),
-        CustomFrontmatterField(originalKey: "double_support_percent"),
-        CustomFrontmatterField(originalKey: "walking_asymmetry_percent"),
-        CustomFrontmatterField(originalKey: "stair_ascent_speed"),
-        CustomFrontmatterField(originalKey: "stair_descent_speed"),
-        CustomFrontmatterField(originalKey: "six_min_walk_m"),
+        "walking_speed",
+        "step_length_cm",
+        "double_support_percent",
+        "walking_asymmetry_percent",
+        "stair_ascent_speed",
+        "stair_descent_speed",
+        "six_min_walk_m",
         // Hearing
-        CustomFrontmatterField(originalKey: "headphone_audio_db"),
-        CustomFrontmatterField(originalKey: "environmental_sound_db"),
+        "headphone_audio_db",
+        "environmental_sound_db",
         // Workouts
-        CustomFrontmatterField(originalKey: "workout_count"),
-        CustomFrontmatterField(originalKey: "workout_minutes"),
-        CustomFrontmatterField(originalKey: "workout_calories"),
-        CustomFrontmatterField(originalKey: "workout_distance_km"),
-        CustomFrontmatterField(originalKey: "workout_distance_mi"),
-        CustomFrontmatterField(originalKey: "workouts"),
-        CustomFrontmatterField(originalKey: "workout_avg_heart_rate"),
-        CustomFrontmatterField(originalKey: "workout_max_heart_rate"),
-        CustomFrontmatterField(originalKey: "workout_min_heart_rate"),
-        CustomFrontmatterField(originalKey: "workout_running_cadence"),
-        CustomFrontmatterField(originalKey: "workout_running_stride_length"),
-        CustomFrontmatterField(originalKey: "workout_running_ground_contact"),
-        CustomFrontmatterField(originalKey: "workout_running_vertical_oscillation"),
-        CustomFrontmatterField(originalKey: "workout_cycling_cadence"),
-        CustomFrontmatterField(originalKey: "workout_avg_power"),
-        CustomFrontmatterField(originalKey: "workout_max_power"),
-        CustomFrontmatterField(originalKey: "workout_details"),
+        "workout_count",
+        "workout_minutes",
+        "workout_calories",
+        "workout_distance_km",
+        "workout_distance_mi",
+        "workouts",
+        "workout_avg_heart_rate",
+        "workout_max_heart_rate",
+        "workout_min_heart_rate",
+        "workout_running_cadence",
+        "workout_running_stride_length",
+        "workout_running_ground_contact",
+        "workout_running_vertical_oscillation",
+        "workout_cycling_cadence",
+        "workout_avg_power",
+        "workout_max_power",
+        "workout_details",
         // Medications
-        CustomFrontmatterField(originalKey: "medication_count"),
-        CustomFrontmatterField(originalKey: "active_medication_count"),
-        CustomFrontmatterField(originalKey: "archived_medication_count"),
-        CustomFrontmatterField(originalKey: "medication_details"),
-        CustomFrontmatterField(originalKey: "medication_dose_count"),
-        CustomFrontmatterField(originalKey: "medication_dose_events"),
-        CustomFrontmatterField(originalKey: "medication_taken_count"),
-        CustomFrontmatterField(originalKey: "medication_skipped_count"),
-        CustomFrontmatterField(originalKey: "medications"),
+        "medication_count",
+        "active_medication_count",
+        "archived_medication_count",
+        "medication_details",
+        "medication_dose_count",
+        "medication_dose_events",
+        "medication_taken_count",
+        "medication_skipped_count",
+        "medications",
     ]
-    
+
+    /// The export mapping owns membership; this list preserves the historical editor order.
+    /// `workout_details` is a native structured block rather than a flat metric mapping.
+    static let defaultFields: [CustomFrontmatterField] = {
+        let known = HealthMetricExportMapping.allKnownFrontmatterKeys.union(["workout_details"])
+        let preferred = preferredFieldOrder.filter { known.contains($0) }
+        let remaining = known.subtracting(preferred).sorted()
+        return (preferred + remaining).map { CustomFrontmatterField(originalKey: $0) }
+    }()
+
     init() {
         self.fields = Self.defaultFields
         self.customFields = [:]
@@ -336,7 +345,7 @@ class FrontmatterConfiguration: ObservableObject, Codable {
     
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        var decoded = try container.decodeIfPresent([CustomFrontmatterField].self, forKey: .fields) ?? Self.defaultFields
+        let decoded = try container.decodeIfPresent([CustomFrontmatterField].self, forKey: .fields) ?? Self.defaultFields
         customFields = try container.decodeIfPresent([String: String].self, forKey: .customFields) ?? [:]
         placeholderFields = try container.decodeIfPresent([String].self, forKey: .placeholderFields) ?? []
         includeDate = try container.decodeIfPresent(Bool.self, forKey: .includeDate) ?? true
@@ -351,20 +360,26 @@ class FrontmatterConfiguration: ObservableObject, Codable {
             preservesExactFieldSet = false
         }
 
-        // Migration: inject any default fields that are missing from a saved native config.
-        // This ensures users upgrading from older versions see new fields rather than
-        // having them silently absent.
-        let existingKeys = Set(decoded.map { $0.originalKey })
+        fields = decoded
+        migrateMissingDefaultFields()
+    }
+
+    /// Native upgrades and editor copies expose newly mapped fields while preserving saved choices.
+    /// Exact shared-setup imports retain their explicit field ledger.
+    func migrateMissingDefaultFields() {
+        guard !preservesExactFieldSet else { return }
+        let existingKeys = Set(fields.map { $0.originalKey })
         let unitAlternateSourceKeys = [
             "walking_running_mi": "walking_running_km",
             "cycling_mi": "cycling_km",
             "workout_distance_mi": "workout_distance_km",
         ]
-        for defaultField in Self.defaultFields where !preservesExactFieldSet {
+        for defaultField in Self.defaultFields {
             guard !existingKeys.contains(defaultField.originalKey) else { continue }
-            var fieldToInsert = defaultField
+            var fieldToInsert = CustomFrontmatterField(originalKey: defaultField.originalKey,
+                customKey: keyStyle.apply(to: defaultField.originalKey))
             if let sourceKey = unitAlternateSourceKeys[defaultField.originalKey],
-               let sourceField = decoded.first(where: { $0.originalKey == sourceKey }) {
+               let sourceField = fields.first(where: { $0.originalKey == sourceKey }) {
                 fieldToInsert = CustomFrontmatterField(
                     originalKey: defaultField.originalKey,
                     customKey: Self.customKeyForUnitAlternate(
@@ -380,16 +395,15 @@ class FrontmatterConfiguration: ObservableObject, Codable {
             if let defaultIndex = defaultKeys.firstIndex(of: defaultField.originalKey),
                defaultIndex > 0 {
                 let precedingKey = defaultKeys[defaultIndex - 1]
-                if let insertAfter = decoded.firstIndex(where: { $0.originalKey == precedingKey }) {
-                    decoded.insert(fieldToInsert, at: insertAfter + 1)
+                if let insertAfter = fields.firstIndex(where: { $0.originalKey == precedingKey }) {
+                    fields.insert(fieldToInsert, at: insertAfter + 1)
                 } else {
-                    decoded.append(fieldToInsert)
+                    fields.append(fieldToInsert)
                 }
             } else {
-                decoded.insert(fieldToInsert, at: 0)
+                fields.insert(fieldToInsert, at: 0)
             }
         }
-        fields = decoded
     }
     
     func encode(to encoder: Encoder) throws {
@@ -408,6 +422,56 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         }
     }
     
+    /// Configuration validation only; user-defined keys are never included in error telemetry.
+    var conflictingOutputKeys: Set<String> { Set(keyConflicts.map(\.outputKey)) }
+
+    var keyConflicts: [FrontmatterKeyConflict] {
+        let entries = Dictionary(grouping: configuredOutputSources(), by: \.key)
+        return entries.keys.sorted().compactMap { key in
+            let sources = entries[key, default: []].map(\.source)
+            let reserved = Self.reservedNoteKeys.contains(key)
+            guard sources.count > 1 || reserved else { return nil }
+            return FrontmatterKeyConflict(outputKey: key, sources: sources, isReserved: reserved)
+        }
+    }
+
+    func hasConflictingName(_ name: String, for originalKey: String) -> Bool {
+        guard fields.first(where: { $0.originalKey == originalKey })?.isEnabled == true else { return false }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let key = trimmed.isEmpty ? originalKey : trimmed
+        return Self.reservedNoteKeys.contains(key) || configuredOutputKeys(excluding: originalKey).contains(key)
+    }
+
+    private static let reservedNoteKeys: Set<String> = [
+        "healthmd_injection_kind", "healthmd_daily_injection_v1", "healthmd_daily_injection_v2"
+    ]
+
+    private func configuredOutputKeys(excluding originalKey: String? = nil) -> [String] {
+        configuredOutputSources(excluding: originalKey).map(\.key)
+    }
+
+    private func configuredOutputSources(excluding originalKey: String? = nil)
+        -> [(key: String, source: FrontmatterConflictSource)] {
+        let configured = Set(fields.map(\.originalKey))
+        // Missing legacy fields are enabled defaults, just as in the injector.
+        let effectiveFields = fields + Self.defaultFields.filter { !configured.contains($0.originalKey) }
+        var entries = effectiveFields.filter { $0.isEnabled && $0.originalKey != originalKey }.map { field in
+            let key = field.customKey.trimmingCharacters(in: .whitespacesAndNewlines)
+            return (key: key.isEmpty ? field.originalKey : key,
+                source: FrontmatterConflictSource(originalKey: field.originalKey,
+                    destination: .metrics(FrontmatterFieldGroup.group(for: field.originalKey))))
+        }
+        if includeDate { entries.append((customDateKey, .init(originalKey: "date", destination: .core))) }
+        if includeType { entries.append((customTypeKey, .init(originalKey: "type", destination: .core))) }
+        entries += customFields.keys.sorted().map { ($0, .init(originalKey: $0, destination: .custom)) }
+        entries += placeholderFields.map { ($0, .init(originalKey: $0, destination: .placeholders)) }
+        return entries
+    }
+
+    static var keyConflictMessage: String {
+        String(localized: "Frontmatter key conflict. Give each enabled field a unique, non-reserved name in Frontmatter Fields. Your daily note was not changed.")
+    }
+
     /// Get the output key for a given original key
     func outputKey(for originalKey: String) -> String? {
         guard let field = fields.first(where: { $0.originalKey == originalKey }),

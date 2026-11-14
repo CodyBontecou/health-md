@@ -50,6 +50,17 @@ struct ContentView: View {
     @State private var partialExportNotice: PartialExportNotice?
     @State private var showError = false
     @State private var errorMessage = ""
+    private struct FrontmatterConflictNotice {
+        let profileID: UUID?
+        let conflicts: [FrontmatterKeyConflict]
+    }
+    private struct FrontmatterConflictReview: Identifiable {
+        let id = UUID()
+        let profile: ExportProfile
+        let destination: FrontmatterConflictDestination
+    }
+    @State private var frontmatterConflictNotice: FrontmatterConflictNotice?
+    @State private var frontmatterConflictReview: FrontmatterConflictReview?
     @State private var errorReason: ExportFailureReason?
     @State private var statusDismissTimer: Timer?
     @State private var exportTask: Task<Void, Never>?
@@ -116,11 +127,13 @@ struct ContentView: View {
             OnboardingView(
                 showFolderPicker: $showFolderPicker,
                 vaultManager: vaultManager,
+                services: onboardingServices,
                 onComplete: {
                     HealthMdReleaseNotes.markCurrentVersionAsSeenAfterOnboarding()
+                    // Onboarding already configured the Daily note automation and
+                    // ran the free export; land on it rather than a creator.
                     withOptionalMotionAnimation(AnimationTimings.smooth) {
                         selectedTab = .schedule
-                        presentFirstAutomationCreator = true
                         hasCompletedOnboarding = true
                     }
                 }
@@ -365,6 +378,12 @@ struct ContentView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(item: $frontmatterConflictReview) { review in
+            if let profileCoordinator {
+                GlassFrontmatterConflictReviewSheet(coordinator: profileCoordinator, profile: review.profile,
+                    destination: review.destination)
+            }
+        }
         .sheet(isPresented: $showExportProfiles) {
             if let profileCoordinator {
                 NavigationStack {
@@ -453,18 +472,12 @@ struct ContentView: View {
         .geistDialog(
             isPresented: $showError,
             title: Text(errorReason?.alertTitle ?? ExportFailureReason.unknown.alertTitle),
-            message: Text(errorMessage),
-            actions: errorReason == .noHealthData
-                ? [
-                    .action("Done", role: .secondary),
-                    .action("Open Health App") {
-                        if let healthURL = URL(string: "x-apple-health://") {
-                            UIApplication.shared.open(healthURL)
-                        }
-                    }
-                ]
-                : [.action("OK", role: .secondary)]
+            message: Text(verbatim: errorMessage),
+            actions: exportErrorActions
         )
+        .onChange(of: showError) { _, presented in
+            if !presented { frontmatterConflictNotice = nil }
+        }
         .geistDialog(
             isPresented: Binding(
                 get: {
@@ -727,7 +740,12 @@ struct ContentView: View {
     // MARK: - Computed Properties
 
     private var canExport: Bool {
-        ExportTargetReadiness.canExport(
+        if let profileCoordinator,
+           profileCoordinator.profileStore.hasProfiles,
+           profileCoordinator.profileStore.activeProfile == nil {
+            return false
+        }
+        return ExportTargetReadiness.canExport(
             isHealthKitAuthorized: healthKitManager.isAuthorized,
             hasSelectedFormat: !advancedSettings.exportFormats.isEmpty,
             dailyNotesOnlyModeEnabled: advancedSettings.dailyNotesOnlyModeEnabled,
@@ -735,7 +753,18 @@ struct ContentView: View {
             hasLocalFolder: vaultManager.vaultURL != nil || vaultManager.requiresVaultReselection,
             canExportToConnectedMac: canExportToConnectedMacWithCurrentSettings,
             apiEndpointConfigured: apiExportSettings.isConfigured,
+            googleDriveReady: activeGoogleDriveDestination.map {
+                GoogleDriveExportService.shared?.readiness(destinationID: $0.id) == .ready
+            } ?? false,
             agentDataGatewayConfigured: agentDataGatewaySettings.isConfigured
+        )
+    }
+
+    private var activeGoogleDriveDestination: GoogleDriveDestination? {
+        guard let profile = profileCoordinator?.profileStore.activeProfile,
+              profile.target == .googleDrive else { return nil }
+        return profileCoordinator?.googleDriveDestinationStore.destination(
+            id: profile.googleDriveDestinationID
         )
     }
 
@@ -973,6 +1002,367 @@ struct ContentView: View {
     /// and in the main app. Synchronous initialization closes the brief launch
     /// race and also preserves a new selection when onboarding is replayed with
     /// existing profile rows (issue #150).
+    // MARK: - Onboarding
+
+    /// Live implementation of the onboarding flow's app-side work. Every step goes
+    /// through the same profile, export, history and purchase paths as the app.
+    private var onboardingServices: OnboardingServices {
+        OnboardingServices(
+            coveredPacks: {
+                // A fresh install enables every catalogue metric, which covers all
+                // packs; keep the design's default selection in that case.
+                let enabled = advancedSettings.metricSelection.enabledMetrics
+                let covered = OnboardingMetricPack.packs(coveredBy: enabled)
+                let everyPack = OnboardingMetricPack.metricIDs(for: Set(OnboardingMetricPack.allCases))
+                // Untouched catalogue defaults enable far more than the packs.
+                return enabled.subtracting(everyPack).count > everyPack.count ? [] : covered
+            },
+            applyPacks: { packs in
+                configurationProtection.performConfigurationChange {
+                    OnboardingMetricPack.apply(packs, to: advancedSettings.metricSelection)
+                    ensureProfileCoordinator().flushEdits()
+                }
+            },
+            selectDestination: { destination in
+                let target: ExportTargetSelection
+                switch destination {
+                case .api: target = .apiEndpoint
+                // Without the direct Drive connection, Drive means a Drive folder picked in Files.
+                case .drive where GoogleDriveConfiguration.from() != nil: target = .googleDrive
+                case .folder, .drive: target = .localIPhoneFolder
+                }
+                configurationProtection.performConfigurationChange {
+                    exportTargetSelection = target
+                    ensureProfileCoordinator().userSelectedTarget(target)
+                }
+            },
+            destinationLabel: {
+                if exportTargetSelection == .apiEndpoint {
+                    return onboardingAPIEndpoint()?.name
+                        ?? URL(string: apiExportSettings.endpointURLString)?.host ?? String(localized: "your API")
+                }
+                if exportTargetSelection == .googleDrive {
+                    return onboardingDriveFolder().map { "Google Drive/\($0.folderLabel)" } ?? "Google Drive"
+                }
+                return onboardingVaultLabel() ?? String(localized: "your folder")
+            },
+            folderLabel: { onboardingVaultLabel() },
+            apiEndpoint: { onboardingAPIEndpoint() },
+            apiEndpointEditMode: { id in
+                let coordinator = ensureProfileCoordinator()
+                guard let endpoint = coordinator.destinationStore.apiEndpoint(id: id) else { return nil }
+                return .edit(
+                    name: endpoint.name,
+                    endpointURLString: endpoint.endpointURLString,
+                    token: coordinator.destinationStore.token(for: id) ?? "",
+                    usedBy: coordinator.profileNames(usingAPIEndpoint: id)
+                )
+            },
+            saveAPIEndpoint: { draft, editingID in
+                var saved = false
+                configurationProtection.performConfigurationChange {
+                    let coordinator = ensureProfileCoordinator()
+                    guard let id = coordinator.saveAPIEndpoint(
+                        editingID: editingID,
+                        name: draft.name,
+                        endpointURLString: draft.endpointURLString,
+                        bearerToken: draft.bearerToken
+                    ), let activeID = coordinator.profileStore.activeProfileID,
+                          coordinator.bindAPIEndpoint(id, toProfile: activeID) else { return }
+                    exportTargetSelection = .apiEndpoint
+                    saved = true
+                }
+                return saved
+            },
+            deleteAPIEndpoint: { id in
+                configurationProtection.performConfigurationChange {
+                    ensureProfileCoordinator().deleteAPIEndpoint(id: id)
+                }
+            },
+            driveAvailable: { GoogleDriveConfiguration.from() != nil },
+            driveFolder: { onboardingDriveFolder() },
+            connectDrive: { await connectOnboardingDrive() },
+            loadWeek: { dates in await loadOnboardingWeek(dates) },
+            saveWeek: { dates in await saveOnboardingWeek(dates) },
+            trialTimeline: {
+                OnboardingServices.defaultTrialTimeline(
+                    price: purchaseManager.product(for: .yearly)?.displayPrice,
+                    trialEligible: purchaseManager.trialEligibleProductIDs.contains(HealthMdPurchaseOption.yearly.productID)
+                )
+            },
+            trialEligible: {
+                purchaseManager.trialEligibleProductIDs.contains(HealthMdPurchaseOption.yearly.productID)
+            },
+            prepareTrial: { await purchaseManager.loadProductsIfNeeded() },
+            startTrial: {
+                await purchaseManager.loadProductsIfNeeded()
+                await purchaseManager.purchase(.yearly, source: .onboardingUnlock)
+                if purchaseManager.isUnlocked { return .started }
+                if let error = purchaseManager.purchaseError { return .failed(error) }
+                return .cancelled
+            },
+            finish: { enableDailySchedule in
+                configurationProtection.performConfigurationChange {
+                    finishOnboardingAutomation(enableDailySchedule: enableDailySchedule)
+                }
+            }
+        )
+    }
+
+    /// The saved endpoint the active (Daily note) automation is bound to.
+    private func onboardingAPIEndpoint() -> OnboardingAPIEndpoint? {
+        let coordinator = ensureProfileCoordinator()
+        guard let activeID = coordinator.profileStore.activeProfileID,
+              let endpointID = coordinator.profileStore.profile(id: activeID)?.apiEndpointID,
+              let endpoint = coordinator.destinationStore.apiEndpoint(id: endpointID) else { return nil }
+        return OnboardingAPIEndpoint(id: endpoint.id, name: endpoint.name, endpointURLString: endpoint.endpointURLString)
+    }
+
+    private func onboardingVaultLabel() -> String? {
+        guard vaultManager.vaultURL != nil else { return nil }
+        let subfolder = vaultManager.healthSubfolder.trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
+        return subfolder.isEmpty ? vaultManager.vaultName : "\(vaultManager.vaultName)/\(subfolder)"
+    }
+
+    /// The Google Drive folder the active (Daily note) automation is bound to.
+    private func onboardingDriveFolder() -> OnboardingDriveFolder? {
+        let coordinator = ensureProfileCoordinator()
+        coordinator.googleDriveDestinationStore.reload()
+        guard let profile = coordinator.profileStore.activeProfile,
+              let destination = coordinator.googleDriveDestinationStore.destination(
+                  id: profile.googleDriveDestinationID
+              ) else { return nil }
+        return OnboardingDriveFolder(
+            id: destination.id,
+            folderLabel: destination.folderLabel ?? String(localized: "Drive folder"),
+            isReady: GoogleDriveExportService.shared?.readiness(destinationID: destination.id) == .ready
+        )
+    }
+
+    /// PR #138's connect flow (Google consent + mobile Picker, `drive.file` only),
+    /// then binds the chosen folder to the Daily note automation. The privacy
+    /// disclosure is shown by the onboarding step before this runs.
+    private func connectOnboardingDrive() async -> OnboardingDriveOutcome {
+        let coordinator = ensureProfileCoordinator()
+        guard configurationProtection.performConfigurationChange({}) else { return .cancelled }
+        let manager = GoogleDriveConnectionManager(destinationStore: coordinator.googleDriveDestinationStore)
+        do {
+            let destination = try await manager.connect(
+                replacing: coordinator.profileStore.activeProfile?.googleDriveDestinationID,
+                commitAllowed: { configurationProtection.performConfigurationChange({}) }
+            )
+            var bound = false
+            configurationProtection.performConfigurationChange {
+                guard let activeID = coordinator.profileStore.activeProfileID,
+                      coordinator.bindGoogleDrive(destination.id, toProfile: activeID) else { return }
+                exportTargetSelection = .googleDrive
+                bound = true
+            }
+            return bound
+                ? .connected
+                : .failed(String(localized: "Google Drive is connected, but Daily note couldn't use it. Choose the folder in Automations."))
+        } catch is CancellationError {
+            return .cancelled
+        } catch {
+            return .failed((error as? GoogleDriveError)?.errorDescription
+                ?? GoogleDriveError(.reauthorizationRequired).errorDescription
+                ?? String(localized: "Google Drive couldn't be connected."))
+        }
+    }
+
+    /// Frozen capture settings for onboarding's preview and free export.
+    private func onboardingCaptureSettings() -> AdvancedExportSettings {
+        let frozen = ExportSettingsSnapshot.from(advancedSettings, appleExportEngineAuthorityIsFrozen: false)
+            .makeAdvancedExportSettings(forNewConfiguration: true)
+        let timeZone = advancedSettings.exportTimeZoneOverride ?? .current
+        frozen.exportTimeZoneOverride = timeZone
+        frozen.executionSleepCaptureContext = AppleSleepCaptureContext(
+            timeZone: timeZone, sleepDayAttribution: healthKitManager.sleepDayAttribution)
+        return frozen
+    }
+
+    private func loadOnboardingWeek(_ dates: [Date]) async -> [OnboardingDayPreview] {
+        guard healthKitManager.isAuthorized else { return dates.map { OnboardingDayPreview.sample(for: $0) } }
+        let settings = onboardingCaptureSettings()
+        var previews: [OnboardingDayPreview] = []
+        await HealthKitQueryExecutionController.withController {
+            for date in dates {
+                guard !Task.isCancelled else { return }
+                let data = try? await healthKitManager.fetchHealthData(
+                    for: date,
+                    detailPolicy: .summary,
+                    metricSelection: settings.metricSelection,
+                    timeZone: settings.exportTimeZoneOverride,
+                    captureContext: settings.executionSleepCaptureContext
+                )
+                previews.append(OnboardingDayPreview.make(date: date, data: data, settings: settings))
+            }
+        }
+        // With no records at all, show an explicitly labelled sample week instead.
+        guard previews.contains(where: \.hasData) else { return dates.map { OnboardingDayPreview.sample(for: $0) } }
+        return previews
+    }
+
+    /// The one free export: writes the previewed days through the normal
+    /// orchestrator, records history, and consumes the free allowance only when
+    /// something was written.
+    private func saveOnboardingWeek(_ dates: [Date]) async -> OnboardingSaveOutcome {
+        guard healthKitManager.isAuthorized else {
+            return .failed(String(localized: "Connect Apple Health to save your notes."))
+        }
+        if exportTargetSelection == .apiEndpoint {
+            return await sendOnboardingWeekToAPI(dates)
+        }
+        if exportTargetSelection == .googleDrive {
+            return await uploadOnboardingWeekToDrive(dates)
+        }
+        vaultManager.refreshVaultAccess()
+        guard vaultManager.vaultURL != nil, !vaultManager.requiresVaultReselection else {
+            return .failed(String(localized: "Choose a folder before saving your notes."))
+        }
+        guard purchaseManager.canExport else {
+            return .failed(String(localized: "Your free export has already been used. Start a trial to export again."))
+        }
+        let settings = onboardingCaptureSettings()
+        let sortedDates = dates.sorted()
+        markInteractiveExportBegan()
+        defer { markInteractiveExportEnded() }
+        let result = await ExportOrchestrator.exportDates(
+            sortedDates,
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings,
+            externalIntegrations: ConnectedAppsFeature.isEnabled ? externalIntegrationManager : nil
+        )
+        if let first = sortedDates.first, let last = sortedDates.last {
+            ExportOrchestrator.recordResult(result, source: .manual, dateRangeStart: first, dateRangeEnd: last)
+        }
+        guard result.successCount > 0 else {
+            let reason = result.primaryFailureReason ?? .unknown
+            return .failed(String(localized: "Nothing was saved: \(reason.shortDescription)"))
+        }
+        purchaseManager.recordExportUse(offerGuidance: false)
+        vaultManager.recordSuccessfulExportStatus(result.localizedGeneratedFileAndDataDayDescription)
+        return .saved(result.successCount)
+    }
+
+    /// The API variant of the free export: the same runner, history and
+    /// allowance accounting as an interactive API export.
+    private func sendOnboardingWeekToAPI(_ dates: [Date]) async -> OnboardingSaveOutcome {
+        guard let destination = apiExportSettings.destinationSnapshot else {
+            return .failed(String(localized: "Add a valid API endpoint before sending your notes."))
+        }
+        guard purchaseManager.canExport else {
+            return .failed(String(localized: "Your free export has already been used. Start a trial to export again."))
+        }
+        let sortedDates = dates.sorted()
+        let result = await APIEndpointExportRunner.export(
+            dates: sortedDates,
+            healthKitManager: healthKitManager,
+            settings: onboardingCaptureSettings(),
+            destination: destination,
+            externalIntegrations: ConnectedAppsFeature.isEnabled ? externalIntegrationManager : nil,
+            onProgress: { _, _ in }
+        )
+        if let first = sortedDates.first, let last = sortedDates.last {
+            ExportOrchestrator.recordResult(
+                result, source: .manual, dateRangeStart: first, dateRangeEnd: last,
+                targetLabel: destination.displayName, exportTarget: .apiEndpoint, fileCount: 0
+            )
+        }
+        guard result.successCount > 0 else {
+            let reason = result.primaryFailureReason ?? .unknown
+            return .failed(String(localized: "Nothing was sent: \(reason.shortDescription)"))
+        }
+        purchaseManager.recordExportUse(offerGuidance: false)
+        return .saved(result.successCount)
+    }
+
+    /// The Drive variant of the free export: PR #138's export service, with the
+    /// same history, operation-keyed allowance accounting and journal
+    /// acknowledgement as an interactive Drive export.
+    private func uploadOnboardingWeekToDrive(_ dates: [Date]) async -> OnboardingSaveOutcome {
+        let coordinator = ensureProfileCoordinator()
+        guard let service = GoogleDriveExportService.shared,
+              let profile = coordinator.profileStore.activeProfile,
+              profile.target == .googleDrive,
+              let destination = coordinator.googleDriveDestinationStore.destination(id: profile.googleDriveDestinationID),
+              service.readiness(destinationID: destination.id) == .ready else {
+            return .failed(String(localized: "Connect Google Drive before saving your notes."))
+        }
+        guard purchaseManager.canExport else {
+            return .failed(String(localized: "Your free export has already been used. Start a trial to export again."))
+        }
+        let settings = onboardingCaptureSettings()
+        let snapshot = ExportSettingsSnapshot.from(
+            settings,
+            healthSubfolder: vaultManager.healthSubfolder,
+            appleExportEngineAuthorityIsFrozen: false,
+            calendarTimeZoneIdentifier: settings.exportTimeZoneOverride?.identifier
+        )
+        let sortedDates = dates.sorted()
+        let operationID = UUID()
+        markInteractiveExportBegan()
+        defer { markInteractiveExportEnded() }
+        let result = await service.export(
+            operationID: operationID,
+            profileID: profile.id,
+            destinationSnapshot: GoogleDriveDestinationSnapshot(destination: destination),
+            dates: sortedDates,
+            healthKitManager: healthKitManager,
+            settingsSnapshot: snapshot,
+            externalIntegrations: ConnectedAppsFeature.isEnabled ? externalIntegrationManager : nil
+        )
+        if let first = sortedDates.first, let last = sortedDates.last {
+            ExportOrchestrator.recordResult(
+                result, source: .manual, dateRangeStart: first, dateRangeEnd: last,
+                targetLabel: "Google Drive", exportTarget: .googleDrive,
+                idempotencyKey: operationID, profileName: profile.name
+            )
+        }
+        guard result.successCount > 0 else {
+            let id = result.failedDateDetails.first?.errorDetails ?? GoogleDriveErrorID.ambiguousCommit.rawValue
+            return .failed(String(localized: "Nothing was uploaded to Google Drive (\(id))."))
+        }
+        do {
+            try purchaseManager.recordExportUse(jobID: operationID)
+            if result.didCompleteAllRequestedDates {
+                await service.acknowledgeCompletedOperation(operationID)
+            }
+        } catch {
+            // The journal stays unacknowledged so the next launch reconciles accounting.
+        }
+        return .saved(result.successCount)
+    }
+
+    /// Onboarding configures the existing Default automation instead of creating a
+    /// second one: it is renamed "Daily note" and, when requested and paid access
+    /// is active, scheduled every morning at 8:00 for yesterday.
+    private func finishOnboardingAutomation(enableDailySchedule: Bool) {
+        let coordinator = ensureProfileCoordinator()
+        coordinator.flushEdits()
+        guard let profileID = coordinator.profileStore.activeProfileID,
+              let profile = coordinator.profileStore.profile(id: profileID) else { return }
+        if profile.isMigrationDefault && profile.name == ExportProfileStore.defaultProfileName {
+            _ = coordinator.renameProfile(id: profileID, to: String(localized: "Daily note", comment: "Name of the automation onboarding configures"))
+        }
+        guard enableDailySchedule, purchaseManager.isUnlocked else { return }
+        // An API destination without a URL could only fail every morning.
+        if exportTargetSelection == .apiEndpoint && (onboardingAPIEndpoint() == nil || !apiExportSettings.isConfigured) { return }
+        // A Drive automation without a ready folder could only fail every morning.
+        if exportTargetSelection == .googleDrive && onboardingDriveFolder()?.isReady != true { return }
+        let entryStore = coordinator.scheduledEntryStore
+        var entry = entryStore.entry(profileID: profileID) ?? ScheduledExportEntry(profileID: profileID)
+        entry.isEnabled = true
+        entry.frequency = .daily
+        entry.preferredHour = 8
+        entry.preferredMinute = 0
+        entry.lookbackDays = 1
+        entry.includeToday = false
+        _ = entryStore.upsert(entry)
+        AutomationScheduleSwitch.didSwitch(isEnabled: true, entries: entryStore.entries, schedulingManager: schedulingManager)
+    }
+
     private func commitVaultFolderSelection(_ url: URL) {
         ensureProfileCoordinator().selectVaultFolder(url)
     }
@@ -1088,6 +1478,18 @@ struct ContentView: View {
         if restoreInteractiveCorpusExportIfNeeded() { return }
         guard !isExporting else { return }
 
+        let conflicts = advancedSettings.formatCustomization.frontmatterConfig.keyConflicts
+        if (advancedSettings.dailyNoteInjection.enabled || advancedSettings.exportFormats.contains(.markdown)
+            || advancedSettings.exportFormats.contains(.obsidianBases)), !conflicts.isEmpty {
+            presentExportConfigurationError(FrontmatterConfiguration.keyConflictMessage)
+            // Local presentation only: keep identifiers out of persisted failures and diagnostics.
+            frontmatterConflictNotice = FrontmatterConflictNotice(profileID: profiles.profileStore.activeProfileID,
+                conflicts: conflicts)
+            errorMessage = conflicts.map(\.localDescription).joined(separator: "\n\n")
+                + "\n\n" + FrontmatterConfiguration.keyConflictMessage
+            return
+        }
+
         partialExportNotice = nil
         statusDismissTimer?.invalidate()
         vaultManager.clearLastExportPresentationTarget()
@@ -1150,6 +1552,23 @@ struct ContentView: View {
         case .apiEndpoint:
             guard apiExportSettings.isConfigured else {
                 presentExportConfigurationError("Configure a valid API endpoint before exporting.")
+                return
+            }
+        case .googleDrive:
+            guard GoogleDriveConfiguration.from() != nil else {
+                presentExportConfigurationError("Google Drive is unavailable in this build (configuration_missing).")
+                return
+            }
+            guard let profile = profileCoordinator?.profileStore.activeProfile,
+                  profile.target == .googleDrive,
+                  let destination = profileCoordinator?.googleDriveDestinationStore.destination(
+                      id: profile.googleDriveDestinationID
+                  ) else {
+                presentExportConfigurationError("Choose and connect a Google Drive folder in the active export profile.")
+                return
+            }
+            guard GoogleDriveExportService.shared?.readiness(destinationID: destination.id) == .ready else {
+                presentExportConfigurationError("Reconnect Google Drive before exporting (reauthorization_required).")
                 return
             }
         case .agentDataGateway:
@@ -1336,6 +1755,7 @@ struct ContentView: View {
         case .connectedMac: exportDataToConnectedMac(selection)
         case .apiEndpoint: exportDataToAPIEndpoint(selection)
         case .agentDataGateway: exportDataToAgentDataGateway(selection)
+        case .googleDrive: exportDataToGoogleDrive(selection)
         }
     }
 
@@ -1384,7 +1804,32 @@ struct ContentView: View {
         }
     }
 
+    private var exportErrorActions: [GeistDialogAction] {
+        if let notice = frontmatterConflictNotice, let profileID = notice.profileID,
+           let destination = notice.conflicts.first?.sources.first?.destination,
+           let coordinator = profileCoordinator,
+           let profile = coordinator.profileStore.profile(id: profileID) {
+            return [
+                .action("Done", role: .secondary) { frontmatterConflictNotice = nil },
+                .action("Review conflict") {
+                    frontmatterConflictNotice = nil
+                    frontmatterConflictReview = FrontmatterConflictReview(profile: profile, destination: destination)
+                }
+            ]
+        }
+        if errorReason == .noHealthData {
+            return [
+                .action("Done", role: .secondary),
+                .action("Open Health App") {
+                    if let healthURL = URL(string: "x-apple-health://") { UIApplication.shared.open(healthURL) }
+                }
+            ]
+        }
+        return [.action("OK", role: .secondary)]
+    }
+
     private func presentExportConfigurationError(_ message: String) {
+        frontmatterConflictNotice = nil
         exportStatusMessage = message
         errorReason = nil
         errorMessage = message
@@ -1402,6 +1847,7 @@ struct ContentView: View {
         _ reason: ExportFailureReason,
         detail: FailedDateDetail? = nil
     ) {
+        frontmatterConflictNotice = nil
         errorReason = reason
         errorMessage = reason.alertMessage(detail: detail)
         showError = true
@@ -1551,6 +1997,93 @@ struct ContentView: View {
                     primaryReason,
                     detail: result.failedDateDetails.first
                 )
+            }
+        }
+    }
+
+    private func exportDataToGoogleDrive(_ selection: HealthHistoryExecutionSelection) {
+        let advancedSettings = selection.makeCaptureSettings()
+        let dateRange = (startDate: selection.scope.startDate, endDate: selection.scope.endDate)
+        guard let service = GoogleDriveExportService.shared,
+              let profile = profileCoordinator?.profileStore.activeProfile,
+              let destination = profileCoordinator?.googleDriveDestinationStore.destination(
+                  id: profile.googleDriveDestinationID
+              ) else {
+            presentExportConfigurationError("Choose and connect a Google Drive folder in the active export profile.")
+            return
+        }
+
+        isExporting = true
+        exportProgress = 0
+        exportStatusMessage = "Preparing Google Drive export…"
+        statusDismissTimer?.invalidate()
+        let snapshot = ExportSettingsSnapshot.from(
+            advancedSettings,
+            healthSubfolder: vaultManager.healthSubfolder,
+            appleExportEngineAuthorityIsFrozen: false,
+            calendarTimeZoneIdentifier: advancedSettings.exportTimeZoneOverride?.identifier
+        )
+        let destinationSnapshot = GoogleDriveDestinationSnapshot(destination: destination)
+        let operationID = UUID()
+
+        exportTask = Task {
+            defer {
+                isExporting = false
+                exportProgress = 0
+                exportTask = nil
+            }
+            let dates = ExportOrchestrator.dateRange(from: dateRange.startDate, to: dateRange.endDate)
+            let result = await service.export(
+                operationID: operationID,
+                profileID: profile.id,
+                destinationSnapshot: destinationSnapshot,
+                dates: dates,
+                healthKitManager: healthKitManager,
+                settingsSnapshot: snapshot,
+                externalIntegrations: ConnectedAppsFeature.isEnabled ? externalIntegrationManager : nil,
+                onProgress: { current, total, date in
+                    exportStatusMessage = "Preparing \(date) for Google Drive… (\(current)/\(total))"
+                    exportProgress = Double(current) / Double(max(total, 1)) * 0.7
+                }
+            )
+            let rangeStart = dates.first ?? dateRange.startDate
+            let rangeEnd = dates.last ?? dateRange.endDate
+            ExportOrchestrator.recordResult(
+                result,
+                source: .manual,
+                dateRangeStart: rangeStart,
+                dateRangeEnd: rangeEnd,
+                targetLabel: "Google Drive",
+                exportTarget: .googleDrive,
+                idempotencyKey: operationID,
+                profileName: profile.name
+            )
+            var quotaAcknowledged = result.successCount == 0
+            if result.successCount > 0 {
+                // The operation ID is the durable accounting key, matching scheduled Drive jobs.
+                // A journal is acknowledged only after both history and quota are durable.
+                do {
+                    try purchaseManager.recordExportUse(jobID: operationID)
+                    quotaAcknowledged = true
+                } catch {
+                    exportStatusMessage = "Google Drive upload completed, but local accounting is pending. Reopen Health.md to reconcile it."
+                }
+            }
+            if result.didCompleteAllRequestedDates, quotaAcknowledged {
+                await service.acknowledgeCompletedOperation(operationID)
+            }
+            if result.wasCancelled {
+                exportStatusMessage = "Google Drive export cancelled"
+                startStatusDismissTimer()
+            } else if result.isFullSuccess {
+                exportStatusMessage = "Uploaded \(result.totalFilesWritten) file(s) to Google Drive"
+                startStatusDismissTimer()
+            } else if result.isPartialSuccess {
+                partialExportNotice = PartialExportNotice(result: result)
+                exportStatusMessage = "Google Drive export partially completed (partial_completion)."
+            } else {
+                let id = result.failedDateDetails.first?.errorDetails ?? GoogleDriveErrorID.ambiguousCommit.rawValue
+                presentExportConfigurationError("Google Drive export stopped (\(id)).")
             }
         }
     }

@@ -111,6 +111,12 @@ final class FeedbackReporter: ObservableObject {
     }
 
     private static func openURL(_ url: URL, completion: @escaping Completion) {
+        #if DEBUG
+        if TestMode.rejectsFeedbackHandoffs || TestMode.simulatesFailedMailSheet {
+            completion(false)
+            return
+        }
+        #endif
         #if os(iOS)
         UIApplication.shared.open(url, options: [:], completionHandler: completion)
         #elseif os(macOS)
@@ -267,6 +273,7 @@ private struct GlassReportFallbackContent: View {
         VStack(spacing: 0) {
             HStack {
                 Button(String(localized: "Close"), action: onDone)
+                    .accessibilityIdentifier("feedback.close")
                     .foregroundStyle(palette.sec)
                     .frame(minWidth: 70, minHeight: GlassMetrics.touchTarget, alignment: .leading)
                 Spacer(minLength: 8)
@@ -283,6 +290,12 @@ private struct GlassReportFallbackContent: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: GlassMetrics.sectionGap) {
+                    Text(message)
+                        .font(.system(size: 14))
+                        .foregroundStyle(palette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 4)
+                        .accessibilityIdentifier("feedback.failureMessage")
                     Text(strings.localOnly)
                         .font(.system(size: 14))
                         .foregroundStyle(palette.muted)
@@ -296,6 +309,7 @@ private struct GlassReportFallbackContent: View {
                         .frame(minHeight: 260)
                         .glassSurface()
                         .accessibilityLabel(strings.reportLabel)
+                        .accessibilityIdentifier("feedback.reportText")
                     GlassPanel {
                         Toggle(isOn: $attachSummary) {
                             VStack(alignment: .leading, spacing: 2) {
@@ -315,6 +329,7 @@ private struct GlassReportFallbackContent: View {
 
             VStack(spacing: 8) {
                 Button(strings.copyReport, action: onCopy).buttonStyle(GlassPrimaryButtonStyle())
+                    .accessibilityIdentifier("feedback.copyReport")
                 ShareLink(item: draft.reportText) {
                     Text(strings.share)
                         .font(.system(size: 16, weight: .medium))
@@ -329,6 +344,7 @@ private struct GlassReportFallbackContent: View {
                     .glassFont(.caption)
                     .foregroundStyle(palette.ok)
                     .accessibilityLabel(draft.copyAccessibilityLabel)
+                    .accessibilityIdentifier("feedback.copyConfirmation")
             }
             .padding(.horizontal, GlassMetrics.screenMargin)
             .padding(.top, 12)

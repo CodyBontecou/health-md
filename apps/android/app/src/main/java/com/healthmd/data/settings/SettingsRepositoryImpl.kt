@@ -2,6 +2,7 @@ package com.healthmd.data.settings
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -14,6 +15,7 @@ import com.healthmd.domain.exportengine.ExportEngineMode
 import com.healthmd.domain.exportengine.ExportEnginePinCodec
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.ExportSettings
+import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FormatCustomization
 import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.repository.SettingsRepository
@@ -38,7 +40,7 @@ class SettingsRepositoryImpl(
     private object Keys {
         val EXPORT_SETTINGS = stringPreferencesKey("export_settings")
 
-        val PREVENT_ACCIDENTAL_CHANGES = booleanPreferencesKey("prevent_accidental_changes")
+        val PREVENT_ACCIDENTAL_CHANGES = ConfigurationProtectionPersistence.enabledKey
         val SLEEP_DAY_ATTRIBUTION = stringPreferencesKey("sleep_day_attribution")
         val EXPORT_FOLDER_URI = stringPreferencesKey("export_folder_uri")
         val FREE_EXPORTS_USED = intPreferencesKey("free_exports_used")
@@ -337,6 +339,15 @@ class SettingsRepositoryImpl(
     }
 
     companion object {
+        /** Uses the admitted disconnect edit, preserving pending runtime metadata verbatim. */
+        internal fun disableGoogleDriveSchedule(prefs: MutablePreferences) {
+            val raw = prefs[Keys.EXPORT_SETTINGS] ?: return
+            val settings = decodePersistedExportSettings(raw)
+            if (!settings.scheduleEnabled || settings.scheduledExportTarget != ExportTarget.GOOGLE_DRIVE) return
+            val root = Json.parseToJsonElement(raw).jsonObject
+            prefs[Keys.EXPORT_SETTINGS] = JsonObject(root + ("scheduleEnabled" to JsonPrimitive(false))).toString()
+        }
+
         const val FREE_EXPORT_LIMIT = FreemiumPolicy.FREE_EXPORT_LIMIT
         const val DEFAULT_HEALTH_PROVIDER_ID = "health_connect"
     }

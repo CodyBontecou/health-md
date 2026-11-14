@@ -1,11 +1,16 @@
 package com.healthmd.presentation.settings
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.runtime.*
+import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
@@ -20,12 +25,16 @@ import com.healthmd.presentation.common.SecondaryButton
 import com.healthmd.presentation.common.SubScreenTopBar
 import com.healthmd.presentation.theme.GeistSizes
 import com.healthmd.presentation.theme.GeistSpacing
+import com.healthmd.presentation.theme.GeistType
+import com.healthmd.presentation.theme.LocalGeistColors
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FrontmatterCustomizationScreen(
     configuration: FrontmatterConfiguration,
     onConfigurationChanged: (FrontmatterConfiguration) -> Unit,
     onBack: () -> Unit,
+    initialFocusTag: String? = null,
 ) {
     var search by remember { mutableStateOf("") }
     var customFieldKey by remember { mutableStateOf("") }
@@ -33,6 +42,19 @@ fun FrontmatterCustomizationScreen(
     var placeholderKey by remember { mutableStateOf("") }
 
     val normalizedConfiguration = remember(configuration) { configuration.withDefaultFields() }
+    val conflicts = normalizedConfiguration.conflictingOutputKeys
+    val reviewRequester = remember(initialFocusTag) { BringIntoViewRequester() }
+    var reviewReady by remember(initialFocusTag) { mutableStateOf(false) }
+    var reviewApplied by remember(initialFocusTag) { mutableStateOf(false) }
+    fun Modifier.reviewTarget(tag: String): Modifier = if (initialFocusTag == tag) {
+        bringIntoViewRequester(reviewRequester).onGloballyPositioned { reviewReady = true }
+    } else this
+    LaunchedEffect(initialFocusTag, reviewReady) {
+        if (reviewReady && !reviewApplied) {
+            reviewApplied = true
+            reviewRequester.bringIntoView()
+        }
+    }
 
     Box(Modifier.fillMaxSize().imePadding(), contentAlignment = Alignment.TopCenter) {
         Column(
@@ -48,6 +70,11 @@ fun FrontmatterCustomizationScreen(
                     start = GeistSpacing.space4, end = GeistSpacing.space4, bottom = GeistSpacing.space8,
                 ),
             ) {
+                if (conflicts.isNotEmpty()) {
+                    Text(stringResource(R.string.frontmatter_key_conflict_inline),
+                        style = GeistType.copy13, color = LocalGeistColors.current.red.c900,
+                        modifier = Modifier.fillMaxWidth().testTag("frontmatter.keyConflict"))
+                }
                 SettingsGroup(
                     title = stringResource(R.string.frontmatter_key_style_section),
                     rows = listOf { _ ->
@@ -74,7 +101,7 @@ fun FrontmatterCustomizationScreen(
                                         value = normalizedConfiguration.customDateKey,
                                         onValueChange = { onConfigurationChanged(normalizedConfiguration.copy(customDateKey = it)) },
                                         tag = FrontmatterCustomizationTags.DATE_KEY,
-                                        modifier = Modifier.rowFieldInset(),
+                                        modifier = Modifier.rowFieldInset().reviewTarget(FrontmatterCustomizationTags.DATE_KEY),
                                     )
                                 }
                             }
@@ -94,6 +121,7 @@ fun FrontmatterCustomizationScreen(
                                             value = normalizedConfiguration.customTypeKey,
                                             onValueChange = { onConfigurationChanged(normalizedConfiguration.copy(customTypeKey = it)) },
                                             tag = FrontmatterCustomizationTags.TYPE_KEY, imeAction = ImeAction.Next,
+                                            modifier = Modifier.reviewTarget(FrontmatterCustomizationTags.TYPE_KEY),
                                         )
                                         FrontmatterCustomizationTextField(
                                             label = stringResource(R.string.frontmatter_type_value),
@@ -119,7 +147,8 @@ fun FrontmatterCustomizationScreen(
                                     FrontmatterCustomizationTextField(
                                         label = stringResource(R.string.frontmatter_field_key),
                                         value = customFieldKey, onValueChange = { customFieldKey = it },
-                                        modifier = modifier, context = customGroup, tag = FrontmatterCustomizationTags.CUSTOM_KEY,
+                                        modifier = modifier.reviewTarget(FrontmatterCustomizationTags.CUSTOM_KEY),
+                                        context = customGroup, tag = FrontmatterCustomizationTags.CUSTOM_KEY,
                                         imeAction = ImeAction.Next,
                                     )
                                 },
@@ -174,7 +203,7 @@ fun FrontmatterCustomizationScreen(
                                 label = stringResource(R.string.frontmatter_field_key),
                                 value = placeholderKey, onValueChange = { placeholderKey = it },
                                 context = placeholderGroup, tag = FrontmatterCustomizationTags.PLACEHOLDER_KEY,
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().reviewTarget(FrontmatterCustomizationTags.PLACEHOLDER_KEY),
                             )
                             SecondaryButton(
                                 text = stringResource(R.string.a11y_frontmatter_add_placeholder_field),
@@ -220,7 +249,7 @@ fun FrontmatterCustomizationScreen(
                                 label = stringResource(R.string.search), value = search, onValueChange = { search = it },
                                 context = metricGroup,
                                 tag = FrontmatterCustomizationTags.SEARCH, identifier = false,
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().reviewTarget(FrontmatterCustomizationTags.SEARCH),
                             )
                         }
                     } + filteredFields.map { field ->
@@ -229,6 +258,8 @@ fun FrontmatterCustomizationScreen(
                                 FrontmatterCustomizationMetric(
                                     field = field,
                                     shape = shape,
+                                    hasKeyConflict = field.isEnabled && field.outputKey in conflicts,
+                                    modifier = Modifier.reviewTarget(FrontmatterCustomizationTags.outputKey(field.originalKey)),
                                     onEnabledChanged = { enabled ->
                                         onConfigurationChanged(normalizedConfiguration.updateField(field.originalKey) { it.copy(isEnabled = enabled) })
                                     },

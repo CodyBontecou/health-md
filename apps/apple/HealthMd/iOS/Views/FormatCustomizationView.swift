@@ -206,12 +206,18 @@ struct FrontmatterCustomizationView: View {
                 )
 
                 frontmatterSummary
+                if !config.conflictingOutputKeys.isEmpty {
+                    Text("Choose a unique, non-reserved field name.")
+                        .font(.footnote).foregroundStyle(Color.errorText)
+                        .accessibilityIdentifier("frontmatter.keyConflict")
+                }
                 coreFieldsCard
                 customFieldsCard
                 placeholderFieldsCard
                 healthMetricFieldsCard
             }
         }
+        .onAppear { config.migrateMissingDefaultFields() }
         .navigationTitle("Frontmatter Fields")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -315,7 +321,11 @@ struct FrontmatterCustomizationView: View {
                 set: { if !$0 { renameTargetKey = nil } }
             ),
             title: Text("Rename Field"),
-            message: renameTargetKey.map { Text("Enter a custom name for \($0).") },
+            message: renameTargetKey.map { key in
+                config.hasConflictingName(renameTempKey, for: key)
+                    ? Text("Choose a unique, non-reserved field name.")
+                    : Text("Enter a custom name for \(key).")
+            },
             actions: [
                 .cancel(),
                 .action("Save Name") { applyRename(renameTempKey) },
@@ -635,27 +645,7 @@ struct FrontmatterCustomizationView: View {
     }
 
     private var fieldCategories: [(name: String, fields: [CustomFrontmatterField])] {
-        let categoryPrefixes: [(name: String, prefixes: [String])] = [
-            ("Sleep", ["sleep_"]),
-            ("Activity", ["steps", "active_", "basal_", "exercise_", "stand_", "flights_", "walking_running", "cycling", "swimming", "wheelchair"]),
-            ("Heart", ["resting_heart", "walking_heart", "average_heart", "heart_rate", "hrv"]),
-            ("Vitals", ["respiratory", "blood_oxygen", "body_temperature", "blood_pressure", "blood_glucose"]),
-            ("Body", ["weight", "height", "bmi", "body_fat", "lean_body", "waist"]),
-            ("Nutrition", ["dietary", "protein", "carbohydrates", "fat", "saturated", "fiber", "sugar", "sodium", "cholesterol", "water", "caffeine"]),
-            ("Mindfulness", ["mindful"]),
-            ("Mobility", ["walking_speed", "step_length", "double_support", "walking_asymmetry", "stair_", "six_min"]),
-            ("Hearing", ["headphone", "environmental"]),
-            ("Workouts", ["workout"])
-        ]
-
-        return categoryPrefixes.map { category in
-            let fields = config.fields.filter { field in
-                category.prefixes.contains { prefix in
-                    field.originalKey.hasPrefix(prefix)
-                }
-            }
-            return (name: category.name, fields: fields)
-        }.filter { !$0.fields.isEmpty }
+        FrontmatterFieldGroup.grouped(config.fields).map { ($0.group.title, $0.fields) }
     }
 }
 

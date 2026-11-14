@@ -7,7 +7,7 @@ final class PaywallJourneyUITests: XCTestCase {
     func testFreshInstallCanBeginSetupWithoutAccess() {
         let app = UITestLaunchHelper.configuredApp(showOnboarding: true)
         app.launch()
-        XCTAssertTrue(app.buttons["Connect Apple Health"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Get started"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.staticTexts[UITestLaunchHelper.Paywall.title].exists)
     }
 
@@ -36,10 +36,10 @@ final class PaywallJourneyUITests: XCTestCase {
     func testForegroundKeepsUnpaidSetupReachable() {
         let app = UITestLaunchHelper.configuredApp(showOnboarding: true)
         app.launch()
-        XCTAssertTrue(app.buttons["Connect Apple Health"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Get started"].waitForExistence(timeout: 10))
         XCUIDevice.shared.press(.home)
         app.activate()
-        XCTAssertTrue(app.buttons["Connect Apple Health"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Get started"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.staticTexts[UITestLaunchHelper.Paywall.title].exists)
     }
 

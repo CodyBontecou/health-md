@@ -25,8 +25,8 @@ class ReleaseReadinessTest {
     fun appVersion_isPreparedForPaidAccessRelease() {
         val buildGradle = readRepoFile("app/build.gradle.kts")
 
-        assertTrue(buildGradle.contains("versionCode = 46"))
-        assertTrue(buildGradle.contains("versionName = \"3.5.0\""))
+        assertTrue(buildGradle.contains("versionCode = 48"))
+        assertTrue(buildGradle.contains("versionName = \"3.5.2\""))
     }
 
     @Test
@@ -41,13 +41,14 @@ class ReleaseReadinessTest {
 
         releaseNotesByPath.forEach { (path, releaseNotes) ->
             assertTrue("Expected $path to match the canonical Play release notes", releaseNotes == canonicalReleaseNotes)
-            assertTrue(releaseNotes.contains("v3.5.0"))
+            assertTrue(releaseNotes.startsWith("v3.5.2 —"))
             assertTrue(releaseNotes.contains("weekly or yearly subscriptions"))
             assertTrue(releaseNotes.contains("7-day free trial when eligible"))
             assertTrue(releaseNotes.contains("one-time Lifetime purchase"))
             assertTrue(releaseNotes.contains("Existing Lifetime and grandfathered access is preserved"))
-            assertTrue(releaseNotes.contains("Active access is required before setup and exports"))
-            assertTrue(releaseNotes.contains("free-export allowance is retired"))
+            // FreemiumPolicy.FREE_EXPORT_LIMIT is 1: the notes must not claim the allowance is gone.
+            assertTrue(releaseNotes.contains("Your first export is free"))
+            assertTrue(!releaseNotes.contains("free-export allowance is retired"))
             assertTrue("Launch notes must not promise an unapproved Lifetime price", !releaseNotes.contains("$49.99"))
             assertTrue("Play Store release notes should stay within the 500-character limit", releaseNotes.trim().length <= 500)
         }
@@ -63,8 +64,8 @@ class ReleaseReadinessTest {
         val wearManifest = readRepoFile("wear/src/main/AndroidManifest.xml")
         val wearCapabilities = readRepoFile("wear/src/main/res/values/wear.xml")
 
-        assertTrue(releaseScope.contains("\"releaseVersionName\": \"3.5.0\""))
-        assertTrue(releaseScope.contains("\"versionCode\": 46"))
+        assertTrue(releaseScope.contains("\"releaseVersionName\": \"3.5.2\""))
+        assertTrue(releaseScope.contains("\"versionCode\": 48"))
         assertTrue(releaseScope.contains("\"status\": \"deferred\""))
         assertTrue(releaseScope.contains("\"published\": false"))
         assertTrue(releaseScope.contains("\"runtimeAdvertisedByPhone\": false"))
