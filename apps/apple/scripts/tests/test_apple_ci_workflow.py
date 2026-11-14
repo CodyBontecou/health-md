@@ -52,5 +52,37 @@ class WorkflowRoutingTests(unittest.TestCase):
         self.assertLess(text.index('Check out the pinned Obsidian consumer'), text.index('scripts/ci/run.py'))
 
 
+class WatchDiagnosticTests(unittest.TestCase):
+    def test_watch_native_checks_remain_explicit_with_full_behavior_and_real_build(self):
+        text = (REPO / '.github/workflows/apple-watch-ci.yml').read_text()
+        triggers = text.split('permissions:', 1)[0]
+        self.assertIn('workflow_dispatch:', triggers)
+        self.assertNotIn('pull_request:', triggers)
+        self.assertNotIn('push:', triggers)
+        self.assertNotIn('schedule:', triggers)
+        for command in (
+            'python3 packages/contracts/validate.py',
+            'python3 packages/contracts/test_watch_capability_governance.py',
+            'swift test --package-path apps/apple/Packages/HealthMdWatchExport --jobs 2',
+            'make -C apps/apple prepare-healthmd-core-rust',
+            'xcodebuild build -project apps/apple/HealthMd.xcodeproj -scheme HealthMdWatch',
+            "-destination 'generic/platform=watchOS'",
+            'CODE_SIGNING_ALLOWED=NO',
+            'tee apps/apple/build/watch-ci/build.log',
+            'if: ${{ !cancelled() }}',
+        ):
+            self.assertIn(command, text)
+        self.assertLess(text.index('prepare-healthmd-core-rust'), text.index('xcodebuild build'))
+        self.assertNotIn('--filter', text)
+        self.assertNotIn('continue-on-error', text)
+        self.assertNotIn('simctl', text)
+
+    def test_portable_contract_lane_keeps_watch_and_registry_governance(self):
+        text = (REPO / 'scripts/ci/contracts.sh').read_text()
+        self.assertIn('python3 packages/contracts/test_watch_capability_governance.py', text)
+        self.assertIn('python3 packages/healthmd-core-rust/scripts/tests/test_registry_capability_scope.py', text)
+        self.assertFalse((REPO / '.github/workflows/core-rust-ci.yml').exists())
+
+
 if __name__ == '__main__':
     unittest.main()

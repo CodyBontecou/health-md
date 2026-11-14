@@ -12,6 +12,8 @@ python3 -m unittest discover -s apps/apple/scripts/tests -p 'test_merge_reviewed
 # All manifests, fixtures and producer/consumer mirrors; source-only checkout omits media links.
 python3 packages/contracts/validate.py --product-parity-only
 python3 -m unittest discover -s packages/contracts -p 'test_validate_manifest.py'
+python3 packages/contracts/test_watch_capability_governance.py
+python3 packages/healthmd-core-rust/scripts/tests/test_registry_capability_scope.py
 python3 packages/healthmd-core-rust/scripts/import-native-registry.py --check
 python3 packages/healthmd-core-rust/scripts/generate-registry-adapters.py --check
 

@@ -31,7 +31,7 @@ class RoutingTests(unittest.TestCase):
     def assertJobs(self, paths, jobs):
         result = ci.plan(set(paths))
         selected = set(jobs)
-        if selected & {"ios", "ios_ui", "macos"}:
+        if selected & {"ios", "ios_ui", "macos", "watch"}:
             selected.add("prepare")
         if selected:
             selected.add("policy")

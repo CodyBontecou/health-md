@@ -598,8 +598,29 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
     private fun assertActionTextFits(tag: String, label: String,
         fontSize: androidx.compose.ui.unit.TextUnit = GeistType.button14.fontSize) {
         val copy = compose.onNode(hasText(label) and hasAnyAncestor(hasTestTag(tag)), useUnmergedTree = true)
-        assertTextFits(copy, fontSize)
+        try {
+            assertTextFits(copy, fontSize)
+        } catch (failure: AssertionError) {
+            // Keep the original fit verdict. Read geometry only after failure so a hosted
+            // IME/scroll transition can be distinguished from a persistently clipped label.
+            val action = compose.onNodeWithTag(tag)
+            throw AssertionError(
+                "Native action text did not fit: tag=$tag on $display\n" +
+                    "action: ${actionGeometry(action)}\nlabel: ${actionGeometry(copy)}",
+                failure,
+            )
+        }
     }
+
+    private fun actionGeometry(control: SemanticsNodeInteraction): String = runCatching {
+        val unclipped = control.getUnclippedBoundsInRoot()
+        val ancestors = control.readLayoutOnIdle { node ->
+            generateSequence(node) { it.parent }.map {
+                "bounds=${it.boundsInRoot}, size=${it.size}, placed=${it.layoutInfo.isPlaced}"
+            }.joinToString("\n")
+        }
+        "unclipped=$unclipped\n$ancestors"
+    }.getOrElse { "Unable to read action geometry: ${it.javaClass.simpleName}" }
 
     private fun SemanticsNodeInteraction.assertRole(role: Role) =
         assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, role))

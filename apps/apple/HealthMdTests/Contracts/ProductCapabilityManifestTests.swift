@@ -26,12 +26,13 @@ final class ProductCapabilityManifestTests: XCTestCase {
         )
         XCTAssertEqual(
             Self.ids(with: .unavailable, in: states),
-            Self.androidCapabilities.union(["source.private-platform-database", "apple.ads-purchase-attribution"])
+            Self.androidCapabilities.union([ "source.private-platform-database", "apple.ads-purchase-attribution"])
         )
         XCTAssertEqual(
             Self.ids(with: .planned, in: states),
             [
                 "account.clinic-sync-requests",
+                "export.watch-origin-manual-api",
                 "core.shared-rust-profile-engine",
                 "setup.share-portable-configuration", "destination.google-drive",
             ]
@@ -74,6 +75,25 @@ final class ProductCapabilityManifestTests: XCTestCase {
                 )
             }
         }
+    }
+
+    func testWatchOriginRemainsPlannedOnBothPlatformsWithoutDailyProfileClaims() throws {
+        let inventory = try Self.loadInventory()
+        let watch = try XCTUnwrap(inventory.capabilities.first { $0.id == "export.watch-origin-manual-api" })
+        XCTAssertEqual(watch.classification, "planned")
+        XCTAssertEqual(watch.profiles, [], "Watch snapshot is not an Apple or Android daily profile")
+        XCTAssertEqual(watch.platforms.apple.state, .planned)
+        XCTAssertEqual(watch.platforms.android.state, .planned)
+        XCTAssertEqual(
+            watch.platforms.apple.target,
+            "Qualify the healthmd.watch_snapshot v1 source path with physical Watch Wi-Fi/cellular uploads while the iPhone is unavailable, interruption/authorization checks, and backend account-bound idempotency receipts before release."
+        )
+        XCTAssertEqual(
+            watch.platforms.android.target,
+            "Wear OS watch-origin API export milestone: add reviewed local Health Services capture, secure destination setup, direct HTTPS delivery and retry; preserve the current phone-authoritative Wear snapshot and keep non-equivalent exercise/sensor statistics distinct."
+        )
+        XCTAssertTrue(watch.evidence.contains("packages/contracts/watch-snapshot/v1/contract.md"))
+        XCTAssertTrue(watch.evidence.contains("apps/android/docs/features/wear-os.md"))
     }
 
     private static func ids(
@@ -164,7 +184,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         sharedCapabilities
             .union(appleCapabilities)
             .union(androidCapabilities)
-            .union(["source.private-platform-database", "apple.ads-purchase-attribution", "core.shared-rust-profile-engine", "setup.share-portable-configuration", "destination.google-drive", "account.clinic-sync-requests"])
+            .union(["export.watch-origin-manual-api", "source.private-platform-database", "apple.ads-purchase-attribution", "core.shared-rust-profile-engine", "setup.share-portable-configuration", "destination.google-drive", "account.clinic-sync-requests"])
     }
 
     private enum ManifestError: Error {
@@ -193,11 +213,13 @@ private struct CapabilityInventory: Decodable {
         let id: String
         let classification: String
         let profiles: [String]
+        let evidence: [String]
         let platforms: Platforms
     }
 
     struct Platforms: Decodable {
         let apple: Availability
+        let android: Availability
     }
 
     struct Availability: Decodable {
