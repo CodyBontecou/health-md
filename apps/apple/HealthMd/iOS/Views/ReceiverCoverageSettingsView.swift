@@ -30,6 +30,10 @@ private struct ReceiverCoverageSettingsEditor: View {
     var body: some View {
         NavigationStack {
             Form {
+                // First in the form so a failed Save is visible without scrolling.
+                if hasError {
+                    Section { Text("Could not save receiver-aware scheduling. Check the endpoint, scope, correction choice and secure credential storage.").foregroundStyle(.red) }
+                }
                 Section {
                     Toggle("Skip retained completed days", isOn: $enabled)
                 } footer: {
@@ -50,7 +54,10 @@ private struct ReceiverCoverageSettingsEditor: View {
                     Section { Text(ReceiverCoverageConfiguration.warning) }
                     Section { Text("Personal compatibility API destinations only. Managed clinic credentials are not supported for receiver-aware scheduling.") }
                 }
-                if hasError { Text("Could not save receiver-aware scheduling. Check the endpoint, scope, correction choice and secure credential storage.").foregroundStyle(.red) }
+            }
+            .onChange(of: hasError) { _, failed in
+                guard failed else { return }
+                AccessibilityNotification.Announcement(String(localized: "Could not save receiver-aware scheduling. Check the endpoint, scope, correction choice and secure credential storage.")).post()
             }
             .navigationTitle("Receiver coverage")
             .navigationBarTitleDisplayMode(.inline)
@@ -59,6 +66,7 @@ private struct ReceiverCoverageSettingsEditor: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         guard !protection.isEnabled else { protection.presentBlockedChangeToast(); return }
+                        hasError = false
                         do {
                             let config: ReceiverCoverageConfiguration?
                             if enabled {

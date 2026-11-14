@@ -12,6 +12,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import com.healthmd.R
 import com.healthmd.data.export.EncryptedAPIExportCredentialStore
@@ -50,6 +53,12 @@ fun ReceiverCoverageSettingsButton(scope: String, uploadUrl: String) {
         title = { Text(stringResource(R.string.receiver_coverage_title)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3)) {
+                // First in the dialog so a failed OK is visible without scrolling and is announced.
+                if (error) Text(
+                    stringResource(R.string.receiver_coverage_save_error),
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                )
                 Text(stringResource(R.string.receiver_coverage_enable))
                 AppSwitch(enabled, { enabled = it }, enabled = !saving)
                 Text(stringResource(R.string.receiver_coverage_default_note))
@@ -61,12 +70,12 @@ fun ReceiverCoverageSettingsButton(scope: String, uploadUrl: String) {
                     Text(stringResource(R.string.receiver_coverage_warning))
                     Text(stringResource(R.string.receiver_coverage_personal_only))
                 }
-                if (error) Text(stringResource(R.string.receiver_coverage_save_error), color = MaterialTheme.colorScheme.error)
             }
         },
         confirmButton = {
             TextButton(enabled = !saving, onClick = {
                 if (protection.enabled) { protection.onBlockedChange(); return@TextButton }
+                error = false
                 val count = correction.toIntOrNull()
                 if (enabled && count !in 0..30) { error = true; return@TextButton }
                 saving = true
