@@ -29,7 +29,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.*
 
 /** E2E-only controller. It delivers real armed occurrences; it never manufactures admission,
- * selection, ACKs, pending rows or journal bytes. Only the SDK source and receiver are synthetic. */
+ * selection, ACKs, pending rows or journal bytes. Only the SDK source and receiver are synthetic.
+ *
+ * Emulator only: `./gradlew :app:installFdroidE2e`, then
+ * `adb shell am start -n com.healthmd.android.e2e/com.healthmd.receiverqa.ReceiverCoverageQaActivity`.
+ * The `*_partial` cases need a batching API engine, because the default `legacy` engine sends one
+ * all-or-nothing request and can never be partially acknowledged. Build them with
+ * `-PEXPORT_ENGINE_API_V1_FROZEN_V4=shadow` (or `rust`). */
 @AndroidEntryPoint
 class ReceiverCoverageQaActivity : ComponentActivity() {
     @Inject lateinit var settings: SettingsRepository
@@ -48,6 +54,9 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
     private lateinit var output: TextView
     private lateinit var state: ReceiverQaState
     private var running = false
+    /** Last state seen for every fixture-tracked request. WorkManager deletes a finished request
+     * when a later alarm enqueues the same unique work, so final evidence uses what was observed. */
+    private val observedStates = mutableMapOf<UUID, WorkInfo.State>()
     companion object {
         private var receiver: LocalReceiver? = null
         private val cases = listOf("legacy_success", "profile_success", "legacy_empty", "profile_empty", "profile_today",
@@ -82,6 +91,12 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
     }
     private suspend fun runCase(case: String): String = withTimeout(120_000) {
         require(case in cases)
+        if (case.endsWith("_partial")) {
+            check(BuildConfig.EXPORT_ENGINE_API_V1_FROZEN_V4 != "legacy") {
+                "Partial ACK needs batched uploads: rebuild with -PEXPORT_ENGINE_API_V1_FROZEN_V4=shadow"
+            }
+        }
+        synchronized(observedStates) { observedStates.clear() }
         check(profiles.getProfiles().all { it.name.startsWith("Receiver QA") }) { "Fixture refuses non-QA profiles" }
         scheduler.cancel()
         for (entry in entries.getEntries()) profileScheduler.removeEntry(entry.profileId)
@@ -220,11 +235,12 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
             }
         }
         awaitCondition { allWork().filter { it.id in ids }.all { it.state.isFinished } }
-        val finalWork = allWork().filter { it.id in ids }
-        check(finalWork.size == ids.size) { "WorkManager evidence disappeared" }
-        check(finalWork.all { it.state == if (it.id in fixtureStoppedBackoffIds) WorkInfo.State.CANCELLED else WorkInfo.State.SUCCEEDED }) {
-            "Worker states: ${finalWork.map { it.state }}"
-        }
+        allWork() // Record the final live states before reading the evidence.
+        val finalStates = ids.associateWith { id -> synchronized(observedStates) { observedStates[id] } }
+        check(finalStates.values.none { it == null }) { "WorkManager evidence was never observed" }
+        check(finalStates.all { (id, state) ->
+            state == if (id in fixtureStoppedBackoffIds) WorkInfo.State.CANCELLED else WorkInfo.State.SUCCEEDED
+        }) { "Worker states: ${finalStates.values}" }
         val newPlans = planFiles().filterKeys { it !in previousPlans }
         if (wide) {
             check(newPlans.isEmpty() && count("coverage") == 0)
@@ -275,6 +291,7 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
     private fun values(kind: String) = state.events().filter { it.getValue("kind").jsonPrimitive.content == kind }.map { it.getValue("value").jsonPrimitive.content }
     private fun allWork(): List<WorkInfo> = listOf(ExportScheduler.EXPORT_OCCURRENCE_TAG, ScheduledProfileScheduler.EXPORT_WORK_TAG)
         .flatMap { workManager.getWorkInfosByTag(it).get(10, java.util.concurrent.TimeUnit.SECONDS) }.distinctBy { it.id }
+        .also { work -> synchronized(observedStates) { work.forEach { observedStates[it.id] = it.state } } }
     private fun planFiles(): Map<String, Pair<JsonObject, JsonObject>> {
         val path = filesDir.toPath().resolve("receiver-coverage/plans")
         if (!Files.exists(path)) return emptyMap()
