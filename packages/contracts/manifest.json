@@ -38,7 +38,7 @@
       "id": "healthmd.capability_index",
       "version": 1,
       "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/capability-index-v1.json",
-      "sha256": "83e13492697f2cc8577ab5ae7eccc43034cea5a735aa01db351385227dc217dd",
+      "sha256": "c2421bd20a192eb6da8b78e686b69bb9e4739f76ef59d46815753a8f31ea1381",
       "implementations": [
         "packages/healthmd-core-rust/scripts/import-native-registry.py",
         "packages/contracts/validate.py"
