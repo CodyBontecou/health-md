@@ -78,6 +78,10 @@ class SharedSetupV2ProductionTransaction @Inject constructor(
             }
             .toMap()
 
+    /** Validated original destination meaning for every still-blocked imported profile. */
+    suspend fun pendingDestinationsByProfileId(): Map<String, SharedSetupV2Destination> =
+        transaction.pendingDestinationsByProfileId().getOrThrow()
+
     /**
      * Blocked imported-profile visibility for the post-apply review UI, in native profile-store
      * order. Fails closed when the sidecar cannot be read rather than guessing intent.

@@ -1,6 +1,7 @@
 #if os(iOS)
 #if DEBUG
 import Notelet
+import MessageUI
 #endif
 import SwiftUI
 
@@ -23,6 +24,10 @@ struct GlassAppSupportScreen: View {
     @State private var showDebugAlert = false
     @State private var isRunningDebug = false
     @State private var confirmingReplay = false
+    #if DEBUG
+    @State private var showFeedbackPasteCheck = false
+    @State private var feedbackPasteCheckText = ""
+    #endif
 
     private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
     private let privacyPolicyURL = URL(string: "https://healthmd.app/privacy-policy.html")!
@@ -83,12 +88,9 @@ struct GlassAppSupportScreen: View {
                             tile: .settingsTileGreen,
                             showsDivider: true
                         ) {
-                            if FeedbackHelper.canSendMail {
-                                showMailCompose = true
-                            } else {
-                                feedbackReporter.open(.email)
-                            }
+                            openFeedback()
                         }
+                        .accessibilityIdentifier("feedback.sendFeedback")
                         GlassSettingsRow(
                             title: String(localized: "Report a bug"),
                             systemImage: "ladybug.fill",
@@ -96,6 +98,16 @@ struct GlassAppSupportScreen: View {
                             value: "GitHub",
                             showsDivider: true
                         ) { feedbackReporter.open(.github) }
+                        .accessibilityIdentifier("feedback.reportBug")
+                        #if DEBUG
+                        if TestMode.rejectsFeedbackHandoffs {
+                            GlassSettingsRow(title: "QA paste check", showsDivider: true) {
+                                feedbackPasteCheckText = ""
+                                showFeedbackPasteCheck = true
+                            }
+                            .accessibilityIdentifier("feedback.openPasteCheck")
+                        }
+                        #endif
                         GlassSettingsRow(
                             title: String(localized: "Help us grow"),
                             systemImage: "star.fill",
@@ -148,9 +160,41 @@ struct GlassAppSupportScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("glass.appSupport")
         .sheet(isPresented: $showMailCompose, onDismiss: feedbackReporter.mailSheetDismissed) {
+            #if DEBUG
+            if TestMode.simulatesFailedMailSheet {
+                // Exercise the real deferred fallback/onDismiss path without opening Mail.
+                Button {
+                    feedbackReporter.completeMail(result: .failed, error: nil)
+                    showMailCompose = false
+                } label: {
+                    Text(verbatim: "Simulate Mail failure")
+                }
+                .accessibilityIdentifier("feedback.simulateMailFailure")
+            } else {
+                MailComposeView(onCompletion: feedbackReporter.completeMail)
+            }
+            #else
             MailComposeView(onCompletion: feedbackReporter.completeMail)
+            #endif
         }
         .feedbackFailureSheet($feedbackReporter.failure)
+        #if DEBUG
+        .sheet(isPresented: $showFeedbackPasteCheck) {
+            // An empty, app-owned paste destination. It never reads or writes the clipboard.
+            if TestMode.rejectsFeedbackHandoffs {
+                VStack {
+                    Button { showFeedbackPasteCheck = false } label: {
+                        Text(verbatim: "Close QA paste check")
+                    }
+                    .accessibilityIdentifier("feedback.closePasteCheck")
+                    TextEditor(text: $feedbackPasteCheckText)
+                        .accessibilityLabel(Text(verbatim: "QA pasted report"))
+                        .accessibilityIdentifier("feedback.pasteCheckText")
+                }
+                .padding()
+            }
+        }
+        #endif
         // MyselfClaimG and DiagnosticsG are pushed pages with Back (no Done).
         .navigationDestination(isPresented: $showMyselfClaim) {
             MyselfClaimView(app: "health.md", presentedModally: false).glassTheme()
@@ -193,7 +237,13 @@ struct GlassAppSupportScreen: View {
     private func openFeedbackAfterReview() {
         guard feedbackAfterReview else { return }
         feedbackAfterReview = false
-        if FeedbackHelper.canSendMail {
+        openFeedback()
+    }
+
+    private func openFeedback() {
+        if TestMode.rejectsFeedbackHandoffs {
+            feedbackReporter.open(.email)
+        } else if TestMode.simulatesFailedMailSheet || FeedbackHelper.canSendMail {
             showMailCompose = true
         } else {
             feedbackReporter.open(.email)

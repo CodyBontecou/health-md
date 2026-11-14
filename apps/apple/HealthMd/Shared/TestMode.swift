@@ -20,6 +20,23 @@ enum TestMode {
 
     // MARK: - Scenario Configuration
 
+    /// Synthetic feedback boundaries never leave the app, and are unavailable in Release.
+    static var rejectsFeedbackHandoffs: Bool {
+        #if DEBUG
+        isUITesting && env("UITEST_FEEDBACK_SCENARIO") == "rejected-handoffs"
+        #else
+        false
+        #endif
+    }
+
+    static var simulatesFailedMailSheet: Bool {
+        #if DEBUG
+        isUITesting && env("UITEST_FEEDBACK_SCENARIO") == "failed-mail-sheet"
+        #else
+        false
+        #endif
+    }
+
     /// Whether the real first-run onboarding flow should remain visible in UI tests.
     static var showsOnboarding: Bool {
         env("UITEST_SHOW_ONBOARDING") == "true"

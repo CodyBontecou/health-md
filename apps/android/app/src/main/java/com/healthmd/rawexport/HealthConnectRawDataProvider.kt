@@ -14,6 +14,7 @@ import androidx.health.connect.client.request.ReadMedicalResourcesPageRequest
 import androidx.health.connect.client.request.ReadMedicalResourcesRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import com.healthmd.testing.TestMode
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -37,6 +38,8 @@ class HealthConnectRawDataProvider(
     private val client by lazy { sharedClient ?: HealthConnectClient.getOrCreate(context) }
 
     override suspend fun capabilities(): RawProviderCapabilities {
+        // UI test mode serves synthetic summaries only; raw records stay out of reach.
+        if (TestMode.isActive) return RawProviderCapabilities(available = false)
         val available = HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
         if (!available) return RawProviderCapabilities(available = false)
         val granted = try {

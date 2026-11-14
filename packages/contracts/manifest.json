@@ -395,8 +395,15 @@
         "packages/contracts/shared-setup/v2/shared-setup.schema.json",
         "packages/contracts/shared-setup/v2/apple-profile-field-coverage.json",
         "packages/contracts/shared-setup/v2/android-profile-field-coverage.json",
+        "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v2.json",
+        "packages/contracts/shared-setup/v2/android-profile-field-coverage-v2.json",
         "packages/contracts/shared-setup/v2/field-coverage-baseline-v1.json",
-        "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v2.json"
+        "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v3.json",
+        "packages/contracts/shared-setup/v2/android-profile-field-coverage-v3.json",
+        "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v4.json",
+        "packages/contracts/shared-setup/v2/android-profile-field-coverage-v4.json",
+        "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v5.json",
+        "packages/contracts/shared-setup/v2/android-profile-field-coverage-v5.json"
       ],
       "implementations": [
         "packages/contracts/validate.py",
@@ -420,6 +427,7 @@
       "consumers": [
         "packages/contracts/validate.py",
         "packages/contracts/test_validate_shared_setup.py",
+        "packages/contracts/test_drive_profile_field_audits.py",
         "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2CodecMapperTests.swift",
         "apps/apple/HealthMdTests/SharedSetup/SharedSetupAppleProfileFieldCoverageTests.swift",
         "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2ProfileTransactionTests.swift",

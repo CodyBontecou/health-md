@@ -109,6 +109,7 @@ internal fun ExportDestinationSetupCard(target: ExportTarget, onSetUp: () -> Uni
             stringResource(
                 when (target) {
                     ExportTarget.DEVICE_FOLDER -> R.string.export_now_setup_folder
+                    ExportTarget.GOOGLE_DRIVE -> R.string.google_drive_title
                     ExportTarget.API_ENDPOINT -> R.string.export_now_setup_api
                     ExportTarget.AGENT_DATA_GATEWAY -> R.string.export_now_setup_gateway
                 },
@@ -159,6 +160,7 @@ internal fun ExportNowDestinationChoice(
                         stringResource(
                             when (target) {
                                 ExportTarget.DEVICE_FOLDER -> R.string.folder_page_folder
+                                ExportTarget.GOOGLE_DRIVE -> R.string.google_drive_title
                                 ExportTarget.API_ENDPOINT -> R.string.export_preview_api_destination
                                 ExportTarget.AGENT_DATA_GATEWAY -> R.string.export_now_destination_gateway
                             },

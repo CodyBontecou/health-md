@@ -98,7 +98,7 @@ object ArchiveLanes {
         // The current folder's display name is not stored with settings; show the relative path.
         ExportTarget.DEVICE_FOLDER -> ArchiveOutput.DeviceFolder(folderName = null, settings = settings, folderUri = appFolderUri)
         ExportTarget.API_ENDPOINT -> ArchiveCoverage.endpointLine(settings.apiEndpointUrl)?.let(ArchiveOutput::Endpoint)
-        ExportTarget.AGENT_DATA_GATEWAY -> null
+        ExportTarget.GOOGLE_DRIVE, ExportTarget.AGENT_DATA_GATEWAY -> null
     }
 
     private fun profileOutput(profile: ExportProfile, current: ExportSettings?, appFolderUri: String?): ArchiveOutput? =
@@ -117,6 +117,6 @@ object ArchiveLanes {
                 }
             }
             ExportTarget.API_ENDPOINT -> ArchiveCoverage.endpointLine(profile.apiEndpointUrl)?.let(ArchiveOutput::Endpoint)
-            ExportTarget.AGENT_DATA_GATEWAY -> null
+            ExportTarget.GOOGLE_DRIVE, ExportTarget.AGENT_DATA_GATEWAY -> null
         }
 }

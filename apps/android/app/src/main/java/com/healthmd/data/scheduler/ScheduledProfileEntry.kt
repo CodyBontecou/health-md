@@ -56,6 +56,8 @@ data class ScheduledProfilePendingExport(
     val receiverDestinationBinding: String? = null,
     @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
     val receiverDestinationFingerprint: String? = null,
+    /** Local Drive binding frozen with residual work; never part of portable setup. */
+    val destinationId: String? = null,
     /** Accepted Morning refresh scope; legacy residuals retain their completed-day-only behavior. */
     @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
     val refreshSlotMillis: Long? = null,
