@@ -23,6 +23,67 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         super.tearDown()
     }
 
+    /// Owner dates are civil dates in the operation calendar, even when this
+    /// host runs in another timezone. Never mutate the process-global timezone.
+    func testLegacyAPIKeepsFrozenCalendarAcrossCaptureAndCompletion() async throws {
+        for useCaptureContext in [false, true] {
+            var calendar = Calendar(identifier: .gregorian)
+            let reference = Date(timeIntervalSince1970: 1_800_000_000)
+            let offset = TimeZone.current.secondsFromGMT(for: reference) == 14 * 3600 ? -12 * 3600 : 14 * 3600
+            calendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: offset))
+            let first = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 3, day: 15)))
+            let dates = [first, try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: first))]
+            XCTAssertNotEqual(Calendar.current.startOfDay(for: first), first,
+                              "Fixture must distinguish host calendar without global timezone changes")
+            let settings = AdvancedExportSettings(userDefaults: defaults); Self.retainedSettings.append(settings)
+            settings.exportTimeZoneOverride = calendar.timeZone
+            if useCaptureContext {
+                settings.executionSleepCaptureContext = .init(timeZone: calendar.timeZone, sleepDayAttribution: .nightBegins)
+            }
+            let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
+            apiSettings.endpointURLString = "https://synthetic.invalid/export"
+            var captured: [Date] = []
+            var uploadedBounds: [Date] = []
+            let result = await APIEndpointExportRunner.export(dates: dates, settings: settings, apiSettings: apiSettings,
+                fetchHealthData: { date, _, _ in
+                    captured.append(date)
+                    return HealthData(date: date, activity: ActivityData(steps: 123))
+                }, upload: { records, _, _, _, _, start, end in
+                    XCTAssertEqual(records.map(\.date), dates)
+                    uploadedBounds = [start, end]
+                    return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+                })
+            XCTAssertEqual(captured, dates)
+            XCTAssertEqual(uploadedBounds, dates)
+            XCTAssertEqual(result.completedDates, dates)
+            XCTAssertTrue(result.didCompleteAllRequestedDates)
+        }
+    }
+
+    func testLegacyAPIFrozenCalendarKeepsEmptyCompletionAndFailedBatchDates() async throws {
+        var calendar = Calendar(identifier: .gregorian)
+        let offset = TimeZone.current.secondsFromGMT() == 14 * 3600 ? -12 * 3600 : 14 * 3600
+        calendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: offset))
+        let first = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 3, day: 15)))
+        let dates = try (0..<3).map { try XCTUnwrap(calendar.date(byAdding: .day, value: $0, to: first)) }
+        let settings = AdvancedExportSettings(userDefaults: defaults); Self.retainedSettings.append(settings)
+        settings.exportTimeZoneOverride = calendar.timeZone
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
+        apiSettings.endpointURLString = "https://synthetic.invalid/export"
+        let result = await APIEndpointExportRunner.export(dates: dates, settings: settings, apiSettings: apiSettings,
+            fetchHealthData: { date, _, _ in
+                HealthData(date: date, activity: ActivityData(steps: date == dates[1] ? nil : 123))
+            }, upload: { _, _, _, _, _, start, _ in
+                if start == dates[2] { throw APIExportClientError.serverRejected(statusCode: 500, body: nil) }
+                return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+            }, maxBatchDaySpan: 1)
+        XCTAssertEqual(result.completedDates, Array(dates.prefix(2)))
+        let uploadFailure = try XCTUnwrap(result.failedDateDetails.first { $0.reason == .apiUploadFailed })
+        XCTAssertEqual(uploadFailure.date, dates[2])
+        XCTAssertTrue(uploadFailure.errorDetails?.contains("2026-03-17 to 2026-03-17") == true)
+        XCTAssertFalse(result.didCompleteAllRequestedDates)
+    }
+
     func testDailyNotesOnlyRejectsAPIDestinationWithoutFetchingOrUploading() async {
         let exportDate = date(year: 2026, month: 5, day: 10)
         let settings = AdvancedExportSettings(userDefaults: defaults)

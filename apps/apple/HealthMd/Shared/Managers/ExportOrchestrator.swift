@@ -832,7 +832,7 @@ struct ExportOrchestrator {
                 case .noFormatsSelected:
                     reason = .unknown
                     errorDetails = error.localizedDescription
-                case .markdownMergeRejected, .dailyNotePathConflict, .invalidExportPath:
+                case .markdownMergeRejected, .frontmatterKeyConflict, .dailyNotePathConflict, .invalidExportPath:
                     reason = .fileWriteError
                     errorDetails = error.localizedDescription
                 }
@@ -1753,7 +1753,7 @@ struct ExportOrchestrator {
                     reason = .accessDenied
                 case .noFormatsSelected:
                     reason = .unknown
-                case .markdownMergeRejected, .dailyNotePathConflict, .invalidExportPath:
+                case .markdownMergeRejected, .frontmatterKeyConflict, .dailyNotePathConflict, .invalidExportPath:
                     reason = .fileWriteError
                 }
                 failedDateDetails.append(FailedDateDetail(

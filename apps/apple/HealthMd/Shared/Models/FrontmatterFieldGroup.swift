@@ -1,5 +1,40 @@
 import Foundation
 
+/// Local editor routing only; these values are not export or diagnostic payloads.
+enum FrontmatterConflictDestination: Hashable, Sendable {
+    case metrics(FrontmatterFieldGroup), core, custom, placeholders
+
+    var title: String {
+        switch self {
+        case .metrics(let group): return group.title
+        case .core: return String(localized: "Core metadata")
+        case .custom: return String(localized: "Custom fields")
+        case .placeholders: return String(localized: "Placeholder fields")
+        }
+    }
+}
+
+struct FrontmatterConflictSource: Equatable, Sendable {
+    let originalKey: String
+    let destination: FrontmatterConflictDestination
+
+    var localLabel: String { "\(destination.title) → \(originalKey)" }
+}
+
+/// Keep user-defined names in local presentation state, never in error telemetry.
+struct FrontmatterKeyConflict: Equatable, Sendable {
+    let outputKey: String
+    let sources: [FrontmatterConflictSource]
+    let isReserved: Bool
+
+    var localDescription: String {
+        let heading = isReserved
+            ? String(localized: "The key “\(outputKey)” is reserved:")
+            : String(localized: "The key “\(outputKey)” is used by:")
+        return ([heading] + sources.map { "• \($0.localLabel)" }).joined(separator: "\n")
+    }
+}
+
 /// Display groups for frontmatter fields, used by the format customization screens.
 /// Grouping is presentation only: it never changes which keys are written.
 enum FrontmatterFieldGroup: String, CaseIterable, Identifiable, Sendable {
@@ -43,8 +78,31 @@ enum FrontmatterFieldGroup: String, CaseIterable, Identifiable, Sendable {
         (.hearing, ["headphone", "environmental"])
     ]
 
+    private static let mappedGroups: [String: FrontmatterFieldGroup] = {
+        var groups: [String: FrontmatterFieldGroup] = [:]
+        for metric in HealthMetrics.all {
+            let group: FrontmatterFieldGroup
+            switch metric.category {
+            case .sleep: group = .sleep
+            case .activity, .cycling: group = .activity
+            case .heart: group = .heart
+            case .respiratory, .vitals: group = .vitals
+            case .bodyMeasurements: group = .body
+            case .nutrition, .vitamins, .minerals: group = .nutrition
+            case .mindfulness: group = .mindfulness
+            case .mobility: group = .mobility
+            case .hearing: group = .hearing
+            case .workouts: group = .workouts
+            case .medications: group = .medications
+            default: group = .other
+            }
+            for key in HealthMetricExportMapping.frontmatterKeys(for: metric.id) { groups[key] = group }
+        }
+        return groups
+    }()
+
     static func group(for originalKey: String) -> FrontmatterFieldGroup {
-        matchOrder.first { _, prefixes in prefixes.contains { originalKey.hasPrefix($0) } }?.0 ?? .other
+        matchOrder.first { _, prefixes in prefixes.contains { originalKey.hasPrefix($0) } }?.0 ?? mappedGroups[originalKey] ?? .other
     }
 
     /// Non-empty groups in display order, each keeping the configuration's field order.

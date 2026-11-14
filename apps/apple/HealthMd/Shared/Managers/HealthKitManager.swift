@@ -749,6 +749,38 @@ final class HealthKitManager: ObservableObject {
         return .requested
     }
 
+    /// Onboarding's pack-scoped request: asks Apple Health only for the metrics the
+    /// user chose, so the sheet lists those types instead of every catalogue type.
+    /// Types added later are requested by the app's normal Connect actions.
+    @discardableResult
+    func requestAuthorization(forMetricIDs metricIDs: Set<String>) async throws -> AuthorizationRequestOutcome {
+        guard isHealthDataAvailable else {
+            authorizationStatus = "Health data not available"
+            return .unavailable
+        }
+        let descriptors = HealthKitRecordCatalog.authorizationDescriptors(enabledMetricIDs: metricIDs)
+        var readTypes = Set(descriptors.compactMap { descriptor -> HKObjectType? in
+            guard HealthKitRecordCatalog.isRuntimeAvailable(descriptor) else { return nil }
+            return HealthKitRecordCatalog.resolveObjectType(descriptor)
+        })
+        if !store.supportsHealthRecords {
+            readTypes = Set(readTypes.filter {
+                !HealthKitRecordCatalog.clinicalTypeIdentifiers.contains($0.identifier)
+            })
+        }
+        guard !readTypes.isEmpty else { return try await requestAuthorization() }
+
+        // Same iOS 26 guard as the full request: never present a sheet whose every
+        // type already has a recorded decision.
+        if try await store.authorizationRequestStatus(toShare: [], read: readTypes) == .unnecessary {
+            markAuthorizationRequested()
+            return .unnecessary
+        }
+        try await store.requestAuth(toShare: [], read: readTypes)
+        markAuthorizationRequested()
+        return .requested
+    }
+
     /// Whether this runtime supports ordinary Health Records authorization.
     var areClinicalHealthRecordsSupported: Bool {
         isHealthDataAvailable && store.supportsHealthRecords

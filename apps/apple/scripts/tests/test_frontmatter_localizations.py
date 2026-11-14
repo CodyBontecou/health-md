@@ -1,9 +1,13 @@
 """Bounded copy/source checks; native XCTest owns actual Foundation/value behavior."""
-from copy import deepcopy
 import importlib.util
 from pathlib import Path
 import re
 import unittest
+
+try:  # Package-qualified unittest and standalone discovery have different import roots.
+    from .localization_fixtures import mutation_inputs
+except ImportError:
+    from localization_fixtures import mutation_inputs
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("reviewed_editor_localizations", ROOT / "scripts/validate-metric-selection-localizations.py")
@@ -22,7 +26,7 @@ class FrontmatterLocalizationTests(unittest.TestCase):
         cls.catalog, cls.manifest, cls.sources = validator.load_inputs(MANIFEST)
 
     def inputs(self):
-        return deepcopy(self.catalog), deepcopy(self.manifest), dict(self.sources)
+        return mutation_inputs(self.catalog, self.manifest, self.sources)
 
     def test_production_slice_and_source_handoffs(self):
         self.assertEqual(validator.validate(self.catalog, self.manifest, self.sources), [])
@@ -104,19 +108,13 @@ class FrontmatterLocalizationTests(unittest.TestCase):
 
     def test_technical_keys_and_grouping_identities_are_not_localized(self):
         source = self.sources[VIEW].split('private var fieldCategories:', 1)[1].split('// MARK: - Frontmatter Field Row', 1)[0]
-        groups = re.findall(r'\("([^"]+)", \[([^\]]+)\]\)', source)
-        actual = [(name, re.findall(r'"([^"]+)"', prefixes)) for name, prefixes in groups]
-        self.assertEqual(actual, [
-            ("Sleep", ["sleep_"]),
-            ("Activity", ["steps", "active_", "basal_", "exercise_", "stand_", "flights_", "walking_running", "cycling", "swimming", "wheelchair"]),
-            ("Heart", ["resting_heart", "walking_heart", "average_heart", "heart_rate", "hrv"]),
-            ("Vitals", ["respiratory", "blood_oxygen", "body_temperature", "blood_pressure", "blood_glucose"]),
-            ("Body", ["weight", "height", "bmi", "body_fat", "lean_body", "waist"]),
-            ("Nutrition", ["dietary", "protein", "carbohydrates", "fat", "saturated", "fiber", "sugar", "sodium", "cholesterol", "water", "caffeine"]),
-            ("Mindfulness", ["mindful"]),
-            ("Mobility", ["walking_speed", "step_length", "double_support", "walking_asymmetry", "stair_", "six_min"]),
-            ("Hearing", ["headphone", "environmental"]), ("Workouts", ["workout"]),
-        ])
+        # Both editors use the shared grouping; it retains opaque technical keys
+        # while resolving localized section titles separately.
+        self.assertIn('FrontmatterFieldGroup.grouped(config.fields).map { ($0.group.title, $0.fields) }', source)
+        self.assertNotIn('categoryPrefixes', source)
+        grouping = (ROOT / "HealthMd/Shared/Models/FrontmatterFieldGroup.swift").read_text()
+        self.assertIn('HealthMetricExportMapping.frontmatterKeys(for: metric.id)', grouping)
+        self.assertIn('Dictionary(grouping: fields) { group(for: $0.originalKey) }', grouping)
         for binding in ['config.customFields[newFieldKey] = newFieldValue', 'config.placeholderFields.append(newPlaceholderKey)',
                         'config.fields[index].customKey = newKey', 'config.fields[index].customKey = config.fields[index].originalKey']:
             self.assertIn(binding, self.sources[VIEW])

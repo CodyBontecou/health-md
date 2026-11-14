@@ -34,7 +34,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
                 "account.clinic-sync-requests",
                 "cloud.opt-in-export-receiver", "cloud.read-only-mcp",
                 "core.shared-rust-profile-engine",
-                "setup.share-portable-configuration",
+                "setup.share-portable-configuration", "destination.google-drive",
             ]
         )
         XCTAssertEqual(Set(states.keys), Self.allCapabilities)
@@ -179,7 +179,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         sharedCapabilities
             .union(appleCapabilities)
             .union(androidCapabilities)
-            .union(["source.private-platform-database", "apple.ads-purchase-attribution", "core.shared-rust-profile-engine", "setup.share-portable-configuration", "account.clinic-sync-requests", "cloud.opt-in-export-receiver", "cloud.read-only-mcp"])
+            .union(["source.private-platform-database", "apple.ads-purchase-attribution", "core.shared-rust-profile-engine", "setup.share-portable-configuration", "destination.google-drive", "account.clinic-sync-requests", "cloud.opt-in-export-receiver", "cloud.read-only-mcp"])
     }
 
     private enum ManifestError: Error {

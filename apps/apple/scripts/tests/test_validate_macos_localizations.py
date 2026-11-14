@@ -66,6 +66,15 @@ class FeedbackFallbackCoverageTests(unittest.TestCase):
         literals = {validator.decode_swift_literal(raw) for raw, _, _ in scanned}
         self.assertTrue(set(self.keys).issubset(literals))
 
+    def test_recovery_sheet_renders_the_specific_failure_message(self) -> None:
+        # Source boundary only: catalog/model checks cannot catch a view that
+        # drops the Mail text-loss warning. The native journey checks visibility.
+        source = (validator.APPLE_ROOT / "HealthMd/Shared/Utilities/FeedbackReporter.swift").read_text()
+        content = source.split("private struct GlassReportFallbackContent: View {", 1)[1]
+        body = content.split("var body: some View {", 1)[1].split("private func updateSummary", 1)[0]
+        self.assertRegex(body, r'Text\(message\)\s*\.')
+        self.assertIn('.accessibilityIdentifier("feedback.failureMessage")', body)
+
     def test_recovery_controls_and_accessibility_have_reviewed_translations(self) -> None:
         catalog = validator.json.loads(validator.CATALOG_PATH.read_text())["strings"]
         manifest = validator.json.loads(validator.MANIFEST_PATH.read_text())

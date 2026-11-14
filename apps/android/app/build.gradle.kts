@@ -46,6 +46,7 @@ val exportEngineAndroidAnalyticalV5 = configuredEngineMode("EXPORT_ENGINE_ANDROI
 val exportEngineApiV1FrozenV4 = configuredEngineMode("EXPORT_ENGINE_API_V1_FROZEN_V4")
 val directProtocolEngine = configuredEngineMode("DIRECT_PROTOCOL_ENGINE")
 val practiceCompiledIn = configuredValue("PRACTICE_COMPILED_IN") == "included"
+val googleDriveAndroidClientId = configuredValue("GOOGLE_DRIVE_ANDROID_CLIENT_ID")
 val instrumentedTestBuildType = providers.gradleProperty("healthmdInstrumentedTestBuildType")
     .getOrElse("debug")
     .also { require(it in setOf("debug", "e2e")) }
@@ -68,6 +69,8 @@ android {
 
         // Explicit opt-in; absent or malformed values keep claim entry points disabled.
         buildConfigField("boolean", "MYSELF_CLAIM_ENABLED", "false")
+        // Launch-scoped UI test mode (com.healthmd.testing.TestMode); only the isolated e2e app honors it.
+        buildConfigField("boolean", "TEST_MODE_AVAILABLE", "false")
         // Clinic access stays hidden until it launches; existing sponsorships keep working.
         buildConfigField("boolean", "CLINIC_ACCESS_ENABLED", "false")
         // Trust is baked into the app build, never supplied by a clinic invitation.
@@ -106,6 +109,12 @@ android {
             "PRACTICE_COMPILED_IN",
             practiceCompiledIn.toString(),
         )
+        // Public Android OAuth client identifier only. No client secret is shipped.
+        buildConfigField(
+            "String",
+            "GOOGLE_DRIVE_ANDROID_CLIENT_ID",
+            googleDriveAndroidClientId.asBuildConfigString(),
+        )
     }
 
     signingConfigs {
@@ -143,6 +152,7 @@ android {
         create("fdroid") {
             dimension = "distribution"
             buildConfigField("String", "DISTRIBUTION_CHANNEL", "\"fdroid\"")
+            buildConfigField("String", "GOOGLE_DRIVE_ANDROID_CLIENT_ID", "\"\"")
         }
     }
 
@@ -165,6 +175,7 @@ android {
             initWith(getByName("debug"))
             applicationIdSuffix = ".e2e"
             versionNameSuffix = "-e2e"
+            buildConfigField("boolean", "TEST_MODE_AVAILABLE", "true")
             matchingFallbacks += listOf("debug")
         }
     }
@@ -244,6 +255,7 @@ dependencies {
     implementation(libs.glance)
     implementation(libs.glance.appwidget)
     add("playImplementation", libs.play.services.wearable)
+    add("playImplementation", libs.play.services.auth)
 
     // Health Connect
     implementation(libs.health.connect)
