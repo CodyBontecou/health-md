@@ -35,7 +35,8 @@
       "direct.cli_agent_wake",
       "core.shared-rust-metric-registry",
       "account.myself_lifetime_claim",
-      "purchase.free-export-journey"
+      "purchase.free-export-journey",
+      "export.iso-week-paths"
     ],
     "apple": [
       "account.clinic-sponsored-access",
@@ -81,7 +82,8 @@
       "core.shared-rust-metric-registry",
       "account.myself_lifetime_claim",
       "purchase.free-export-journey",
-      "purchase.family-sharing"
+      "purchase.family-sharing",
+      "export.iso-week-paths"
     ]
   },
   "known_capability_ids": [
@@ -155,10 +157,11 @@
     "agent.export.profile-dictionary",
     "account.myself_lifetime_claim",
     "purchase.free-export-journey",
-    "purchase.family-sharing"
+    "purchase.family-sharing",
+    "export.iso-week-paths"
   ],
   "schema": "healthmd.capability_index",
   "schema_version": 1,
   "source_inventory_path": "packages/contracts/product-capabilities.json",
-  "source_inventory_sha256": "0e6685e0f33117138c31f6db13ad94a62e5aaf96834893fa75759dd74c287b7f"
+  "source_inventory_sha256": "f19a398c4d7c9771a0987e0f76e5e935f5a87db2f98cb37eb953bc67f4c9f081"
 }
