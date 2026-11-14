@@ -91,12 +91,15 @@ class SubscriptionViewModel @Inject constructor(
      * opened; on false [purchaseError] explains why, so the caller keeps its sheet open to show it.
      */
     fun switchToYearly(activity: Activity?, onResult: (Boolean) -> Unit = {}) {
-        if (!purchasesAvailable || SubscriptionStatusPreview.status != null) return onResult(false)
-        launchError.value = null
-        if (activity == null) {
-            launchError.value = BillingError.PURCHASE_FAILED
-            return onResult(false)
+        launchError.value = when {
+            // Never a dead tap: each early return explains itself like a store failure does.
+            !purchasesAvailable -> BillingError.SERVICE_UNAVAILABLE
+            // The debug preview has sample prices but no real Play product to switch to.
+            SubscriptionStatusPreview.status != null -> BillingError.PRODUCT_UNAVAILABLE
+            activity == null -> BillingError.PURCHASE_FAILED
+            else -> null
         }
+        if (launchError.value != null || activity == null) return onResult(false)
         viewModelScope.launch { onResult(purchaseRepository.launchYearlySwitch(activity)) }
     }
 
