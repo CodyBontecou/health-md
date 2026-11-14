@@ -1,0 +1,2 @@
+package com.healthmd.domain.billing
+object ClinicExportAuthorization { fun canonicalClinicEndpoint(url:String):String?=url }

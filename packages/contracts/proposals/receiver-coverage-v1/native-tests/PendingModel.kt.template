@@ -1,0 +1,12 @@
+package com.healthmd.domain.model
+import java.time.LocalDate
+import kotlinx.serialization.Serializable
+import com.healthmd.domain.exportengine.*
+/*MODEL*/
+enum class ExportTarget {DEVICE_FOLDER,API_ENDPOINT,AGENT_DATA_GATEWAY}
+enum class ScheduleDateWindow {PAST_COMPLETE_DAYS,TODAY,PAST_COMPLETE_DAYS_THROUGH_TODAY}
+enum class ExportFailureReason {UNKNOWN}
+data class FailedDateDetail(val date:LocalDate,val reason:ExportFailureReason=ExportFailureReason.UNKNOWN)
+data class ExportSettings(val pendingScheduledExportRequests:List<PendingScheduledExportRequest> = emptyList(), val pendingScheduledRetryDates:List<String> = emptyList(),val scheduledExportTarget:ExportTarget=ExportTarget.API_ENDPOINT,val apiEndpointUrl:String="https://example.com",val agentDataGatewayUrl:String="https://example.com",val scheduleDateWindow:ScheduleDateWindow=ScheduleDateWindow.PAST_COMPLETE_DAYS,val scheduleLookbackDays:Int=3)
+object APIExportEndpoint {fun fingerprint(url:String):String? = url}
+object AgentDataGatewayEndpoint {fun fingerprint(url:String):String? = url}

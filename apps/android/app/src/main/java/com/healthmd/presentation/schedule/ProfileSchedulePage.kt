@@ -162,6 +162,7 @@ fun ProfileSchedulePage(
             // Today Refresh resends the current day's complete snapshot, so receivers must upsert.
             if (row.profile.target == ExportTarget.API_ENDPOINT) {
                 Footnote(stringResource(R.string.schedule_api_refresh_note))
+                ReceiverCoverageSettingsButton(scope = profileId, uploadUrl = row.profile.apiEndpointUrl ?: uiState.currentSettings.apiEndpointUrl)
             }
 
             val liveEntry = row.entry

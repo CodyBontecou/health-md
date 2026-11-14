@@ -48,7 +48,11 @@ class ScheduledProfileEntryStore @Inject constructor(
     }
 
     val entries: Flow<List<ScheduledProfileEntry>> = dataStore.data.map { prefs ->
-        decode(prefs[Keys.ENTRIES], prefs[Keys.MINUTE_INTENT]).orEmpty()
+        val raw = prefs[Keys.ENTRIES]
+        val decoded = decode(raw, prefs[Keys.MINUTE_INTENT])
+        if (decoded == null && raw?.contains(com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.SCHEMA) == true)
+            error("Saved receiver schedules need explicit recovery")
+        decoded.orEmpty()
     }
 
     suspend fun getEntries(): List<ScheduledProfileEntry> = entries.first()
@@ -197,9 +201,9 @@ class ScheduledProfileEntryStore @Inject constructor(
             if (index < 0 || entries[index] != expected || !expected.isEnabled || expected.pendingExports.isNotEmpty() ||
                 expected.profileId in prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()) return@edit
             require(pending.ownerEpochDays.size in 1..31 && pending.ownerEpochDays == pending.ownerEpochDays.distinct().sorted())
-            val snapshot = com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decode(pending.settingsSnapshotJson)
-            require(snapshot.version == com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot.PROVIDER_AUTHORITY_VERSION &&
-                snapshot.scheduledExportTarget == pending.target && snapshot.ianaTimeZone == expected.zoneId)
+            val snapshot = com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decodeScheduled(pending.settingsSnapshotJson)
+            require((snapshot.version == com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot.PROVIDER_AUTHORITY_VERSION ||
+                pending.receiverCoverageJson != null) && snapshot.scheduledExportTarget == pending.target && snapshot.ianaTimeZone == expected.zoneId)
             val updated = entries.toMutableList()
             updated[index] = expected.copy(pendingExports = listOf(pending))
             persist(prefs, updated.sortedBy { it.profileId })
@@ -341,7 +345,18 @@ class ScheduledProfileEntryStore @Inject constructor(
             val decoded = json.decodeFromString(listSerializer, raw)
             val objects = json.parseToJsonElement(raw) as JsonArray
             val choices = archived?.let { runCatching { json.parseToJsonElement(it).jsonObject }.getOrNull() }
-            decoded.mapIndexed { index, entry ->
+            decoded.mapIndexed { index, original ->
+                val entry = original.copy(pendingExports = original.pendingExports.map { pending ->
+                    val authority = com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.authority(pending.settingsSnapshotJson)
+                    if (authority == null) pending else {
+                        require(pending.receiverPlanId == null || pending.receiverPlanId == authority.planId)
+                        require(pending.receiverCoverageJson == null || pending.receiverCoverageJson == authority.configuration)
+                        require(pending.receiverDestinationFingerprint == null || pending.receiverDestinationFingerprint == authority.fingerprint)
+                        require(pending.receiverDestinationBinding == null || pending.receiverDestinationBinding == authority.binding)
+                        pending.copy(receiverCoverageJson = authority.configuration, receiverPlanId = authority.planId,
+                            receiverDestinationBinding = authority.binding, receiverDestinationFingerprint = authority.fingerprint)
+                    }
+                })
                 val minutes = choices?.get(entry.profileId)?.jsonPrimitive?.intOrNull
                 if (objects[index].jsonObject["todayRefreshPersistenceVersion"] == null &&
                     !entry.todayRefreshEnabled && minutes in listOf(30, 60)

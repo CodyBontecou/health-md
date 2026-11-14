@@ -28,7 +28,10 @@ object ScheduledExportPendingRequests {
         val byDestinationAndDate = linkedMapOf<Triple<ExportTarget, LocalDate, String?>, PendingScheduledExportRequest>()
 
         settings.pendingScheduledExportRequests.forEach { request ->
+            val authority = request.settingsSnapshotJson?.let(com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot::authority)
+            require(authority == null || request.receiverPlanId == null || request.receiverPlanId == authority.planId)
             val normalized = request.copy(
+                receiverPlanId = request.receiverPlanId ?: authority?.planId,
                 firstFailedAtMillis = request.firstFailedAtMillis.coerceAtLeast(0L),
                 lastAttemptAtMillis = request.lastAttemptAtMillis.coerceAtLeast(0L),
                 attemptCount = request.attemptCount.coerceAtLeast(0),
@@ -63,6 +66,27 @@ object ScheduledExportPendingRequests {
                 }
             }
             .sortedWith(compareBy<PendingScheduledExportRequest> { it.date }.thenBy { it.exportTarget.name })
+    }
+
+    /** A newer admission must not overwrite another plan's same-day refresh row. */
+    fun receiverRefreshOwnedByAnotherPlan(settings: ExportSettings, date: LocalDate,
+        destinationFingerprint: String?, receiverPlanId: String): Boolean = pendingRequests(settings).any {
+        it.exportTarget == ExportTarget.API_ENDPOINT && it.destinationFingerprint == destinationFingerprint &&
+            it.receiverPlanId != null && it.receiverPlanId != receiverPlanId && it.date == date
+    }
+
+    enum class ReceiverAdmissionAction { EXECUTE, COMPLETE, RETRY }
+
+    /** Decide admission disposition before treating an empty date-builder window as success.
+     * A different plan owning Today is outstanding work, not evidence that this refresh ran.
+     * Absent opt-in retains the historical full-lookback/empty-window behavior. */
+    fun receiverAdmissionAction(settings: ExportSettings, dates: List<LocalDate>,
+        receiverOptIn: Boolean, refreshDate: LocalDate?, destinationFingerprint: String?,
+        receiverPlanId: String): ReceiverAdmissionAction = when {
+        receiverOptIn && refreshDate != null && receiverRefreshOwnedByAnotherPlan(
+            settings, refreshDate, destinationFingerprint, receiverPlanId) -> ReceiverAdmissionAction.RETRY
+        dates.isEmpty() -> ReceiverAdmissionAction.COMPLETE
+        else -> ReceiverAdmissionAction.EXECUTE
     }
 
     fun pendingDates(
@@ -106,6 +130,7 @@ object ScheduledExportPendingRequests {
         resumeExistingApiOperation: Boolean = false,
         folderOperationId: String? = null,
         resumeExistingFolderOperation: Boolean = false,
+        receiverPlanId: String? = null,
     ): List<LocalDate> {
         val normalizedRunDates = intendedRunDates.distinct().sorted()
         if (normalizedRunDates.isEmpty()) return emptyList()
@@ -136,12 +161,13 @@ object ScheduledExportPendingRequests {
             }
         val matchingPendingDates = pendingForDestination
             .filter { request ->
-                request.enginePin == enginePin &&
+                (request.receiverPlanId == null || request.receiverPlanId == receiverPlanId) &&
+                    request.enginePin == enginePin &&
                     // A missing snapshot is explicit legacy/current-settings behavior. It may join
                     // the next matching-pin operation, whose snapshot was captured from then-current
                     // settings before any provider read.
                     (request.settingsSnapshotJson == null ||
-                        request.settingsSnapshotJson == settingsSnapshotJson) &&
+                        com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.outputSettings(request.settingsSnapshotJson) == settingsSnapshotJson) &&
                     when (settings.scheduledExportTarget) {
                         ExportTarget.API_ENDPOINT -> if (resumeExistingApiOperation) {
                             request.apiOperationId == apiOperationId
@@ -163,9 +189,10 @@ object ScheduledExportPendingRequests {
             .filter { !it.isAfter(pendingCutoff) }
         val datesPinnedToAnotherOperation = pendingForDestination
             .filter { request ->
-                request.enginePin != enginePin ||
+                (request.receiverPlanId != null && request.receiverPlanId != receiverPlanId) ||
+                    request.enginePin != enginePin ||
                     (request.settingsSnapshotJson != null &&
-                        request.settingsSnapshotJson != settingsSnapshotJson) ||
+                        com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.outputSettings(request.settingsSnapshotJson) != settingsSnapshotJson) ||
                     (settings.scheduledExportTarget == ExportTarget.API_ENDPOINT &&
                         request.apiOperationId != null && request.apiOperationId != apiOperationId) ||
                     (settings.scheduledExportTarget == ExportTarget.DEVICE_FOLDER &&
@@ -195,6 +222,7 @@ object ScheduledExportPendingRequests {
         folderOperationIds: Map<LocalDate, String> = emptyMap(),
         driveOperationIds: Map<LocalDate, String> = emptyMap(),
         freshCaptureRetryDates: Set<LocalDate> = emptySet(),
+        receiverPlanId: String? = null,
     ): ExportSettings = applyAttemptResult(
         settings = settings,
         attemptedDates = dates,
@@ -208,6 +236,7 @@ object ScheduledExportPendingRequests {
         folderOperationIds = folderOperationIds,
         driveOperationIds = driveOperationIds,
         freshCaptureRetryDates = freshCaptureRetryDates,
+        receiverPlanId = receiverPlanId,
     )
 
     fun applyAttemptResult(
@@ -223,6 +252,7 @@ object ScheduledExportPendingRequests {
         folderOperationIds: Map<LocalDate, String> = emptyMap(),
         driveOperationIds: Map<LocalDate, String> = emptyMap(),
         freshCaptureRetryDates: Set<LocalDate> = emptySet(),
+        receiverPlanId: String? = null,
     ): ExportSettings {
         val attempted = attemptedDates.toSet()
         if (attempted.isEmpty()) return settings.withPendingRequests(pendingRequests(settings, nowMillis))
@@ -253,6 +283,7 @@ object ScheduledExportPendingRequests {
                         } else {
                             existing.settingsSnapshotJson
                         },
+                        receiverPlanId = existing?.receiverPlanId ?: receiverPlanId,
                         apiOperationId = if (failure.date in freshCaptureRetryDates) {
                             null
                         } else {
@@ -298,6 +329,7 @@ object ScheduledExportPendingRequests {
         folderOperationIds: Map<LocalDate, String> = emptyMap(),
         driveOperationIds: Map<LocalDate, String> = emptyMap(),
         freshCaptureRetryDates: Set<LocalDate> = emptySet(),
+        receiverPlanId: String? = null,
     ): ExportSettings {
         val attempted = attemptedDates.toSet()
         if (attempted.isEmpty()) return settings.withPendingRequests(pendingRequests(settings, nowMillis))
@@ -319,6 +351,7 @@ object ScheduledExportPendingRequests {
                 destinationFingerprint = existing?.destinationFingerprint ?: destinationFingerprint,
                 enginePin = existing?.enginePin ?: enginePin,
                 settingsSnapshotJson = existing?.settingsSnapshotJson ?: settingsSnapshotJson,
+                receiverPlanId = existing?.receiverPlanId ?: receiverPlanId,
                 apiOperationId = if (date in freshCaptureRetryDates) {
                     null
                 } else {
@@ -388,6 +421,7 @@ object ScheduledExportPendingRequests {
             enginePin = existing.enginePin,
             settingsSnapshotJson = existing.settingsSnapshotJson,
             apiOperationId = existing.apiOperationId,
+            receiverPlanId = existing.receiverPlanId,
             folderOperationId = existing.folderOperationId,
             driveOperationId = existing.driveOperationId,
         )

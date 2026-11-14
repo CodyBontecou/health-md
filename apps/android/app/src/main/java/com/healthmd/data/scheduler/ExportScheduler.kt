@@ -435,12 +435,16 @@ class ExportScheduler @Inject constructor(
         // Advancing accepts a new occurrence. Retain output/calendar/renderer choices,
         // but never bind every future occurrence to the first occurrence's account.
         val snapshot = configuration.settingsSnapshot
-        val nextConfiguration = if (snapshot?.sleepCaptureContext?.sleepDayAttribution ==
-            com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS) {
+        val receiver = configuration.target == ExportTarget.API_ENDPOINT &&
+            snapshot?.exportMode == com.healthmd.rawexport.ExportMode.COMPATIBILITY &&
+            ReceiverCoverageRuntime.configuration(context, "legacy") != null
+        val nextConfiguration = if (snapshot != null && (receiver || snapshot.providerCaptureAuthority != null ||
+            snapshot.sleepCaptureContext?.sleepDayAttribution == com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)) {
             val authority = (healthRepository as? com.healthmd.domain.repository.RestorableHealthRepository
                 ?: error("Provider capture authority is unavailable")).captureProviderAuthority()
             configuration.copy(settingsSnapshot = snapshot.copy(
-                version = AndroidExportSettingsSnapshot.PROVIDER_AUTHORITY_VERSION,
+                version = if (snapshot.sleepCaptureContext?.sleepDayAttribution == com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS)
+                    AndroidExportSettingsSnapshot.RECEIVER_PROVIDER_AUTHORITY_VERSION else AndroidExportSettingsSnapshot.PROVIDER_AUTHORITY_VERSION,
                 providerCaptureAuthority = authority.validatedCopy()))
         } else configuration
         return if (configuration.zoneId == occurrence.configuration.zoneId) {
@@ -600,7 +604,9 @@ class ExportScheduler @Inject constructor(
         val fingerprint = destinationFingerprint(settings, target)
         val context = com.healthmd.domain.model.AndroidCaptureContext(zoneId, settingsRepository.getSleepDayAttribution())
             .also { it.requireShippedProfile() }
-        val authority = if (context.sleepDayAttribution == com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)
+        val receiver = target == ExportTarget.API_ENDPOINT && settings.exportMode == com.healthmd.rawexport.ExportMode.COMPATIBILITY &&
+            ReceiverCoverageRuntime.configuration(this.context, "legacy") != null
+        val authority = if (receiver || context.sleepDayAttribution == com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)
             (healthRepository as? com.healthmd.domain.repository.RestorableHealthRepository
                 ?: error("Provider capture authority is unavailable")).captureProviderAuthority() else null
         val captureSettings = settings.copy(executionSleepCaptureContext = context,
@@ -631,6 +637,11 @@ class ExportScheduler @Inject constructor(
             return null
         }
         val persistedSnapshot = persisted.settingsSnapshot
+        // Enabling receiver selection is a new admission, not permission to reinterpret an
+        // older unbound Night snapshot using today's account. Existing plans stay frozen.
+        if (target == ExportTarget.API_ENDPOINT && settings.exportMode == com.healthmd.rawexport.ExportMode.COMPATIBILITY &&
+            ReceiverCoverageRuntime.configuration(context, "legacy") != null &&
+            persistedSnapshot?.providerCaptureAuthority == null) return null
         val zone = ZoneId.of(persisted.zoneId)
         val currentSnapshot = if (persistedSnapshot == null) {
             null

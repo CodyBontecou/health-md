@@ -92,6 +92,9 @@ class ExportWorker @AssistedInject constructor(
     private val distributionPolicy: DistributionPolicy,
 ) : CoroutineWorker(appContext, workerParams) {
 
+    private var receiverPlanId: String? = null
+    private var receiverSnapshotJson: String? = null
+
     override suspend fun doWork(): Result {
         val identity = mapOf(DiagnosticField.OPERATION_ID to DiagnosticValue.Text(id.toString()), DiagnosticField.TRIGGER to DiagnosticValue.Text("background_task"))
         Diagnostics.record(DiagnosticEventID.ATTEMPT_STARTED, identity)
@@ -304,15 +307,19 @@ class ExportWorker @AssistedInject constructor(
             ScheduledExportPendingRequests.pendingRequests(settings)
                 .asSequence()
                 .filter { it.exportTarget == ExportTarget.API_ENDPOINT }
+                .filter { it.receiverPlanId == null || it.receiverPlanId == admissionOperationId }
                 .filter { it.destinationFingerprint == destinationFingerprint }
                 .filter { it.enginePin == enginePin }
                 .filter {
                     it.settingsSnapshotJson == null ||
-                        it.settingsSnapshotJson == capturedSnapshotJson
+                        com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.outputSettings(it.settingsSnapshotJson) == capturedSnapshotJson
                 }
                 .mapNotNull { it.apiOperationId }
                 .firstOrNull()
         } else null
+        // Receiver plans belong to one admission, including fresh-capture retries with no
+        // prepared API batch. Older plans remain in explicit recovery; never graft a new
+        // occurrence (or its Today refresh) onto their exact residuals.
         val durableApiOperationId = if (capturedTarget == ExportTarget.API_ENDPOINT) {
             pendingApiOperationId ?: admissionOperationId
         } else null
@@ -322,7 +329,7 @@ class ExportWorker @AssistedInject constructor(
                 .filter { it.enginePin == enginePin }
                 .filter {
                     it.settingsSnapshotJson == null ||
-                        it.settingsSnapshotJson == capturedSnapshotJson
+                        com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.outputSettings(it.settingsSnapshotJson) == capturedSnapshotJson
                 }
         } else {
             emptyList()
@@ -345,7 +352,7 @@ class ExportWorker @AssistedInject constructor(
         entitlementRepository.refresh()
         val isPurchased = distributionPolicy.fullAccessIncluded ||
             entitlementRepository.verifyExportAccess(capturedTarget, settings.apiEndpointUrl.takeIf { settings.exportMode == com.healthmd.rawexport.ExportMode.COMPATIBILITY })
-        val dates = scheduledDates(
+        var dates = scheduledDates(
             settings,
             destinationFingerprint,
             intendedRunDates,
@@ -355,10 +362,33 @@ class ExportWorker @AssistedInject constructor(
             pendingApiOperationId != null,
             durableFolderOperationId,
             pendingFolderOperationId != null,
+            admissionOperationId,
         )
-        if (dates.isEmpty()) return Result.success()
-        val startDate = dates.first()
-        val endDate = dates.last()
+        val receiverRuntime = ReceiverCoverageRuntime(applicationContext, apiCredentialStore, entitlementRepository)
+        val selectionNow = java.time.Instant.now()
+        // One admission may cover several missed runs. Its latest due boundary owns
+        // the completed candidates; the first fire cannot erase subsequent due dates.
+        val completedCandidates = dates.filter { it < intendedRunDates.max() }
+        val receiverConfiguration = if (capturedTarget == ExportTarget.API_ENDPOINT &&
+            settings.exportMode == ExportMode.COMPATIBILITY && capturedSnapshotJson != null) {
+            try {
+                receiverRuntime.configurationForOccurrence(admissionOperationId, "legacy",
+                    ReceiverCoverageRuntime.withinSelectionBounds(completedCandidates, capturedOccurrence.configuration.zoneId, selectionNow) &&
+                        ScheduledExportPendingRequests.pendingRequests(settings).none {
+                            it.exportTarget == ExportTarget.API_ENDPOINT && it.receiverPlanId == null
+                        })
+            } catch (_: Exception) { return Result.retry() }
+        } else null
+        val refreshDue = capturedOccurrence.configuration.dateWindow == com.healthmd.domain.model.ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY
+        val refreshDate = selectionNow.atZone(java.time.ZoneId.of(capturedOccurrence.configuration.zoneId)).toLocalDate()
+        when (ScheduledExportPendingRequests.receiverAdmissionAction(settings, dates,
+            receiverConfiguration != null, refreshDate.takeIf { refreshDue }, destinationFingerprint, admissionOperationId)) {
+            ScheduledExportPendingRequests.ReceiverAdmissionAction.RETRY -> return Result.retry()
+            ScheduledExportPendingRequests.ReceiverAdmissionAction.COMPLETE -> return Result.success()
+            ScheduledExportPendingRequests.ReceiverAdmissionAction.EXECUTE -> Unit
+        }
+        var startDate = dates.first()
+        var endDate = dates.last()
 
         if (!isPurchased) {
             val failureDetails = dates.map { FailedDateDetail(it, ExportFailureReason.PAYWALL_REQUIRED) }
@@ -393,6 +423,57 @@ class ExportWorker @AssistedInject constructor(
             return Result.failure()
         }
 
+        var receiverLease: ReceiverCoverageRuntime.Lease? = null
+        if (capturedTarget == ExportTarget.API_ENDPOINT && settings.exportMode == ExportMode.COMPATIBILITY && capturedSnapshotJson != null) {
+            try {
+                val planID = admissionOperationId
+                val configuration = receiverConfiguration
+                val completed = completedCandidates
+                if (configuration != null) {
+                    val refresh = refreshDue
+                    if (completed.isNotEmpty() || receiverRuntime.hasPlan(planID)) {
+                        receiverPlanId = planID
+                        val frozenDestination = receiverRuntime.destination(configuration, settings.apiEndpointUrl,
+                            capturedSnapshotJson, capturedOccurrence.configuration.zoneId)
+                        receiverSnapshotJson = com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.wrap(capturedSnapshotJson,
+                            configuration, planID, frozenDestination.preflight.destinationBinding, frozenDestination.fingerprint)
+                        val lease = receiverRuntime.resolve(planID, "legacy:$planID", configuration, settings.apiEndpointUrl,
+                            capturedSnapshotJson, capturedOccurrence.configuration.zoneId, completed, refresh, selectionNow,
+                            admit = { conservativePlan ->
+                                // The journal saves conservative intent first. Only then publish
+                                // native recovery rows, before a queued notification cancel can
+                                // prevent the HTTP child from starting.
+                                val conservativeDates = conservativePlan.residual.map(LocalDate::parse)
+                                persistCancelledRetryDates((dates + conservativeDates).distinct().sorted(), conservativeDates.toSet(), capturedTarget, destinationFingerprint,
+                                    enginePin, capturedSnapshotJson, ExportResult(0, conservativeDates.size, wasCancelled = true))
+                                dates = conservativeDates
+                            },
+                            query = { request ->
+                                ScheduledExportCancellationCoordinator.run(id) {
+                                    com.healthmd.data.receivercoverage.ReceiverCoverageHTTPClient().query(request)
+                                }
+                            },
+                            authorized = { stateStore.matchesAdmission(capturedOccurrence, admissionOperationId, id) })
+                        receiverLease = lease
+                        receiverPlanId = lease.id
+                        val originalDates = dates
+                        dates = lease.plan.residual.map(LocalDate::parse).filter { it in originalDates || (refresh && it.toString() == lease.plan.today) }
+                        persistCancelledRetryDates((originalDates + dates).distinct().sorted(), dates.toSet(), capturedTarget, destinationFingerprint,
+                            enginePin, capturedSnapshotJson, ExportResult(0, dates.size, wasCancelled = true))
+                        if (dates.isEmpty()) {
+                            persistPendingRetryDates(originalDates, emptyList(), capturedTarget, destinationFingerprint, enginePin, capturedSnapshotJson)
+                            return Result.success() // Covered/acknowledged occurrence, no health capture or upload history.
+                        }
+                    }
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                kotlin.coroutines.coroutineContext.ensureActive()
+                return Result.success() // Keep the fixed/provisional plan and exact native residuals.
+            } catch (_: Exception) { return Result.retry() }
+        }
+
+        startDate = dates.first()
+        endDate = dates.last()
         if (capturedTarget == ExportTarget.DEVICE_FOLDER &&
             (enginePin != null || pendingFolderOperationId != null) &&
             durableFolderOperationId == null
@@ -529,7 +610,7 @@ class ExportWorker @AssistedInject constructor(
                             dates = dates,
                             settings = settings.copy(exportTarget = ExportTarget.API_ENDPOINT),
                                 onProgress = exportProgress,
-                            expectedDestinationFingerprint = destinationFingerprint,
+                            expectedDestinationFingerprint = receiverLease?.fingerprint ?: destinationFingerprint,
                             durableOperationId = durableApiOperationId,
                             durableSettingsSnapshotJson = capturedSnapshotJson,
                             requireExistingDurableOperation = pendingApiOperationId != null,
@@ -576,6 +657,11 @@ class ExportWorker @AssistedInject constructor(
                 )
             }
 
+            if (receiverLease != null) {
+                if (!stateStore.matchesAdmission(capturedOccurrence, admissionOperationId, id)) return Result.success()
+                val remaining = cancellationRemainingDates(dates, settings, result)
+                receiverRuntime.acknowledge(receiverLease, dates.filterNot { it in remaining })
+            }
             if (result.wasCancelled) {
                 val remainingDates = cancellationRemainingDates(dates, settings, result)
                 persistCancelledRetryDates(
@@ -745,6 +831,7 @@ class ExportWorker @AssistedInject constructor(
         resumeExistingApiOperation: Boolean,
         folderOperationId: String?,
         resumeExistingFolderOperation: Boolean,
+        receiverPlanId: String,
     ): List<LocalDate> = ScheduledExportPendingRequests.scheduledRunDates(
         settings = settings,
         intendedRunDates = intendedRunDates.ifEmpty { listOf(LocalDate.now()) },
@@ -755,6 +842,7 @@ class ExportWorker @AssistedInject constructor(
         resumeExistingApiOperation = resumeExistingApiOperation,
         folderOperationId = folderOperationId,
         resumeExistingFolderOperation = resumeExistingFolderOperation,
+        receiverPlanId = receiverPlanId,
     )
 
     private fun cancellationRemainingDates(
@@ -804,11 +892,12 @@ class ExportWorker @AssistedInject constructor(
                 target = target,
                 destinationFingerprint = destinationFingerprint,
                 enginePin = enginePin,
-                settingsSnapshotJson = settingsSnapshotJson,
+                settingsSnapshotJson = receiverSnapshotJson ?: settingsSnapshotJson,
                 apiOperationIds = result.retryOperationIds,
                 folderOperationIds = result.retryFolderOperationIds,
                 driveOperationIds = result.retryDriveOperationIds,
                 freshCaptureRetryDates = result.freshCaptureRetryDates,
+                receiverPlanId = receiverPlanId,
             )
         }
     }
@@ -833,11 +922,12 @@ class ExportWorker @AssistedInject constructor(
                 target = target,
                 destinationFingerprint = destinationFingerprint,
                 enginePin = enginePin,
-                settingsSnapshotJson = settingsSnapshotJson,
+                settingsSnapshotJson = receiverSnapshotJson ?: settingsSnapshotJson,
                 apiOperationIds = apiOperationIds,
                 folderOperationIds = folderOperationIds,
                 driveOperationIds = driveOperationIds,
                 freshCaptureRetryDates = freshCaptureRetryDates,
+                receiverPlanId = receiverPlanId,
             )
         }
     }
@@ -859,7 +949,8 @@ class ExportWorker @AssistedInject constructor(
                 target = target,
                 destinationFingerprint = destinationFingerprint,
                 enginePin = enginePin,
-                settingsSnapshotJson = settingsSnapshotJson,
+                settingsSnapshotJson = receiverSnapshotJson ?: settingsSnapshotJson,
+                receiverPlanId = receiverPlanId,
                 folderOperationIds = folderOperationId?.let { operationId ->
                     attemptedDates.associateWith { operationId }
                 }.orEmpty(),

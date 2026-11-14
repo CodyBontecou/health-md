@@ -43,6 +43,7 @@ class ScheduledProfileMorningAdmissionTest {
     private lateinit var scope: CoroutineScope
     private lateinit var store: ScheduledProfileEntryStore
     private lateinit var dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>
+    private lateinit var preferenceFile: java.io.File
     private val factory get() = ScheduledProfileSnapshotFactory(ExportEnginePinPlanner(), settingsRepository)
     private val live = ExportSettings(exportFormat = ExportFormat.CSV, exportFormats = setOf(ExportFormat.CSV), subfolder = "live")
 
@@ -52,8 +53,8 @@ class ScheduledProfileMorningAdmissionTest {
         System.setProperty("uniffi.component.healthmd_core_uniffi.libraryOverride", library!!)
         coEvery { settingsRepository.getSleepDayAttribution() } answers { preference }
         scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        val file = temporary.newFolder().resolve("entries.preferences_pb")
-        dataStore = PreferenceDataStoreFactory.create(scope = scope, produceFile = { file })
+        preferenceFile = temporary.newFolder().resolve("entries.preferences_pb")
+        dataStore = PreferenceDataStoreFactory.create(scope = scope, produceFile = { preferenceFile })
         store = ScheduledProfileEntryStore(dataStore, mockk<Context>(relaxed = true))
     }
     @After fun teardown() { if (::scope.isInitialized) scope.cancel() }
@@ -149,5 +150,37 @@ class ScheduledProfileMorningAdmissionTest {
             executionProviderCaptureAuthority = supplied, executionProviderCaptureAuthorityIsFrozen = true), ExportTarget.API_ENDPOINT, endpoint)
         assertThat(AndroidExportSettingsSnapshotCodec.decode(json).providerCaptureAuthority).isNull()
         assertThat(json).doesNotContain(grant)
+    }
+
+    @Test fun nightReceiverReopensWithOriginalAccountAfterTheSelectedAccountChanges() = runTest {
+        preference = SleepDayAttribution.NIGHT_BEGINS
+        val profile = requireNotNull(factory.captureForNewOccurrence(definition(), live, zone, source, forceFresh = true))
+        val config = com.healthmd.data.receivercoverage.ReceiverCoverageConfiguration("https://profile.example.invalid/coverage", "synthetic-night", 0).json()
+        val pending = ScheduledProfilePendingExport(id = "night-receiver", ownerEpochDays = listOf(LocalDate.of(2026, 7, 1).toEpochDay()),
+            fireAtMillis = 1L, settingsSnapshotJson = com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.wrap(
+                profile.settingsSnapshotJson, config, "night-receiver", "a".repeat(64), "b".repeat(64)),
+            target = profile.target, profileName = profile.name, apiEndpointUrl = endpoint, receiverCoverageJson = config,
+            receiverPlanId = "night-receiver",
+            receiverDestinationBinding = "a".repeat(64), receiverDestinationFingerprint = "b".repeat(64))
+        val entry = ScheduledProfileEntry(profileId = profile.id, isEnabled = true,
+            anchorEpochDay = LocalDate.of(2026, 7, 2).toEpochDay(), zoneId = zone.id)
+        assertThat(store.upsert(entry)).isTrue()
+        assertThat(store.admitOccurrence(entry, pending)).isTrue()
+        scope.coroutineContext[Job]!!.cancelAndJoin()
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        dataStore = PreferenceDataStoreFactory.create(scope = scope, produceFile = { preferenceFile })
+        val reopened = ScheduledProfileEntryStore(dataStore, mockk<Context>(relaxed = true))
+        val saved = requireNotNull(reopened.entry(entry.profileId)).pendingExports.single()
+        assertThat(saved).isEqualTo(pending)
+        grant = "00000000-0000-4000-8000-000000000202"
+        val restored = requireNotNull(factory.restoreForRun(profile.copy(settingsSnapshotJson = saved.settingsSnapshotJson), live, 2))
+        assertThat(restored.executionProviderCaptureAuthority?.connectionIds)
+            .containsEntry("whoop", "00000000-0000-4000-8000-000000000201")
+        assertThat(restored.executionProviderCaptureAuthorityIsFrozen).isTrue()
+        assertThat(acceptances).isEqualTo(1)
+        val next = requireNotNull(factory.captureForNewOccurrence(definition(), live, zone, source, forceFresh = true))
+        assertThat(next.settingsSnapshotJson).isNotEqualTo(profile.settingsSnapshotJson)
+        assertThat(AndroidExportSettingsSnapshotCodec.decode(next.settingsSnapshotJson).providerCaptureAuthority?.connectionIds)
+            .containsEntry("whoop", grant)
     }
 }

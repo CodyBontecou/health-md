@@ -41,6 +41,7 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
     let recoveryGeneration: Int
     let scheduleEnabledAt: Date?
     let apiDestinationIdentity: ScheduledAPIEndpointIdentity?
+    let receiverCoverage: ReceiverCoverageConfiguration?
     /// When a scheduled run attempted this request and preserved unresolved
     /// dates for retry. An attempted request is a preserved retry: bulk
     /// fallback re-arm cancellation must never delete it (only its exact-ID
@@ -89,6 +90,7 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         recoveryGeneration: Int = 0,
         scheduleEnabledAt: Date? = nil,
         apiDestinationIdentity: ScheduledAPIEndpointIdentity? = nil,
+        receiverCoverage: ReceiverCoverageConfiguration? = nil,
         attemptedAt: Date? = nil,
         calendar: Calendar = .current
     ) {
@@ -119,6 +121,7 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         self.recoveryGeneration = source == .scheduled ? recoveryGeneration : 0
         self.scheduleEnabledAt = source == .scheduled ? scheduleEnabledAt : nil
         self.apiDestinationIdentity = source == .scheduled ? apiDestinationIdentity : nil
+        self.receiverCoverage = receiverCoverage
         self.attemptedAt = source == .scheduled ? attemptedAt : nil
     }
 
@@ -165,6 +168,7 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         apiDestinationIdentity = try container.decodeIfPresent(
             ScheduledAPIEndpointIdentity.self, forKey: .apiDestinationIdentity
         )
+        receiverCoverage = try container.decodeIfPresent(ReceiverCoverageConfiguration.self, forKey: .receiverCoverage)
         // Pre-marker persisted requests decode as never-attempted; the
         // fallback-window heuristic covers those during migration.
         attemptedAt = try container.decodeIfPresent(Date.self, forKey: .attemptedAt)
@@ -218,7 +222,7 @@ struct PendingExportStore: PendingExportStoring {
     static let successorStorageKey = "pendingExportRequests.sleep-attribution.v1"
 
     private enum Queue: CaseIterable {
-        case historical, successor
+        case historical, successor, receiver
         var key: String { self == .historical ? PendingExportStore.storageKey : PendingExportStore.successorStorageKey }
     }
 
@@ -229,6 +233,14 @@ struct PendingExportStore: PendingExportStoring {
         static let schemaID = "healthmd.pending_exports.sleep_attribution"
     }
 
+    private struct ReceiverJournal: Codable {
+        let schema: String
+        let version: Int
+        let requests: [PendingExportRequest]
+        static let schemaID = "healthmd.pending_exports.receiver_coverage"
+    }
+
+    private let receiverJournalURL: URL?
     private let userDefaults: UserDefaults
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
@@ -236,8 +248,11 @@ struct PendingExportStore: PendingExportStoring {
     init(
         userDefaults: UserDefaults = .standard,
         encoder: JSONEncoder = JSONEncoder(),
-        decoder: JSONDecoder = JSONDecoder()
+        decoder: JSONDecoder = JSONDecoder(),
+        receiverJournalURL: URL? = nil
     ) {
+        self.receiverJournalURL = receiverJournalURL ?? (userDefaults === UserDefaults.standard
+            ? ReceiverCoverageSettings.directory.appendingPathComponent("pending-requests-v1.json") : nil)
         self.userDefaults = userDefaults
         self.encoder = encoder
         self.encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
@@ -253,7 +268,13 @@ struct PendingExportStore: PendingExportStoring {
         var queues: [Queue: [PendingExportRequest]] = [:]
         do {
             for queue in Queue.allCases {
-                guard let stored = userDefaults.object(forKey: queue.key) else {
+                let stored: Any?
+                if queue == .receiver {
+                    stored = try receiverJournalURL.flatMap { url in
+                        FileManager.default.fileExists(atPath: url.path) ? try Data(contentsOf: url) : nil
+                    }
+                } else { stored = userDefaults.object(forKey: queue.key) }
+                guard let stored else {
                     queues[queue] = []
                     continue
                 }
@@ -261,6 +282,13 @@ struct PendingExportStore: PendingExportStoring {
                 switch queue {
                 case .historical:
                     queues[queue] = try decoder.decode([PendingExportRequest].self, from: data)
+                case .receiver:
+                    let journal = try decoder.decode(ReceiverJournal.self, from: data)
+                    guard journal.schema == ReceiverJournal.schemaID, journal.version == 1,
+                          journal.requests.allSatisfy({ $0.receiverCoverage != nil }) else {
+                        throw PendingExportStoreError.unreadableJournal
+                    }
+                    queues[queue] = journal.requests
                 case .successor:
                     let journal = try decoder.decode(SuccessorJournal.self, from: data)
                     guard journal.schema == SuccessorJournal.schemaID, journal.version == 1,
@@ -290,6 +318,7 @@ struct PendingExportStore: PendingExportStoring {
             && lhs.settingsSnapshot?.sleepCaptureContext == rhs.settingsSnapshot?.sleepCaptureContext
             && lhs.settingsSnapshot?.appleExportEnginePin == rhs.settingsSnapshot?.appleExportEnginePin
             && lhs.originalCalendarTimeZoneIdentifier == rhs.originalCalendarTimeZoneIdentifier
+            && lhs.receiverCoverage == rhs.receiverCoverage
     }
 
     func upsert(_ request: PendingExportRequest) throws {
@@ -301,7 +330,7 @@ struct PendingExportStore: PendingExportStoring {
         }
         // Never move a persisted draft job out of its original namespace on upgrade.
         // New successor work goes where historical binaries cannot discover or replace it.
-        let queue = existingQueue?.key ?? (Self.requiresProfileIsolation(request) ? .successor : .historical)
+        let queue = existingQueue?.key ?? (request.receiverCoverage != nil ? .receiver : (Self.requiresProfileIsolation(request) ? .successor : .historical))
         var requests = queues[queue, default: []]
         requests.removeAll { $0.id == request.id || shouldReplace(existing: $0, with: request) }
         requests.append(request)
@@ -360,11 +389,18 @@ struct PendingExportStore: PendingExportStoring {
             switch queue {
             case .historical:
                 encoded[queue] = try encoder.encode(sorted(requests))
+            case .receiver:
+                encoded[queue] = try encoder.encode(ReceiverJournal(schema: ReceiverJournal.schemaID, version: 1, requests: sorted(requests)))
             case .successor:
                 encoded[queue] = try encoder.encode(SuccessorJournal(
                     schema: SuccessorJournal.schemaID, version: 1, requests: sorted(requests)))
             }
         }
-        for (queue, data) in encoded { userDefaults.set(data, forKey: queue.key) }
+        for (queue, data) in encoded {
+            if queue == .receiver {
+                guard let receiverJournalURL else { throw PendingExportStoreError.unreadableJournal }
+                try ReceiverCoverageAtomicFile.write(data, to: receiverJournalURL)
+            } else { userDefaults.set(data, forKey: queue.key) }
+        }
     }
 }

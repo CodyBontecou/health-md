@@ -114,6 +114,16 @@ struct APIExportClient {
     }
 
     @MainActor
+    static func receiverCoverageHeaders(_ destination: APIExportDestinationSnapshot) async throws -> [String: String] {
+        let access = await productionAuthorization(destination.endpointURL)
+        let clinic = productionClinicContext(destination.endpointURL)
+        // Managed credentials rotate independently at upload. Until upload supports a pinned
+        // effective credential, receiver selection is restricted to personal API destinations.
+        guard access == .allowedPersonal, !clinic.managed else { throw APIExportClientError.accessDenied }
+        return destination.authorizationHeaderValue.map { ["Authorization": $0] } ?? [:]
+    }
+
+    @MainActor
     private static func productionAuthorization(_ endpoint: URL) async -> ClinicExportDecision {
         await PurchaseManager.shared.refreshStatus()
         if PurchaseManager.shared.canExport { return .allowedPersonal }
