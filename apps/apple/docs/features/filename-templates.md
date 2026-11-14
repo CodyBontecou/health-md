@@ -50,6 +50,8 @@ Templates support date placeholders so exports can match your vault naming schem
 - `{weekday}` → `Tuesday`
 - `{monthName}` → `May`
 - `{quarter}` → `Q2`
+- `{week}` → ISO week number, zero-padded (`01`–`53`)
+- `{weekYear}` → ISO week-numbering year (`2026`)
 
 ## Example paths
 
@@ -105,3 +107,10 @@ Health/2026-05-12-bases.md
 - `filename(for:format:)` appends the correct extension for Markdown, Bases, JSON, or CSV.
 - Bases gets `-bases` only when both `.markdown` and `.obsidianBases` are selected.
 - Placeholder expansion uses fixed date formats and is independent of Format Customization date display settings.
+
+ISO weeks start on Monday and week 1 contains January 4. Use **By Year and Week**
+(`{weekYear}/Week {week}`) for weekly folders: January 1, 2027 resolves to
+`2026/Week 53`, while `{year}` stays `2027`. Week tokens use the export owner-day
+timezone, independently of locale or the device calendar. Existing templates and
+daily export schema versions are unchanged. Keep `{date}` in daily filenames to
+avoid collisions between days in the same week.
