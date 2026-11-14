@@ -168,7 +168,7 @@
     <string name="section_write_mode">Modo de Escritura</string>
     <string name="section_filename_template">Plantilla de Nombre de Archivo</string>
     <string name="filename_template_hint">{date}</string>
-    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}</string>
+    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}, {week}, {weekYear}</string>
     <string name="section_format_options">Opciones de Formato</string>
     <string name="toggle_include_frontmatter">Incluir el frontmatter</string>
     <string name="toggle_group_by_category">Agrupar por Categoría</string>

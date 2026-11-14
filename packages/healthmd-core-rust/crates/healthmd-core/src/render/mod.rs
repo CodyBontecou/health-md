@@ -2043,6 +2043,7 @@ fn resolve_date_template(
     let month_index = usize::try_from(date.month0()).map_err(|_| RenderError::InvalidPath)?;
     let weekday_index = usize::try_from(date.weekday().num_days_from_monday())
         .map_err(|_| RenderError::InvalidPath)?;
+    let iso_week = date.iso_week();
     let mut value = template.to_owned();
     for (marker, replacement) in [
         (
@@ -2056,6 +2057,8 @@ fn resolve_date_template(
         ("{weekday}", WEEKDAYS[weekday_index].to_owned()),
         ("{monthName}", MONTHS[month_index].to_owned()),
         ("{quarter}", format!("Q{}", (date.month() - 1) / 3 + 1)),
+        ("{week}", format!("{:02}", iso_week.week())),
+        ("{weekYear}", format!("{:04}", iso_week.year())),
         ("{profile}", profile.to_owned()),
     ] {
         value = value.replace(marker, &replacement);
@@ -2428,6 +2431,23 @@ mod tests {
                         .is_err()
                 );
             }
+        }
+    }
+
+    #[test]
+    fn iso_week_folders_follow_the_week_year_across_new_year() {
+        let template = "{weekYear}/Week {week}/{date}";
+        for (year, month, day, expected) in [
+            (2026, 11, 1, "2026/Week 44/2026-11-01"),
+            (2027, 1, 1, "2026/Week 53/2027-01-01"),
+            (2027, 1, 4, "2027/Week 01/2027-01-04"),
+            (2029, 12, 31, "2030/Week 01/2029-12-31"),
+        ] {
+            let date = NaiveDate::from_ymd_opt(year, month, day).unwrap();
+            assert_eq!(
+                resolve_date_template(template, date, "profile").unwrap(),
+                expected
+            );
         }
     }
 

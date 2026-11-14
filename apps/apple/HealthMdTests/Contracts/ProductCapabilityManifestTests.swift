@@ -106,6 +106,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "account.myself_lifetime_claim",
             "purchase.free-export-journey",
         "export.daily-files",
+        "export.iso-week-paths",
         "export.sleep-summary",
         "export.activity-basics",
         "export.cardiorespiratory-summary",
