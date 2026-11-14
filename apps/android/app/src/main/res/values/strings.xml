@@ -267,7 +267,7 @@
     <string name="section_write_mode">Write Mode</string>
     <string name="section_filename_template">Filename Template</string>
     <string name="filename_template_hint">{date}</string>
-    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}</string>
+    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}, {week}, {weekYear}</string>
     <string name="section_format_options">Format Options</string>
     <string name="toggle_include_frontmatter">Include Frontmatter</string>
     <string name="toggle_group_by_category">Group by Category</string>
@@ -1755,6 +1755,7 @@
     <string name="receiver_coverage_warning">Already retained completed days may be skipped. Late source updates outside the correction window will not be resent automatically. Use full lookback or a manual re-export to refresh older snapshots.</string>
     <string name="receiver_coverage_personal_only">Personal compatibility API destinations only. Managed clinic credentials are not supported for receiver-aware scheduling.</string>
     <string name="receiver_coverage_save_error">Could not save receiver-aware scheduling. Check the endpoint, scope, correction choice and secure credential storage.</string>
+    <string name="folder_organization_by_year_week_label">By Year and Week</string>
     <string name="frontmatter_review_conflict">Review conflict</string>
     <string name="frontmatter_conflict_duplicate_key">The key “%1$s” is used by:</string>
     <string name="frontmatter_conflict_reserved_key">The key “%1$s” is reserved:</string>

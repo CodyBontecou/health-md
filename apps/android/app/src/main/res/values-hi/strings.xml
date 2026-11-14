@@ -239,7 +239,7 @@
     <string name="section_write_mode">लिखने की विधि</string>
     <string name="section_filename_template">फ़ाइल नाम टेम्पलेट</string>
     <string name="filename_template_hint">{date}</string>
-    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}</string>
+    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}, {week}, {weekYear}</string>
     <string name="section_format_options">प्रारूप विकल्प</string>
     <string name="toggle_include_frontmatter">फ्रंटमैटर शामिल करें</string>
     <string name="toggle_group_by_category">श्रेणी के अनुसार समूहीकृत करें</string>

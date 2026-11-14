@@ -239,7 +239,7 @@
     <string name="section_write_mode">ਲਿਖਤ ਢੰਗ</string>
     <string name="section_filename_template">ਫਾਈਲ ਨਾਮ ਟੈਮਪਲੇਟ</string>
     <string name="filename_template_hint">{date}</string>
-    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}</string>
+    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}, {week}, {weekYear}</string>
     <string name="section_format_options">ਫਾਰਮੇਟ ਵਿਕਲਪ</string>
     <string name="toggle_include_frontmatter">Frontmatter ਸ਼ਾਮਲ ਕਰੋ</string>
     <string name="toggle_group_by_category">ਸ਼੍ਰੇਣੀ ਦੁਆਰਾ ਗ੍ਰੁਪ ਕਰੋ</string>
