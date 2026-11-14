@@ -535,7 +535,11 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             }
             return selected.preparedExportAssumingSelectionApplied(settings: frozenSettings)
         }
-        guard preparedExports.contains(where: \.hasAnyData),
+        // Staged daily artifacts may leave a range-only corpus with capture
+        // dates but no native aggregates (for example, provider-only days).
+        // Let the reducer omit a metric-free range without failing those files.
+        let isRangeOnly = requestedRange != nil && dailyOutputOwnerDates.isEmpty
+        guard (isRangeOnly || preparedExports.contains(where: \.hasAnyData)),
               zip(ownerDates, preparedExports).allSatisfy({ pair in
                   !dailyOutputOwnerDates.contains(pair.0) || pair.1.hasAnyData
               }) else {

@@ -19,6 +19,38 @@ import org.junit.Test
 class ExportOrchestratorTest {
 
     @Test
+    fun manualDailyRangeSkipsEmptyDaysButWritesExplicitZero() = runTest {
+        val first = LocalDate.of(2026, 4, 1)
+        val dates = (0L..2L).map(first::plusDays)
+        val written = mutableListOf<LocalDate>()
+        val health = object : HealthRepository {
+            override suspend fun resolveCaptureContext(zoneId: ZoneId, sleepDayAttributionOverride: SleepDayAttributionOverride) =
+                AndroidCaptureContext(zoneId, SleepDayAttribution.DEFAULT)
+            override suspend fun fetchHealthData(date: LocalDate) = HealthData(date = date,
+                activity = if (date == dates[1]) ActivityData() else ActivityData(steps = 0))
+            override suspend fun isAvailable() = true
+            override suspend fun hasPermissions() = true
+            override suspend fun hasHistoricalReadPermission() = true
+            override suspend fun hasBackgroundReadPermission() = true
+            override suspend fun getEarliestDataDate() = first
+            override fun isBeforeFirstUnlock() = false
+        }
+        val destination = object : ExportRepository {
+            override suspend fun exportHealthData(data: HealthData, settings: ExportSettings): Boolean {
+                written += data.date
+                return true
+            }
+            override suspend fun hasExportFolder() = true
+            override fun getExportFolderName() = "Health"
+        }
+        val result = ExportOrchestrator(health, destination).exportDates(dates, ExportSettings())
+        assertEquals(listOf(dates[0], dates[2]), written)
+        assertEquals(2, result.successCount)
+        assertEquals(listOf(dates[1]), result.failedDateDetails.map { it.date })
+        assertEquals(ExportFailureReason.NO_HEALTH_DATA, result.failedDateDetails.single().reason)
+    }
+
+    @Test
     fun recordsHealthConnectRateLimitAsActionableFailureReason() = runTest {
         val firstDate = LocalDate.of(2026, 4, 1)
         val rateLimitedDate = LocalDate.of(2026, 4, 2)
