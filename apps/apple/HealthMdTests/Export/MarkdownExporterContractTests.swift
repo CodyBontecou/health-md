@@ -11,6 +11,34 @@ import XCTest
 
 // Static customizations to avoid macOS 26 deinit crash.
 private enum MDContractCustomizations {
+    static let reportedSelection: FormatCustomization = {
+        let c = FormatCustomization()
+        for index in c.frontmatterConfig.fields.indices {
+            c.frontmatterConfig.fields[index].isEnabled =
+                ["sleep_total_hours", "workout_count", "steps"].contains(c.frontmatterConfig.fields[index].originalKey)
+        }
+        c.frontmatterConfig.includeDate = true
+        c.frontmatterConfig.includeType = false
+        return c
+    }()
+    static let reportedSelectionWithCompleteCatalog: FormatCustomization = {
+        let c = FormatCustomization()
+        FormatCustomizationSnapshot.from(reportedSelection).apply(to: c)
+        let configured = Set(c.frontmatterConfig.fields.map(\.originalKey))
+        for key in HealthMetricExportMapping.allKnownFrontmatterKeys.subtracting(configured).sorted() {
+            c.frontmatterConfig.fields.append(CustomFrontmatterField(originalKey: key, isEnabled: false))
+        }
+        return c
+    }()
+    static let workoutCountOnly: FormatCustomization = {
+        let c = FormatCustomization()
+        for index in c.frontmatterConfig.fields.indices {
+            c.frontmatterConfig.fields[index].isEnabled =
+                c.frontmatterConfig.fields[index].originalKey == "workout_count"
+        }
+        return c
+    }()
+
     static let metric: FormatCustomization = {
         let c = FormatCustomization()
         c.unitPreference = .metric
@@ -187,6 +215,81 @@ final class MarkdownExporterContractTests: XCTestCase {
         let keys = keySet(pairs)
         XCTAssertFalse(keys.contains("steps"), "Disabled metric fields should not appear in Markdown frontmatter")
         XCTAssertTrue(keys.contains("active_calories"), "Other enabled metric fields should still appear")
+    }
+
+    func testWorkoutCountOnlyFiltersFreshMarkdownAndBasesFrontmatter() {
+        let customization = MDContractCustomizations.workoutCountOnly
+        for output in [ExportFixtures.fullDay.toMarkdown(customization: customization),
+                       ExportFixtures.fullDay.toObsidianBases(customization: customization)] {
+            let pairs = parseFrontmatterString(output)
+            let keys = keySet(pairs)
+            XCTAssertNotNil(value(for: "workout_count", in: pairs))
+            for key in ["workout_minutes", "workout_calories", "workout_distance_km",
+                        "workout_avg_heart_rate", "workouts", "steps", "resting_heart_rate"] {
+                XCTAssertFalse(keys.contains(key), "Disabled property leaked: \(key)")
+            }
+        }
+    }
+
+    func testFrontmatterFieldSelectionDoesNotFilterMarkdownBody() {
+        let data = ExportFixtures.fullDay
+        XCTAssertEqual(data.toMarkdown(includeMetadata: false, customization: MDContractCustomizations.workoutCountOnly),
+                       data.toMarkdown(includeMetadata: false, customization: MDContractCustomizations.metric))
+    }
+
+    func testReportedSelectionOmitsExtendedMetricsFromFreshFrontmatter() {
+        assertReportedSelectionOmitsExtendedMetrics(customization: MDContractCustomizations.reportedSelection)
+    }
+
+    func testExplicitlyDisabledExtendedFieldsAreOmittedFromFreshFrontmatter() {
+        assertReportedSelectionOmitsExtendedMetrics(customization: MDContractCustomizations.reportedSelectionWithCompleteCatalog)
+    }
+
+    func testEveryMappedHealthPropertyHasAFrontmatterControl() {
+        let configured = Set(FrontmatterConfiguration.defaultFields.map(\.originalKey))
+        let missing = HealthMetricExportMapping.allKnownFrontmatterKeys.subtracting(configured).sorted()
+        XCTAssertTrue(missing.isEmpty, "Exported health properties without controls (\(missing.count)): \(missing.joined(separator: ", "))")
+    }
+
+    private func assertReportedSelectionOmitsExtendedMetrics(customization: FormatCustomization,
+                                                            file: StaticString = #filePath, line: UInt = #line) {
+        var data = ExportFixtures.fullDay
+        data.activity.physicalEffort = 4.5
+        data.activity.vo2MaxAgeSeconds = 3600
+        data.activity.vo2MaxSourceUUID = UUID(uuidString: "00000000-0000-0000-0000-000000000456")
+        data.activity.vo2MaxSourceStartDate = data.date
+        data.activity.vo2MaxSourceEndDate = data.date
+        data.activity.vo2MaxCarriedForward = true
+        data.mobility.runningSpeed = 3
+        data.mobility.runningStrideLength = 1.2
+        data.mobility.runningGroundContactTime = 250
+        data.mobility.runningVerticalOscillation = 8
+        data.mobility.runningPower = 200
+        data.other.timeInDaylight = 30
+        data.vitals.wristTemperature = 36
+        for output in [data.toMarkdown(customization: customization),
+                       data.toObsidianBases(customization: customization)] {
+            let keys = keySet(parseFrontmatterString(output))
+            for key in ["date", "sleep_total_hours", "workout_count", "steps"] {
+                XCTAssertTrue(keys.contains(key), "Selected property missing: \(key)", file: file, line: line)
+            }
+            for key in ["physical_effort", "running_speed", "running_stride_length_m",
+                        "running_ground_contact_ms", "running_vertical_oscillation_cm", "running_power_w",
+                        "time_in_daylight_min", "vo2_max", "vo2_max_age_seconds", "vo2_max_source_uuid",
+                        "vo2_max_source_start", "vo2_max_source_end", "vo2_max_carried_forward", "wrist_temperature"] {
+                XCTAssertFalse(keys.contains(key), "Disabled property leaked: \(key)", file: file, line: line)
+            }
+        }
+    }
+
+    func testWorkoutCountOnlyMarkdownUpdatePreservesPreviouslyWrittenDisabledProperty() {
+        let fresh = ExportFixtures.fullDay.toMarkdown(customization: MDContractCustomizations.workoutCountOnly)
+        XCTAssertFalse(keySet(parseFrontmatterString(fresh)).contains("workout_minutes"))
+        let existing = "---\nworkout_minutes: 99 # retained\nmood: focused\n---\nJournal\n"
+        let updated = MarkdownMerger.merge(existing: existing, new: fresh)
+        XCTAssertTrue(updated.contains("workout_minutes: 99 # retained"))
+        XCTAssertTrue(updated.contains("mood: focused"))
+        XCTAssertNotNil(value(for: "workout_count", in: parseFrontmatterString(updated)))
     }
 
     func testFrontmatter_customMetricKeyRespected() {

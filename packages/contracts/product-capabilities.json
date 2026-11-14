@@ -820,6 +820,35 @@
       ]
     },
     {
+      "id": "destination.google-drive",
+      "name": "Direct Google Drive export destination",
+      "classification": "planned",
+      "summary": "Implemented but release-gated direct mobile destination: authorize one Google account with drive.file, bind an export profile to a Picker-selected writable My Drive or Shared Drive folder, and deliver unchanged renderer artifacts manually or on a best-effort schedule without a Health.md health-data or Google-token server; availability remains planned pending production OAuth, physical-device, privacy, and store review receipts.",
+      "profiles": [
+        "apple-v8",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "planned",
+          "target": "Complete production OAuth publication, physical-iPhone My Drive/Shared Drive and background-recovery validation, App Store privacy review, and release-checklist receipts."
+        },
+        "android": {
+          "state": "planned",
+          "target": "Complete Play-channel production OAuth publication, physical-Pixel My Drive/Shared Drive and foreground-reauthorization validation, Play Data safety review, and release-checklist receipts. Direct Drive is unavailable in the F-Droid channel because its distribution boundary excludes the Google authorization SDK; the F-Droid adapter fails closed without acquiring account authority."
+        }
+      },
+      "evidence": [
+        "docs/architecture/google-drive-export-destination.md",
+        "docs/features/google-drive-export.md",
+        "docs/qa/google-drive-export-release-checklist.md",
+        "apps/apple/docs/features/google-drive-export.md",
+        "apps/android/docs/google-drive-export.md",
+        "apps/website/docs-src/src/content/docs/guides/google-drive-export.md"
+      ]
+    },
+    {
       "id": "automation.run-overlap-policy",
       "name": "Choose what happens when an automation's runs overlap",
       "classification": "planned",
@@ -1251,7 +1280,7 @@
       "id": "purchase.free-export-journey",
       "name": "First free export and paid access",
       "classification": "shared",
-      "summary": "On iOS/iPadOS and Google Play Android, onboarding guides users into creating an automation and running their first export for free. Further exports require active paid access. Setup, automation editing, previews, and existing files remain reachable. Historical usage is preserved through purchase, restore, and expiry. Eligible subscriptions retain store-backed trials. Free macOS companion and F-Droid Full Access are unchanged.",
+      "summary": "On iOS/iPadOS and Google Play Android, onboarding configures the existing default automation as \"Daily note\" from shared metric packs (sleep, activity, heart, body, mind, nutrition, cycle; members are platform-specific), previews the past 7 days, and writes them as the first export for free. The 7-day trial and daily schedule are offered afterwards. Further exports and scheduled runs require active paid access. Setup, automation editing, previews, and existing files remain reachable. Historical usage is preserved through purchase, restore, and expiry. Eligible subscriptions retain store-backed trials. Free macOS companion and F-Droid Full Access are unchanged.",
       "platforms": {
         "apple": {
           "state": "available"
@@ -1266,6 +1295,8 @@
         "apps/android/app/src/main/java/com/healthmd/domain/billing/FreemiumPolicy.kt",
         "apps/android/app/src/main/java/com/healthmd/presentation/export/ExportScreen.kt",
         "apps/apple/docs/features/onboarding.md",
+        "apps/apple/HealthMd/Shared/Models/OnboardingMetricPack.swift",
+        "apps/android/docs/features/onboarding.md",
         "apps/android/docs/features/lifetime-unlock.md"
       ],
       "profiles": []

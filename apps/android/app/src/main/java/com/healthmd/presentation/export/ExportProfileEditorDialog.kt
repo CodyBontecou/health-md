@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -98,6 +100,11 @@ import com.healthmd.presentation.metrics.MetricSelectionScreen
 import com.healthmd.presentation.settings.ExportDetailOverridesSection
 import com.healthmd.presentation.settings.SettingsRow
 import com.healthmd.presentation.settings.groupRowShape
+import com.healthmd.presentation.endpoints.APIEndpointSheet
+import com.healthmd.presentation.endpoints.APIEndpointsViewModel
+import com.healthmd.presentation.endpoints.SavedEndpointsPicker
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.presentation.theme.GeistAdaptiveLayout
 import com.healthmd.presentation.theme.GeistBreakpoints
 import com.healthmd.presentation.theme.GeistRadii
@@ -130,6 +137,25 @@ fun ExportProfileEditorDialog(
     val colors = LocalGeistColors.current
     var draft by rememberSaveable(stateSaver = ExportProfileEditorDraftSaver) { mutableStateOf(initial) }
     var showMetricSelection by rememberSaveable { mutableStateOf(false) }
+    val endpointsViewModel: APIEndpointsViewModel = hiltViewModel()
+    val endpointSheet by endpointsViewModel.sheet.collectAsStateWithLifecycle()
+    endpointSheet?.let { sheet ->
+        val editedUrl = draft.apiEndpointUrl
+        APIEndpointSheet(
+            state = sheet,
+            onUpdate = endpointsViewModel::update,
+            onTest = endpointsViewModel::testConnection,
+            // A new or edited endpoint becomes this automation's selection.
+            onSave = { endpointsViewModel.save { saved -> draft = draft.copy(apiEndpointUrl = saved.url) } },
+            onDismiss = endpointsViewModel::dismiss,
+            onRequestDelete = endpointsViewModel::requestDelete,
+            onDelete = {
+                endpointsViewModel.delete { removed ->
+                    if (APIExportEndpoint.normalizedOrNull(editedUrl) == removed.url) draft = draft.copy(apiEndpointUrl = "")
+                }
+            },
+        )
+    }
 
     fun updateSettings(transform: (ExportSettings) -> ExportSettings) {
         draft = draft.copy(settings = transform(draft.settings))
@@ -151,12 +177,13 @@ fun ExportProfileEditorDialog(
     val trimmedName = draft.name.trim()
     val endpointValid = draft.target != ExportTarget.API_ENDPOINT ||
         APIExportEndpoint.isConfigured(draft.apiEndpointUrl)
+    val driveValid = draft.target != ExportTarget.GOOGLE_DRIVE || !draft.destinationId.isNullOrBlank()
     val gatewayValid = draft.target != ExportTarget.AGENT_DATA_GATEWAY ||
         AgentDataGatewayEndpoint.isConfigured(draft.agentDataGatewayUrl)
     val canSave = trimmedName.isNotEmpty() &&
         draft.hasOutputFormat &&
         endpointValid &&
-        gatewayValid &&
+        gatewayValid && driveValid &&
         (rawSnapshot || AutomationOutputPathValidation.isValidDailyNotes(draft.settings.dailyNoteInjection))
 
     val overlappingNames = overlapPreview(draft.target, draft.folderUri, draft.settings)
@@ -246,13 +273,32 @@ fun ExportProfileEditorDialog(
                         }
                     }
                     ExportTarget.API_ENDPOINT -> {
-                        EditorTextField(
-                            value = draft.apiEndpointUrl,
-                            onValueChange = { draft = draft.copy(apiEndpointUrl = it) },
-                            label = stringResource(R.string.api_export_endpoint_url_label),
-                            error = stringResource(R.string.m3_profiles_editor_endpoint_invalid).takeIf { !endpointValid },
+                        // Saved endpoints are shared: pick one, edit it in place, or add a new one.
+                        val endpointRows by endpointsViewModel.rows.collectAsStateWithLifecycle()
+                        SavedEndpointsPicker(
+                            rows = endpointRows,
+                            selectedUrl = draft.apiEndpointUrl,
+                            onSelect = { draft = draft.copy(apiEndpointUrl = it.url) },
+                            onEdit = { endpointsViewModel.openEdit(it.id) },
+                            onNew = endpointsViewModel::openNew,
                         )
+                        if (!endpointValid) {
+                            Text(
+                                stringResource(R.string.endpoint_not_configured),
+                                style = GeistType.copy13,
+                                color = colors.error,
+                            )
+                        }
                     }
+                    ExportTarget.GOOGLE_DRIVE -> Text(
+                        text = if (driveValid) {
+                            "Uses the connected local Google Drive destination."
+                        } else {
+                            "Connect Google Drive in Settings before saving this profile."
+                        },
+                        style = GeistType.copy14,
+                        color = if (driveValid) colors.secondary else colors.error,
+                    )
                     ExportTarget.AGENT_DATA_GATEWAY -> {
                         EditorTextField(
                             value = draft.agentDataGatewayUrl,
@@ -692,11 +738,12 @@ internal fun ProfileNote(
 @Composable
 private fun targetLabel(target: ExportTarget): String = when (target) {
     ExportTarget.DEVICE_FOLDER -> stringResource(R.string.m3_profiles_editor_target_device)
+    ExportTarget.GOOGLE_DRIVE -> stringResource(R.string.google_drive_destination_label)
     ExportTarget.API_ENDPOINT -> stringResource(R.string.m3_profiles_editor_target_api)
     ExportTarget.AGENT_DATA_GATEWAY -> stringResource(R.string.export_preview_gateway_destination)
 }
 
-/** Three exclusive destinations: segmented buttons, or wrapping chips when labels would crowd. */
+/** Exclusive destinations: segmented buttons, or wrapping chips when labels would crowd. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TargetChoice(selected: ExportTarget, onSelect: (ExportTarget) -> Unit) {
@@ -705,7 +752,7 @@ private fun TargetChoice(selected: ExportTarget, onSelect: (ExportTarget) -> Uni
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val reading = GeistAdaptiveLayout.stackDetailedControls(maxWidth.value, LocalDensity.current.fontScale)
         if (!reading) {
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
                 targets.forEachIndexed { index, target ->
                     SegmentedButton(
                         selected = selected == target,
