@@ -1381,7 +1381,7 @@ async fn android_export_rejection_preserves_reason_and_terminal_state() {
         let error = result.unwrap_err();
         assert_eq!(std::fs::read_dir(&destination).unwrap().count(), 0);
         if malformed {
-            assert!(matches!(error, ClientError::ExportPaused(_)));
+            assert!(matches!(error, ClientError::InvalidTransfer(_)));
             let record = client.v2_job_record(request.job_id).unwrap();
             assert_eq!(record.state, JobState::Paused);
             assert!(record.failure.is_none());

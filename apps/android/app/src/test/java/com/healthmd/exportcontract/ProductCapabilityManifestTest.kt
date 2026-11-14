@@ -42,6 +42,7 @@ class ProductCapabilityManifestTest {
             setOf(
                 "account.clinic-sync-requests",
                 "core.shared-rust-profile-engine",
+                "destination.google-drive",
                 "automation.api-recovery-authority",
                 "automation.include-today",
                 "automation.run-overlap-policy",
@@ -223,6 +224,7 @@ class ProductCapabilityManifestTest {
             "export.coverage-calendar",
             "export.range-summary",
             "setup.share-portable-configuration",
+            "destination.google-drive",
             "account.myself_lifetime_claim",
             "export.watch-origin-manual-api",
             "core.shared-rust-profile-engine",

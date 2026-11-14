@@ -44,6 +44,11 @@ data class CustomFrontmatterField(
         get() = customKey.ifEmpty { originalKey }
 }
 
+// Local presentation only: never serialize these names into export or diagnostic payloads.
+enum class FrontmatterConflictSection { METRIC, DATE, TYPE, CUSTOM, PLACEHOLDER }
+data class FrontmatterConflictSource(val originalKey: String, val section: FrontmatterConflictSection)
+data class FrontmatterKeyConflict(val outputKey: String, val sources: List<FrontmatterConflictSource>, val isReserved: Boolean)
+
 @Serializable
 data class FrontmatterConfiguration(
     val fields: List<CustomFrontmatterField> = defaultFields,
@@ -56,6 +61,28 @@ data class FrontmatterConfiguration(
     val customTypeValue: String = "health-data",
     val keyStyle: FrontmatterKeyStyle = FrontmatterKeyStyle.SNAKE_CASE,
 ) {
+    /** Shared by the editor and manual export preflight; keys stay out of diagnostics. */
+    val conflictingOutputKeys: Set<String> get() = keyConflicts.map { it.outputKey }.toSet()
+
+    val keyConflicts: List<FrontmatterKeyConflict>
+        get() {
+            val entries = mutableListOf<Pair<String, FrontmatterConflictSource>>()
+            val configured = fields.map { it.originalKey }.toSet()
+            val effective = fields + defaultFields.filter { it.originalKey !in configured }
+                .map { it.copy(customKey = keyStyle.apply(it.originalKey)) }
+            effective.filter { it.isEnabled }.forEach {
+                entries += it.outputKey to FrontmatterConflictSource(it.originalKey, FrontmatterConflictSection.METRIC)
+            }
+            if (includeDate) entries += customDateKey to FrontmatterConflictSource("date", FrontmatterConflictSection.DATE)
+            if (includeType) entries += customTypeKey to FrontmatterConflictSource("type", FrontmatterConflictSection.TYPE)
+            customFields.keys.sorted().forEach { entries += it to FrontmatterConflictSource(it, FrontmatterConflictSection.CUSTOM) }
+            placeholderFields.forEach { entries += it to FrontmatterConflictSource(it, FrontmatterConflictSection.PLACEHOLDER) }
+            val reserved = setOf("healthmd_injection_kind", "healthmd_daily_injection_v1", "healthmd_daily_injection_v2")
+            return entries.groupBy({ it.first }, { it.second }).toSortedMap().mapNotNull { (key, sources) ->
+                if (sources.size > 1 || key in reserved) FrontmatterKeyConflict(key, sources, key in reserved) else null
+            }
+        }
+
     fun outputKey(originalKey: String): String? {
         // Older saved configurations may not contain fields added in newer app versions.
         // Treat missing known fields as enabled defaults so export-contract additions migrate

@@ -359,6 +359,7 @@ private fun entryCounts(entry: ExportHistoryEntry): String =
 @Composable
 private fun destinationTypeLabel(entry: ExportHistoryEntry): String = stringResource(
     when (entry.target) {
+        ExportTarget.GOOGLE_DRIVE -> R.string.google_drive_title
         ExportTarget.API_ENDPOINT -> R.string.export_preview_api_destination
         ExportTarget.AGENT_DATA_GATEWAY -> R.string.export_preview_gateway_destination
         ExportTarget.DEVICE_FOLDER -> R.string.export_preview_device_destination

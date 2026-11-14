@@ -544,6 +544,31 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertNil(invalidRestored.exportTimeZoneOverride)
     }
 
+    func testFrontmatterCatalogMigrationPreservesSavedChoicesAndExposesEveryMappedKey() throws {
+        let payload = Data(#"{"fields":[{"originalKey":"steps","customKey":"mySteps","isEnabled":false},{"originalKey":"workout_count","customKey":"training","isEnabled":true}],"keyStyle":"camelCase"}"#.utf8)
+        let config = try JSONDecoder().decode(FrontmatterConfiguration.self, from: payload)
+        XCTAssertEqual(config.fields.first { $0.originalKey == "steps" }?.customKey, "mySteps")
+        XCTAssertFalse(config.isFieldEnabled("steps"))
+        XCTAssertEqual(config.outputKey(for: "workout_count"), "training")
+        XCTAssertEqual(config.outputKey(for: "running_speed"), "runningSpeed")
+        XCTAssertTrue(HealthMetricExportMapping.allKnownFrontmatterKeys.isSubset(of: Set(config.fields.map(\.originalKey))))
+        let before = try JSONEncoder().encode(config)
+        config.migrateMissingDefaultFields()
+        // Compare values, since JSON object member order is not part of native settings.
+        let after = try JSONEncoder().encode(config)
+        XCTAssertEqual(try JSONSerialization.jsonObject(with: before) as? NSDictionary,
+                       try JSONSerialization.jsonObject(with: after) as? NSDictionary)
+    }
+
+    func testEditorCatalogMigrationPreservesExactSharedSetupFieldLedger() throws {
+        let config = FrontmatterConfiguration()
+        config.fields = [CustomFrontmatterField(originalKey: "steps", customKey: "mySteps", isEnabled: false)]
+        config.preservesExactFieldSet = true
+        config.migrateMissingDefaultFields()
+        XCTAssertEqual(config.fields.map(\.originalKey), ["steps"])
+        XCTAssertFalse(config.isFieldEnabled("steps"))
+    }
+
     func testFrontmatterConfigurationDecode_migratesImperialDistanceFields() throws {
         let legacy = FrontmatterConfiguration()
         legacy.applyKeyStyle(.camelCase)

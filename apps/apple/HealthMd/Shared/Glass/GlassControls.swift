@@ -191,3 +191,45 @@ struct StatusBadge: View {
         }
     }
 }
+
+/// Original logo from https://developers.google.com/workspace/drive/api/guides/branding.
+struct GoogleDriveConnectionButton: View {
+    let title: LocalizedStringKey
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image("GoogleDriveLogo")
+                    .renderingMode(.original)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 24, height: 24)
+                    .accessibilityHidden(true)
+                Text(title)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, GlassMetrics.panelPadding)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, minHeight: GlassMetrics.rowMinHeight)
+        }
+        .buttonStyle(GoogleDriveConnectionButtonStyle())
+    }
+}
+
+private struct GoogleDriveConnectionButtonStyle: ButtonStyle {
+    @Environment(\.glassPalette) private var palette
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .glassFont(.body)
+            .fontWeight(.medium)
+            .foregroundStyle(palette.text)
+            .background(Capsule().fill(palette.surface2))
+            .overlay(Capsule().strokeBorder(palette.line, lineWidth: 1))
+            .contentShape(Capsule())
+            .opacity(isEnabled ? (configuration.isPressed ? 0.7 : 1) : 0.4)
+    }
+}
