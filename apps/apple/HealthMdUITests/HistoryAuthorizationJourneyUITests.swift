@@ -72,12 +72,18 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
         reveal(exportButton, in: app)
         exportButton.tap()
-        XCTAssertTrue(app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge].waitForExistence(timeout: 10))
-        // Exporting closes the settings sheet, so the result is in the glass shell, not the export scroll.
+        let status = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
+        XCTAssertTrue(status.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["View Exported File"].exists)
+        // The completion toast owns the bottom overlay until the user dismisses it;
+        // the shell then presents the retained history assessment in that space.
+        let dismissStatus = app.buttons["Dismiss export status"]
+        XCTAssertTrue(dismissStatus.waitForExistence(timeout: 5))
+        dismissStatus.tap()
+        XCTAssertTrue(status.waitForNonExistence(timeout: 5))
         let execution = app.staticTexts["export.historyWarning.execution"]
         XCTAssertTrue(execution.waitForExistence(timeout: 10))
         XCTAssertTrue(execution.label.contains("Rechecked for this export"))
-        XCTAssertTrue(app.buttons["View Exported File"].exists)
     }
 
     func testUnknownHistoryPreviewHasAccessibleActionOnNativeRoot() throws {
@@ -128,12 +134,183 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
         continueButton.tap()
         let status = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
         XCTAssertTrue(status.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["View Exported File"].exists)
+        let dismissStatus = app.buttons["Dismiss export status"]
+        XCTAssertTrue(dismissStatus.waitForExistence(timeout: 5))
+        dismissStatus.tap()
+        XCTAssertTrue(status.waitForNonExistence(timeout: 5))
         let execution = app.staticTexts["export.historyWarning.execution"]
         XCTAssertTrue(execution.waitForExistence(timeout: 10))
         XCTAssertTrue(execution.label.contains("without a completed history assessment"))
         XCTAssertFalse(execution.label.contains("Rechecked"))
         XCTAssertFalse(app.buttons["export.historyWarning.cancelCheck"].exists)
+    }
+
+    func testAllTimeCompleteDiscoveryAdmitsExportAndRetainsHistoryDisclosure() {
+        let app = discoveryApp("complete")
+        app.launch()
+        selectAllTime(in: app)
+        app.buttons[UITestLaunchHelper.Export.exportButton].tap()
+        let status = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
+        XCTAssertTrue(status.waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["View Exported File"].exists)
+        app.buttons["Dismiss export status"].tap()
+        XCTAssertTrue(status.waitForNonExistence(timeout: 5))
+        let execution = app.staticTexts["export.historyWarning.execution"]
+        XCTAssertTrue(execution.waitForExistence(timeout: 10))
+        XCTAssertTrue(execution.label.contains("Rechecked for this export"))
+    }
+
+    func testAllTimeCompleteDiscoveryRendersSyntheticPreview() {
+        let app = discoveryApp("complete", previewFixtures: true)
+        app.launch()
+        selectAllTime(in: app)
+        app.buttons[UITestLaunchHelper.Export.previewButton].tap()
+        XCTAssertTrue(app.descendants(matching: .any)[UITestLaunchHelper.ExportPreview.markdownFileRow]
+            .waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["View Exported File"].exists, "Preview must not run capture")
+    }
+
+    func testAllTimeEmptyDiscoveryCannotAdmitCapture() {
+        assertDiscoveryCannotAdmitCapture("empty", expected: "No readable historical data was found")
+    }
+
+    func testAllTimeFailedDiscoveryCannotAdmitCapture() {
+        assertDiscoveryCannotAdmitCapture("failure",
+            expected: "The earliest date could not be determined for every selected metric")
+    }
+
+    private func assertDiscoveryCannotAdmitCapture(_ scenario: String, expected: String) {
+        let app = discoveryApp(scenario)
+        app.launch()
+        defer { app.terminate() }
+        selectAllTime(in: app)
+        app.buttons[UITestLaunchHelper.Export.exportButton].tap()
+        let message = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", expected)).firstMatch
+        XCTAssertTrue(message.waitForExistence(timeout: 10), "\(scenario) must block All Time admission")
+        XCTAssertFalse(app.buttons["View Exported File"].exists)
+        XCTAssertFalse(app.buttons["export.historyWarning.continueUnverified"].exists,
+                       "Required readable-range discovery cannot be bypassed as advisory history")
+    }
+
+    func testAllTimePendingDiscoveryCanCancelButCannotContinueUnverified() {
+        let app = discoveryApp("delayed")
+        app.launch()
+        defer { app.terminate() }
+        selectAllTime(in: app)
+        app.buttons[UITestLaunchHelper.Export.exportButton].tap()
+        let cancel = app.buttons["export.historyWarning.cancelRangeCheck"]
+        XCTAssertTrue(cancel.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["export.historyWarning.continueUnverified"].exists)
+        cancel.tap()
+        XCTAssertTrue(cancel.waitForNonExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["View Exported File"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge].exists)
+    }
+
+    func testBackgroundingPendingHistoryInvalidatesAdmission() {
+        let app = UITestLaunchHelper.firstRunExportApp()
+        app.launchEnvironment["UITEST_HISTORY_ASSESSMENT"] = "pending"
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
+        app.launch()
+        defer { app.terminate() }
+        app.buttons[UITestLaunchHelper.Export.exportButton].tap()
+        let continuation = app.buttons["export.historyWarning.continueUnverified"]
+        XCTAssertTrue(continuation.waitForExistence(timeout: 10))
+        XCUIDevice.shared.press(.home)
+        app.activate()
+        XCTAssertTrue(continuation.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["glass.exportNow"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["View Exported File"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge].exists)
+    }
+
+    func testWideCustomRangeCancelDoesNotAdmitCapture() {
+        let app = UITestLaunchHelper.firstRunExportApp()
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
+        app.launch()
+        selectWideCustomRange(in: app)
+        app.buttons[UITestLaunchHelper.Export.exportButton].tap()
+        let cancel = app.buttons["export.confirmLargeExport.cancelButton"]
+        XCTAssertTrue(cancel.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["View Exported File"].exists)
+        cancel.tap()
+        XCTAssertTrue(cancel.waitForNonExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["View Exported File"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge].exists)
+    }
+
+    func testWideCustomRangeConfirmAdmitsCaptureAfterExplicitDecision() {
+        let app = UITestLaunchHelper.firstRunExportApp()
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
+        app.launch()
+        selectWideCustomRange(in: app)
+        app.buttons[UITestLaunchHelper.Export.exportButton].tap()
+        let confirm = app.buttons["export.confirmLargeExport.confirmButton"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["View Exported File"].exists)
+        confirm.tap()
+        XCTAssertTrue(app.buttons["View Exported File"].waitForExistence(timeout: 10))
+        XCTAssertFalse(confirm.exists)
+    }
+
+    private func discoveryApp(_ scenario: String, previewFixtures: Bool = false) -> XCUIApplication {
+        let app = UITestLaunchHelper.configuredApp(healthAuthorized: true, vaultSelected: true,
+            purchaseUnlocked: true, useHealthKitExportPreviewFixtures: previewFixtures)
+        app.launchEnvironment["UITEST_EARLIEST_STEP_DISCOVERY"] = scenario
+        app.launchEnvironment["UITEST_HISTORY_ASSESSMENT"] = "unknown"
+        app.launchArguments += ["-UITestOpenClassicExport", "YES"]
+        return app
+    }
+
+    private func selectAllTime(in app: XCUIApplication) {
+        let preset = app.buttons[UITestLaunchHelper.Export.datePresetAllTimeButton]
+        reveal(preset, in: app)
+        preset.tap()
+        XCTAssertTrue(preset.isSelected)
+    }
+
+    private func selectWideCustomRange(in app: XCUIApplication) {
+        let custom = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
+        reveal(custom, in: app)
+        custom.tap()
+        let start = app.descendants(matching: .any)[UITestLaunchHelper.Export.customStartDatePicker]
+        reveal(start, in: app)
+        start.tap()
+        let previousMonth = app.buttons["DatePicker.PreviousMonth"]
+        XCTAssertTrue(previousMonth.waitForExistence(timeout: 5))
+        let calendar = Calendar(identifier: .gregorian)
+        let today = Date()
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US")
+        formatter.dateFormat = "MMMM yyyy"
+        let monthHeader = app.buttons["DatePicker.Show"]
+        XCTAssertEqual(monthHeader.value as? String, formatter.string(from: today))
+        for offset in 1...4 {
+            previousMonth.tap()
+            let expectedMonth = calendar.date(byAdding: .month, value: -offset, to: today)!
+            let transitioned = XCTNSPredicateExpectation(
+                predicate: NSPredicate(format: "value == %@", formatter.string(from: expectedMonth)),
+                object: monthHeader)
+            XCTAssertEqual(XCTWaiter.wait(for: [transitioned], timeout: 5), .completed,
+                           "Each native calendar month must commit before the next navigation")
+        }
+        let targetMonth = calendar.date(byAdding: .month, value: -4, to: today)!
+        let firstDay = calendar.date(from: calendar.dateComponents([.year, .month], from: targetMonth))!
+        formatter.dateFormat = "EEEE, MMMM d"
+        let day = app.buttons[formatter.string(from: firstDay)]
+        XCTAssertTrue(day.waitForExistence(timeout: 5))
+        day.tap()
+        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: day)
+        XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 5), .completed,
+                       "The intended first day must be selected in the native calendar")
+        app.buttons["PopoverDismissRegion"].tap()
+        XCTAssertTrue(previousMonth.waitForNonExistence(timeout: 5))
+        formatter.dateFormat = "MMM d, yyyy"
+        let committedDate = start.descendants(matching: .any).matching(
+            NSPredicate(format: "value == %@", formatter.string(from: firstDay))).firstMatch
+        XCTAssertTrue(committedDate.waitForExistence(timeout: 5),
+                      "The wide-range start date must be committed before capture")
     }
 
     /// These exact assertions replace the in-process UIView traversal, which
