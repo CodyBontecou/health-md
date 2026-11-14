@@ -2,17 +2,24 @@ package com.healthmd.data.billing
 
 import com.android.billingclient.api.Purchase
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.domain.billing.ActivePurchase
 import com.healthmd.domain.repository.PurchasePlan
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Test
 
 class PlayEntitlementSnapshotTest {
-    private fun purchase(plan: PurchasePlan, state: Int = Purchase.PurchaseState.PURCHASED, acknowledged: Boolean = false) =
+    private fun purchase(
+        plan: PurchasePlan,
+        state: Int = Purchase.PurchaseState.PURCHASED,
+        acknowledged: Boolean = false,
+        autoRenewing: Boolean = true,
+    ) =
         mockk<Purchase> {
             every { products } returns listOf(plan.productId)
             every { purchaseState } returns state
             every { isAcknowledged } returns acknowledged
+            every { isAutoRenewing } returns autoRenewing
             every { purchaseToken } returns "test-token-${plan.name}"
         }
 
@@ -53,5 +60,48 @@ class PlayEntitlementSnapshotTest {
         val snapshot = playEntitlementSnapshot(listOf(purchase(PurchasePlan.WEEKLY, acknowledged = true)))
         assertThat(snapshot.hasAccess).isTrue()
         assertThat(snapshot.unacknowledgedTokens).isEmpty()
+    }
+
+    @Test fun ownedSubscriptionReportsItsPlanAndRenewalState() {
+        val renewing = playEntitlementSnapshot(listOf(purchase(PurchasePlan.WEEKLY)))
+        assertThat(renewing.activePurchase).isEqualTo(ActivePurchase(PurchasePlan.WEEKLY, isAutoRenewing = true))
+
+        val cancelled = playEntitlementSnapshot(listOf(purchase(PurchasePlan.YEARLY, autoRenewing = false)))
+        assertThat(cancelled.activePurchase).isEqualTo(ActivePurchase(PurchasePlan.YEARLY, isAutoRenewing = false))
+    }
+
+    @Test fun lifetimeIsPresentedOverACanceledSubscriptionAndNeverRenews() {
+        val snapshot = playEntitlementSnapshot(listOf(
+            purchase(PurchasePlan.WEEKLY, autoRenewing = false), purchase(PurchasePlan.LIFETIME)))
+        assertThat(snapshot.activePurchase).isEqualTo(ActivePurchase(PurchasePlan.LIFETIME, isAutoRenewing = false))
+        assertThat(snapshot.hasLifetime).isTrue()
+    }
+
+    @Test fun aStillRenewingSubscriptionIsPresentedBesideLifetimeSoItStaysManageable() {
+        val snapshot = playEntitlementSnapshot(listOf(purchase(PurchasePlan.WEEKLY), purchase(PurchasePlan.LIFETIME)))
+        assertThat(snapshot.activePurchase).isEqualTo(ActivePurchase(PurchasePlan.WEEKLY, isAutoRenewing = true))
+        assertThat(snapshot.hasLifetime).isTrue()
+    }
+
+    @Test fun pendingPurchaseIsNotPresentedAsOwned() {
+        val snapshot = playEntitlementSnapshot(listOf(purchase(PurchasePlan.YEARLY, Purchase.PurchaseState.PENDING)))
+        assertThat(snapshot.activePurchase).isNull()
+    }
+
+    @Test fun activeSubscriptionTokenIsKeptOnlyForTheOwnedSubscription() {
+        assertThat(playEntitlementSnapshot(listOf(purchase(PurchasePlan.WEEKLY))).activeSubscriptionToken)
+            .isEqualTo("test-token-WEEKLY")
+        // Lifetime wins over a canceled subscription, so no subscription token is kept.
+        assertThat(playEntitlementSnapshot(listOf(purchase(PurchasePlan.WEEKLY, autoRenewing = false),
+            purchase(PurchasePlan.LIFETIME))).activeSubscriptionToken).isNull()
+        // A still-renewing one beside Lifetime is presented, so its token is kept for the date read.
+        assertThat(playEntitlementSnapshot(listOf(purchase(PurchasePlan.WEEKLY), purchase(PurchasePlan.LIFETIME)))
+            .activeSubscriptionToken).isEqualTo("test-token-WEEKLY")
+        assertThat(playEntitlementSnapshot(emptyList()).activeSubscriptionToken).isNull()
+    }
+
+    @Test fun snapshotTextNeverContainsPurchaseTokens() {
+        val text = playEntitlementSnapshot(listOf(purchase(PurchasePlan.YEARLY))).toString()
+        assertThat(text).doesNotContain("test-token")
     }
 }

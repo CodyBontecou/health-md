@@ -544,9 +544,9 @@ fun HealthMdNavigation(
                             protectionSettingsRequestId = protectionSettingsRequestId,
                             clinicAccessAvailable = BuildConfig.CLINIC_ACCESS_ENABLED && clinicStatus.configured,
                             onNavigateToClinicAccess = { open(SubRoutes.CLINIC_ACCESS) },
-                            onNavigateToPaywall = {
+                            onNavigateToSubscription = {
                                 if (settingsViewModel.distributionPolicy.purchasesAvailable) {
-                                    navController.navigate(PaywallEntryPoint.UPGRADE.route)
+                                    navController.navigate(SubRoutes.SETTINGS_SUBSCRIPTION) { launchSingleTop = true }
                                 }
                             },
                             onNavigateToClinicianReport = { open(SubRoutes.CLINICIAN_REPORT) },
@@ -631,6 +631,23 @@ fun HealthMdNavigation(
                     title = stringResource(R.string.settings_connected_apps),
                     onBack = { navController.popBackStack() },
                 ) { ReadableWidth { ConnectedAppsScreen(viewModel = settingsViewModel) } }
+            }
+
+            if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                composable(SubRoutes.SETTINGS_SUBSCRIPTION) {
+                    SubScreenFrame(
+                        title = stringResource(R.string.m3_subscription_title),
+                        onBack = { navController.popBackStack() },
+                    ) {
+                        ReadableWidth {
+                            SubscriptionScreen(
+                                onSeePlans = {
+                                    navController.navigate(PaywallEntryPoint.UPGRADE.route) { launchSingleTop = true }
+                                },
+                            )
+                        }
+                    }
+                }
             }
 
             if (BuildConfig.MYSELF_CLAIM_ENABLED && settingsViewModel.distributionPolicy.purchasesAvailable) {
@@ -843,6 +860,7 @@ fun HealthMdNavigation(
                         val priceText by paywallViewModel.priceText.collectAsStateWithLifecycle()
                         val offers by paywallViewModel.offers.collectAsStateWithLifecycle()
                         val debugUnlockOverride by paywallViewModel.debugUnlockOverride.collectAsStateWithLifecycle()
+                        val subscriptionStatus by paywallViewModel.subscriptionStatus.collectAsStateWithLifecycle()
                         val context = LocalContext.current
 
                         // Navigate back automatically if purchase is successful
@@ -878,6 +896,8 @@ fun HealthMdNavigation(
                             onDebugResetState = { paywallViewModel.debugResetPurchaseState() },
                             purchasesAvailable = paywallViewModel.purchasesAvailable,
                             fullAccessIncluded = paywallViewModel.distributionPolicy.fullAccessIncluded,
+                            manageSubscriptionsUrl = com.healthmd.domain.billing.PlaySubscriptionLinks
+                                .forStatus(subscriptionStatus, context.packageName),
                         )
                     }
                 }
