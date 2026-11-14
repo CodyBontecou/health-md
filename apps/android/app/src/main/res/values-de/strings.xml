@@ -164,7 +164,7 @@
     <string name="section_write_mode">Schreibmodus</string>
     <string name="section_filename_template">Dateinamenvorlage</string>
     <string name="filename_template_hint">{date}</string>
-    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}</string>
+    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}, {week}, {weekYear}</string>
     <string name="section_format_options">Formatoptionen</string>
     <string name="toggle_include_frontmatter">Frontmatter einschließen</string>
     <string name="toggle_group_by_category">Nach Kategorie gruppieren</string>

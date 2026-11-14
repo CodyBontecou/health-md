@@ -315,6 +315,7 @@ struct AgentDataGatewayExportRunner {
                     vaultManager: vault,
                     settings: materializationSettings,
                     externalIntegrations: frozenExternalIntegrations,
+                    skipSuccessfulEmptyDays: false,
                     onProgress: progress
                 )
             }

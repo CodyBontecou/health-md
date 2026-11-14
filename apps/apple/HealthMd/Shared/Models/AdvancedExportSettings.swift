@@ -556,7 +556,7 @@ class AdvancedExportSettings: ObservableObject {
     var executionAppleExportEngineAuthorityIsFrozen: Bool = false
 
     /// Formats a filename using the current format template and a given date
-    /// Supported placeholders: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}
+    /// Supported placeholders: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}, {week}, {weekYear}
     func formatFilename(for date: Date) -> String {
         return applyDatePlaceholders(to: filenameFormat, for: date)
     }
@@ -578,7 +578,7 @@ class AdvancedExportSettings: ObservableObject {
 
     /// Formats the folder structure path using the current template and a given date.
     /// Returns nil if folder structure is empty (flat structure) and format folders are disabled.
-    /// Supported date placeholders: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}.
+    /// Supported date placeholders: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}, {week}, {weekYear}.
     /// When `organizeFormatsIntoFolders` is enabled and a format is supplied, the
     /// path is prefixed with Markdown/, Bases/, JSON/, or CSV/.
     func formatFolderPath(for date: Date, format: ExportFormat? = nil) -> String? {
@@ -610,7 +610,7 @@ class AdvancedExportSettings: ObservableObject {
         if let exportLocaleOverride { dateFormatter.locale = exportLocaleOverride }
         if let exportCalendarOverride { dateFormatter.calendar = exportCalendarOverride }
         dateFormatter.timeZone = exportTimeZoneOverride ?? .current
-        var result = template
+        var result = ISOWeekDateTokens.apply(to: template, for: date, timeZone: exportTimeZoneOverride ?? .current)
 
         // {date} -> yyyy-MM-dd
         dateFormatter.dateFormat = "yyyy-MM-dd"
