@@ -101,6 +101,9 @@ class MainActivity : ComponentActivity() {
             intent.getBooleanExtra(StaticPurchasePreview.EXTRA, false) ||
                 TestMode.scenario?.staticPurchasePrices == true,
         )
+        com.healthmd.presentation.settings.SubscriptionStatusPreview.configure(
+            intent.getStringExtra(com.healthmd.presentation.settings.SubscriptionStatusPreview.EXTRA),
+        )
         handledMyselfClaimIntent = savedInstanceState?.getBoolean(STATE_HANDLED_MYSELF_CLAIM) == true
         handledClinicSyncIntent = savedInstanceState?.getBoolean(STATE_HANDLED_CLINIC_SYNC) == true
         val alreadyHandledExternalIntent =

@@ -201,6 +201,8 @@ internal val GeistDarkColors = GeistColors(
 val LocalGeistColors = staticCompositionLocalOf { GeistLightColors }
 
 object GeistSpacing {
+    /** Separation between rows within a grouped settings list. */
+    val listGroupGap = 2.dp
     val space1 = 4.dp
     val space2 = 8.dp
     val space3 = 12.dp
@@ -223,6 +225,13 @@ object GeistRadii {
 }
 
 object GeistSizes {
+    /** Plan identity artwork, deliberately larger than an interactive control. */
+    val planArtwork = 56.dp
+    /** Inline button glyphs and body-aligned list glyphs. */
+    val iconSmall = 18.dp
+    val iconMedium = 20.dp
+    /** Legible stroke for compact progress indicators. */
+    val progressStroke = 2.dp
     val controlSmall = 32.dp
     val control = 40.dp
     val controlLarge = 48.dp
