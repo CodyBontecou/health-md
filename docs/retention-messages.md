@@ -89,14 +89,17 @@ Notes:
 
 - Some cancel-flow retention offers are in Early Access. Confirm enrolment and the Console eligibility type before relying on them.
 - **Plan Change is omitted.** Play shows Plan Change only when the same subscription has a lower-priced base plan. Each subscription has a single base plan, so no target exists today. Subscribers who aren't eligible for an offer go straight from Play's offer step to the cancellation survey. To enable Plan Change later, add a cheaper base plan to the same subscription at a price the owner approves. Weekly → Yearly is a different product with a higher single charge, so don't present it as a downgrade.
-- **In-app offer card (board `RF_BeforeYouGoOffer`): Weekly → Yearly switch.** The app ships the card but shows it only when Play returns this offer, so nothing appears until it is created. Create on `health_md_premium_yearly` · base plan `yearly`:
+- **In-app offer card (board `RF_BeforeYouGoOffer`): Weekly → Yearly switch.** The app shows the card only when Play returns this offer. Created and activated in Play Console on November 14, 2026, on `health_md_premium_yearly` · base plan `yearly`:
 
   | Field | Value |
   |---|---|
   | Offer ID | `switch-yearly-1y` |
-  | Eligibility | Developer determined |
+  | Status | Active |
+  | Eligibility | Developer-determined (in-app) |
   | Tags | `retention-in-app` |
-  | Phases | 1 × P1Y single payment (finite, 1 cycle) at [YOUR PRICE], below the Yearly base price, then the base plan |
+  | Phases | 1 year single payment at 33.33% off the base plan in every region (US $19.99 vs $29.99), then the base plan |
+
+  The price is a percentage discount, not a fixed amount. About 30 regions price Yearly below a straight currency conversion, so a fixed $19.99 converted to local currencies would have cost more than Yearly there. The percentage keeps every region a third below its own Yearly price. Some currencies get unrounded amounts (for example INR 666.03); round them per region in Console if needed. A developer-determined offer can't be bought outside the app, so only builds with this card can show it.
 
   The app hides the card unless the offer has exactly that shape in one currency (`selectYearlySwitchOffer`), and shows it only to an active, renewing Weekly subscriber. Prices come from `ProductDetails`. Taking it replaces Weekly with `WITH_TIME_PRORATION`: it starts now and Play credits the unused Weekly time. The card's button is outlined and smaller than the two sheet actions, so Continue to cancel stays one tap away and equally prominent. The paywall never shows this offer. A discount on the *same* plan (e.g. `inapp-keep-1y` for Yearly subscribers) still isn't possible in-app: Billing can't re-buy an owned product. That needs Google's in-app subscription management API (boards `RF_FutureSheet`, `RF_FutureApplied`), still "Coming soon".
 
@@ -106,5 +109,6 @@ Notes:
 - Eligibility durations shown as `[e.g. …]`.
 - Translations for every shipped locale (both stores).
 - Android subscriptions are active on Internal Testing. Production release with subscriptions is still pending.
-- Deploy the myself.md endpoint (branch `feat/healthmd-play-subscription-status`) and confirm the service account can read `com.healthmd.android` subscriptions; until then Android shows no dates.
-- Create `switch-yearly-1y` (above); until then Android shows no offer card.
+- Qualify the Weekly purchase → Yearly switch → cancel → lapse path with a license-test account that doesn't own Lifetime. Not run: both license-test accounts on the QA Pixel own Lifetime, which correctly hides the offer.
+
+The myself.md subscription-status endpoint was deployed to production on November 14, 2026 (myself.md PR #5). It rejects an unknown purchase token with 403 rather than 503, which shows the service account authenticates with Google. A real subscription token hasn't been checked against it yet.
