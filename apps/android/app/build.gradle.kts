@@ -69,6 +69,8 @@ android {
 
         // Explicit opt-in; absent or malformed values keep claim entry points disabled.
         buildConfigField("boolean", "MYSELF_CLAIM_ENABLED", "false")
+        // Launch-scoped UI test mode (com.healthmd.testing.TestMode); only the isolated e2e app honors it.
+        buildConfigField("boolean", "TEST_MODE_AVAILABLE", "false")
         // Clinic access stays hidden until it launches; existing sponsorships keep working.
         buildConfigField("boolean", "CLINIC_ACCESS_ENABLED", "false")
         // Trust is baked into the app build, never supplied by a clinic invitation.
@@ -173,6 +175,7 @@ android {
             initWith(getByName("debug"))
             applicationIdSuffix = ".e2e"
             versionNameSuffix = "-e2e"
+            buildConfigField("boolean", "TEST_MODE_AVAILABLE", "true")
             matchingFallbacks += listOf("debug")
         }
     }
