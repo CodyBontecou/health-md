@@ -63,6 +63,9 @@ class PaywallViewModel @Inject constructor(
         .map { it?.localizedPriceText }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    /** The owned or just-ended plan, so Manage subscriptions opens that plan's Play page. */
+    val subscriptionStatus: StateFlow<com.healthmd.domain.billing.SubscriptionStatus> = purchaseRepository.subscriptionStatus
+
     val offers: StateFlow<List<PurchaseOffer>> =
         if (StaticPurchasePreview.enabled) MutableStateFlow(StaticPurchasePreview.offers).asStateFlow()
         else purchaseRepository.offers

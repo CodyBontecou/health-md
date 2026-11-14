@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings › Subscription. Dates appear only after myself.md has read them from Google Play; until then the row names Google Play. -->
+    <string name="m3_subscription_title">Abonament</string>
+    <string name="m3_subscription_plan_weekly">Health.md Săptămânal</string>
+    <string name="m3_subscription_plan_yearly">Health.md Anual</string>
+    <string name="m3_subscription_plan_lifetime">Health.md Pe viață</string>
+    <string name="m3_subscription_plan_full_access">Health.md cu acces complet</string>
+    <string name="m3_subscription_plan_free">Plan gratuit</string>
+    <string name="m3_subscription_status_renews">Activ · se reînnoiește automat</string>
+    <string name="m3_subscription_status_cancelled">Anulat · accesul continuă până la sfârșitul perioadei plătite</string>
+    <string name="m3_subscription_status_lifetime">Pe viață · nimic de reînnoit</string>
+    <string name="m3_subscription_status_included">Inclus pentru instalarea timpurie · nimic de reînnoit</string>
+    <string name="m3_subscription_status_free">Primul export este gratuit. Planurile adaugă exporturi nelimitate și automatizări.</string>
+    <string name="m3_subscription_status_checking">Se verifică Google Play…</string>
+    <string name="m3_subscription_row_plan">Plan</string>
+    <string name="m3_subscription_value_weekly">Săptămânal</string>
+    <string name="m3_subscription_value_yearly">Anual</string>
+    <string name="m3_subscription_value_lifetime">Pe viață · achiziție unică</string>
+    <string name="m3_subscription_row_billing_date">Următoarea dată de facturare</string>
+    <string name="m3_subscription_value_billing_date">Afișată în Google Play</string>
+    <string name="m3_subscription_row_access_until">Acces până la</string>
+    <string name="m3_subscription_row_billed_by">Facturat de</string>
+    <string name="m3_subscription_value_google_play">Google Play</string>
+    <string name="m3_subscription_row_includes">Include</string>
+    <string name="m3_subscription_value_includes">Exporturi nelimitate, note zilnice programate, automatizări, rapoarte clinice și exporturi healthmd CLI</string>
+    <string name="m3_subscription_manage_or_cancel">Gestionați sau anulați</string>
+    <string name="m3_subscription_manage_in_play">Gestionați în Google Play</string>
+    <string name="m3_subscription_cancel_note">Puteți anula oricând în Google Play. Păstrați accesul până la sfârșitul perioadei pentru care ați plătit.</string>
+    <string name="m3_subscription_cancelled_note">Abonamentul nu se va reînnoi. Vă puteți reabona sau îl puteți modifica în Google Play.</string>
+    <string name="m3_subscription_see_plans">Vedeți planurile</string>
+
+    <!-- "Before you go": factual only. Both actions are the same size. -->
+    <string name="m3_subscription_sheet_title">Înainte să anulați</string>
+    <string name="m3_subscription_sheet_body">Anularea se face în Google Play. Păstrați accesul până la sfârșitul perioadei pentru care ați plătit, iar Google Play afișează această dată.</string>
+    <!-- %1$s: the verified end of the paid period, e.g. "December 1, 2026". -->
+    <string name="m3_subscription_sheet_body_dated">Anularea se face în Google Play. Păstrați accesul până la %1$s.</string>
+    <string name="m3_subscription_stops_heading">Ce se oprește când abonamentul se încheie</string>
+    <string name="m3_subscription_stops_exports">Exporturile nelimitate, inclusiv exporturile healthmd CLI</string>
+    <string name="m3_subscription_stops_automations">Notele zilnice programate și automatizările</string>
+    <string name="m3_subscription_stops_reports">Rapoartele clinice</string>
+    <string name="m3_subscription_keep_heading">Ce păstrați</string>
+    <string name="m3_subscription_keep_files">Fiecare notă exportată. Sunt fișiere Markdown, CSV sau JSON simple în dosarul ales și rămân acolo.</string>
+    <string name="m3_subscription_keep_setup">Configurarea. Valorile, formatele, destinațiile și automatizările rămân salvate, iar programările rulează din nou dacă vă reabonați.</string>
+    <string name="m3_subscription_continue_to_cancel">Continuați anularea</string>
+    <string name="m3_subscription_keep_subscription">Păstrați abonamentul</string>
+    <!-- Weekly -> Yearly offer card (Play offer switch-yearly-1y). Prices come from Google Play. -->
+    <string name="m3_subscription_offer_eyebrow">Ofertă pentru abonamentul săptămânal</string>
+    <!-- %1$s: first-year offer price from Google Play, e.g. "$19.99". -->
+    <string name="m3_subscription_offer_title">Anual la %1$s în primul an</string>
+    <!-- %1$s: the regular Yearly price from Google Play, e.g. "$29.99". -->
+    <string name="m3_subscription_offer_detail">Apoi %1$s pe an. Începe acum, iar Google Play vă creditează partea nefolosită din săptămână.</string>
+    <string name="m3_subscription_offer_action">Treceți la Anual</string>
+    <string name="m3_subscription_sheet_footnote">Continuați anularea deschide Google Play › Abonamente pentru Health.md.</string>
+
+    <!-- After a lapse: what still works and what is paused, without nagging. -->
+    <string name="m3_subscription_ended_title">Abonament încheiat</string>
+    <string name="m3_subscription_ended_subtitle">%1$s nu mai este activ</string>
+    <string name="m3_subscription_still_works">Funcționează în continuare</string>
+    <string name="m3_subscription_works_files_title">Fișierele exportate</string>
+    <string name="m3_subscription_works_files_body">Fișiere Markdown, CSV sau JSON simple în dosarul ales. Le puteți deschide în orice aplicație.</string>
+    <string name="m3_subscription_works_setup_title">Configurarea este salvată</string>
+    <string name="m3_subscription_works_setup_body">Valorile, formatele, destinațiile și automatizările rămân așa cum le-ați lăsat.</string>
+    <string name="m3_subscription_works_health_connect_title">Accesul la Health Connect</string>
+    <string name="m3_subscription_works_health_connect_body">Permisiunile acordate rămân neschimbate. Le puteți modifica în Health Connect.</string>
+    <string name="m3_subscription_paused_heading">Întrerupte până vă reabonați</string>
+    <string name="m3_subscription_paused_body">Exporturi nelimitate · note zilnice programate și automatizări · rapoarte clinice · exporturi healthmd CLI</string>
+    <string name="m3_subscription_paused_schedule_note">Programările rămân active, așa că fiecare rulare programată este înregistrată ca necesitând acces. Dezactivați-le în Automatizări dacă nu doriți să vedeți aceste notificări.</string>
+    <string name="m3_subscription_play_subscriptions">Abonamente Google Play</string>
+</resources>

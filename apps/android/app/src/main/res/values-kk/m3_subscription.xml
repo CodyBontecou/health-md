@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings › Subscription. Dates appear only after myself.md has read them from Google Play; until then the row names Google Play. -->
+    <string name="m3_subscription_title">Жазылым</string>
+    <string name="m3_subscription_plan_weekly">Health.md апталық</string>
+    <string name="m3_subscription_plan_yearly">Health.md жылдық</string>
+    <string name="m3_subscription_plan_lifetime">Health.md өмір бойы</string>
+    <string name="m3_subscription_plan_full_access">Health.md толық қолжетімділігі</string>
+    <string name="m3_subscription_plan_free">Тегін жоспар</string>
+    <string name="m3_subscription_status_renews">Белсенді · автоматты түрде жаңартылады</string>
+    <string name="m3_subscription_status_cancelled">Тоқтатылды · қолжетімділік төленген кезең аяқталғанша сақталады</string>
+    <string name="m3_subscription_status_lifetime">Өмір бойы · жаңартатын ештеңе жоқ</string>
+    <string name="m3_subscription_status_included">Ерте орнатуыңызбен бірге берілген · жаңартатын ештеңе жоқ</string>
+    <string name="m3_subscription_status_free">Алғашқы экспортыңыз тегін. Жоспарлар шексіз экспорт пен автоматтандыруларды қосады.</string>
+    <string name="m3_subscription_status_checking">Google Play тексерілуде…</string>
+    <string name="m3_subscription_row_plan">Жоспар</string>
+    <string name="m3_subscription_value_weekly">Апталық</string>
+    <string name="m3_subscription_value_yearly">Жылдық</string>
+    <string name="m3_subscription_value_lifetime">Өмір бойы · бір реттік сатып алу</string>
+    <string name="m3_subscription_row_billing_date">Келесі төлем күні</string>
+    <string name="m3_subscription_value_billing_date">Google Play-де көрсетіледі</string>
+    <string name="m3_subscription_row_access_until">Қолжетімділік аяқталатын күн</string>
+    <string name="m3_subscription_row_billed_by">Төлем алушы</string>
+    <string name="m3_subscription_value_google_play">Google Play</string>
+    <string name="m3_subscription_row_includes">Құрамында</string>
+    <string name="m3_subscription_value_includes">Шексіз экспорт, жоспарланған күнделікті жазбалар, автоматтандырулар, дәрігерге арналған есептер және healthmd CLI экспорттары</string>
+    <string name="m3_subscription_manage_or_cancel">Басқару не бас тарту</string>
+    <string name="m3_subscription_manage_in_play">Google Play-де басқару</string>
+    <string name="m3_subscription_cancel_note">Google Play-де кез келген уақытта бас тартуға болады. Қолжетімділік төлеген кезеңіңіздің соңына дейін сақталады.</string>
+    <string name="m3_subscription_cancelled_note">Жазылымыңыз жаңартылмайды. Google Play-де қайта жазылуға немесе оны өзгертуге болады.</string>
+    <string name="m3_subscription_see_plans">Жоспарларды көру</string>
+
+    <!-- "Before you go": factual only. Both actions are the same size. -->
+    <string name="m3_subscription_sheet_title">Кетпес бұрын</string>
+    <string name="m3_subscription_sheet_body">Бас тарту Google Play-де жасалады. Қолжетімділік төлеген кезеңіңіздің соңына дейін сақталады, ал ол күнді Google Play көрсетеді.</string>
+    <!-- %1$s: the verified end of the paid period, e.g. "December 1, 2026". -->
+    <string name="m3_subscription_sheet_body_dated">Бас тарту Google Play-де жасалады. Қолжетімділік %1$s күніне дейін сақталады.</string>
+    <string name="m3_subscription_stops_heading">Жазылым аяқталғанда не тоқтайды</string>
+    <string name="m3_subscription_stops_exports">Шексіз экспорт, healthmd CLI экспорттарын қоса</string>
+    <string name="m3_subscription_stops_automations">Жоспарланған күнделікті жазбалар мен автоматтандырулар</string>
+    <string name="m3_subscription_stops_reports">Дәрігерге арналған есептер</string>
+    <string name="m3_subscription_keep_heading">Сізде не қалады</string>
+    <string name="m3_subscription_keep_files">Экспорттаған әр жазбаңыз. Олар таңдаған қалтаңыздағы қарапайым Markdown, CSV немесе JSON файлдары және сол жерде қалады.</string>
+    <string name="m3_subscription_keep_setup">Баптауларыңыз. Көрсеткіштер, пішімдер, мақсаттар мен автоматтандырулар сақталады, ал қайта жазылсаңыз, кестелер қайта іске қосылады.</string>
+    <string name="m3_subscription_continue_to_cancel">Бас тартуды жалғастыру</string>
+    <string name="m3_subscription_keep_subscription">Жазылымды сақтау</string>
+    <!-- Weekly -> Yearly offer card (Play offer switch-yearly-1y). Prices come from Google Play. -->
+    <string name="m3_subscription_offer_eyebrow">Апталық жазылушыларға ұсыныс</string>
+    <!-- %1$s: first-year offer price from Google Play, e.g. "$19.99". -->
+    <string name="m3_subscription_offer_title">Жылдық — алғашқы жылы %1$s</string>
+    <!-- %1$s: the regular Yearly price from Google Play, e.g. "$29.99". -->
+    <string name="m3_subscription_offer_detail">Кейін жылына %1$s. Ол қазір басталады, ал Google Play аптаңыздың пайдаланылмаған бөлігін есепке алады.</string>
+    <string name="m3_subscription_offer_action">Жылдық жоспарға ауысу</string>
+    <string name="m3_subscription_sheet_footnote">«Бас тартуды жалғастыру» Health.md үшін Google Play › Жазылымдар бөлімін ашады.</string>
+
+    <!-- After a lapse: what still works and what is paused, without nagging. -->
+    <string name="m3_subscription_ended_title">Жазылым аяқталды</string>
+    <string name="m3_subscription_ended_subtitle">%1$s енді белсенді емес</string>
+    <string name="m3_subscription_still_works">Әлі де жұмыс істейді</string>
+    <string name="m3_subscription_works_files_title">Экспортталған файлдарыңыз</string>
+    <string name="m3_subscription_works_files_body">Таңдаған қалтаңыздағы қарапайым Markdown, CSV немесе JSON. Оларды кез келген қолданбада ашыңыз.</string>
+    <string name="m3_subscription_works_setup_title">Баптауларыңыз сақталған</string>
+    <string name="m3_subscription_works_setup_body">Көрсеткіштер, пішімдер, мақсаттар мен автоматтандырулар сіз қалдырған күйінде қалады.</string>
+    <string name="m3_subscription_works_health_connect_title">Health Connect қолжетімділігі</string>
+    <string name="m3_subscription_works_health_connect_body">Берген рұқсаттарыңыз сол күйінде қалады. Оларды Health Connect-те өзгертіңіз.</string>
+    <string name="m3_subscription_paused_heading">Қайта жазылғанша кідіртілді</string>
+    <string name="m3_subscription_paused_body">Шексіз экспорт · жоспарланған күнделікті жазбалар мен автоматтандырулар · дәрігерге арналған есептер · healthmd CLI экспорттары</string>
+    <string name="m3_subscription_paused_schedule_note">Кестелер қосулы қалады, сондықтан әр жоспарланған іске қосу қолжетімділік қажет деп журналға жазылады. Бұл хабарландыруларды көргіңіз келмесе, оларды Автоматтандырулар бөлімінде өшіріңіз.</string>
+    <string name="m3_subscription_play_subscriptions">Google Play жазылымдары</string>
+</resources>
