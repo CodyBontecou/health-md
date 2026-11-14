@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+#[cfg(test)]
+mod direct_denial_test_support;
 mod guidance;
 mod output;
 
@@ -3493,6 +3495,34 @@ mod tests {
             options.oauth_issuer.unwrap().as_str(),
             "https://auth.health.md/"
         );
+    }
+
+    #[tokio::test]
+    async fn encrypted_android_denial_reaches_cli_without_receipt_corruption() {
+        for malformed in [false, true] {
+            for (map, integrity_code) in [
+                (
+                    map_direct_file_error as fn(ClientError) -> CommandError,
+                    "invalid_direct_file_receipt",
+                ),
+                (map_direct_client_error, "invalid_direct_response"),
+            ] {
+                let (error, _) =
+                    crate::direct_denial_test_support::encrypted_denial(malformed).await;
+                let mapped = map(error);
+                if malformed {
+                    assert_eq!(mapped.code, integrity_code);
+                } else {
+                    assert_eq!(mapped.code, "direct_export_rejected");
+                    assert!(mapped.message.contains("quota_exhausted"));
+                    assert!(mapped.message.contains("preparing"));
+                    assert!(mapped.message.contains("retryable: false"));
+                    assert!(mapped.message.contains("billing"));
+                    assert!(!mapped.message.contains("integrity"));
+                }
+                assert!(!mapped.message.contains("synthetic-private"));
+            }
+        }
     }
 
     #[test]

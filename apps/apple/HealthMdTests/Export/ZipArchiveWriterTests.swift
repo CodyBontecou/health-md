@@ -1158,8 +1158,8 @@ struct MorningDailyNoteTests {
         snapshot.detailPolicy = .lossless
         snapshot.formatCustomization.frontmatterConfig.keyStyle = .camelCase
         snapshot.formatCustomization.frontmatterConfig.customFields = ["Daily steps": "incorrect custom value"]
-        // This custom field is disabled in full-note frontmatter. Injection is
-        // governed by metric selection and must still honor its accepted alias.
+        // Disabled fields must not leak into the note even when their source
+        // metric is selected and the private scoped capture still contains it.
         if let index = snapshot.formatCustomization.frontmatterConfig.fields.firstIndex(where: { $0.originalKey == "steps" }) {
             snapshot.formatCustomization.frontmatterConfig.fields[index].customKey = "Daily steps"
             snapshot.formatCustomization.frontmatterConfig.fields[index].isEnabled = false
@@ -1183,7 +1183,7 @@ struct MorningDailyNoteTests {
         #expect(note.contains("sleep_deep_hours: 9 # historical field\n"))
         #expect(note.contains("# Personal title\nKeep my introduction."))
         #expect(note.contains("## Thoughts\nMy own section."))
-        #expect(note.contains("Daily steps: 42"))
+        #expect(!note.contains("Daily steps:"))
         #expect(!note.contains("schema_profile: apple-v11"))
         let properties = try #require(MarkdownMerger.frontmatterProperties(named: ["healthmd_daily_injection_v1"], in: note))
         #expect(properties.count == 1)

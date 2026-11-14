@@ -6,7 +6,9 @@ final class OnboardingJourneyUITests: XCTestCase {
         continueAfterFailure = false
     }
 
-    func testReadyCTACompletesOnboardingAndOpensAutomationCreator() throws {
+    /// Onboarding v2: Welcome → Packs → Apple Health → Folder → First note →
+    /// Make it daily, landing on the configured "Daily note" automation.
+    func testPackFlowReachesFirstNoteAndLandsOnDailyNoteAutomation() throws {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,
             showOnboarding: true,
@@ -17,30 +19,39 @@ final class OnboardingJourneyUITests: XCTestCase {
         )
         app.launch()
 
+        tapButton("Get started", in: app)
+
+        // Sleep, Activity and Heart are preselected; Cycle Tracking stays opt-in.
+        XCTAssertTrue(app.buttons["onboarding.pack.sleep"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["onboarding.pack.sleep"].isSelected)
+        XCTAssertFalse(app.buttons["onboarding.pack.cycle"].isSelected)
         tapButton("Connect Apple Health", in: app)
 
-        // Health access, then the archive folder (OnboardingG phase 2).
-        tapButton("Continue Setup", in: app)
+        // Already authorized in this fixture, so the step offers Continue.
+        tapButton("Continue", in: app)
 
-        // Keep folder setup optional and verify the explicit skip path remains usable.
-        tapButton("Skip for Now", in: app)
+        // Skipping the folder keeps the free export unused.
+        tapButton("Skip for now", in: app)
 
-        // Sample export preview (phase 3, with the folded-in plugin promo), then ready.
-        tapButton("Continue Setup", in: app)
-        tapButton("Create My First Automation", in: app)
+        XCTAssertTrue(app.buttons["onboarding.firstNote.rawToggle"].waitForExistence(timeout: 15))
+        app.buttons["onboarding.firstNote.rawToggle"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["onboarding.firstNote.raw"].waitForExistence(timeout: 5))
+        tapButton("Finish setup", in: app)
 
-        let create = app.buttons["export.profiles.editor.confirm"]
-        XCTAssertTrue(create.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Make it daily?"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts[UITestLaunchHelper.Paywall.title].exists)
-        create.tap()
-        XCTAssertTrue(app.buttons["glass.composer.runNow"].waitForExistence(timeout: 10))
+        tapButton("Not now, I'll export manually", in: app)
+
+        // The existing Default automation is configured, not a second one.
+        XCTAssertTrue(app.staticTexts["Daily note"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["glass.automation.tryFree"].exists)
         XCTAssertFalse(app.staticTexts["whatsNew.title"].exists)
     }
 
     func testUnpaidUserReachesSetupWithoutAPaywall() throws {
         let app = UITestLaunchHelper.configuredApp(showOnboarding: true)
         app.launch()
-        XCTAssertTrue(app.buttons["Connect Apple Health"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Get started"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.staticTexts[UITestLaunchHelper.Paywall.title].exists)
     }
 
@@ -52,7 +63,7 @@ final class OnboardingJourneyUITests: XCTestCase {
         )
         app.launch()
 
-        XCTAssertTrue(app.buttons["Connect Apple Health"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["Get started"].waitForExistence(timeout: 8))
         XCTAssertFalse(
             app.descendants(matching: .any)[UITestLaunchHelper.SharedSetup.use].exists,
             "OnboardingG's welcome has no shared-setup link; import stays in Settings."
@@ -120,7 +131,7 @@ final class OnboardingJourneyUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["whatsNew.title"].waitForNonExistence(timeout: 5))
     }
 
-    func testSetupActionsArePrimaryAndReadyOffersRepairs() throws {
+    func testHealthAndFolderStepsCanBeSkippedAndRepairedLater() throws {
         let app = UITestLaunchHelper.configuredApp(
             showOnboarding: true,
             purchaseUnlocked: true,
@@ -128,29 +139,22 @@ final class OnboardingJourneyUITests: XCTestCase {
         )
         app.launch()
 
+        tapButton("Get started", in: app)
         tapButton("Connect Apple Health", in: app)
-        XCTAssertTrue(app.buttons["Connect Apple Health"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Skip for Now"].exists)
-        tapButton("Skip for Now", in: app)
 
-        // Paid-access setup keeps health and folder permissions repairable;
-        // the root access gate has already been satisfied by this fixture.
-        XCTAssertTrue(app.buttons["Select Export Folder"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Skip for Now"].exists)
-        tapButton("Skip for Now", in: app)
+        XCTAssertTrue(app.buttons["Continue to Apple Health"].waitForExistence(timeout: 5))
+        tapButton("Skip for now", in: app)
 
-        // The sample-export preview follows the folder step.
-        tapButton("Continue Setup", in: app)
+        XCTAssertTrue(app.buttons["Choose a folder"].waitForExistence(timeout: 5))
+        tapButton("Skip for now", in: app)
 
-        XCTAssertTrue(app.buttons["Connect"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Choose Folder"].exists)
-        XCTAssertTrue(app.buttons["Create My First Export"].exists)
+        // Without Health access the first note is an explicitly labelled sample.
+        XCTAssertTrue(app.descendants(matching: .any)["onboarding.firstNote.sampleNotice"].waitForExistence(timeout: 10))
+        tapButton("Finish setup", in: app)
 
-        tapButton("Create My First Automation", in: app)
-        // Geist dialogs are in-tree SwiftUI overlays rather than native UIAlert instances.
-        let setupPromptTitle = app.staticTexts["Finish Preview Setup"]
-        XCTAssertTrue(setupPromptTitle.waitForExistence(timeout: 8))
-        XCTAssertTrue(app.buttons["Connect Apple Health"].waitForExistence(timeout: 3))
+        // Paid access: the schedule can be turned on directly, no trial copy.
+        XCTAssertTrue(app.buttons["Turn on daily notes"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Start 7-day free trial"].exists)
     }
 
     private func openSharedSetupSettings(

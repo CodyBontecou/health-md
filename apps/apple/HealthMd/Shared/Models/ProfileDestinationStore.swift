@@ -322,6 +322,37 @@ final class ProfileDestinationStore: ObservableObject {
         return endpoint
     }
 
+    /// Edits one saved endpoint in place. Profiles bind endpoints by id, so the
+    /// change applies to every automation that uses it. `bearerToken` nil keeps
+    /// the stored token; an empty string removes it. Returns false when the id
+    /// is unknown or the URL already belongs to a different saved endpoint.
+    @discardableResult
+    func updateAPIEndpoint(
+        id: UUID,
+        name: String,
+        endpointURLString: String,
+        bearerToken: String?
+    ) -> Bool {
+        let trimmedURL = endpointURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedURL.isEmpty,
+              let index = apiEndpoints.firstIndex(where: { $0.id == id }) else { return false }
+        let collides = apiEndpoints.contains {
+            $0.id != id && $0.endpointURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+                .caseInsensitiveCompare(trimmedURL) == .orderedSame
+        }
+        guard !collides else { return false }
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        var updated = apiEndpoints[index]
+        updated.name = trimmedName.isEmpty ? updated.name : trimmedName
+        updated.endpointURLString = trimmedURL
+        if updated != apiEndpoints[index] {
+            apiEndpoints[index] = updated
+            persistAPIEndpoints()
+        }
+        if let bearerToken { setToken(bearerToken, for: id) }
+        return true
+    }
+
     func token(for endpointID: UUID) -> String? {
         keychain.readString(key: Self.apiTokenKey(for: endpointID))
     }

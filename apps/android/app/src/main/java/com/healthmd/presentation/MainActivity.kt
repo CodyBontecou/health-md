@@ -22,6 +22,7 @@ import com.healthmd.data.scheduler.ExportScheduler
 import com.healthmd.data.scheduler.ScheduledProfileScheduler
 import com.healthmd.data.settings.ExportProfileCoordinator
 import com.healthmd.distribution.DistributionRuntime
+import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.common.ProvideAppFolderName
 import com.healthmd.presentation.common.ProvideHostNavigationBarInset
@@ -30,10 +31,13 @@ import com.healthmd.presentation.navigation.HealthMdNavigation
 import com.healthmd.sharedsetup.SharedSetupCoordinator
 import com.healthmd.sharedsetup.SharedSetupIntentExtractor
 import com.healthmd.sharedsetup.SharedSetupIntentRestoreAction
+import com.healthmd.testing.TestMode
+import com.healthmd.testing.TestModeSeeder
 import com.healthmd.widget.refresh.HealthWidgetLifecycleCoordinator
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -42,6 +46,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val EXTRA_START_ROUTE = "com.healthmd.START_ROUTE"
         const val EXTRA_PROMPT_SCHEDULED_RECOVERY = "com.healthmd.PROMPT_SCHEDULED_RECOVERY"
+        const val EXTRA_GOOGLE_DRIVE_OPERATION_ID = "com.healthmd.GOOGLE_DRIVE_OPERATION_ID"
         /** Wake id of a tapped clinic sync request notification. */
         const val EXTRA_CLINIC_SYNC_WAKE_ID = "com.healthmd.CLINIC_SYNC_WAKE_ID"
         private const val STATE_HANDLED_MYSELF_CLAIM = "myselfClaim.handledIntent"
@@ -58,10 +63,16 @@ class MainActivity : ComponentActivity() {
     private var startRoute by mutableStateOf<String?>(null)
     private var cloudRepairLinkNotice by mutableStateOf(false)
     private var scheduledRecoveryPromptRequestId by mutableStateOf(0L)
+    internal var googleDriveOperationId by mutableStateOf<String?>(null)
+        private set
     private var handledExternalIntent = false
 
     @Inject
     lateinit var settingsRepository: SettingsRepository
+
+    // Lazy: only a UI test launch (e2e build) resolves it here; production startup is unchanged.
+    @Inject
+    lateinit var entitlementRepository: dagger.Lazy<EntitlementRepository>
 
     @Inject
     lateinit var exportScheduler: ExportScheduler
@@ -86,7 +97,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        StaticPurchasePreview.configure(intent.getBooleanExtra(StaticPurchasePreview.EXTRA, false))
+        TestMode.configure(intent.extras)?.let { scenario ->
+            // Seed before navigation resolves its start route; only the isolated e2e app gets here.
+            runBlocking { TestModeSeeder.seed(scenario, settingsRepository, entitlementRepository.get()) }
+        }
+        StaticPurchasePreview.configure(
+            intent.getBooleanExtra(StaticPurchasePreview.EXTRA, false) ||
+                TestMode.scenario?.staticPurchasePrices == true,
+        )
         handledMyselfClaimIntent = savedInstanceState?.getBoolean(STATE_HANDLED_MYSELF_CLAIM) == true
         handledClinicSyncIntent = savedInstanceState?.getBoolean(STATE_HANDLED_CLINIC_SYNC) == true
         val alreadyHandledExternalIntent =
@@ -167,6 +185,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // A UI test launch must not arm alarms, refresh widgets, or reconcile distribution state.
+        if (TestMode.isActive) return
         lifecycleScope.launch {
             runCatching { exportScheduler.reconcile() }
             runCatching { scheduledProfileScheduler.reconcile() }
@@ -228,8 +248,15 @@ class MainActivity : ComponentActivity() {
             }
         }
         startRoute = intent?.getStringExtra(EXTRA_START_ROUTE)
+        intent?.getStringExtra(EXTRA_GOOGLE_DRIVE_OPERATION_ID)
+            ?.takeIf { it.matches(Regex("[A-Za-z0-9._-]{1,128}")) }
+            ?.let { googleDriveOperationId = it }
         if (intent?.getBooleanExtra(EXTRA_PROMPT_SCHEDULED_RECOVERY, false) == true) {
             scheduledRecoveryPromptRequestId = System.currentTimeMillis()
         }
+    }
+
+    internal fun consumeGoogleDriveOperationId(operationId: String) {
+        if (googleDriveOperationId == operationId) googleDriveOperationId = null
     }
 }

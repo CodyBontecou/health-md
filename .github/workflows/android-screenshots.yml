@@ -1,0 +1,106 @@
+name: Android Update store screenshots
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Published immutable Android release tag whose reviewed assets will be uploaded'
+        required: true
+        type: string
+      version_code:
+        description: 'Exact currently published phone versionCode'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-google-play-mutation
+  cancel-in-progress: false
+
+jobs:
+  screenshots:
+    name: Update reviewed phone and tablet screenshots
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: google-play
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: apps/android
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      VERSION_CODE: ${{ inputs.version_code }}
+    steps:
+      - name: Checkout immutable workflow source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Bind reviewed assets to published release and main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_TYPE" = tag
+          [[ "$GITHUB_REF_NAME" == android/recovery/* || "$GITHUB_REF_NAME" == android/v* ]]
+          [[ "$RELEASE_TAG" =~ ^android/v[0-9]+\.[0-9]+\.[0-9]+(\+[0-9]+)?$ ]]
+          [[ "$VERSION_CODE" =~ ^[1-9][0-9]*$ ]]
+          # Checkout can fetch the event SHA over the annotated tag ref. Restore
+          # the server's tag objects before checking their type and peeled SHA.
+          git fetch --force --no-tags origin \
+            "+refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}" \
+            "+refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
+          test "$(git cat-file -t "$GITHUB_REF_NAME")" = tag
+          test "$(git rev-parse "$GITHUB_REF_NAME^{commit}")" = "$GITHUB_SHA"
+          test "$(git cat-file -t "$RELEASE_TAG")" = tag
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          git merge-base --is-ancestor "$RELEASE_TAG^{commit}" origin/main
+          scope=$(git show "$RELEASE_TAG:apps/android/release-scope.json")
+          version=$(printf '%s' "$scope" | jq -er .releaseVersionName)
+          printf '%s' "$scope" | jq -e --argjson code "$VERSION_CODE" '.googlePlay.phone.versionCode == $code'
+          python3 scripts/validate-phone-release-tag.py "$RELEASE_TAG" "$version" "$VERSION_CODE"
+          # The recovery tag may change workflow infrastructure, never release assets.
+          git diff --exit-code "$RELEASE_TAG^{commit}" "$GITHUB_SHA" -- \
+            play-console/screenshots play-console/locales.json play-store-screenshots/locales
+          python3 -m unittest scripts/tests/test_sync_google_play_screenshots.py
+          python3 scripts/sync-google-play-screenshots.py \
+            --version-code "$VERSION_CODE" --intent "$RUNNER_TEMP/screenshot-intent.json"
+
+      - name: Retain exact screenshot intent before authentication
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: android-screenshot-intent-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/screenshot-intent.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Authenticate using protected Workload Identity
+        id: play-auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GOOGLE_PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+          create_credentials_file: false
+
+      - name: Replace screenshots and verify committed hashes and order
+        env:
+          ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
+        run: |
+          python3 scripts/sync-google-play-screenshots.py --apply \
+            --version-code "$VERSION_CODE" --intent "$RUNNER_TEMP/screenshot-intent.json" \
+            --evidence "$RUNNER_TEMP/screenshot-evidence"
+
+      - name: Retain submission evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: android-screenshot-result-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/screenshot-evidence
+          if-no-files-found: warn
+          retention-days: 90

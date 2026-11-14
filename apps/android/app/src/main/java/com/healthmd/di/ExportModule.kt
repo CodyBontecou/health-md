@@ -11,6 +11,12 @@ import com.healthmd.data.export.MarkdownExporter
 import com.healthmd.data.export.ObsidianBasesExporter
 import com.healthmd.data.export.RawSnapshotExportRunner
 import com.healthmd.data.export.RawSnapshotService
+import com.healthmd.data.drive.EncryptedGoogleDriveAccountAuthorityStore
+import com.healthmd.data.drive.GoogleDriveAccessTokenProvider
+import com.healthmd.data.drive.GoogleDriveAccountAuthorityStore
+import com.healthmd.data.drive.GoogleDriveApi
+import com.healthmd.data.drive.GoogleDriveAuthorizationManager
+import com.healthmd.data.drive.OkHttpGoogleDriveApi
 import com.healthmd.data.storage.ExportRepositoryImpl
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.data.storage.ScheduledFolderExportJournalStore
@@ -79,9 +85,36 @@ object ExportModule {
 
     @Provides
     @Singleton
+    fun provideGoogleDriveApi(client: OkHttpClient): GoogleDriveApi = OkHttpGoogleDriveApi(client)
+
+    @Provides
+    @Singleton
+    fun provideGoogleDriveAccountAuthorityStore(
+        store: EncryptedGoogleDriveAccountAuthorityStore,
+    ): GoogleDriveAccountAuthorityStore = store
+
+    @Provides
+    @Singleton
+    fun provideGoogleDriveAccessTokenProvider(
+        manager: GoogleDriveAuthorizationManager,
+    ): GoogleDriveAccessTokenProvider = manager
+
+    @Provides
+    @Singleton
     fun provideAPIExportCredentialStore(
         store: EncryptedAPIExportCredentialStore,
     ): APIExportCredentialStore = store
+
+    @Provides
+    @Singleton
+    fun provideSavedAPIEndpointPersistence(
+        store: EncryptedAPIExportCredentialStore,
+    ): com.healthmd.data.export.SavedAPIEndpointPersistence = store
+
+    @Provides
+    fun provideEndpointBindingOps(
+        ops: com.healthmd.data.settings.ProfileEndpointBindingOps,
+    ): com.healthmd.data.settings.EndpointBindingOps = ops
 
     @Provides
     @Singleton

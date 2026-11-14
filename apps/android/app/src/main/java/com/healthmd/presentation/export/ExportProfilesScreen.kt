@@ -264,6 +264,7 @@ fun ExportProfilesScreen(
             initial = ExportProfilesViewModel.initialCreationDraft(
                 rows = uiState.rows,
                 currentSettings = uiState.currentSettings,
+                connectedGoogleDriveDestinationId = uiState.connectedGoogleDriveDestinationId,
             ),
             overlapPreview = { target, folderUri, settings ->
                 viewModel.draftOverlapPreview(
@@ -296,6 +297,7 @@ fun ExportProfilesScreen(
             initial = ExportProfilesViewModel.initialEditDraft(
                 profile = row.profile,
                 currentSettings = uiState.currentSettings,
+                connectedGoogleDriveDestinationId = uiState.connectedGoogleDriveDestinationId,
             ),
             overlapPreview = { target, folderUri, settings ->
                 viewModel.draftOverlapPreview(
@@ -459,6 +461,7 @@ private fun destinationLine(profile: ExportProfile): String = when (profile.targ
         R.string.m3_profiles_destination_gateway,
         profile.agentDataGatewayUrl ?: stringResource(R.string.m3_profiles_not_configured),
     )
+    ExportTarget.GOOGLE_DRIVE -> stringResource(R.string.google_drive_title)
 }
 
 @Composable
