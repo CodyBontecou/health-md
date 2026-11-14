@@ -118,3 +118,33 @@ startup failures, lost data, broken export/protocol bytes, unauthorized access a
 recovery. If changed lifecycle, permissions, navigation or native runtime behavior
 needs device verification, report the remaining gap and obtain the existing
 explicit QA opt-in. Compilation and portable tests cannot certify those behaviors.
+
+## Agent plan, guard, and receipt workflow
+
+1. **Load instructions.** Start Pi at the worktree root with trusted project resources, then check `/verification-status`. For component-directory sessions use `bash /path/to/health-md/scripts/agent-pi.sh` so the guard is explicitly loaded. Existing sessions need `/reload`; project trust and disabled extensions can prevent automatic discovery. Other harnesses must load root/nearest `AGENTS.md` and use the portable runner below; their hooks are not installed automatically.
+2. **Plan before checks.** In Pi call `verification_plan` with the task, input files/directories, `focused`, `affected`, or `qualification` tier, relevant toolchains and configuration. Its result loads root/owner instructions and this guide. Include sources, dependencies/lockfiles, fixtures, generators, feature/configuration inputs, and every affected consumer. Declare risk drivers (`public-contract`, `security`, `persistence`, `ffi`, `platform`, `uncertain`) and the escalation rationale. A new plan revokes pending approvals. Read owner instructions before editing too; a plan does not excuse earlier instruction loading.
+3. **Run or reuse.** Use `verification_run` with a command and worktree-relative `cwd`. Known direct shell checks require a plan and get observed receipts, but only runner-owned exit-code/toolchain-checked passes are eligible for reuse. Set `reuse: true` after checking scope completeness; default execution never silently skips a check. Unchanged reruns warn unless `rerunReason` explains the repetition. Broad qualification warns when the plan has no `reason`, rather than blocking legitimate contract/security escalation.
+4. **Finish with evidence.** Call `verification_report` with relevant `notRun` entries (`surface`, `reason`), then summarize commands/results, original execution versus reuse, and gaps in the task/PR. Pi also writes a report on agent completion, including pending blocked opt-in requests. `/verification-status` shows its path. Reports distinguish observed tool completion from runner passes and mark source-stale checks; they do not certify release qualification.
+
+Known simulator/emulator/device/native-UI commands and every Argent tool are blocked without a human-only approval. A blocked call displays `/verification-allow <request-id>`; the user reviews the task and exact tool arguments in a confirmation dialog. Approval covers one identical request, expires after ten minutes, and is never saved in receipts, restored on reload, or inferred from prompts/environment variables. Plan/session/branch changes revoke it; unused approvals expire at agent completion. Prefer approving an explicit recorded-flow runner for a multi-step authorized QA flow, rather than a blanket device permission. Non-interactive runs without a confirmation UI remain blocked. Otherwise record the workflow as not run.
+
+Receipts live under ignored `.pi/verification/<session-id>/`. They fingerprint selected tracked/untracked input bytes (including additions/deletions), instruction files, selected toolchain executable paths/version probes (Node and the runner's Bash are always included), inherited environment (digest only), loaded runner/policy identity, command, configuration, and tier. A pass can replay only when these match and inputs remain unchanged across execution; a later failure prevents replay of an earlier pass. Choose all relevant toolchains, for example `rust` **and** `cargo`, or `node` and `python`; selection remains the agent's responsibility. Inputs are paths, not globs. Include ignored fixtures/generated dependencies explicitly when relevant. Installed dependencies must match the declared lockfiles; a receipt cannot establish that by itself. Keep secrets/health data out of commands and plan descriptions; command output is returned, not stored in receipt JSON.
+
+The guard is a conservative workflow check, **not a shell/OS security sandbox**. It covers known command routes, common shell wrappers/substitutions, and Pi tool calls (including nested calls routed through Pi). Arbitrary code, unknown/renamed scripts, direct processes started by other extensions, and human `!` shell commands are not comprehensively mediated. Review unfamiliar runners; the repository policy still applies. Disabling project resources disables automatic enforcement, and no receipt proves that the declared scope contains every required consumer.
+
+### Other agent harnesses
+
+Run the same workflow from the worktree root (Node 24+, Git, POSIX shell), choosing a unique session ID per agent. `PI_SESSION_ID` is the default when present:
+
+```bash
+node scripts/verification.mjs plan --session my-task \
+  --task 'Fix verification command routing' --tier focused \
+  --input scripts --input Makefile --input .github/workflows/testing-tools-ci.yml \
+  --toolchain node --toolchain python --configuration 'Host-only default features'
+node scripts/verification.mjs run --session my-task \
+  --command 'node --test scripts/tests/verification-*.test.mjs'
+node scripts/verification.mjs report --session my-task \
+  --not-run '[{"surface":"Native/device QA","reason":"No product changes; not requested"}]'
+```
+
+Use `run --reuse` for an explicitly reviewed replay and `--rerun-reason` for intentional repetition. `check --command '<command>' --session <id>` exposes the same JSON decision for a harness pre-tool hook: exit 2 means block, and `warnings` should be surfaced to the agent. Check errors must block, not fall through to execution. The portable CLI has no opt-in bypass; an authorized device workflow needs a reviewed human-confirming harness adapter (Pi's is included). Guard installation must be confirmed in each actual harness; instructions alone do not install hooks.

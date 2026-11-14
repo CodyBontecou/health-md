@@ -1954,6 +1954,7 @@ class SchedulingManager: ObservableObject {
             ?? .current
         var providerCalendar = Calendar(identifier: .gregorian)
         providerCalendar.timeZone = providerTimeZone
+        let whoopResources = settings.metricSelection.enabledWHOOPResources
         let externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
         if ConnectedAppsFeature.isEnabled,
            let scheduledExternalIntegrations,
@@ -1961,7 +1962,8 @@ class SchedulingManager: ObservableObject {
             externalRecordFetcher = { date in
                 await scheduledExternalIntegrations.fetchDailyRecords(
                     for: date,
-                    calendar: providerCalendar
+                    calendar: providerCalendar,
+                    whoopResources: whoopResources
                 )
             }
         } else {
@@ -3066,6 +3068,7 @@ class SchedulingManager: ObservableObject {
                             && request.profileID == occurrence.profileID
                             && request.scheduledFireDate == occurrence.fireDate
                             && request.scheduledKind == occurrence.kind
+                            && request.recoveryGeneration == occurrence.recoveryGeneration
                     }
                 }
             } catch {

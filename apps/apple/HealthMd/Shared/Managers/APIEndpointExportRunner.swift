@@ -277,6 +277,9 @@ struct APIEndpointExportRunner {
         var snapshot = ExportSettingsSnapshot.from(settings, appleExportEngineAuthorityIsFrozen: false,
             calendarTimeZoneIdentifier: captureContext.calendarTimeZoneIdentifier)
         snapshot.sleepCaptureContext = captureContext
+        if !settings.executionExternalProviderCaptureAuthorityIsFrozen, snapshot.appleExportEnginePin == nil {
+            snapshot.metricSelection.enabledWHOOPResources.formIntersection(WHOOPExportResourceSelection.stored())
+        }
         let providerAuthorityIsFrozen = settings.executionExternalProviderCaptureAuthorityIsFrozen
         let connectedAppsEnabledForNewOperation = ConnectedAppsFeature.isEnabled
         let providers: (any ExternalIntegrationDailyRecordProviding)?
@@ -307,6 +310,7 @@ struct APIEndpointExportRunner {
         providers?.beginExportAction()
         // Source membership, settings and the calendar are accepted before the first suspension.
         let connectedAppsEnabled = (providers?.connectedProviderCount ?? 0) > 0
+        let whoopResources = frozenSettings.metricSelection.enabledWHOOPResources
         let calendarTimeZone = captureContext.timeZone
         let externalFetcher: ExternalDailyRecordFetcher?
         if connectedAppsEnabled,
@@ -317,7 +321,8 @@ struct APIEndpointExportRunner {
             externalFetcher = { date in
                 await providers.fetchDailyRecords(
                     for: date,
-                    calendar: providerCalendar
+                    calendar: providerCalendar,
+                    whoopResources: whoopResources
                 )
             }
         } else {
@@ -381,7 +386,16 @@ struct APIEndpointExportRunner {
         IdleTimerCoordinator.shared.beginActivity(awakeActivityID)
         defer { IdleTimerCoordinator.shared.endActivity(awakeActivityID) }
 
-        let normalizedDates = HealthKitDailyCapture.normalizedDates(dates)
+        let calendarTimeZone = settings.executionSleepCaptureContext?.timeZone
+            ?? settings.exportTimeZoneOverride ?? .current
+        var calendar = Calendar.current
+        calendar.timeZone = calendarTimeZone
+        let normalizedDates = HealthKitDailyCapture.normalizedDates(dates, calendar: calendar)
+        // This injectable uploader is a legacy-only seam, not permission to override a job pin.
+        if settings.executionAppleExportEnginePin != nil {
+            return failureResult(dates: normalizedDates, reason: .unknown,
+                message: EngineError.rustPlanningFailed.rawValue)
+        }
         guard !normalizedDates.isEmpty else {
             return ExportOrchestrator.ExportResult(
                 successCount: 0,
@@ -406,6 +420,7 @@ struct APIEndpointExportRunner {
                 dates: normalizedDates,
                 settings: settings,
                 destination: destination,
+                calendarTimeZone: calendarTimeZone,
                 fetchHealthData: fetchHealthData,
                 fetchExternalDailyRecords: fetchExternalDailyRecords,
                 upload: { batch, destination in
@@ -452,7 +467,7 @@ struct APIEndpointExportRunner {
         if (settings.executionSleepCaptureContext ?? AppleSleepCaptureContext.pinned.wrappedValue)?.sleepDayAttribution == .morningEnds {
             return .rust
         }
-        return policyResolver.requestedModeForNewOperation(profile: .appleHealthDataV8)
+        return policyResolver.requestedModeForNewOperation(profile: .appleHealthDataV10)
     }
 
     /// Destination-free preparation seam used by API preview and focused engine tests. A legacy
@@ -477,7 +492,7 @@ struct APIEndpointExportRunner {
     ) async throws -> PreparationResolution {
         let captureContext = settings.executionSleepCaptureContext ?? AppleSleepCaptureContext.pinned.wrappedValue
         let wakeDate = captureContext?.sleepDayAttribution == .morningEnds
-        let requestedMode: ExportEngineMode = fetchExternalDailyRecords == nil || wakeDate
+        let requestedMode: ExportEngineMode = fetchExternalDailyRecords == nil || wakeDate || settings.executionAppleExportEnginePin != nil
             ? requestedMode(settings: settings, policyResolver: policyResolver)
             : .legacy
         guard requestedMode != .legacy else {
@@ -519,7 +534,10 @@ struct APIEndpointExportRunner {
         comparisonOptions: NativeExportComparisonOptions = NativeExportComparisonOptions(),
         diagnosticSink: @escaping EngineDiagnosticSink = ShadowExportEvidenceRecorder.productionSink
     ) async throws -> PreparedOperation? {
-        guard !records.isEmpty else { return nil }
+        guard !records.isEmpty else {
+            if settings.executionAppleExportEnginePin != nil { throw EngineError.rustPlanningFailed }
+            return nil
+        }
         let timeZoneIdentifier = calendarTimeZone.identifier
         var recordsByOwnerDate: [String: HealthData] = [:]
         for record in records {
@@ -585,6 +603,10 @@ struct APIEndpointExportRunner {
         calendar.timeZone = calendarTimeZone
         let normalizedDates = HealthKitDailyCapture.normalizedDates(dates, calendar: calendar)
         guard !normalizedDates.isEmpty else {
+            if settings.executionAppleExportEnginePin != nil {
+                return failureResult(dates: [], reason: .unknown,
+                    message: EngineError.rustPlanningFailed.rawValue)
+            }
             return ExportOrchestrator.ExportResult(
                 successCount: 0,
                 totalCount: 0,
@@ -612,11 +634,11 @@ struct APIEndpointExportRunner {
 
         // This is the only authority read for the operation and occurs before either HealthKit or
         // a provider can be called. Persisted pins, including explicit nil/legacy authority, take
-        // precedence over current rollout defaults. Provider-bearing v8 days remain
+        // precedence over current rollout defaults. Provider-bearing v10 days remain
         // native-authoritative so the typed section cannot be dropped by an older path.
         let wakeDate = (settings.executionSleepCaptureContext ?? AppleSleepCaptureContext.pinned.wrappedValue)?.sleepDayAttribution == .morningEnds
             || settings.executionAppleExportEnginePin?.isWakeDate == true
-        let requestedMode: ExportEngineMode = fetchExternalDailyRecords == nil || wakeDate
+        let requestedMode: ExportEngineMode = fetchExternalDailyRecords == nil || wakeDate || settings.executionAppleExportEnginePin != nil
             ? requestedMode(settings: settings, policyResolver: policyResolver)
             : .legacy
         guard requestedMode != .legacy else {
@@ -625,6 +647,7 @@ struct APIEndpointExportRunner {
                 dates: dates,
                 settings: settings,
                 destination: destination,
+                calendarTimeZone: calendarTimeZone,
                 fetchHealthData: fetchHealthData,
                 fetchExternalDailyRecords: fetchExternalDailyRecords,
                 upload: upload,
@@ -659,6 +682,7 @@ struct APIEndpointExportRunner {
                     dates: dates,
                     settings: settings,
                     destination: destination,
+                    calendarTimeZone: calendarTimeZone,
                     fetchHealthData: fetchHealthData,
                     fetchExternalDailyRecords: fetchExternalDailyRecords,
                     upload: upload,
@@ -749,7 +773,10 @@ struct APIEndpointExportRunner {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = calendarTimeZone
         let normalizedDates = HealthKitDailyCapture.normalizedDates(dates, calendar: calendar)
-        guard !normalizedDates.isEmpty else { return .legacy }
+        guard !normalizedDates.isEmpty else {
+            if suppliedPin != nil { throw EngineError.rustPlanningFailed }
+            return .legacy
+        }
 
         let dayLimit = max(1, maxBatchDaySpan)
         let byteLimit = max(1, maxBatchPayloadBytes)
@@ -789,7 +816,7 @@ struct APIEndpointExportRunner {
         } catch is CancellationError {
             throw CancellationError()
         } catch {
-            if requestedMode == .shadow {
+            if requestedMode == .shadow, suppliedPin == nil {
                 await emitRustFailure(pin: nil, diagnosticSink: diagnosticSink)
                 return .legacy
             }
@@ -1036,7 +1063,7 @@ struct APIEndpointExportRunner {
         identity: AppleExportOperationIdentity,
         pin: AppleExportEnginePin
     ) throws -> NativeExportArtifactPlan {
-        let profile: CoreMetricRegistryProfile = pin.isWakeDate ? .appleHealthDataV11 : .appleHealthDataV8
+        let profile: CoreMetricRegistryProfile = pin.coreProfile
         let artifacts = try batches.enumerated().map { index, batch in
             let path = apiArtifactPath(requestID: identity.requestID, index: index)
             let digest = batch.bodyArtifact.descriptor.sha256
@@ -1476,7 +1503,8 @@ struct APIEndpointExportRunner {
                     totalCount: operation.normalizedDates.count,
                     failedDateDetails: knownFailures,
                     partialFailures: operation.partialFailures,
-                    externalRecordCount: totalExternalRecordCount
+                    externalRecordCount: totalExternalRecordCount,
+                    calendar: operation.calendar
                 )
             }
         }
@@ -1531,6 +1559,7 @@ struct APIEndpointExportRunner {
         dates: [Date],
         settings: AdvancedExportSettings,
         destination: APIExportDestinationSnapshot,
+        calendarTimeZone: TimeZone,
         fetchHealthData: HealthDataFetcher,
         fetchExternalDailyRecords: ExternalDailyRecordFetcher?,
         upload: @escaping PreparedUploader,
@@ -1550,7 +1579,11 @@ struct APIEndpointExportRunner {
             )
         }
         #endif
-        let normalizedDates = HealthKitDailyCapture.normalizedDates(dates)
+        // Discovery and capture already accepted civil owner dates in this zone.
+        // Re-normalizing with the host zone can move every requested day.
+        var calendar = Calendar.current
+        calendar.timeZone = calendarTimeZone
+        let normalizedDates = HealthKitDailyCapture.normalizedDates(dates, calendar: calendar)
         guard let dateRangeStart = normalizedDates.first else {
             return ExportOrchestrator.ExportResult(
                 successCount: 0,
@@ -1621,7 +1654,7 @@ struct APIEndpointExportRunner {
                     uploadRequestCount += 1
                     #endif
                     _ = try await upload(batch, destination)
-                    completedDates.formUnion(terminalCompletedDates(in: batch.failedDateDetails))
+                    completedDates.formUnion(terminalCompletedDates(in: batch.failedDateDetails, calendar: calendar))
                     return nil
                 } catch {
                     return uploadFailureResult(
@@ -1635,7 +1668,8 @@ struct APIEndpointExportRunner {
                         totalCount: normalizedDates.count,
                         failedDateDetails: allFailedDateDetails,
                         partialFailures: allPartialFailures,
-                        externalRecordCount: totalExternalRecordCount
+                        externalRecordCount: totalExternalRecordCount,
+                        calendar: calendar
                     )
                 }
             }
@@ -1647,7 +1681,7 @@ struct APIEndpointExportRunner {
                     #endif
                     _ = try await upload(failureOnlyBatch, destination)
                     completedDates.formUnion(
-                        terminalCompletedDates(in: failureOnlyBatch.failedDateDetails)
+                        terminalCompletedDates(in: failureOnlyBatch.failedDateDetails, calendar: calendar)
                     )
                 } catch {
                     return uploadFailureResult(
@@ -1661,7 +1695,8 @@ struct APIEndpointExportRunner {
                         totalCount: normalizedDates.count,
                         failedDateDetails: allFailedDateDetails,
                         partialFailures: allPartialFailures,
-                        externalRecordCount: totalExternalRecordCount
+                        externalRecordCount: totalExternalRecordCount,
+                        calendar: calendar
                     )
                 }
             }
@@ -1674,9 +1709,9 @@ struct APIEndpointExportRunner {
                 _ = try await upload(batch, destination)
                 totalSuccessCount += batch.records.count
                 completedDates.formUnion(batch.records.map {
-                    Calendar.current.startOfDay(for: $0.date)
+                    calendar.startOfDay(for: $0.date)
                 })
-                completedDates.formUnion(terminalCompletedDates(in: batch.failedDateDetails))
+                completedDates.formUnion(terminalCompletedDates(in: batch.failedDateDetails, calendar: calendar))
                 totalExternalRecordCount += batch.externalRecordPayloadCount
                 return nil
             } catch {
@@ -1691,7 +1726,8 @@ struct APIEndpointExportRunner {
                     totalCount: normalizedDates.count,
                     failedDateDetails: allFailedDateDetails,
                     partialFailures: allPartialFailures,
-                    externalRecordCount: totalExternalRecordCount
+                    externalRecordCount: totalExternalRecordCount,
+                    calendar: calendar
                 )
             }
         }
@@ -1724,7 +1760,8 @@ struct APIEndpointExportRunner {
                         totalCount: normalizedDates.count,
                         failedDateDetails: allFailedDateDetails,
                         partialFailures: allPartialFailures,
-                        externalRecordCount: totalExternalRecordCount
+                        externalRecordCount: totalExternalRecordCount,
+                        calendar: calendar
                     )
                 }
             }
@@ -1757,7 +1794,8 @@ struct APIEndpointExportRunner {
                     totalCount: normalizedDates.count,
                     failedDateDetails: allFailedDateDetails,
                     partialFailures: allPartialFailures,
-                    externalRecordCount: totalExternalRecordCount
+                    externalRecordCount: totalExternalRecordCount,
+                    calendar: calendar
                 )
             }
 
@@ -1784,12 +1822,14 @@ struct APIEndpointExportRunner {
                     totalCount: normalizedDates.count,
                     failedDateDetails: allFailedDateDetails,
                     partialFailures: allPartialFailures,
-                    externalRecordCount: totalExternalRecordCount
+                    externalRecordCount: totalExternalRecordCount,
+                    calendar: calendar
                 )
             }
 
             var candidate = currentBatch ?? AccumulatingBatch(
                 connectedAppsEnabled: connectedAppsEnabled,
+                calendarTimeZone: calendarTimeZone,
                 artifactDirectory: artifactDirectory
             )
             candidate.append(preparedOutcome)
@@ -1808,7 +1848,8 @@ struct APIEndpointExportRunner {
                     totalCount: normalizedDates.count,
                     failedDateDetails: allFailedDateDetails,
                     partialFailures: allPartialFailures,
-                    externalRecordCount: totalExternalRecordCount
+                    externalRecordCount: totalExternalRecordCount,
+                    calendar: calendar
                 )
             }
 
@@ -1834,11 +1875,13 @@ struct APIEndpointExportRunner {
                         totalCount: normalizedDates.count,
                         failedDateDetails: allFailedDateDetails,
                         partialFailures: allPartialFailures,
-                        externalRecordCount: totalExternalRecordCount
+                        externalRecordCount: totalExternalRecordCount,
+                        calendar: calendar
                     )
                 }
                 var singleton = AccumulatingBatch(
                     connectedAppsEnabled: connectedAppsEnabled,
+                    calendarTimeZone: calendarTimeZone,
                     artifactDirectory: artifactDirectory
                 )
                 singleton.append(preparedOutcome)
@@ -1873,7 +1916,8 @@ struct APIEndpointExportRunner {
                     totalCount: normalizedDates.count,
                     failedDateDetails: allFailedDateDetails,
                     partialFailures: allPartialFailures,
-                    externalRecordCount: totalExternalRecordCount
+                    externalRecordCount: totalExternalRecordCount,
+                    calendar: calendar
                 )
             }
         }
@@ -1906,9 +1950,10 @@ struct APIEndpointExportRunner {
         totalCount: Int,
         failedDateDetails: [FailedDateDetail],
         partialFailures: [ExportPartialFailure],
-        externalRecordCount: Int
+        externalRecordCount: Int,
+        calendar: Calendar = .current
     ) -> ExportOrchestrator.ExportResult {
-        let failedRange = rangeDescription(start: failedBatchStart, end: failedBatchEnd)
+        let failedRange = rangeDescription(start: failedBatchStart, end: failedBatchEnd, calendar: calendar)
         let failureMessage = "Batch upload failed for \(failedRange): \(safeUploadFailureDescription(for: error))"
         let uploadFailureDates = undeliveredRecordDates.isEmpty
             ? [failedBatchStart]
@@ -1930,7 +1975,7 @@ struct APIEndpointExportRunner {
 
         var seenDates: Set<Date> = []
         let orderedFailures = (uploadFailures + failedDateDetails + notAttempted).filter {
-            seenDates.insert(Calendar.current.startOfDay(for: $0.date)).inserted
+            seenDates.insert(calendar.startOfDay(for: $0.date)).inserted
         }
 
         return ExportOrchestrator.ExportResult(
@@ -1988,11 +2033,11 @@ struct APIEndpointExportRunner {
         )
     }
 
-    private static func rangeDescription(start: Date, end: Date) -> String {
+    private static func rangeDescription(start: Date, end: Date, calendar: Calendar) -> String {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone.current
+        formatter.timeZone = calendar.timeZone
         formatter.dateFormat = "yyyy-MM-dd"
         return "\(formatter.string(from: start)) to \(formatter.string(from: end))"
     }

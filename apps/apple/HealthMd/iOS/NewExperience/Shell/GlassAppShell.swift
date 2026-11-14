@@ -18,6 +18,7 @@ struct GlassAppShell: View {
     @Binding var endDate: Date
     @Binding var dateRangePreset: ExportDateRangePreset
     @Binding var isExporting: Bool
+    let showsBottomStatus: Bool
     let exportProgress: Double
     @Binding var exportStatusMessage: String
     @Binding var showFolderPicker: Bool
@@ -33,7 +34,10 @@ struct GlassAppShell: View {
     /// Commits a folder chosen inside the classic export sheet.
     let onSelectFolder: (URL) -> Void
     let executionHistoryAssessment: HealthHistoryAssessment?
+    let executionHistoryScope: HealthHistoryScope?
     let isAssessingHistory: Bool
+    let isDiscoveringExportRange: Bool
+    @Binding var isPreparingExport: Bool
     let historyCheckAwaitsDecision: Bool
     let onContinueWithoutHistoryVerification: () -> Void
     let onCancelHistoryVerification: () -> Void
@@ -572,7 +576,7 @@ struct GlassAppShell: View {
             startDate: $startDate,
             endDate: $endDate,
             dateRangePreset: $dateRangePreset,
-            isExporting: $isExporting,
+            showsBottomStatus: showsBottomStatus,
             exportStatusMessage: $exportStatusMessage,
             showFolderPicker: $showClassicFolderPicker,
             presentFirstExportPreview: .constant(false),
@@ -583,7 +587,10 @@ struct GlassAppShell: View {
             },
             historyProfileStore: profileCoordinator?.profileStore,
             executionHistoryAssessment: executionHistoryAssessment,
+            executionHistoryScope: executionHistoryScope,
             isAssessingHistory: isAssessingHistory,
+            isDiscoveringExportRange: isDiscoveringExportRange,
+            isPreparingExport: $isPreparingExport,
             onContinueWithoutHistoryVerification: onContinueWithoutHistoryVerification,
             onCancelHistoryVerification: onCancelHistoryVerification
         )
@@ -674,6 +681,14 @@ struct GlassAppShell: View {
     @ViewBuilder private var historyCard: some View {
         if awaitsHistoryDecision {
             EmptyView()
+        } else if isDiscoveringExportRange {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(String(localized: "Checking readable date range")).glassFont(.navTitle)
+                HealthHistoryRangeDiscoveryContent(cancel: onCancelHistoryVerification)
+            }
+            .padding(GlassMetrics.panelPadding)
+            .glassSurface(cornerRadius: GlassMetrics.panelSmallRadius, style: .strong)
+            .padding(.horizontal, GlassMetrics.screenMargin)
         } else if isAssessingHistory {
             VStack(alignment: .leading, spacing: 8) {
                 Text(String(localized: "Checking history access"))

@@ -9,10 +9,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[4]
-ANDROID_TASKS = [
-    ':app:testPlayDebugUnitTest', ':app:testPlayReleaseUnitTest', ':app:testPlayE2eUnitTest',
-    ':healthmd-core:testDebugUnitTest', ':wearable-contract:test', ':direct-protocol:test',
-]
+ANDROID_TASKS = ['test']
 
 FAKE = r'''
 import fcntl, json, os, sys, time
@@ -56,7 +53,7 @@ class LocalRunnerTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory(prefix='healthmd-root-make-')
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name).resolve()
-        for component in ('apple', 'android', 'cli', 'practice', 'wake', 'website'):
+        for component in ('apple', 'android', 'cli', 'practice', 'wake', 'cloud', 'website'):
             (self.root / 'apps' / component).mkdir(parents=True)
         (self.root / 'packages/healthmd-core-rust').mkdir(parents=True)
         shutil.copyfile(ROOT / 'Makefile', self.root / 'Makefile')
@@ -83,7 +80,7 @@ class LocalRunnerTests(unittest.TestCase):
         starts = [x for x in calls if x['event'] == 'start']
         expected = {'contracts', 'cargo:packages/healthmd-core-rust', 'ios', 'macos',
                     'gradlew:apps/android', 'cargo:apps/cli', 'npm:apps/practice',
-                    'npm:apps/wake', 'npm:apps/website'}
+                    'npm:apps/wake', 'npm:apps/cloud', 'npm:apps/website'}
         self.assertTrue(expected <= {x['job'] for x in starts})
         self.assertEqual(1, sum(x['job'] == 'prepare' for x in starts))
         self.assertEqual([['test'], ['run', 'check']], [x['args'] for x in starts if x['job'] == 'npm:apps/wake'])

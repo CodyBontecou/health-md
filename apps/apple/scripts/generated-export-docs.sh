@@ -38,7 +38,9 @@ schema_fixture_digest() {
 SCHEMA_BEFORE="$(schema_fixture_digest)"
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/healthmd-generated-export-docs.XXXXXX")"
 OUTPUT_DIR="$TMP_ROOT/output"
-DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$TMP_ROOT/DerivedData}"
+# Incremental `test` rebuilds changed inputs; cache stays scoped to this worktree.
+DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$ROOT_DIR/build/DerivedData/macOS}"
+MACOS_DEST="${MACOS_DEST:-platform=macOS,arch=$(uname -m)}"
 OUTPUT_MARKER="$ROOT_DIR/HealthMdTests/Fixtures/Documentation/.generated-export-docs-output"
 cleanup() {
   rm -f "$OUTPUT_MARKER"
@@ -56,7 +58,8 @@ GENERATED_EXPORT_DOCS_OUTPUT_DIR="$OUTPUT_DIR" \
 xcodebuild test \
   -project HealthMd.xcodeproj \
   -scheme HealthMd-Tests-macOS \
-  -destination 'platform=macOS' \
+  -destination "$MACOS_DEST" \
+  -enableCodeCoverage "${MACOS_CODE_COVERAGE:-NO}" \
   -only-testing:HealthMdTests/GeneratedExportDocumentationTests/testGeneratedExportDocumentationIsCurrent \
   -derivedDataPath "$DERIVED_DATA_PATH" \
   CODE_SIGNING_ALLOWED=NO \

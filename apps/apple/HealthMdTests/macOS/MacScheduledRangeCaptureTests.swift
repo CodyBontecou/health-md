@@ -10,7 +10,7 @@ final class MacScheduledRangeCaptureTests: XCTestCase {
         super.tearDown()
     }
 
-    func testNormalModeLegacyAuthorityCaptureGeneratesStandaloneRangeV9Summary() throws {
+    func testNormalModeLegacyAuthorityCaptureGeneratesStandaloneRangeV10Summary() throws {
         let timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let selectedDate = try date(2026, 3, 15, timeZone: timeZone)
         let selected = record(on: selectedDate)
@@ -43,7 +43,7 @@ final class MacScheduledRangeCaptureTests: XCTestCase {
             settings: settings
         ).first { $0.period == .range })
         XCTAssertTrue(HealthRollupExporter.content(for: range, format: .json).contains(
-            "\"schema_version\" : 9"
+            "\"schema_version\" : 10"
         ))
         XCTAssertEqual(range.daysExpected, 1)
         XCTAssertEqual(range.daysCounted, 1)

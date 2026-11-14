@@ -1,0 +1,32 @@
+# Dedicated loopback origin for the Cloudflare Tunnel. Not the existing 443 service.
+worker_processes 1;
+pid /tmp/healthmd-mcp-nginx.pid;
+error_log stderr crit;
+events { worker_connections 128; }
+http {
+  access_log off;
+  server {
+    listen 127.0.0.1:18790 default_server;
+    server_name mcp.healthmd.app;
+    client_max_body_size 64k;
+    client_body_timeout 15s;
+    if ($host != mcp.healthmd.app) { return 421; }
+    location = /mcp {
+      limit_except POST { deny all; }
+      proxy_pass http://127.0.0.1:18789;
+      proxy_http_version 1.1;
+      proxy_set_header Connection "";
+      proxy_set_header Host mcp.healthmd.app;
+      proxy_set_header X-Forwarded-Host mcp.healthmd.app;
+      proxy_set_header X-Forwarded-Proto https;
+      proxy_set_header X-Forwarded-For "";
+      proxy_set_header Cookie "";
+      proxy_request_buffering on;
+      proxy_buffering on;
+      proxy_read_timeout 30s;
+      proxy_send_timeout 20s;
+      add_header Cache-Control "no-store" always;
+    }
+    location / { return 404; }
+  }
+}

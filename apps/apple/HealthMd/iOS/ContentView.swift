@@ -5,6 +5,18 @@ import Combine
 import QuickLook
 import os.log
 
+private enum ManualExportStatusKind: Equatable {
+    case success
+    case warning
+    case failure
+    case cancelled
+}
+
+private struct ClassifiedManualExportStatus: Equatable {
+    let status: String
+    let kind: ManualExportStatusKind
+}
+
 struct ContentView: View {
     private static let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "Export")
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -20,6 +32,8 @@ struct ContentView: View {
         @EnvironmentObject var configurationProtection: ConfigurationProtectionManager
     @StateObject private var vaultManager = VaultManager()
     @ObservedObject private var exportHistory = ExportHistoryManager.shared
+    @ObservedObject private var cliExportActivity = CLIExportActivityTracker.shared
+    @ObservedObject private var notificationExportActivity = NotificationExportActivityTracker.shared
     @EnvironmentObject var schedulingManager: SchedulingManager
 
     @State private var selectedTab: NavTab = .export
@@ -35,18 +49,21 @@ struct ContentView: View {
     @State private var isTestExportWaitingForCompletion = false
     @State private var isRequestingHealthAuthorization = false
     @State private var isAssessingHistory = false
-    /// The history check timed out and the export waits for Continue or Cancel.
+    @State private var hasBegunHistoryAssessment = false
     @State private var historyCheckAwaitsDecision = false
     @State private var executionHistoryAssessment: HealthHistoryAssessment?
     @State private var historyExecutionCoordinator = HealthHistoryAssessmentCoordinator()
     @State private var historyExecutionWorker = HealthHistoryAssessmentWorker()
     @State private var historyProfilePublicationObserver = HealthHistoryProfilePublicationObserver()
     @State private var historyExecutionTask: Task<Void, Never>?
-    @State private var pendingHistorySelection: HealthHistoryExecutionSelection?
     @State private var pendingHistoryRequestID: UUID?
+    @State private var activeHistoryRequest: HealthHistoryExportRequest?
+    @State private var pendingScaleRequest: HealthHistoryExportRequest?
     @State private var exportProgress: Double = 0.0
     @State private var exportStatusMessage = ""
     @State private var partialExportNotice: PartialExportNotice?
+    @State private var presentedPartialExportNotice: PartialExportNotice?
+    @State private var classifiedExportStatus: ClassifiedManualExportStatus?
     @State private var showError = false
     @State private var errorMessage = ""
     private struct FrontmatterConflictNotice {
@@ -151,6 +168,7 @@ struct ContentView: View {
             Color.bgPrimary.ignoresSafeArea()
 
             VStack(spacing: 0) {
+                bottomStatusHosted {
                 GlassAppShell(
                     selectedTab: $selectedTab,
                     vaultManager: vaultManager,
@@ -161,6 +179,7 @@ struct ContentView: View {
                     endDate: $endDate,
                     dateRangePreset: $dateRangePreset,
                     isExporting: $isExporting,
+                    showsBottomStatus: hasBottomStatus,
                     exportProgress: exportProgress,
                     exportStatusMessage: $exportStatusMessage,
                     showFolderPicker: $showFolderPicker,
@@ -174,13 +193,17 @@ struct ContentView: View {
                     onBrowseExportFolder: browseExportFolder,
                     onPreviewExport: presentExportPreview,
                     onSelectFolder: commitVaultFolderSelection,
-                    executionHistoryAssessment: executionHistoryAssessment,
-                    isAssessingHistory: isAssessingHistory,
+                    executionHistoryAssessment: currentExecutionHistoryScope == nil ? nil : executionHistoryAssessment,
+                    executionHistoryScope: currentExecutionHistoryScope,
+                    isAssessingHistory: hasBegunHistoryAssessment,
+                    isDiscoveringExportRange: isAssessingHistory && !hasBegunHistoryAssessment && pendingScaleRequest == nil,
+                    isPreparingExport: Binding(get: { activeHistoryRequest != nil }, set: { _ in }),
                     historyCheckAwaitsDecision: historyCheckAwaitsDecision,
-                    onContinueWithoutHistoryVerification: continueWithoutHistoryVerification,
-                    onCancelHistoryVerification: invalidateExecutionHistory,
+                    onContinueWithoutHistoryVerification: historyContinuationAction,
+                    onCancelHistoryVerification: historyCancellationAction,
                     isShowingExportMoment: $isShowingExportMoment
                 )
+                }
                 .tint(Color.accent)
                 .task { ensureProfileCoordinator() }
                 .profileDestinationSync(
@@ -203,54 +226,15 @@ struct ContentView: View {
                 }
             }
 
-            // Toast notifications
-            VStack {
-                // MomentGlass fills the bottom with its own summary card, so while it shows,
-                // the completion toast sits at the top instead of covering that card.
-                if !isShowingExportMoment { Spacer() }
-
-                PartialExportNoticeToast(
-                    notice: $partialExportNotice,
-                    bottomPadding: 120,
-                    onDismiss: dismissStatus,
-                    requestHealthAuthorization: {
-                        try await healthKitManager.requestAuthorization()
-                    }
+        }
+        .onChange(of: isExporting) { wasExporting, nowExporting in
+            if !wasExporting && nowExporting {
+                UIAccessibility.post(
+                    notification: .announcement,
+                    argument: String(localized: "Export in Progress")
                 )
-
-                // Per-file writers publish intermediate status while a batch is still running.
-                // Keep the completion toast hidden until the whole export operation finishes.
-                if !isExporting,
-                   partialExportNotice == nil,
-                   let status = vaultManager.lastExportStatus {
-                    // Success cannot be derived from the status copy: the local
-                    // full-success status is the generated-file/data-day
-                    // description, and prefix sniffing breaks under localization.
-                    // The recorded outcome flag is authoritative; the prefixes
-                    // remain as a fallback for assignment sites not yet migrated.
-                    let isSuccess = vaultManager.lastExportStatusIsSuccess
-                        || status.starts(with: "Exported")
-                        || status.starts(with: "Updated")
-                    let presentationTarget = isSuccess
-                        ? vaultManager.lastExportPresentationTarget
-                        : nil
-                    ExportStatusBadge(
-                        status: isSuccess ? .success(status) : .error(status),
-                        onDismiss: dismissStatus,
-                        exportFileName: presentationTarget?.fileURL.lastPathComponent,
-                        onPreview: presentationTarget.map { target in
-                            { presentExportPreview(target) }
-                        },
-                        onBrowseFolder: presentationTarget.map { target in
-                            { browseExportFolder(target) }
-                        }
-                    )
-                    .padding(.horizontal, Spacing.lg)
-                    .padding(.top, isShowingExportMoment ? Spacing.s2 : 0)
-                    .padding(.bottom, isShowingExportMoment ? 0 : 120)
-                }
-
-                if isShowingExportMoment { Spacer() }
+            } else if wasExporting && !nowExporting, !exportStatusMessage.isEmpty {
+                UIAccessibility.post(notification: .announcement, argument: exportStatusMessage)
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
@@ -261,25 +245,8 @@ struct ContentView: View {
                     }
                     .accessibilityIdentifier("uitest.export.finishBatch")
                 }
-                if isExporting && !isShowingExportMoment {
-                    ManualExportActivityBanner(
-                        target: exportTargetSelection,
-                        progress: exportProgress,
-                        message: exportStatusMessage,
-                        onCancel: cancelExport
-                    )
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.top, Spacing.s2)
-                    .padding(.bottom, Spacing.s1)
-                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
-                }
             }
         }
-        .animation(reduceMotion ? nil : AnimationTimings.standard, value: isExporting)
-        .onChange(of: clinicSponsorship.destinationSelectionRequestID) { _, _ in
-            applyRequestedClinicDestination()
-        }
-        .task { applyRequestedClinicDestination() }
         .sheet(isPresented: $showFolderPicker) {
             FolderPicker { url in
                 configurationProtection.performConfigurationChange {
@@ -368,10 +335,10 @@ struct ContentView: View {
                 // mutations surface a sheet-local one that stays visible over
                 // pushed detail screens; its settings shortcut closes the
                 // sheet and routes to the protection toggle.
-                .overlay(alignment: .top) {
+                .safeAreaInset(edge: .bottom, spacing: 0) {
                     ConfigurationProtectionToast(configurationProtection: configurationProtection)
                         .padding(.horizontal, Spacing.md)
-                        .padding(.top, Spacing.s2)
+                        .padding(.bottom, Spacing.s2)
                 }
                 .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
                     if requestID != nil {
@@ -436,6 +403,13 @@ struct ContentView: View {
         }
         #endif
         .geistDialog(
+            isPresented: scaleConfirmationBinding,
+            title: Text("Confirm Large Export"),
+            message: Text(pendingScaleRequest?.scaleConfirmationMessage ?? ""),
+            messageAccessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationMessage,
+            actions: scaleConfirmationActions
+        )
+        .geistDialog(
             isPresented: $showDestinationChangedAlert,
             title: Text("Export Folder Changed"),
             message: Text("The saved folder now points to a different location. Health.md paused local exports so it won’t write somewhere you did not select. Review any duplicate or conflict in Files, then re-select the intended folder."),
@@ -453,6 +427,35 @@ struct ContentView: View {
         .onChange(of: showError) { _, presented in
             if !presented { frontmatterConflictNotice = nil }
         }
+        .geistDialog(
+            isPresented: Binding(
+                get: { presentedPartialExportNotice != nil },
+                set: { presented in
+                    guard !presented else { return }
+                    presentedPartialExportNotice = nil
+                    dismissStatus()
+                }
+            ),
+            title: Text(presentedPartialExportNotice?.permissionGuidance != nil
+                ? "Health Permissions Needed"
+                : "Partial Export"),
+            message: presentedPartialExportNotice.map { notice in
+                if let guidance = notice.permissionGuidance {
+                    return Text(notice.permissionAlertMessage(instructions: guidance.iOSInstructions))
+                }
+                return Text(notice.genericAlertMessage)
+            },
+            actions: presentedPartialExportNotice?.permissionGuidance != nil
+                ? [
+                    .action("Request Access") {
+                        requestAdditionalHealthAccessForPartialNotice()
+                    },
+                    .action("Open Health App") {
+                        openHealthApp()
+                    }
+                ]
+                : [.action("Done", role: .secondary)]
+        )
         .geistDialog(
             isPresented: Binding(
                 get: {
@@ -549,6 +552,9 @@ struct ContentView: View {
         // Profile invalidation is still observed, but synchronously through
         // typed execution inputs in ensureProfileCoordinator, not this store's
         // broad pre-change/list/timestamp publication (which may be a flush).
+        .onChange(of: clinicSponsorship.destinationSelectionRequestID) { _, _ in applyRequestedClinicDestination() }
+        .task { applyRequestedClinicDestination() }
+        .onChange(of: selectedTab) { _, _ in invalidateExecutionHistory(reason: "tab") }
         .onChange(of: scenePhase) { _, newPhase in
             invalidateExecutionHistory()
             guard newPhase == .active else { return }
@@ -823,13 +829,277 @@ struct ContentView: View {
 
     // MARK: - Status Helpers
 
+    private var hasBottomStatus: Bool {
+        configurationProtection.blockedChangeToastID != nil
+            || notificationExportActivity.snapshot != nil
+            || cliExportActivity.snapshot != nil
+            || hasManualExportStatus
+    }
+
+    private func bottomStatusHosted<Content: View>(
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        content()
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if hasBottomStatus {
+                    bottomStatusStack
+                        .padding(.horizontal, Spacing.md)
+                        .padding(.top, Spacing.s2)
+                        .padding(.bottom, Spacing.s2)
+                        .transition(
+                            reduceMotion
+                                ? .opacity
+                                : .move(edge: .bottom).combined(with: .opacity)
+                        )
+                }
+            }
+            .animation(
+                reduceMotion ? nil : AnimationTimings.standard,
+                value: hasBottomStatus
+            )
+    }
+
+    @ViewBuilder
+    private var bottomStatusStack: some View {
+        VStack(spacing: Spacing.s2) {
+            ConfigurationProtectionToast(configurationProtection: configurationProtection)
+
+            if let snapshot = notificationExportActivity.snapshot {
+                NotificationExportActivityBanner(
+                    snapshot: snapshot,
+                    onCancel: snapshot.phase.allowsCancellation
+                        ? { schedulingManager.cancelNotificationExport(operationID: snapshot.operationID) }
+                        : nil
+                )
+            } else if let snapshot = cliExportActivity.snapshot {
+                CLIExportActivityBanner(snapshot: snapshot)
+            }
+
+            if hasManualExportStatus {
+                manualExportStatusCard
+            }
+        }
+    }
+
+    private var hasManualExportStatus: Bool {
+        isExporting || partialExportNotice != nil || vaultManager.lastExportStatus != nil
+    }
+
+    private var manualExportStatusCard: some View {
+        let progress = isExporting && exportProgress > 0 ? exportProgress : nil
+        let dismissAction: (() -> Void)?
+        if isExporting {
+            dismissAction = nil
+        } else {
+            dismissAction = { dismissStatus() }
+        }
+        return ExportActivityBanner(
+            title: manualExportCardTitle,
+            systemImage: manualExportCardIcon,
+            tint: manualExportCardTint,
+            sourceLabel: String(localized: "iPhone"),
+            targetLabel: manualExportTargetLabel,
+            message: manualExportCardMessage,
+            progress: progress,
+            showsIndeterminateProgress: isExporting && progress == nil,
+            progressAccessibilityLabel: String(localized: "Export progress"),
+            details: manualExportCardDetails,
+            trailingText: nil,
+            accessibilityIdentifier: AccessibilityID.Status.exportStatusBadge,
+            actions: manualExportCardActions,
+            onDismiss: dismissAction
+        )
+    }
+
+    private var manualExportCardTitle: String {
+        if isExporting { return String(localized: "Export in Progress") }
+        if partialExportNotice != nil { return String(localized: "Partial Export") }
+        guard let status = vaultManager.lastExportStatus else {
+            return String(localized: "Export")
+        }
+        return manualExportStatusTitle(for: resolvedManualExportStatusKind(for: status))
+    }
+
+    private var manualExportCardIcon: String {
+        if isExporting {
+            switch exportTargetSelection {
+            case .localIPhoneFolder: return "folder.fill"
+            case .connectedMac: return "desktopcomputer"
+            case .apiEndpoint, .agentDataGateway: return "network"
+            }
+        }
+        if partialExportNotice != nil { return "exclamationmark.circle.fill" }
+        guard let status = vaultManager.lastExportStatus else { return "arrow.up.doc.fill" }
+        return manualExportStatusIcon(for: resolvedManualExportStatusKind(for: status))
+    }
+
+    private var manualExportCardTint: Color {
+        if isExporting { return .accent }
+        if partialExportNotice != nil { return .warning }
+        guard let status = vaultManager.lastExportStatus else { return .accent }
+        return manualExportStatusTint(for: resolvedManualExportStatusKind(for: status))
+    }
+
+    private var manualExportCardMessage: String {
+        if isExporting {
+            return exportStatusMessage.isEmpty ? String(localized: "Exporting") + "…" : exportStatusMessage
+        }
+        if let partialExportNotice { return partialExportNotice.toastMessage }
+        guard let status = vaultManager.lastExportStatus else { return "" }
+        return manualExportStatusMessage(for: status)
+    }
+
+    private var manualExportCardDetails: [ExportActivityBannerDetail] {
+        guard !isExporting,
+              partialExportNotice == nil,
+              let status = vaultManager.lastExportStatus else { return [] }
+        return manualExportStatusDetails(for: resolvedManualExportStatusKind(for: status))
+    }
+
+    private var manualExportCardActions: [ExportActivityBannerAction] {
+        if isExporting {
+            return [ExportActivityBannerAction(
+                title: String(localized: "Stop Export"),
+                systemImage: "stop.fill",
+                accessibilityIdentifier: AccessibilityID.Export.cancelExportButton,
+                perform: cancelExport
+            )]
+        }
+        if let notice = partialExportNotice {
+            return [ExportActivityBannerAction(
+                title: String(localized: "Review export issues"),
+                systemImage: "info.circle",
+                accessibilityIdentifier: "export.review-issues",
+                style: .standard,
+                perform: { presentedPartialExportNotice = notice }
+            )]
+        }
+        guard let status = vaultManager.lastExportStatus else { return [] }
+        return manualExportStatusActions(for: resolvedManualExportStatusKind(for: status))
+    }
+
+    private var manualExportTargetLabel: String {
+        switch exportTargetSelection {
+        case .localIPhoneFolder: return String(localized: "Local iPhone Folder")
+        case .connectedMac: return String(localized: "Connected Mac")
+        case .apiEndpoint: return String(localized: "API Endpoint")
+        case .agentDataGateway: return String(localized: "Agent Data gateway")
+        }
+    }
+
+    private func resolvedManualExportStatusKind(for status: String) -> ManualExportStatusKind {
+        if let classifiedExportStatus, classifiedExportStatus.status == status {
+            return classifiedExportStatus.kind
+        }
+        return vaultManager.lastExportStatusIsSuccess ? .success : .failure
+    }
+
+    private func manualExportStatusMessage(for status: String) -> String {
+        if classifiedExportStatus?.status == status, !exportStatusMessage.isEmpty {
+            return exportStatusMessage
+        }
+        return vaultManager.localizedLastExportStatus ?? status
+    }
+
+    private func manualExportStatusTitle(for kind: ManualExportStatusKind) -> String {
+        switch kind {
+        case .success: return String(localized: "Export complete")
+        case .warning: return String(localized: "Partial Export")
+        case .failure: return String(localized: "Export failed")
+        case .cancelled: return String(localized: "Export cancelled")
+        }
+    }
+
+    private func manualExportStatusIcon(for kind: ManualExportStatusKind) -> String {
+        switch kind {
+        case .success: return "checkmark.circle.fill"
+        case .warning: return "exclamationmark.circle.fill"
+        case .failure: return "exclamationmark.triangle.fill"
+        case .cancelled: return "xmark.circle.fill"
+        }
+    }
+
+    private func manualExportStatusTint(for kind: ManualExportStatusKind) -> Color {
+        switch kind {
+        case .success: return .success
+        case .warning, .cancelled: return .warning
+        case .failure: return .error
+        }
+    }
+
+    private func manualExportStatusDetails(
+        for kind: ManualExportStatusKind
+    ) -> [ExportActivityBannerDetail] {
+        guard kind == .success,
+              let target = vaultManager.lastExportPresentationTarget else { return [] }
+        return [ExportActivityBannerDetail(
+            text: target.fileURL.lastPathComponent,
+            systemImage: "doc"
+        )]
+    }
+
+    private func manualExportStatusActions(
+        for kind: ManualExportStatusKind
+    ) -> [ExportActivityBannerAction] {
+        var actions: [ExportActivityBannerAction] = []
+        if kind == .success, let target = vaultManager.lastExportPresentationTarget {
+            actions.append(ExportActivityBannerAction(
+                title: String(localized: "View Exported File"),
+                systemImage: "doc.text.magnifyingglass",
+                accessibilityIdentifier: "export.preview-file",
+                style: .success,
+                perform: { presentExportPreview(target) }
+            ))
+            actions.append(ExportActivityBannerAction(
+                title: String(localized: "Browse Export Folder"),
+                systemImage: "folder",
+                accessibilityIdentifier: "export.browse-folder",
+                style: .standard,
+                perform: { browseExportFolder(target) }
+            ))
+        } else if kind == .failure, !errorMessage.isEmpty {
+            actions.append(ExportActivityBannerAction(
+                title: String(localized: "Details"),
+                systemImage: "info.circle",
+                accessibilityIdentifier: "export.status.details",
+                style: .standard,
+                perform: { showError = true }
+            ))
+        }
+        return actions
+    }
+
+    private func recordManualExportStatus(_ status: String, kind: ManualExportStatusKind) {
+        if kind == .success {
+            vaultManager.recordSuccessfulExportStatus(status)
+        } else {
+            vaultManager.lastExportStatus = status
+        }
+        classifiedExportStatus = ClassifiedManualExportStatus(status: status, kind: kind)
+    }
+
+    private func requestAdditionalHealthAccessForPartialNotice() {
+        Task { @MainActor in
+            do {
+                if try await healthKitManager.requestAuthorization() == .unnecessary {
+                    openHealthApp()
+                }
+            } catch {
+                openHealthApp()
+            }
+        }
+    }
+
+    private func openHealthApp() {
+        guard let healthURL = URL(string: "x-apple-health://") else { return }
+        UIApplication.shared.open(healthURL)
+    }
+
     private func startStatusDismissTimer() {
         statusDismissTimer?.invalidate()
         let status = vaultManager.lastExportStatus ?? ""
-        let isSuccess = vaultManager.lastExportStatusIsSuccess
-            || status.starts(with: "Exported")
-            || status.starts(with: "Updated")
-        let hasExportActions = vaultManager.lastExportPresentationTarget != nil && isSuccess
+        let kind = resolvedManualExportStatusKind(for: status)
+        let hasExportActions = vaultManager.lastExportPresentationTarget != nil && kind == .success
         guard !hasExportActions else { return }
 
         statusDismissTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { _ in
@@ -847,8 +1117,13 @@ struct ContentView: View {
 
     private func dismissStatus() {
         partialExportNotice = nil
+        presentedPartialExportNotice = nil
+        classifiedExportStatus = nil
         vaultManager.lastExportStatus = nil
         vaultManager.clearLastExportPresentationTarget()
+        exportStatusMessage = ""
+        errorReason = nil
+        errorMessage = ""
         statusDismissTimer?.invalidate()
     }
 
@@ -1475,6 +1750,8 @@ struct ContentView: View {
         // taps should focus that immutable export, not create a competing job.
         if restoreInteractiveCorpusExportIfNeeded() { return }
 
+        dismissStatus()
+
         let conflicts = advancedSettings.formatCustomization.frontmatterConfig.keyConflicts
         if (advancedSettings.dailyNoteInjection.enabled || advancedSettings.exportFormats.contains(.markdown)
             || advancedSettings.exportFormats.contains(.obsidianBases)), !conflicts.isEmpty {
@@ -1486,10 +1763,6 @@ struct ContentView: View {
                 + "\n\n" + FrontmatterConfiguration.keyConflictMessage
             return
         }
-
-        partialExportNotice = nil
-        statusDismissTimer?.invalidate()
-        vaultManager.clearLastExportPresentationTarget()
 
         // The primary export action stays available so an incomplete setup can
         // lead the user directly to its missing step instead of appearing broken.
@@ -1579,36 +1852,124 @@ struct ContentView: View {
             }
         }
 
-        // Assess a frozen request after normal preflight, independently of query
-        // completion. This is UI evidence only: consumer receipts need review.
-        let selection = interactiveHistorySelection
-        let requestID = historyExecutionCoordinator.beginRequest()
+        prepareInteractiveHistoryExport(selection: interactiveHistorySelection)
+    }
+
+    private var scaleConfirmationBinding: Binding<Bool> {
+        let presentedID = pendingScaleRequest?.id
+        return Binding(get: { presentedID != nil && pendingScaleRequest?.id == presentedID },
+            set: { presented in
+                guard !presented, let presentedID, let request = pendingScaleRequest,
+                      request.id == presentedID else { return }
+                cancelHistoryRequest(request)
+            })
+    }
+
+    private var scaleConfirmationActions: [GeistDialogAction] {
+        guard let request = pendingScaleRequest else { return [] }
+        return [
+            .cancel(accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationCancelButton) {
+                cancelHistoryRequest(request)
+            },
+            .action("Export Anyway", accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationConfirmButton) {
+                guard pendingScaleRequest?.id == request.id, isCurrentHistoryRequest(request) else { return }
+                pendingScaleRequest = nil
+                assessPreparedHistoryExport(request)
+            }
+        ]
+    }
+
+    private var historyContinuationAction: () -> Void {
+        let presentedRequest = activeHistoryRequest
+        return {
+            guard let presentedRequest else { return }
+            continueWithoutHistoryVerification(presentedRequest)
+        }
+    }
+
+    private var historyCancellationAction: () -> Void {
+        let presentedRequest = activeHistoryRequest
+        return {
+            guard let presentedRequest else { return }
+            cancelHistoryRequest(presentedRequest)
+        }
+    }
+
+    private func cancelHistoryRequest(_ request: HealthHistoryExportRequest) {
+        guard activeHistoryRequest?.id == request.id, pendingHistoryRequestID == request.id else { return }
+        invalidateExecutionHistory()
+    }
+
+    private func isCurrentHistoryRequest(_ request: HealthHistoryExportRequest) -> Bool {
+        activeHistoryRequest?.id == request.id
+            && historyExecutionCoordinator.isCurrent(request, liveSelection: interactiveHistorySelection)
+            && scenePhase == .active && selectedTab == .export
+    }
+
+    private var currentExecutionHistoryScope: HealthHistoryScope? {
+        guard let request = activeHistoryRequest,
+              historyExecutionCoordinator.isCurrent(request, liveSelection: interactiveHistorySelection) else { return nil }
+        return request.selection.scope
+    }
+
+    private func prepareInteractiveHistoryExport(selection: HealthHistoryExecutionSelection) {
+        let request = historyExecutionCoordinator.beginExportRequest(selection: selection)
+        activeHistoryRequest = request
+        pendingHistoryRequestID = request.id
         executionHistoryAssessment = nil
-        pendingHistorySelection = selection
-        pendingHistoryRequestID = requestID
         isAssessingHistory = true
+        exportStatusMessage = request.selection.preset == .allTime
+            ? "Checking readable date range…" : "Checking history access…"
+        historyExecutionTask = Task { @MainActor in
+            var handedOff = false
+            defer {
+                if !handedOff && pendingHistoryRequestID == request.id { clearPendingHistoryCheck() }
+            }
+            do {
+                guard let resolved = try await historyExecutionCoordinator.resolveExportRequest(request,
+                    liveSelection: { interactiveHistorySelection }, operation: {
+                        try await NativeExportDateRangeResolver.resolve(request.dateRangeRequest,
+                            using: healthKitManager, currentRequest: {
+                                HealthHistoryExportRequest(id: request.id, selection: interactiveHistorySelection).dateRangeRequest
+                            })
+                    }), isCurrentHistoryRequest(request) else { return }
+                activeHistoryRequest = resolved
+                handedOff = true
+                switch resolved.scaleVerdict {
+                case .proceed:
+                    assessPreparedHistoryExport(resolved)
+                case .confirm:
+                    historyExecutionTask = nil
+                    pendingScaleRequest = resolved
+                    exportStatusMessage = "Confirm the export range to continue."
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                guard isCurrentHistoryRequest(request) else { return }
+                presentExportConfigurationError(error.localizedDescription)
+            }
+        }
+    }
+
+    private func assessPreparedHistoryExport(_ request: HealthHistoryExportRequest) {
+        guard pendingHistoryRequestID == request.id, isCurrentHistoryRequest(request) else { return }
+        let selection = request.selection
+        hasBegunHistoryAssessment = true
         exportStatusMessage = "Checking history access…"
-        historyExecutionTask = Task {
+        historyExecutionTask = Task { @MainActor in
             var awaitingUserDecision = false
             defer {
-                // A cancelled/stalled old request must not clear a newer owner.
-                if !awaitingUserDecision && pendingHistoryRequestID == requestID { clearPendingHistoryCheck() }
+                if !awaitingUserDecision && pendingHistoryRequestID == request.id { clearPendingHistoryCheck() }
             }
-            let result = await historyExecutionCoordinator.assessExecution(requestID: requestID, worker: historyExecutionWorker,
-                notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: selection.scope), scope: selection.scope, isCurrent: {
-                selection == interactiveHistorySelection
-            }, operation: {
-                await healthKitManager.assessHistoryAccess(scope: selection.scope)
-            })
-            guard pendingHistoryRequestID == requestID else { return }
-            guard let assessment = result else {
-                exportStatusMessage = "Export selection changed. Review the range and export again."
-                return
-            }
+            let result = await historyExecutionCoordinator.assessExecution(requestID: request.id,
+                worker: historyExecutionWorker,
+                notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: selection.scope),
+                scope: selection.scope, isCurrent: { isCurrentHistoryRequest(request) }, operation: {
+                    await healthKitManager.assessHistoryAccess(scope: selection.scope)
+                })
+            guard pendingHistoryRequestID == request.id, let assessment = result else { return }
             if assessment.requiresExplicitContinuation {
-                // The logical deadline releases this task, but the SDK owner
-                // stays retained. Keep Continue/Cancel reachable until the user
-                // chooses; a timeout must never admit capture automatically.
                 awaitingUserDecision = true
                 historyCheckAwaitsDecision = true
                 historyExecutionTask = nil
@@ -1617,14 +1978,14 @@ struct ContentView: View {
             }
             clearPendingHistoryCheck()
             executionHistoryAssessment = assessment
-            beginInteractiveCapture(selection)
+            beginInteractiveCapture(request)
         }
     }
 
     private func clearPendingHistoryCheck() {
-        pendingHistorySelection = nil
         pendingHistoryRequestID = nil
         isAssessingHistory = false
+        hasBegunHistoryAssessment = false
         historyCheckAwaitsDecision = false
         historyExecutionTask = nil
     }
@@ -1634,6 +1995,8 @@ struct ContentView: View {
     }
 
     private func invalidateExecutionHistory(reason: String) {
+        activeHistoryRequest = nil
+        pendingScaleRequest = nil
         historyExecutionCoordinator.invalidate()
         historyExecutionWorker.cancelLogicalWaiter()
         executionHistoryAssessment = nil
@@ -1647,21 +2010,23 @@ struct ContentView: View {
         clearPendingHistoryCheck()
     }
 
-    private func continueWithoutHistoryVerification() {
-        guard let selection = pendingHistorySelection, selection == interactiveHistorySelection else {
-            invalidateExecutionHistory()
+    private func continueWithoutHistoryVerification(_ request: HealthHistoryExportRequest) {
+        guard hasBegunHistoryAssessment, activeHistoryRequest?.id == request.id,
+              pendingHistoryRequestID == request.id, isCurrentHistoryRequest(request) else {
             return
         }
-        historyExecutionCoordinator.invalidate()
+        // Cancel only the logical assessment waiter. The action revision and
+        // physical provider owner survive this explicit continuation.
         historyExecutionWorker.cancelLogicalWaiter()
         historyExecutionTask?.cancel()
         clearPendingHistoryCheck()
-        executionHistoryAssessment = healthKitManager.historyAssessmentNotCompleted(scope: selection.scope)
-        beginInteractiveCapture(selection)
+        executionHistoryAssessment = healthKitManager.historyAssessmentNotCompleted(scope: request.selection.scope)
+        beginInteractiveCapture(request)
     }
 
-    private func beginInteractiveCapture(_ selection: HealthHistoryExecutionSelection) {
-        guard selection == interactiveHistorySelection else { return }
+    private func beginInteractiveCapture(_ request: HealthHistoryExportRequest) {
+        let selection = request.selection
+        guard isCurrentHistoryRequest(request) else { return }
         let clinicAllowed = selection.target == .apiEndpoint && clinicSponsorship.authorizeCached(
             endpoint: apiExportSettings.endpointURLString) == .allowedClinicDestination
         guard purchaseManager.canExport || clinicAllowed else { presentExportPaywall(); return }
@@ -1672,7 +2037,8 @@ struct ContentView: View {
         }
         if selection.target == .localIPhoneFolder {
             vaultManager.refreshVaultAccess()
-            guard vaultManager.vaultURL != nil, !vaultManager.requiresVaultReselection else {
+            guard vaultManager.vaultURL == selection.localDestinationURL,
+                  vaultManager.vaultURL != nil, !vaultManager.requiresVaultReselection else {
                 configurationProtection.performConfigurationChange { showDestinationChangedAlert = true }
                 return
             }
@@ -1691,6 +2057,7 @@ struct ContentView: View {
         HealthHistoryExecutionSelection(scope: interactiveHistoryScope,
             settings: ExportSettingsSnapshot.from(advancedSettings, appleExportEngineAuthorityIsFrozen: false),
             target: exportTargetSelection, preset: dateRangePreset,
+            localDestinationURL: exportTargetSelection == .localIPhoneFolder ? vaultManager.vaultURL : nil,
             sleepDayAttribution: healthKitManager.sleepDayAttribution)
     }
 
@@ -1777,7 +2144,9 @@ struct ContentView: View {
         frontmatterConflictNotice = nil
         errorReason = reason
         errorMessage = reason.alertMessage(detail: detail)
-        showError = true
+        // Empty stores use the guided dialog; other failures keep the branch's
+        // single status-card surface until the user opens its Details action.
+        showError = reason == .noHealthData
     }
 
     // MARK: - Interactive Export Lifecycle Marker
@@ -1815,8 +2184,7 @@ struct ContentView: View {
                 exportTask = nil
             }
 
-            startDate = dateRange.startDate
-            endDate = dateRange.endDate
+            // Execution bounds belong to the frozen request, not date preferences.
             let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
             advancedSettings.exportTimeZoneOverride = frozenTimeZone
             var calendar = Calendar(identifier: .gregorian)
@@ -1860,13 +2228,16 @@ struct ContentView: View {
                     exportStatusMessage = result.dailyNoteUpdateCount > 0
                         ? "Daily note update stopped — \(result.dailyNoteUpdateCount) of \(result.totalCount) notes updated"
                         : "Daily note update cancelled"
-                    vaultManager.lastExportStatus = exportStatusMessage
+                    recordManualExportStatus(exportStatusMessage, kind: .cancelled)
                 } else if result.isPartialSuccess {
                     exportStatusMessage = "\(String(localized: "Export cancelled")) · \(result.localizedGeneratedFileAndDataDayDescription)"
-                    vaultManager.lastExportStatus = exportStatusMessage
+                    recordManualExportStatus(exportStatusMessage, kind: .cancelled)
                 } else {
                     exportStatusMessage = String(localized: "Export cancelled", comment: "Export was cancelled")
-                    vaultManager.lastExportStatus = String(localized: "Export cancelled", comment: "Export was cancelled")
+                    recordManualExportStatus(
+                        String(localized: "Export cancelled", comment: "Export was cancelled"),
+                        kind: .cancelled
+                    )
                 }
                 startStatusDismissTimer()
             } else if result.isFullSuccess {
@@ -1876,13 +2247,13 @@ struct ContentView: View {
                 let noteSuffix = result.localizedInformationalNoteSummary.map { " \($0)" } ?? ""
                 if advancedSettings.dailyNotesOnlyModeEnabled {
                     exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")"
-                    vaultManager.recordSuccessfulExportStatus(exportStatusMessage)
+                    recordManualExportStatus(exportStatusMessage, kind: .success)
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
                     exportStatusMessage = "\(result.localizedGeneratedFileAndDataDayDescription) (\(result.fileBreakdownDescription))\(noteSuffix)"
-                    vaultManager.recordSuccessfulExportStatus(result.localizedGeneratedFileAndDataDayDescription)
+                    recordManualExportStatus(result.localizedGeneratedFileAndDataDayDescription, kind: .success)
                 } else {
                     exportStatusMessage = result.localizedGeneratedFileAndDataDayDescription + noteSuffix
-                    vaultManager.recordSuccessfulExportStatus(result.localizedGeneratedFileAndDataDayDescription)
+                    recordManualExportStatus(result.localizedGeneratedFileAndDataDayDescription, kind: .success)
                 }
                 startStatusDismissTimer()
 
@@ -1901,27 +2272,30 @@ struct ContentView: View {
                 let suffix = warning ?? "Failed: \(failedDatesStr)"
                 if isCompletedDailyNoteSkip {
                     exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily notes. No export files were created."
-                    vaultManager.lastExportStatus = "Daily notes: \(result.dailyNoteUpdateCount) updated, \(result.dailyNoteSkipCount) skipped"
+                    recordManualExportStatus(
+                        "Daily notes: \(result.dailyNoteUpdateCount) updated, \(result.dailyNoteSkipCount) skipped",
+                        kind: .warning
+                    )
                     startStatusDismissTimer()
                 } else if advancedSettings.dailyNotesOnlyModeEnabled {
                     exportStatusMessage = "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes. \(suffix)"
-                    vaultManager.lastExportStatus = "Partial daily note update: \(result.dailyNoteUpdateCount)/\(result.totalCount)"
+                    recordManualExportStatus(
+                        "Partial daily note update: \(result.dailyNoteUpdateCount)/\(result.totalCount)",
+                        kind: .warning
+                    )
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
                     exportStatusMessage = "\(result.localizedGeneratedFileAndDataDayDescription) (\(result.fileBreakdownDescription)). \(suffix)"
-                    vaultManager.lastExportStatus = result.localizedGeneratedFileAndDataDayDescription
+                    recordManualExportStatus(result.localizedGeneratedFileAndDataDayDescription, kind: .warning)
                 } else {
                     exportStatusMessage = "\(result.localizedGeneratedFileAndDataDayDescription). \(suffix)"
-                    vaultManager.lastExportStatus = exportStatusMessage
+                    recordManualExportStatus(exportStatusMessage, kind: .warning)
                 }
             } else {
                 let primaryReason = result.primaryFailureReason ?? .unknown
                 exportStatusMessage = advancedSettings.dailyNotesOnlyModeEnabled
                     ? "No daily notes were updated"
                     : "Export failed: \(primaryReason.shortDescription)"
-                vaultManager.lastExportStatus = Self.failureToastStatus(
-                    primaryReason.shortDescription,
-                    reason: primaryReason
-                )
+                recordManualExportStatus(primaryReason.shortDescription, kind: .failure)
                 presentExportFailure(
                     primaryReason,
                     detail: result.failedDateDetails.first
@@ -2042,8 +2416,7 @@ struct ContentView: View {
                 exportTask = nil
             }
 
-            startDate = dateRange.startDate
-            endDate = dateRange.endDate
+            // Execution bounds belong to the frozen request, not date preferences.
             let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
             advancedSettings.exportTimeZoneOverride = frozenTimeZone
             var calendar = Calendar(identifier: .gregorian)
@@ -2102,11 +2475,11 @@ struct ContentView: View {
                 exportStatusMessage = result.successCount == 0
                     ? "API export cancelled"
                     : "API export stopped — uploaded \(result.successCount)/\(totalDays) days"
-                vaultManager.lastExportStatus = exportStatusMessage
+                recordManualExportStatus(exportStatusMessage, kind: .cancelled)
                 startStatusDismissTimer()
             } else if result.isFullSuccess {
                 exportStatusMessage = "Uploaded \(result.successCount) day\(result.successCount == 1 ? "" : "s")\(providerRecordDescription) to API"
-                vaultManager.lastExportStatus = "API export complete"
+                recordManualExportStatus("API export complete", kind: .success)
                 startStatusDismissTimer()
 
                 if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
@@ -2118,11 +2491,14 @@ struct ContentView: View {
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
                 let suffix = warning ?? "Failed: \(failedDatesStr)"
                 exportStatusMessage = "Uploaded \(result.successCount)/\(totalDays) days\(providerRecordDescription) to API. \(suffix)"
-                vaultManager.lastExportStatus = "API partial export: \(result.successCount)/\(totalDays) days uploaded"
+                recordManualExportStatus(
+                    "API partial export: \(result.successCount)/\(totalDays) days uploaded",
+                    kind: .warning
+                )
             } else {
                 let primaryReason = result.primaryFailureReason ?? .unknown
                 exportStatusMessage = "API export failed: \(primaryReason.shortDescription)"
-                vaultManager.lastExportStatus = Self.failureToastStatus("API export failed", reason: primaryReason)
+                recordManualExportStatus("API export failed", kind: .failure)
                 presentExportFailure(
                     primaryReason,
                     detail: result.failedDateDetails.first
@@ -2155,8 +2531,7 @@ struct ContentView: View {
                 exportTask = nil
             }
 
-            startDate = dateRange.startDate
-            endDate = dateRange.endDate
+            // Execution bounds belong to the frozen request, not date preferences.
             let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
             advancedSettings.exportTimeZoneOverride = frozenTimeZone
             var calendar = Calendar(identifier: .gregorian)
@@ -2281,6 +2656,10 @@ struct ContentView: View {
         statusDismissTimer?.invalidate()
 
         exportTask = Task {
+            guard !Task.isCancelled else {
+                finishMacExportPreparationStopped(jobID: jobID, message: "Export cancelled")
+                return
+            }
             externalIntegrationManager.beginExportAction()
             defer { externalIntegrationManager.endExportAction() }
             do {
@@ -2293,12 +2672,14 @@ struct ContentView: View {
                 let captureContext = try healthKitManager.resolveSleepCaptureContext(settings: advancedSettings, timeZone: providerTimeZone)
                 var providerCalendar = Calendar(identifier: .gregorian)
                 providerCalendar.timeZone = providerTimeZone
+                let whoopResources = advancedSettings.metricSelection.enabledWHOOPResources
                 let externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
                 if ConnectedAppsFeature.isEnabled, externalIntegrationManager.connectedProviderCount > 0 {
                     externalRecordFetcher = { date in
                         await externalIntegrationManager.fetchDailyRecords(
                             for: date,
-                            calendar: providerCalendar
+                            calendar: providerCalendar,
+                            whoopResources: whoopResources
                         )
                     }
                 } else {
@@ -2626,8 +3007,13 @@ struct ContentView: View {
                        metadata.requestedDays.contains(day),
                        advancedSettings.writesExternalProviderSidecars,
                        let externalRecordFetcher {
+                        let whoopResources = metadata.settingsSnapshot.metricSelection.enabledWHOOPResources
+                            .requested(for: date, calendar: sourceCalendar)
                         let providerRecords = await externalRecordFetcher(date)
-                        record.providers = HealthProviderSections.normalized(from: providerRecords)
+                            .compactMap { $0.selectingWHOOPResources(whoopResources) }
+                        record.providers = HealthProviderSections.normalized(
+                            from: providerRecords, whoopResources: whoopResources
+                        )
                         externalDailyRecords.append(contentsOf: providerRecords.filter(\.shouldExport))
                     }
                     records.append(record)
@@ -2716,7 +3102,7 @@ struct ContentView: View {
         // checkpoint, even though the UI optimistically marked payloadSent.
         guard activeMacExportJobID == jobID else { return }
         exportStatusMessage = message
-        vaultManager.lastExportStatus = message
+        recordManualExportStatus(message, kind: .failure)
         isExporting = false
         exportProgress = 0.0
         exportTask = nil
@@ -2729,7 +3115,7 @@ struct ContentView: View {
     private func finishMacExportPreparationStopped(jobID: UUID, message: String) {
         guard activeMacExportJobID == jobID, !macExportPayloadSent else { return }
         exportStatusMessage = message
-        vaultManager.lastExportStatus = message
+        recordManualExportStatus(message, kind: .cancelled)
         isExporting = false
         exportProgress = 0.0
         exportTask = nil
@@ -2741,10 +3127,10 @@ struct ContentView: View {
     private func finishMacExportPreparationFailed(jobID: UUID, message: String) {
         guard activeMacExportJobID == jobID, !macExportPayloadSent else { return }
         exportStatusMessage = "Export failed: \(message)"
-        vaultManager.lastExportStatus = message
+        recordManualExportStatus(message, kind: .failure)
         errorReason = nil
         errorMessage = message
-        showError = true
+        showError = false
         isExporting = false
         exportProgress = 0.0
         exportTask = nil
@@ -2842,7 +3228,7 @@ struct ContentView: View {
                   let journal = corpusRecoveryManager.journal(jobID: jobID),
                   journal.state.isTerminal else { return }
             finishCorpusRecoveryUI(
-                succeeded: journal.state == .completed,
+                kind: manualExportStatusKind(for: journal.progressSnapshot.state),
                 message: journal.statusMessage ?? "Connected Mac export finished."
             )
             return
@@ -2854,7 +3240,7 @@ struct ContentView: View {
         if terminalStates.contains(snapshot.state) {
             guard snapshot.jobID == activeMacExportJobID else { return }
             finishCorpusRecoveryUI(
-                succeeded: snapshot.state == .completed || snapshot.state == .partialSuccess,
+                kind: manualExportStatusKind(for: snapshot.state),
                 message: snapshot.message ?? "Connected Mac export finished."
             )
             return
@@ -2901,12 +3287,29 @@ struct ContentView: View {
         }
     }
 
-    private func finishCorpusRecoveryUI(succeeded: Bool, message: String) {
+    private func manualExportStatusKind(
+        for state: ConnectedCorpusJobState
+    ) -> ManualExportStatusKind {
+        switch state {
+        case .completed: return .success
+        case .partialSuccess: return .warning
+        case .cancelled: return .cancelled
+        case .failed, .expired: return .failure
+        case .preparing, .transferring, .paused, .finalizing: return .failure
+        }
+    }
+
+    private func finishCorpusRecoveryUI(kind: ManualExportStatusKind, message: String) {
         isExporting = false
         exportTask = nil
         reconcileDurableExportExecutionAssertion()
-        exportProgress = succeeded ? 1.0 : 0.0
+        exportProgress = kind == .success || kind == .warning ? 1.0 : 0.0
         exportStatusMessage = message
+        recordManualExportStatus(message, kind: kind)
+        if kind == .failure {
+            errorReason = nil
+            errorMessage = message
+        }
         resetMacExportState()
         startStatusDismissTimer()
     }
@@ -3008,16 +3411,16 @@ struct ContentView: View {
                 : (exportResult.informationalNoteSummary.map { " \($0)" } ?? "")
             if completionSettings.dailyNotesOnlyModeEnabled {
                 exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s") on \(destinationName)\(warningSuffix)"
-                vaultManager.lastExportStatus = exportStatusMessage
+                recordManualExportStatus(exportStatusMessage, kind: .success)
             } else if !result.hasAuthoritativeFileCount
                         || result.formatsPerDate > 1
                         || derivedFileCount > 0
                         || externalRecordFileCount > 0 {
                 exportStatusMessage = "Successfully exported \(generatedFileCountText) to \(destinationName) (\(exportResult.fileBreakdownDescription))\(warningSuffix)"
-                vaultManager.lastExportStatus = "Exported \(generatedFileCountText) to Mac"
+                recordManualExportStatus("Exported \(generatedFileCountText) to Mac", kind: .success)
             } else {
                 exportStatusMessage = "Successfully exported \(result.successCount) files to \(destinationName)\(warningSuffix)"
-                vaultManager.lastExportStatus = "Exported \(result.successCount) files to Mac"
+                recordManualExportStatus("Exported \(result.successCount) files to Mac", kind: .success)
             }
             startStatusDismissTimer()
 
@@ -3037,28 +3440,43 @@ struct ContentView: View {
             let suffix = warning ?? "Failed: \(failedDatesStr)"
             if isCompletedDailyNoteSkip {
                 exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily notes on \(destinationName). No export files were created."
-                vaultManager.lastExportStatus = "Daily notes: \(result.dailyNoteUpdateCount) updated, \(result.dailyNoteSkipCount) skipped"
+                recordManualExportStatus(
+                    "Daily notes: \(result.dailyNoteUpdateCount) updated, \(result.dailyNoteSkipCount) skipped",
+                    kind: .warning
+                )
                 startStatusDismissTimer()
             } else if completionSettings.dailyNotesOnlyModeEnabled {
                 exportStatusMessage = "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes on \(destinationName). \(suffix)"
-                vaultManager.lastExportStatus = "Partial daily note update: \(result.dailyNoteUpdateCount)/\(result.totalCount)"
+                recordManualExportStatus(
+                    "Partial daily note update: \(result.dailyNoteUpdateCount)/\(result.totalCount)",
+                    kind: .warning
+                )
             } else if !result.hasAuthoritativeFileCount
                         || result.formatsPerDate > 1
                         || derivedFileCount > 0
                         || externalRecordFileCount > 0 {
                 exportStatusMessage = "Exported \(generatedFileCountText) to \(destinationName) (\(exportResult.fileBreakdownDescription)). \(suffix)"
-                vaultManager.lastExportStatus = "Partial Mac export: \(result.successCount)/\(result.totalCount) days succeeded (\(generatedFileCountText))"
+                recordManualExportStatus(
+                    "Partial Mac export: \(result.successCount)/\(result.totalCount) days succeeded (\(generatedFileCountText))",
+                    kind: .warning
+                )
             } else {
                 exportStatusMessage = "Exported \(result.successCount)/\(result.totalCount) files to \(destinationName). \(suffix)"
-                vaultManager.lastExportStatus = "Partial Mac export: \(result.successCount)/\(result.totalCount) succeeded"
+                recordManualExportStatus(
+                    "Partial Mac export: \(result.successCount)/\(result.totalCount) succeeded",
+                    kind: .warning
+                )
             }
         case .cancelled:
             if result.successCount > 0 {
                 exportStatusMessage = "Mac export stopped — \(result.successCount) of \(result.totalCount) days exported"
-                vaultManager.lastExportStatus = "Mac export stopped: \(result.successCount)/\(result.totalCount) exported"
+                recordManualExportStatus(
+                    "Mac export stopped: \(result.successCount)/\(result.totalCount) exported",
+                    kind: .cancelled
+                )
             } else {
                 exportStatusMessage = "Mac export cancelled"
-                vaultManager.lastExportStatus = "Mac export cancelled"
+                recordManualExportStatus("Mac export cancelled", kind: .cancelled)
             }
             startStatusDismissTimer()
         case .failure:
@@ -3066,7 +3484,7 @@ struct ContentView: View {
             exportStatusMessage = completionSettings.dailyNotesOnlyModeEnabled
                 ? "No daily notes were updated on \(destinationName)"
                 : "Mac export failed: \(primaryReason.shortDescription)"
-            vaultManager.lastExportStatus = primaryReason.shortDescription
+            recordManualExportStatus(primaryReason.shortDescription, kind: .failure)
             presentExportFailure(
                 primaryReason,
                 detail: result.failedDateDetails.first
@@ -3124,14 +3542,14 @@ struct ContentView: View {
 
         if failure.reason == .cancelled {
             exportStatusMessage = "Mac export cancelled"
-            vaultManager.lastExportStatus = "Mac export cancelled"
+            recordManualExportStatus("Mac export cancelled", kind: .cancelled)
             startStatusDismissTimer()
         } else {
             exportStatusMessage = "Mac export failed: \(failure.message)"
-            vaultManager.lastExportStatus = failure.message
+            recordManualExportStatus(failure.message, kind: .failure)
             errorReason = reason
             errorMessage = failure.underlyingError.map { "\(failure.message)\n\nDetails: \($0)" } ?? failure.message
-            showError = true
+            showError = reason == .noHealthData
         }
 
         resetMacExportState()
@@ -3231,19 +3649,23 @@ struct ContentView: View {
                 )
                 partialExportNotice = PartialExportNotice(result: exportResult)
                 exportStatusMessage = "Exported 1 file with 1 warning"
-                vaultManager.lastExportStatus = "Partial export: 1 warning"
+                recordManualExportStatus("Partial export: 1 warning", kind: .warning)
                 purchaseManager.recordExportUse(offerGuidance: false)
-            case "fail", "no-data":
+            case "fail":
+                exportStatusMessage = "Export failed"
+                recordManualExportStatus("Export failed", kind: .failure)
+                presentExportFailure(.unknown)
+            case "no-data":
                 exportStatusMessage = "No matching health data"
-                vaultManager.lastExportStatus = "No health data"
+                recordManualExportStatus("No health data", kind: .failure)
                 presentExportFailure(.noHealthData)
             default:
                 if advancedSettings.archiveModeEnabled {
                     exportStatusMessage = "Successfully exported 1 files (no loose daily files + 1 ZIP archive)"
-                    vaultManager.lastExportStatus = "Exported ZIP archive"
+                    recordManualExportStatus("Exported ZIP archive", kind: .success)
                 } else {
                     exportStatusMessage = "Successfully exported 1 files"
-                    vaultManager.lastExportStatus = "Exported 1 files"
+                    recordManualExportStatus("Exported 1 files", kind: .success)
                 }
                 if let fileURL = createTestExportFile() {
                     vaultManager.recordExportPresentationTarget(
@@ -3305,6 +3727,611 @@ struct ContentView: View {
 
     private func effectiveExportDateRange() -> (startDate: Date, endDate: Date) {
         (startDate, endDate)
+    }
+}
+
+// MARK: - Discord Promo Banner
+
+struct DiscordPromoBanner: View {
+    private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
+    let onClose: () -> Void
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    bannerMessage
+                    HStack(spacing: Spacing.sm) {
+                        bannerJoinLink
+                        bannerDismissButton
+                    }
+                }
+            } else {
+                HStack(spacing: Spacing.sm) {
+                    bannerMessage
+                    Spacer(minLength: Spacing.sm)
+                    bannerJoinLink
+                    bannerDismissButton
+                }
+            }
+        }
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.bgPrimary)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Join the Health.md Discord community.")
+    }
+
+    private var bannerMessage: some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: "bubble.left.and.bubble.right.fill")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.accent)
+                .frame(width: 26, height: 26)
+                .background(
+                    Circle()
+                        .fill(Color.accentSubtle)
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Join the community")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text("Chat with us on Discord")
+                    .font(.caption)
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private var bannerJoinLink: some View {
+        Link(destination: discordURL) {
+            Text("Join")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.accent)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(Color.accentSubtle)
+                )
+        }
+    }
+
+    private var bannerDismissButton: some View {
+        Button(action: onClose) {
+            Image(systemName: "xmark")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Color.textMuted)
+                .padding(6)
+                .background(
+                    Circle()
+                        .fill(Color.bgSecondary)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Dismiss Discord banner")
+    }
+}
+
+// MARK: - Schedule Tab View
+
+struct ScheduleTabView: View {
+    @EnvironmentObject var schedulingManager: SchedulingManager
+    @EnvironmentObject var healthKitManager: HealthKitManager
+    @ObservedObject var vaultManager: VaultManager
+    @ObservedObject var advancedSettings: AdvancedExportSettings
+    @ObservedObject var apiExportSettings: APIExportSettings
+    @EnvironmentObject var agentDataGatewaySettings: AgentDataGatewaySettings
+    @Binding var showFolderPicker: Bool
+    var profileCoordinator: ExportProfileCoordinator? = nil
+
+    var body: some View {
+        NavigationStack {
+            ScheduleSettingsView(
+                vaultManager: vaultManager,
+                advancedSettings: advancedSettings,
+                apiExportSettings: apiExportSettings,
+                agentDataGatewaySettings: agentDataGatewaySettings,
+                showFolderPicker: $showFolderPicker,
+                profileCoordinator: profileCoordinator
+            )
+        }
+    }
+}
+
+// MARK: - Settings Tab View
+
+struct SettingsTabView: View {
+    @ObservedObject var vaultManager: VaultManager
+    @ObservedObject var advancedSettings: AdvancedExportSettings
+    @ObservedObject var externalIntegrationManager: ExternalIntegrationManager
+    /// Built by ContentView when the main UI appears; used to gate the
+    /// profile-management row while remaining optional at the call site.
+    var profileCoordinator: ExportProfileCoordinator?
+    @EnvironmentObject private var sharedSetupCoordinator: SharedSetupCoordinator
+        @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    @Environment(\.locale) private var locale
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ObservedObject private var purchaseManager = PurchaseManager.shared
+    @Binding var showFolderPicker: Bool
+    @Binding var showExportProfiles: Bool
+    @Binding var showClinicianReport: Bool
+    @State private var showMailCompose = false
+    @StateObject private var feedbackReporter = FeedbackReporter()
+    @State private var showPaywall = false
+    @State private var showMyselfClaim = false
+    @State private var showExternalIntegrations = false
+    @State private var showDiagnostics = false
+    private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
+    private let privacyPolicyURL = URL(string: "https://healthmd.app/privacy-policy.html")!
+    @State private var debugResult: String = ""
+    @State private var showDebugAlert = false
+    @State private var isRunningDebug = false
+
+    private var unlockSubtitle: String {
+        "Individual and Family Lifetime options"
+    }
+
+    private var purchaseSettingsIcon: String {
+        if purchaseManager.isFamilyUnlocked {
+            return "person.3.fill"
+        }
+        return purchaseManager.isUnlocked ? "checkmark.seal.fill" : "lock.fill"
+    }
+
+    private var purchaseSettingsTitle: String {
+        purchaseManager.isUnlocked ? "Purchases & Family" : "Unlock Full Access"
+    }
+
+    private var purchaseSettingsSubtitle: String {
+        if purchaseManager.isFamilyUnlocked {
+            return "Family Lifetime active"
+        }
+        if purchaseManager.canBuyFamilyUpgrade {
+            return "Full access active — family upgrade available"
+        }
+        if purchaseManager.isUnlocked {
+            return "Full access active"
+        }
+        return unlockSubtitle
+    }
+
+    private var purchaseStatusLabel: String {
+        purchaseManager.isUnlocked ? "Active" : "Limited"
+    }
+
+    private var purchaseStatusTone: SettingsStatusTone {
+        purchaseManager.isUnlocked ? .success : .warning
+    }
+
+    private var vaultStatusLabel: String {
+        vaultManager.vaultAvailabilityText
+    }
+
+    private var showDebugTools: Bool {
+        #if DEBUG
+        return true
+        #else
+        return false
+        #endif
+    }
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: Spacing.s4) {
+                    settingsHeader
+                    configurationProtectionSection
+                    accountAndStorageSection
+                    profilesAndReportsSection
+                    sharedSetupSection
+                privacyAndAnalyticsSection
+                if ConnectedAppsFeature.isEnabled {
+                    connectedAppsSection
+                }
+                supportSection
+                debugToolsSection
+            }
+                .padding(.horizontal, Spacing.s4)
+                .padding(.top, Spacing.s4)
+                .padding(.bottom, 120)
+            }
+            .background(Color.bgPrimary.ignoresSafeArea())
+            .scrollIndicators(.hidden)
+            .onAppear {
+                guard let requestID = configurationProtection.settingsNavigationRequestID else { return }
+                Task { @MainActor in
+                    await Task.yield()
+                    withAnimation(AnimationTimings.smooth) {
+                        proxy.scrollTo(AccessibilityID.ConfigurationProtection.section, anchor: .center)
+                    }
+                    configurationProtection.consumeSettingsNavigationRequest(requestID)
+                }
+            }
+            .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+                guard let requestID else { return }
+                Task { @MainActor in
+                    await Task.yield()
+                    withAnimation(AnimationTimings.smooth) {
+                        proxy.scrollTo(AccessibilityID.ConfigurationProtection.section, anchor: .center)
+                    }
+                    configurationProtection.consumeSettingsNavigationRequest(requestID)
+                }
+            }
+        }
+        .sheet(isPresented: $showMailCompose, onDismiss: feedbackReporter.mailSheetDismissed) {
+            MailComposeView(onCompletion: feedbackReporter.completeMail)
+        }
+        .feedbackFailureSheet($feedbackReporter.failure)
+        .sheet(isPresented: $showMyselfClaim) {
+            MyselfClaimView(app: "health.md")
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(context: .settings)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showDiagnostics) { DiagnosticsView() }
+        .sheet(isPresented: $showExternalIntegrations) {
+            ExternalIntegrationsView(manager: externalIntegrationManager)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .geistDialog(
+            isPresented: $showDebugAlert,
+            title: Text("Receipt Verification"),
+            message: Text(debugResult),
+            actions: [.action("Done", role: .secondary)]
+        )
+    }
+
+    private var settingsHeader: some View {
+        HealthMdPageHeader(
+            title: "Settings",
+            subtitle: "Manage access, storage, and support for Health.md."
+        ) {
+            Group {
+                if dynamicTypeSize >= .xxxLarge {
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        settingsHeaderStatusPills
+                    }
+                } else {
+                    HStack(spacing: Spacing.sm) {
+                        settingsHeaderStatusPills
+                    }
+                }
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Purchase status: \(purchaseManager.isUnlocked ? "full access" : "free plan"). Vault status: \(vaultStatusLabel.lowercased()).")
+        }
+    }
+
+    @ViewBuilder
+    private var settingsHeaderStatusPills: some View {
+        SettingsStatusPill(text: purchaseManager.isUnlocked ? "Full Access" : "Free Plan", tone: purchaseStatusTone)
+        SettingsStatusPill(text: vaultManager.vaultAvailabilityText, tone: vaultManager.vaultURL == nil ? .warning : .success)
+    }
+
+    private var configurationProtectionSection: some View {
+        SettingsSectionCard(
+            title: "Prevent Accidental Changes",
+            subtitle: "Keep your saved configuration from being changed by mistake. Manual exports and syncs remain available."
+        ) {
+            ReadingProtectionRow(
+                isEnabled: Binding(
+                    get: { configurationProtection.isEnabled },
+                    set: { configurationProtection.setEnabled($0) }
+                ),
+                accessibilityIdentifier: AccessibilityID.ConfigurationProtection.toggle
+            )
+        }
+        .id(AccessibilityID.ConfigurationProtection.section)
+    }
+
+    private var accountAndStorageSection: some View {
+        SettingsSectionCard(
+            title: "Account & Storage",
+            subtitle: "Choose where exports go and manage your access."
+        ) {
+            SettingsRow(
+                icon: purchaseSettingsIcon,
+                title: purchaseSettingsTitle,
+                subtitle: purchaseSettingsSubtitle,
+                status: purchaseStatusLabel,
+                statusTone: purchaseStatusTone,
+                isActive: purchaseManager.isUnlocked,
+                accessibilityHint: "Double tap to manage purchases and Family Sharing",
+                action: { showPaywall = true }
+            )
+
+            SettingsRowDivider()
+
+            SettingsRow(
+                icon: "gift.fill",
+                title: "Claim myself.md access",
+                subtitle: "Verify an eligible purchase for complimentary Lifetime access.",
+                isActive: true,
+                accessibilityHint: "Double tap to review purchase verification for myself.md",
+                accessibilityIdentifier: "settings-myself-claim",
+                action: { showMyselfClaim = true }
+            )
+
+            SettingsRowDivider()
+
+            SettingsRow(
+                icon: "folder.fill",
+                title: "Obsidian Vault",
+                subtitle: vaultManager.hasVaultSelection ? vaultManager.vaultName : "Choose a folder for exports",
+                status: vaultStatusLabel,
+                statusTone: vaultManager.vaultURL == nil ? .warning : .success,
+                isActive: vaultManager.hasVaultSelection,
+                accessibilityHint: "Double tap to choose an Obsidian vault folder",
+                action: { showFolderPicker = true }
+            )
+            .configurationChangesProtected()
+        }
+    }
+
+    private var profilesAndReportsSection: some View {
+        SettingsSectionCard(
+            title: "Profiles & Reports",
+            subtitle: "Manage saved export configurations and clinician-ready summaries."
+        ) {
+            if profileCoordinator != nil {
+                ExportProfilesSettingsRow {
+                    showExportProfiles = true
+                }
+
+                SettingsRowDivider()
+            }
+
+            SettingsRow(
+                icon: "doc.text.fill",
+                title: clinicianReportCopy.string(.title),
+                subtitle: clinicianReportCopy.string(.entry_subtitle),
+                isActive: true,
+                accessibilityHint: clinicianReportCopy.string(.accessibility_hint),
+                accessibilityIdentifier: AccessibilityID.ClinicianReport.entry,
+                action: { showClinicianReport = true }
+            )
+        }
+    }
+
+    private var clinicianReportCopy: ClinicianReportCopy {
+        ClinicianReportCopy(locale: locale)
+    }
+
+    private var sharedSetupSection: some View {
+        SettingsSectionCard(
+            title: "Configuration",
+            subtitle: "Review, apply, undo, or share portable export preferences."
+        ) {
+            SharedSetupConfigurationCard(coordinator: sharedSetupCoordinator)
+                .padding(Spacing.s4)
+        }
+    }
+
+    private var privacyAndAnalyticsSection: some View {
+        SettingsSectionCard(
+            title: "Privacy & Analytics",
+            subtitle: "Health.md collects limited product events using a random app-install identifier for setup, export-shape, and purchase-flow analytics."
+        ) {
+            SettingsRow(
+                icon: "hand.raised.fill",
+                title: "Privacy Policy",
+                subtitle: "Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. On iPhone and iPad, Apple Ads campaign identifiers are linked to purchase outcomes to measure campaign conversion. No health data or purchase events are sent to Apple Ads.",
+                isActive: true,
+                accessibilityHint: "Double tap to open the Health.md privacy policy",
+                action: { UIApplication.shared.open(privacyPolicyURL) }
+            )
+        }
+    }
+
+    private var connectedAppsSection: some View {
+        SettingsSectionCard(
+            title: "Connected Apps",
+            subtitle: "Add provider-native sidecar exports without replacing Apple Health."
+        ) {
+            SettingsRow(
+                icon: "link.circle.fill",
+                title: "Third-Party Integrations",
+                subtitle: "Fitbit, Oura, WHOOP, Withings, and Strava",
+                isActive: externalIntegrationManager.connectedProviderCount > 0,
+                accessibilityHint: "Double tap to connect or disconnect third-party health providers",
+                action: { showExternalIntegrations = true }
+            )
+        }
+    }
+
+    private var supportSection: some View {
+        SettingsSectionCard(
+            title: "Community & Support",
+            subtitle: "Get help, share ideas, or report a problem."
+        ) {
+            SettingsRow(
+                icon: "bubble.left.and.bubble.right.fill",
+                title: "Join Our Discord",
+                subtitle: "Chat with the community",
+                isActive: true,
+                accessibilityHint: "Double tap to open Discord",
+                action: { UIApplication.shared.open(discordURL) }
+            )
+
+            SettingsRowDivider()
+
+            SettingsRow(
+                icon: "envelope.fill",
+                title: "Send Feedback",
+                subtitle: "Questions, ideas, or issues",
+                isActive: true,
+                accessibilityHint: "Double tap to send feedback by email",
+                action: {
+                    if FeedbackHelper.canSendMail {
+                        showMailCompose = true
+                    } else {
+                        feedbackReporter.open(.email)
+                    }
+                }
+            )
+
+            SettingsRowDivider()
+
+            SettingsRow(
+                icon: "doc.text.magnifyingglass",
+                title: "Diagnostics",
+                subtitle: "Inspect local technical events and choose what to share",
+                isActive: true,
+                accessibilityHint: "Double tap to open Diagnostics",
+                action: { showDiagnostics = true }
+            )
+
+            SettingsRowDivider()
+
+            SettingsRow(
+                icon: "ladybug.fill",
+                title: "Report a Bug",
+                subtitle: "Open an issue on GitHub",
+                isActive: true,
+                accessibilityHint: "Double tap to open GitHub Issues",
+                action: { feedbackReporter.open(.github) }
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var debugToolsSection: some View {
+        if showDebugTools {
+            SettingsSectionCard(
+                title: "Developer Tools",
+                subtitle: "Debug actions available in development builds."
+            ) {
+                SettingsRow(
+                    icon: "checkmark.shield.fill",
+                    title: isRunningDebug ? "Running…" : "Verify Receipt",
+                    subtitle: "Test worker ↔ Apple end-to-end",
+                    isActive: true,
+                    accessibilityHint: "Double tap to verify the purchase receipt",
+                    action: runReceiptVerification
+                )
+
+                SettingsRowDivider()
+
+                SettingsRow(
+                    icon: "arrow.counterclockwise",
+                    title: "Replay Onboarding",
+                    subtitle: "Show onboarding flow again",
+                    isActive: true,
+                    accessibilityHint: "Double tap to replay onboarding",
+                    action: replayOnboarding
+                )
+            }
+        }
+    }
+
+    private func runReceiptVerification() {
+        guard !isRunningDebug else { return }
+        isRunningDebug = true
+        Task {
+            let result = await PurchaseManager.shared.debugVerifyReceipt()
+            await MainActor.run {
+                debugResult = result
+                isRunningDebug = false
+                showDebugAlert = true
+            }
+        }
+    }
+
+    private func replayOnboarding() {
+        UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+        debugResult = "Onboarding will replay now."
+        showDebugAlert = true
+    }
+}
+
+// MARK: - Settings Components
+
+private struct SettingsSectionCard<Content: View>: View {
+    let title: String
+    let subtitle: String?
+    let content: Content
+
+    init(title: String, subtitle: String? = nil, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.subtitle = subtitle
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.textPrimary)
+
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.footnote)
+                        .foregroundStyle(Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.horizontal, 2)
+
+            VStack(spacing: 0) {
+                content
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.bgTertiary)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+            )
+        }
+    }
+}
+
+private struct SettingsRowDivider: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        Divider()
+            .overlay(Color.borderSubtle)
+            .padding(.leading, dynamicTypeSize >= .xxxLarge ? Spacing.md : Spacing.s16)
+            .padding(.trailing, dynamicTypeSize >= .xxxLarge ? Spacing.md : 0)
+    }
+}
+
+// SettingsRow and its production label/status views live in ReadingA11yComponents.
+
+/// Export Profiles entry row. Isolated from `SettingsTabView` to keep the
+/// profile-management entry's layout independent from the surrounding section.
+private struct ExportProfilesSettingsRow: View {
+    let action: () -> Void
+
+    var body: some View {
+        SettingsRow(
+            icon: "square.and.arrow.down.on.square",
+            title: "Export Profiles",
+            subtitle: "Save multiple export configurations and run them on their own schedules.",
+            isActive: true,
+            accessibilityHint: "Double tap to manage export profiles",
+            accessibilityIdentifier: AccessibilityID.ExportProfiles.entry,
+            action: action
+        )
     }
 }
 

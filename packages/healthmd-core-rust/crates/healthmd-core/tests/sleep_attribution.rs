@@ -214,5 +214,16 @@ fn wake_date_identity_cannot_reuse_the_whoop_v10_identity() {
         read_public_sleep_context(SleepSource::Apple, 11, Some("apple-v11"), Some(&authority))
             .expect("Wake-date exports need their own versioned identity");
     assert_eq!(context.successor_profile.as_deref(), Some("apple-v11"));
-    assert!(serde_json::from_str::<MetricRegistryProfile>("\"apple_health_data_v10\"").is_err());
+    let whoop: MetricRegistryProfile = serde_json::from_str("\"apple_health_data_v10\"").unwrap();
+    assert_eq!(whoop, MetricRegistryProfile::AppleHealthDataV10);
+    assert_eq!(
+        metric_registry_snapshot(whoop, 2),
+        Err(healthmd_core::CoreError::UnsupportedRegistryVersion)
+    );
+    assert_eq!(
+        metric_registry_snapshot(whoop, 1)
+            .unwrap()
+            .public_schema_version,
+        10
+    );
 }

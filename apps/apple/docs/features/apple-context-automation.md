@@ -9,10 +9,14 @@ files or file quota. It receives a durable request identity and can recover a
 request-bound receipt after an acknowledgement is lost or either app restarts.
 This is not ordinary file export or computer-initiated MCP acquisition.
 
-The existing seven export/summary/schedule actions are unchanged. The iOS provider
-additionally registers `RefreshMacHealthContextIntent` and
-`GetMacContextRefreshStatusIntent`, returning `MacContextRefreshEntity` with a
-persisted request ID and a Status property. The selected hosted SDK is the Apple
+The existing export/summary/schedule actions and the latest-status
+`GetMacContextRefreshStatusIntent` remain unchanged. The iOS provider adds a
+**Refresh Context for Dates** tile for `RefreshMacHealthContextIntent`.
+`GetMacContextRequestStatusIntent` is available in the Shortcuts action editor;
+pass it the refresh's `MacContextRefreshEntity`, which carries the persisted
+request ID and a Status property. This keeps the existing nine tiles within
+[Apple's ten App Shortcuts limit](https://developer.apple.com/videos/play/wwdc2023/10102/)
+while exposing both request-bound actions through App Intents metadata. The selected hosted SDK is the Apple
 CI `macos-26` / `latest-stable` Xcode image; only established public AppIntents
 APIs already used by the existing entity-returning intents are used. No OS 27
 all-history API, private API, flag enablement or deployment is involved.

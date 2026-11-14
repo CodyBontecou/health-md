@@ -111,7 +111,7 @@ struct ClinicianReportView: View {
                 }
             }
         }
-        .overlay(alignment: .top) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             ConfigurationProtectionToast(configurationProtection: configurationProtection)
                 .padding(.horizontal, GlassMetrics.screenMargin)
                 .padding(.top, 8)

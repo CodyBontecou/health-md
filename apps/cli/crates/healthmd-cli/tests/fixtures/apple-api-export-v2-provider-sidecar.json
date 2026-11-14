@@ -1,6 +1,6 @@
 {
   "daily_record_schema" : "healthmd.health_data",
-  "daily_record_schema_version" : 8,
+  "daily_record_schema_version" : 10,
   "date_range" : {
     "end" : "2026-03-16",
     "start" : "2026-03-15"
@@ -106,6 +106,7 @@
               "max_heart_rate_bpm" : 174,
               "score_state" : "SCORED",
               "start_time" : "2026-03-15T07:00:00.000000000Z",
+              "step_count" : 8234,
               "strain_score" : 12.699999999999999,
               "timezone_offset" : "Z"
             }
@@ -152,7 +153,7 @@
             }
           ],
           "schema" : "healthmd.provider.whoop_daily",
-          "schema_version" : 1,
+          "schema_version" : 2,
           "sleep" : [
             {
               "awake_milliseconds" : 2399250,
@@ -214,7 +215,7 @@
       },
       "raw_capture_status" : "complete",
       "schema" : "healthmd.health_data",
-      "schema_version" : 8,
+      "schema_version" : 10,
       "time_context" : {
         "calendar_timezone" : "UTC",
         "timestamp_timezone" : "UTC"

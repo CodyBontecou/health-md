@@ -1,0 +1,56 @@
+name = "healthmd-cloud-ingest"
+main = "src/ingest-worker.ts"
+compatibility_date = "2026-08-01"
+workers_dev = false
+preview_urls = false
+logpush = false
+
+# Health-data boundary: retain only fixed Analytics Engine buckets below.
+# Disable persisted Worker logs, invocation metadata and traces so account URLs,
+# exception details and provider request context cannot become a second dataset.
+[observability]
+enabled = false
+redact_query_string = true
+
+[observability.logs]
+enabled = false
+invocation_logs = false
+persist = false
+
+[observability.traces]
+enabled = false
+persist = false
+
+# Source-only production profile. Placeholder bindings deliberately prevent
+# deployment until Phase 0/1 approvals and isolated resources exist.
+[[d1_databases]]
+binding = "DB"
+database_name = "healthmd-cloud-production-placeholder"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "EXPORTS"
+bucket_name = "healthmd-cloud-production-placeholder-not-for-deployment"
+
+[[analytics_engine_datasets]]
+binding = "METRICS"
+dataset = "healthmd_cloud_ingest_metrics_placeholder"
+
+[vars]
+ENVIRONMENT = "production"
+SERVICE_PROFILE = "ingest"
+DEPLOYMENT_REVISION = "REPLACE_WITH_FULL_GIT_COMMIT_SHA"
+PUBLIC_ORIGIN = "https://api.healthmd.app"
+AUTH_SIGNUP_MODE = "closed"
+ACCOUNT_KEY_MODE = "per_account"
+CURRENT_ACCOUNT_WRAPPING_KEY_ID = "kek-v1"
+HEALTH_FREE_METRICS_REQUIRED = "1"
+MAX_EXPORT_BYTES = "26214400"
+INGEST_TOKEN_HOURLY_LIMIT = "120"
+INGEST_ACCOUNT_HOURLY_LIMIT = "240"
+
+# Required secrets:
+#   ACCOUNT_KEY_WRAPPING_KEYS_JSON (for example {"kek-v1":"<32-byte-base64>"})
+# Ingest must not receive legacy EXPORT_ENCRYPTION_KEYS_JSON/CURRENT_EXPORT_KEY_ID authority.
+#   CLOUD_RUNTIME_APPROVED=healthmd-cloud-v1-reviewed

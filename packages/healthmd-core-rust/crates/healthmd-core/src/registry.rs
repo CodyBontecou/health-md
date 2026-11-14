@@ -32,6 +32,7 @@ pub enum MetricRegistryProfile {
     AppleHealthDataV11,
     /// Android wake-date daily v6, explicitly requested from registry v2.
     AndroidSleepV6,
+    AppleHealthDataV10,
 }
 
 impl MetricRegistryProfile {
@@ -41,6 +42,7 @@ impl MetricRegistryProfile {
         match self {
             Self::AppleHealthDataV7 => "apple_health_data_v7",
             Self::AppleHealthDataV8 => "apple_health_data_v8",
+            Self::AppleHealthDataV10 => "apple_health_data_v10",
             Self::AndroidFrozenV4 => "android_frozen_v4",
             Self::AndroidAnalyticalV5 => "android_analytical_v5",
             Self::AppleHealthDataV11 => "apple_health_data_v11",
@@ -52,7 +54,8 @@ impl MetricRegistryProfile {
     #[must_use]
     pub const fn registry_version(self) -> u32 {
         match self {
-            Self::AppleHealthDataV7
+            Self::AppleHealthDataV10
+            | Self::AppleHealthDataV7
             | Self::AppleHealthDataV8
             | Self::AndroidFrozenV4
             | Self::AndroidAnalyticalV5 => REGISTRY_VERSION,
@@ -372,6 +375,21 @@ pub fn metric_registry_snapshot_at_authority(
     {
         return Err(CoreError::UnsupportedRegistryVersion);
     }
+    if profile == MetricRegistryProfile::AppleHealthDataV10 {
+        let extension = apple_v10_profile()?;
+        let mut snapshot = metric_registry_snapshot_at_authority(
+            MetricRegistryProfile::AppleHealthDataV8,
+            expected_registry_version,
+            registry_sha256,
+        )?;
+        snapshot.profile_id.clone_from(&extension.profile_id);
+        snapshot
+            .public_profile_id
+            .clone_from(&extension.public_profile_id);
+        snapshot.public_schema.clone_from(&extension.public_schema);
+        snapshot.public_schema_version = extension.public_schema_version;
+        return Ok(snapshot);
+    }
     let bytes = crate::authority::registry_bytes(registry_sha256, profile.id())?;
     let document = decode_and_validate_version(bytes, false, expected_registry_version)?;
     let mut snapshot = project_snapshot(&document, profile)?;
@@ -395,6 +413,52 @@ fn registry_document(version: u32) -> Result<&'static RegistryDocument, CoreErro
         _ => return Err(CoreError::UnsupportedRegistryVersion),
     };
     result.as_ref().map_err(|error| *error)
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct AppleV10Profile {
+    schema: String,
+    schema_version: u32,
+    base_profile_id: String,
+    core_api_version: u32,
+    profile_id: String,
+    profile_revision: u32,
+    public_profile_id: String,
+    public_schema: String,
+    public_schema_version: u32,
+    registry_sha256: String,
+    registry_version: u32,
+    whoop_schema_version: u32,
+}
+
+fn apple_v10_profile() -> Result<&'static AppleV10Profile, CoreError> {
+    static EXTENSION: OnceLock<Result<AppleV10Profile, CoreError>> = OnceLock::new();
+    EXTENSION
+        .get_or_init(|| {
+            let extension: AppleV10Profile = serde_json::from_slice(include_bytes!(
+                "../registry/apple-health-data-v10-profile-v1.json"
+            ))
+            .map_err(|_| CoreError::InvalidRegistry)?;
+            if extension.schema != "healthmd.metric_profile_extension"
+                || extension.schema_version != 1
+                || extension.base_profile_id != "apple_health_data_v8"
+                || extension.core_api_version != 5
+                || extension.profile_id != "apple_health_data_v10"
+                || extension.profile_revision != 1
+                || extension.public_profile_id != "apple-v10"
+                || extension.public_schema != "healthmd.health_data"
+                || extension.public_schema_version != 10
+                || extension.registry_sha256 != REGISTRY_SHA256
+                || extension.registry_version != REGISTRY_VERSION
+                || extension.whoop_schema_version != 2
+            {
+                return Err(CoreError::InvalidRegistry);
+            }
+            Ok(extension)
+        })
+        .as_ref()
+        .map_err(|error| *error)
 }
 
 /// Validate exact embedded registry bytes and return deterministic inventory counts.
@@ -989,6 +1053,27 @@ mod tests {
                 .filter(|output| output.alias_kind == "legacy_android")
                 .count(),
             13
+        );
+    }
+
+    #[test]
+    fn apple_v10_extension_preserves_pinned_registry_and_primary_metrics() {
+        let old = metric_registry_snapshot(MetricRegistryProfile::AppleHealthDataV8, 1).unwrap();
+        let current =
+            metric_registry_snapshot(MetricRegistryProfile::AppleHealthDataV10, 1).unwrap();
+        assert_eq!(old.public_schema_version, 8);
+        assert_eq!(current.profile_id, "apple_health_data_v10");
+        assert_eq!(current.public_profile_id, "apple-v10");
+        assert_eq!(current.public_schema_version, 10);
+        assert_eq!(current.registry_sha256, old.registry_sha256);
+        assert_eq!(current.categories, old.categories);
+        assert_eq!(current.metrics, old.metrics);
+        assert_eq!(current.outputs, old.outputs);
+        assert_eq!(current.unavailable_metrics, old.unavailable_metrics);
+        assert_eq!(current.profile_revision, old.profile_revision);
+        assert_eq!(
+            metric_registry_snapshot(MetricRegistryProfile::AppleHealthDataV10, 2),
+            Err(CoreError::UnsupportedRegistryVersion)
         );
     }
 

@@ -3135,7 +3135,7 @@ final class MacCorpusExportSessionManager {
             artifactPlanVersion: plan.artifactPlanVersion,
             requestID: plan.requestID,
             sessionID: plan.sessionID,
-            profile: plan.pin.isWakeDate ? .appleHealthDataV11 : .appleHealthDataV8,
+            profile: plan.pin.coreProfile,
             artifacts: nativeArtifacts,
             totalByteCount: plan.totalByteCount,
             pin: plan.pin

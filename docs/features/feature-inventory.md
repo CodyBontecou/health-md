@@ -23,6 +23,7 @@ This page locates canonical documentation and source owners. It is not a second 
 | Standalone CLI/MCP users and maintainers | [CLI README](../../apps/cli/README.md) and [CLI architecture](../../apps/cli/docs/architecture.md) |
 | Shared deterministic semantics and direct protocols | [Shared core README](../../packages/healthmd-core-rust/README.md) and [contract registry](../../packages/contracts/README.md) |
 | Practice synthetic runtime and clinical approval boundaries | [Practice README](../../apps/practice/README.md) and [product requirements](../product/practice/README.md) |
+| Optional retained-export Cloud pilot, MCP reader and gated multi-user foundations | [Cloud README](../../apps/cloud/README.md), [pilot decision](../architecture/adr-0007-healthmd-cloud.md) and [Cloud rollout gates](../../apps/cloud/docs/) |
 | Notification-only Direct CLI wake service | [Wake README](../../apps/wake/README.md) and [worker specification](../architecture/rfc-0005-worker-spec.md) |
 | Contributor/consumer agent skills and publication | [Agent skill ownership and installation](../agents/skills.md) |
 | Releases and CI | Component `AGENTS.md` files and [workflow index](../../.github/workflows/README.md) |

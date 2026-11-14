@@ -30,6 +30,45 @@ where
         .map_err(D::Error::custom)
 }
 
+/// Swift-compatible optional whole-second timestamps.
+pub mod option {
+    use super::*;
+
+    /// Serialize an optional timestamp using Swift-compatible whole seconds.
+    ///
+    /// # Errors
+    ///
+    /// Returns the serializer's error when the timestamp or null cannot be emitted.
+    pub fn serialize<S>(value: &Option<DateTime<Utc>>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match value {
+            Some(value) => super::serialize(value, serializer),
+            None => serializer.serialize_none(),
+        }
+    }
+
+    /// Decode an optional RFC 3339 timestamp and normalize it to UTC.
+    ///
+    /// # Errors
+    ///
+    /// Returns a deserialization error for a non-string or invalid timestamp.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = Option::<String>::deserialize(deserializer)?;
+        value
+            .map(|value| {
+                DateTime::parse_from_rfc3339(&value)
+                    .map(|date| date.with_timezone(&Utc))
+                    .map_err(D::Error::custom)
+            })
+            .transpose()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

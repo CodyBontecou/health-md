@@ -16,10 +16,9 @@ This project uses **strict TDD** for all testing-related work items.
 
 3. **REFACTOR**
    - Improve code structure/readability while keeping behavior unchanged.
-   - Re-run:
-     - the focused test(s)
-     - then the broader suite for impacted area
-   - Confirm all pass.
+   - Re-run focused tests after relevant inputs change; retain the GREEN result if nothing affecting it changed.
+   - Run the impacted module's broader regressions once at the end of a coherent change/batch, not after every tiny edit or todo. Escalate contract/security/FFI changes according to the root [verification policy](../../../../AGENTS.md#verification-policy).
+   - Record passing commands and any blocked/opt-in verification gap. Simulator/device/Argent workflows require explicit authorization for the current task; use host-side orchestration tests for script/CI changes.
 
 ## Required evidence before closing a testing todo
 

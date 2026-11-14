@@ -17,7 +17,7 @@ class HealthMdCoreInstrumentationTest {
 
         assertThat(buildInfo.coreSourceRevision).isNotEmpty()
         assertThat(buildInfo.registrySha256).hasLength(64)
-        assertThat(buildInfo.coreApiVersion).isEqualTo(4u)
+        assertThat(buildInfo.coreApiVersion).isEqualTo(5u)
         assertThat(buildInfo.semanticInputVersion).isEqualTo(1u)
         assertThat(buildInfo.canonicalModelVersion).isEqualTo(1u)
         assertThat(buildInfo.registryVersion).isEqualTo(1u)

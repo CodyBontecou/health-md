@@ -482,7 +482,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
         let service = HealthMdCoreService()
         XCTAssertTrue(capturedPin.isCompatible(
             buildInfo: try service.buildInfo(),
-            registrySnapshot: try service.metricRegistry(profile: .appleHealthDataV8)
+            registrySnapshot: try service.metricRegistry(profile: .appleHealthDataV10)
         ))
         XCTAssertTrue(AppleLooseDailyExportPlanner.supports(
             healthData: [record],
@@ -1069,7 +1069,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
     ) throws -> AppleLooseDailyPlannedOperation {
         let service = HealthMdCoreService()
         let buildInfo = try service.buildInfo()
-        let registry = try service.metricRegistry(profile: .appleHealthDataV8)
+        let registry = try service.metricRegistry(profile: .appleHealthDataV10)
         let pin = try AppleExportEnginePin(
             engine: authority,
             calendarTimeZoneIdentifier: "UTC",
@@ -1121,7 +1121,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             id: NativeExportArtifactPlan.artifactID(
                 requestID: identity.requestID,
                 sessionID: identity.sessionID,
-                profile: .appleHealthDataV8,
+                profile: .appleHealthDataV10,
                 relativePath: path,
                 mediaType: "application/json",
                 writeMode: .overwrite,
@@ -1138,7 +1138,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             artifactPlanVersion: pin.artifactPlanVersion,
             requestID: identity.requestID,
             sessionID: identity.sessionID,
-            profile: .appleHealthDataV8,
+            profile: .appleHealthDataV10,
             artifacts: [artifact],
             totalByteCount: artifact.byteCount,
             pin: pin

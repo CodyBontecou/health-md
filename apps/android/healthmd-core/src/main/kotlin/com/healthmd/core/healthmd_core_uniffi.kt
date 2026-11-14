@@ -3872,7 +3872,11 @@ enum class CoreMetricRegistryProfile {
     /**
      * Android wake-date daily v6, selected explicitly from registry v2.
      */
-    ANDROID_SLEEP_V6;
+    ANDROID_SLEEP_V6,
+    /**
+     * Apple v10, with provider-native WHOOP v2 supplementation.
+     */
+    APPLE_HEALTH_DATA_V10;
 
     
 

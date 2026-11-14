@@ -3015,6 +3015,10 @@ public enum CoreMetricRegistryProfile: Equatable, Hashable {
      * Android wake-date daily v6, selected explicitly from registry v2.
      */
     case androidSleepV6
+    /**
+     * Apple v10, with provider-native WHOOP v2 supplementation.
+     */
+    case appleHealthDataV10
 
 
 
@@ -3048,6 +3052,8 @@ public struct FfiConverterTypeCoreMetricRegistryProfile: FfiConverterRustBuffer 
         
         case 6: return .androidSleepV6
         
+        case 7: return .appleHealthDataV10
+        
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -3078,6 +3084,10 @@ public struct FfiConverterTypeCoreMetricRegistryProfile: FfiConverterRustBuffer 
         
         case .androidSleepV6:
             writeInt(&buf, Int32(6))
+        
+        
+        case .appleHealthDataV10:
+            writeInt(&buf, Int32(7))
         
         }
     }

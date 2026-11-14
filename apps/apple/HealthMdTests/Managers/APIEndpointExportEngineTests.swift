@@ -9,6 +9,78 @@ final class APIEndpointExportEngineTests: XCTestCase {
     // is unsafe during test teardown on some macOS runtimes. See docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
+    func testHistoricalAPIPinStopsBeforeHealthOrProviderCaptureAndUpload() async throws {
+        let service = HealthMdCoreService()
+        let current = try AppleExportEnginePin(engine: .shadow, calendarTimeZoneIdentifier: "UTC",
+            buildInfo: service.buildInfo(), registrySnapshot: service.metricRegistry(profile: .appleHealthDataV10))
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(current)) as? [String: Any])
+        object["profile"] = "apple_health_data_v8"
+        object["public_schema_version"] = 8
+        object["core_api_version"] = 4
+        let old = try JSONDecoder().decode(AppleExportEnginePin.self,
+            from: JSONSerialization.data(withJSONObject: object))
+        let settings = makeSettings()
+        settings.executionAppleExportEnginePin = old
+        for dates in [[], days(count: 1)] {
+            for withProvider in [false, true] {
+                let external: APIEndpointExportRunner.ExternalDailyRecordFetcher? = withProvider ? { _ in
+                    XCTFail("Historical authority must stop before provider capture")
+                    return []
+                } : nil
+                do {
+                    _ = try await APIEndpointExportRunner.prepare(
+                        dates: dates,
+                        settings: settings,
+                        destination: destination,
+                        calendarTimeZone: TimeZone(identifier: "UTC"),
+                        connectedAppsEnabled: withProvider,
+                        fetchHealthData: { _, _, _ in
+                            XCTFail("Must not capture")
+                            return ExportFixtures.partialDay
+                        },
+                        fetchExternalDailyRecords: external
+                    )
+                    XCTFail("Historical API pin must not downgrade to current native v10")
+                } catch {
+                    XCTAssertEqual(error as? APIEndpointExportRunner.EngineError, .rustPlanningFailed)
+                }
+            }
+        }
+
+        do {
+            _ = try await APIEndpointExportRunner.preparePreview(
+                records: [], settings: settings, destination: destination,
+                calendarTimeZone: try XCTUnwrap(TimeZone(identifier: "UTC")), connectedAppsEnabled: false
+            )
+            XCTFail("An empty preview cannot bypass pinned authority")
+        } catch {
+            XCTAssertEqual(error as? APIEndpointExportRunner.EngineError, .rustPlanningFailed)
+        }
+
+        let suiteName = "APIEndpointExportEngineTests.historical.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
+        apiSettings.endpointURLString = "https://api.example.com/healthmd"
+        for dates in [[], days(count: 1)] {
+            let result = await APIEndpointExportRunner.export(
+                dates: dates, settings: settings, apiSettings: apiSettings,
+                fetchHealthData: { _, _, _ in
+                    XCTFail("The compatibility uploader cannot bypass a pin")
+                    return ExportFixtures.partialDay
+                },
+                fetchExternalDailyRecords: { _ in XCTFail("Must not fetch providers"); return [] },
+                upload: { _, _, _, _, _, _, _ in
+                    XCTFail("Must not upload")
+                    return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+                }
+            )
+            XCTAssertEqual(result.successCount, 0)
+            XCTAssertEqual(result.failedDateDetails.first?.errorDetails,
+                APIEndpointExportRunner.EngineError.rustPlanningFailed.rawValue)
+        }
+    }
+
     func testDenseStateOfMindRecordsRemainOutsideAPIHandoffAndRetainNativeSource() async throws {
         let zone = TimeZone.gmt
         let date = try XCTUnwrap(days(count: 1).first)
@@ -712,8 +784,14 @@ final class APIEndpointExportEngineTests: XCTestCase {
         let draft = try JSONDecoder().decode(AppleSleepCaptureContext.self,
             from: JSONSerialization.data(withJSONObject: object))
         let service = HealthMdCoreService()
-        let historical = try AppleExportEnginePin(engine: .shadow, calendarTimeZoneIdentifier: "UTC",
-            buildInfo: service.buildInfo(), registrySnapshot: service.metricRegistry(profile: .appleHealthDataV8))
+        let current = try AppleExportEnginePin(engine: .shadow, calendarTimeZoneIdentifier: "UTC",
+            buildInfo: service.buildInfo(), registrySnapshot: service.metricRegistry(profile: .appleHealthDataV10))
+        var historicalObject = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(current)) as? [String: Any])
+        historicalObject["profile"] = "apple_health_data_v8"
+        historicalObject["public_schema_version"] = 8
+        historicalObject["core_api_version"] = 4
+        let historical = try JSONDecoder().decode(AppleExportEnginePin.self,
+            from: JSONSerialization.data(withJSONObject: historicalObject))
         let cases: [(AppleSleepCaptureContext, AppleExportEnginePin?, Bool)] = [
             (draft, nil, false), (valid, historical, true), (valid, nil, true),
             (AppleSleepCaptureContext(timeZone: TimeZone(identifier: "Europe/Berlin")!, sleepDayAttribution: .morningEnds), nil, false),
@@ -902,12 +980,43 @@ final class APIEndpointExportEngineTests: XCTestCase {
 
     func testExactV2NativeAndRustFixtureIncludesExternalJSONAndUnescapedSlashes() async throws {
         let dates = days(count: 2)
-        let settings = makeSettings()
+        let utc = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let core = SystemAppleLooseDailyCoreExecutor()
+        let resolver = AppleExportEnginePolicyResolver(
+            injectedOverride: "shadow", userDefaults: nil, environment: [:]
+        )
+        let candidatePin = await resolver.pinForNewOperation(
+            calendarTimeZoneIdentifier: "UTC", requestedMode: .shadow, coreExecutor: core
+        )
+        let pin = try XCTUnwrap(candidatePin, "Real packaged shadow authority is required")
+        let original = makeSettings()
+        original.executionSleepCaptureContext = AppleSleepCaptureContext(
+            timeZone: utc, sleepDayAttribution: .nightBegins
+        )
+        original.executionSleepCaptureContextIsFrozen = true
+        let accepted = ExportSettingsSnapshot.from(
+            original, appleExportEnginePin: pin, appleExportEngineAuthorityIsFrozen: true,
+            calendarTimeZoneIdentifier: "UTC"
+        )
+        // Use the same private durable codec as persisted export requests. Public snapshots
+        // intentionally omit this context and cannot model restored capture authority.
+        let encoder = JSONEncoder()
+        encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
+        let decoder = JSONDecoder()
+        decoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
+        let restored = try decoder.decode(ExportSettingsSnapshot.self, from: encoder.encode(accepted))
+        let settings = restored.makeAdvancedExportSettings()
+        Self.retainedSettings.append(settings)
+        XCTAssertEqual(settings.executionAppleExportEnginePin, pin)
+        XCTAssertTrue(settings.executionAppleExportEngineAuthorityIsFrozen)
+        XCTAssertTrue(settings.executionSleepCaptureContextIsFrozen)
+        XCTAssertEqual(settings.executionSleepCaptureContext, original.executionSleepCaptureContext)
         let external = externalRecord(ownerDate: "2026-07-01")
-        let operation = try await preparedOperation(
-            mode: .shadow,
+        let resolution = try await APIEndpointExportRunner.prepare(
             dates: dates,
             settings: settings,
+            destination: destination,
+            calendarTimeZone: utc,
             connectedAppsEnabled: true,
             fetchHealthData: { date, _, _ in
                 if date == dates[1] {
@@ -920,10 +1029,21 @@ final class APIEndpointExportEngineTests: XCTestCase {
             },
             fetchExternalDailyRecords: { date in
                 date == dates[0] ? [external] : []
-            }
+            },
+            policyResolver: resolver,
+            coreExecutor: core,
+            identitySource: identitySource
         )
+        guard case .prepared(let operation) = resolution else {
+            return XCTFail("Persisted shadow authority must run both real producers")
+        }
 
-        XCTAssertEqual(operation.nativePlan, operation.rustPlan)
+        XCTAssertEqual(operation.authority, .shadow)
+        XCTAssertEqual(operation.pin, pin)
+        let nativePlan = try XCTUnwrap(operation.nativePlan)
+        let rustPlan = try XCTUnwrap(operation.rustPlan)
+        XCTAssertEqual(nativePlan, rustPlan)
+        XCTAssertEqual(operation.selectedPlan, nativePlan)
         let batch = try XCTUnwrap(operation.batches.first)
         let frozenSettings = operation.settingsSnapshot.makeAdvancedExportSettings()
         let expected = try APIExportClient.makePayload(
@@ -947,6 +1067,46 @@ final class APIEndpointExportEngineTests: XCTestCase {
         XCTAssertEqual(envelope["schema_version"] as? Int, 2)
         XCTAssertEqual(envelope["external_record_count"] as? Int, 1)
         XCTAssertEqual((envelope["failed_date_details"] as? [Any])?.count, 1)
+        XCTAssertEqual(envelope["date_range"] as? [String: String], [
+            "start": "2026-07-01",
+            "end": "2026-07-02",
+        ])
+    }
+
+    func testNewProviderNightWorkRemainsLegacyBeforeHealthOrProviderCapture() async throws {
+        let settings = makeSettings()
+        let utc = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        settings.executionSleepCaptureContext = AppleSleepCaptureContext(
+            timeZone: utc, sleepDayAttribution: .nightBegins
+        )
+        settings.executionSleepCaptureContextIsFrozen = true
+        XCTAssertNil(settings.executionAppleExportEnginePin)
+        var healthCaptures = 0
+        var providerCaptures = 0
+        let resolution = try await APIEndpointExportRunner.prepare(
+            dates: days(count: 2),
+            settings: settings,
+            destination: destination,
+            calendarTimeZone: utc,
+            connectedAppsEnabled: true,
+            fetchHealthData: { date, _, _ in
+                healthCaptures += 1
+                return self.record(date: date, steps: 9_876)
+            },
+            fetchExternalDailyRecords: { _ in
+                providerCaptures += 1
+                return [self.externalRecord(ownerDate: "2026-07-01")]
+            },
+            policyResolver: AppleExportEnginePolicyResolver(
+                injectedOverride: "shadow", userDefaults: nil, environment: [:]
+            ),
+            coreExecutor: APIFailingCoreExecutor(sensitiveValue: "must-not-load")
+        )
+        guard case .legacy = resolution else {
+            return XCTFail("New provider-bearing Night work must remain legacy")
+        }
+        XCTAssertEqual(healthCaptures, 0)
+        XCTAssertEqual(providerCaptures, 0)
     }
 
     func testShadowCommitsNativeOnlyAndNeverCommitsMismatchingRustCandidate() async throws {

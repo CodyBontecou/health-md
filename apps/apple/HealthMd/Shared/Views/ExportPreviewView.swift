@@ -766,7 +766,8 @@ struct ExportPreviewView: View {
         connectedAppsEnabled: Bool,
         writesExternalProviderSidecars: Bool,
         fetchHealthData: (Date) async -> HealthData?,
-        fetchExternalDailyRecords: APIEndpointExportRunner.ExternalDailyRecordFetcher?
+        fetchExternalDailyRecords: APIEndpointExportRunner.ExternalDailyRecordFetcher?,
+        whoopResources: Set<WHOOPResourceName>? = nil
     ) async -> HealthData? {
         guard var record = await fetchHealthData(date) else { return nil }
         // API previews capture providers in preparePreview. File previews must
@@ -778,7 +779,7 @@ struct ExportPreviewView: View {
            record.hasAnyData,
            let fetchExternalDailyRecords {
             let externalRecords = await fetchExternalDailyRecords(date)
-            record.providers = HealthProviderSections.normalized(from: externalRecords)
+            record.providers = HealthProviderSections.normalized(from: externalRecords, whoopResources: whoopResources)
         }
         return record
     }
@@ -822,7 +823,8 @@ struct ExportPreviewView: View {
            providers.connectedProviderCount > 0 {
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = context.timeZone
-            fetchExternalDailyRecords = { await providers.fetchDailyRecords(for: $0, calendar: calendar) }
+            let whoopResources = acceptedCapture.snapshot.metricSelection.enabledWHOOPResources
+            fetchExternalDailyRecords = { await providers.fetchDailyRecords(for: $0, calendar: calendar, whoopResources: whoopResources) }
         } else {
             fetchExternalDailyRecords = acceptedCapture.snapshot.sleepCaptureContext?.sleepDayAttribution == .nightBegins
                 && externalIntegrations == nil && connectedAppsEnabled ? self.fetchExternalDailyRecords : nil
@@ -899,7 +901,8 @@ struct ExportPreviewView: View {
                 connectedAppsEnabled: connectedAppsEnabled,
                 writesExternalProviderSidecars: settings.writesExternalProviderSidecars,
                 fetchHealthData: { date in await configuration.fetchRecord(for: date, using: fetchHealthData) },
-                fetchExternalDailyRecords: fetchExternalDailyRecords
+                fetchExternalDailyRecords: fetchExternalDailyRecords,
+                whoopResources: acceptedCapture.snapshot.metricSelection.enabledWHOOPResources
             )
             }) else { continue }
             warnings.append(contentsOf: healthData.partialFailures)

@@ -315,7 +315,7 @@ nonisolated enum AppleExportDetailPreset: String, CaseIterable, Identifiable, Se
         case .detailedTimeSeries:
             String(localized: "Detailed Time-Series", comment: "Export data-detail preset")
         case .losslessHealthRecords:
-            String(localized: "Lossless Health Records", comment: "Export data-detail preset")
+            String(localized: "Lossless", comment: "Export data-detail preset")
         case .archiveOnly:
             String(localized: "HealthKit Archive Only", comment: "Advanced export data-detail preset")
         }
@@ -799,6 +799,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             calendarTimeZoneIdentifier: identifier
         )
 
+        if !settings.executionExternalProviderCaptureAuthorityIsFrozen, snapshot.appleExportEnginePin == nil {
+            snapshot.metricSelection.enabledWHOOPResources.formIntersection(WHOOPExportResourceSelection.stored())
+        }
         if snapshot.sleepCaptureContext == nil, !settings.executionSleepCaptureContextIsFrozen {
             snapshot.sleepCaptureContext = AppleSleepCaptureContext.resolve(
                 timeZone: resolvedTimeZone, attribution: HealthKitManager.shared.sleepDayAttribution
@@ -1202,13 +1205,15 @@ struct MetricSelectionSnapshot: Codable, Equatable {
     var enabledMetricIDs: Set<String>
     var enabledCategoryIDs: Set<String>
     var nativeDetailMetricIDs: Set<String> = []
+    var enabledWHOOPResources: Set<WHOOPResourceName> = Set(WHOOPResourceName.allCases)
 
-    enum CodingKeys: String, CodingKey { case enabledMetricIDs, enabledCategoryIDs, nativeDetailMetricIDs }
+    enum CodingKeys: String, CodingKey { case enabledMetricIDs, enabledCategoryIDs, nativeDetailMetricIDs, enabledWHOOPResources }
 
-    init(enabledMetricIDs: Set<String>, enabledCategoryIDs: Set<String>, nativeDetailMetricIDs: Set<String> = []) {
+    init(enabledMetricIDs: Set<String>, enabledCategoryIDs: Set<String>, nativeDetailMetricIDs: Set<String> = [], enabledWHOOPResources: Set<WHOOPResourceName> = Set(WHOOPResourceName.allCases)) {
         self.enabledMetricIDs = enabledMetricIDs
         self.enabledCategoryIDs = enabledCategoryIDs
         self.nativeDetailMetricIDs = nativeDetailMetricIDs
+        self.enabledWHOOPResources = enabledWHOOPResources
     }
 
     init(from decoder: Decoder) throws {
@@ -1216,12 +1221,16 @@ struct MetricSelectionSnapshot: Codable, Equatable {
         enabledMetricIDs = try values.decode(Set<String>.self, forKey: .enabledMetricIDs)
         enabledCategoryIDs = try values.decode(Set<String>.self, forKey: .enabledCategoryIDs)
         nativeDetailMetricIDs = try values.decodeIfPresent(Set<String>.self, forKey: .nativeDetailMetricIDs) ?? []
+        enabledWHOOPResources = try values.decodeIfPresent(Set<WHOOPResourceName>.self, forKey: .enabledWHOOPResources) ?? Set(WHOOPResourceName.allCases)
     }
 
     func encode(to encoder: Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
         try values.encode(enabledMetricIDs, forKey: .enabledMetricIDs)
         try values.encode(enabledCategoryIDs, forKey: .enabledCategoryIDs)
+        if enabledWHOOPResources != Set(WHOOPResourceName.allCases) {
+            try values.encode(enabledWHOOPResources.sorted { $0.rawValue < $1.rawValue }, forKey: .enabledWHOOPResources)
+        }
         if !nativeDetailMetricIDs.isEmpty {
             try values.encode(nativeDetailMetricIDs, forKey: .nativeDetailMetricIDs)
         }
@@ -1231,7 +1240,8 @@ struct MetricSelectionSnapshot: Codable, Equatable {
         MetricSelectionSnapshot(
             enabledMetricIDs: selection.enabledMetrics,
             enabledCategoryIDs: selection.enabledCategories,
-            nativeDetailMetricIDs: selection.nativeDetailMetricIDs
+            nativeDetailMetricIDs: selection.nativeDetailMetricIDs,
+            enabledWHOOPResources: selection.enabledWHOOPResources
         )
     }
 
@@ -1239,5 +1249,6 @@ struct MetricSelectionSnapshot: Codable, Equatable {
         selection.enabledMetrics = enabledMetricIDs
         selection.enabledCategories = enabledCategoryIDs
         selection.nativeDetailMetricIDs = nativeDetailMetricIDs
+        selection.enabledWHOOPResources = enabledWHOOPResources
     }
 }

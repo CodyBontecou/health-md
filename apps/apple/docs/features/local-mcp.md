@@ -193,6 +193,14 @@ Raw and canonical transport bodies can be gigabytes and contain routes, clinical
 
 These jobs populate the disposable encrypted query context; they are independent from generated-file export jobs. Refresh, resume, and cancel also require explicit user interaction because they trigger iPhone reads or mutate durable job state.
 
+### Capacity evidence
+
+The committed synthetic maximal Summary day measures 27,749 bytes as JSON, 17,202 bytes as CSV, 23,358 bytes as Markdown, and 15,558 bytes as Obsidian Bases. These are renderer fixtures, not a promise about a user's corpus or encrypted-context size. Workout count, samples, source metadata, canonical/lossless detail, providers, attachments, and raw records can change size substantially.
+
+`SummarySizingBenchmarkTests` measures deterministic sparse, typical, workout-heavy, and maximal profiles in all four formats and enforces bounded 365-day linear estimates. `EncryptedHealthContextStoreTests` separately writes 365 synthetic compact-context days and checks the store's exact encrypted byte/day accounting. Release evidence must report measurements from the exact candidate; it must not multiply the four renderer fixtures and label that result an encrypted-store guarantee.
+
+The live readiness response reports exact current `owner_date_count`, `encrypted_byte_count`, manifest bytes, day-blob bytes, and average encrypted bytes per owner date. It does not inspect or disclose health values.
+
 ## Example analysis
 
 ```json

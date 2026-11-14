@@ -7,10 +7,13 @@ const zoneKeys = [
 ];
 
 export function withWhoopSamples(days, template) {
-  if (template?.schema !== "healthmd.provider.whoop_daily" || template.schema_version !== 1) {
-    throw new Error("WHOOP gallery samples require the reviewed WHOOP daily v1 fixture");
+  if (template?.schema !== "healthmd.provider.whoop_daily" || ![1, 2].includes(template.schema_version)) {
+    throw new Error("WHOOP gallery samples require a reviewed WHOOP daily v1/v2 fixture");
   }
   return days.map((day, index) => {
+    if (template.schema_version === 2 && day.schema_version !== 10) {
+      throw new Error("WHOOP v2 requires Apple daily v10; never relabel frozen daily v8");
+    }
     const whoop = structuredClone(template);
     const midnight = Date.parse(`${day.date}T00:00:00Z`);
     const at = (milliseconds) => new Date(midnight + milliseconds).toISOString();

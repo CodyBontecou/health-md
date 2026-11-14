@@ -2,8 +2,123 @@ import XCTest
 @testable import HealthMd
 
 final class WHOOPProviderSectionsExportTests: XCTestCase {
+    func testCycleStepsPreserveZeroAndExactCountsWithoutChangingDailySteps() throws {
+        for count in [0, 1, Int(Int32.max)] {
+            let (data, native) = try cycleExport([.number(Double(count))])
+            let text = try data.toJSONThrowing(outputFormatting: [.sortedKeys])
+            let root = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])
+            let providers = try XCTUnwrap(root["providers"] as? [String: Any])
+            let whoop = try XCTUnwrap(providers["whoop"] as? [String: Any])
+            let cycles = try XCTUnwrap(whoop["cycles"] as? [[String: Any]])
+            XCTAssertEqual(whoop["schema_version"] as? Int, 2)
+            XCTAssertEqual(cycles.first?["step_count"] as? Int, count)
+            XCTAssertEqual((root["activity"] as? [String: Any])?["steps"] as? Int, 1)
+            XCTAssertEqual(data.activity.steps, 1)
+            XCTAssertTrue(data.toObsidianBases().contains("whoop_cycle_step_count: \(count)\n"))
+            XCTAssertTrue(data.toMarkdown().contains("Steps (cycle)"))
+            XCTAssertTrue(try data.toCSVThrowing().contains("WHOOP Cycle,Physiological-Cycle Steps,\(count),count,"))
+            let nativeText = String(decoding: try JSONEncoder().encode(native), as: UTF8.self)
+            XCTAssertTrue(nativeText.contains("\"step_count\":\(count)"))
+        }
+    }
+
+    func testCycleStepsMissingNullAndInvalidValuesRemainUnavailable() throws {
+        let values: [JSONValue?] = [nil, .null, .number(-1), .number(1.5),
+                                  .number(Double(Int32.max) + 1), .bool(false), .string("100")]
+        for value in values {
+            let (data, _) = try cycleExport([value])
+            let text = try data.toJSONThrowing()
+            XCTAssertFalse(text.contains("\"step_count\""))
+            XCTAssertFalse(data.toObsidianBases().contains("whoop_cycle_step_count:"))
+            XCTAssertFalse(try data.toCSVThrowing().contains("Physiological-Cycle Steps,"))
+            XCTAssertEqual(data.activity.steps, 1)
+        }
+    }
+
+    func testMultiplePhysiologicalCyclesKeepCountsWithoutAFalseDailyTotal() throws {
+        let (data, _) = try cycleExport([.number(0), .number(9_876)])
+        let text = try data.toJSONThrowing()
+        let root = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])
+        let whoop = try XCTUnwrap((root["providers"] as? [String: Any])?["whoop"] as? [String: Any])
+        let cycles = try XCTUnwrap(whoop["cycles"] as? [[String: Any]])
+        XCTAssertEqual(cycles.compactMap { $0["step_count"] as? Int }, [0, 9_876])
+        XCTAssertFalse(data.toObsidianBases().contains("whoop_cycle_step_count:"))
+        XCTAssertEqual(data.activity.steps, 1)
+        XCTAssertTrue(data.toMarkdown().contains("Steps (cycle)"))
+        XCTAssertTrue(try data.toCSVThrowing().contains("WHOOP Cycle,Cycle Record,"))
+    }
+
+    private func cycleExport(_ counts: [JSONValue?]) throws -> (HealthData, ExternalDailyRecord) {
+        let cycles: [JSONValue] = counts.enumerated().map { index, count in
+            var object: [String: JSONValue] = [
+                "id": .number(Double(index + 1)),
+                "start": .string("2026-03-14T17:00:00Z"),
+                "end": index == 0 ? .string("2026-03-15T08:00:00Z") : .null,
+                "timezone_offset": .string("Z")
+            ]
+            if let count { object["step_count"] = count }
+            return .object(object)
+        }
+        let record = ExternalDailyRecord(
+            provider: .whoop, date: "2026-03-15", fetchedAt: ExportFixtures.referenceDate,
+            payloads: [ExternalProviderPayload(
+                name: "cycles", endpoint: "https://redacted.invalid/cycle", statusCode: 200,
+                data: .object(["records": .array(cycles)])
+            )]
+        )
+        var data = ExportFixtures.whoopDay
+        data.providers = try XCTUnwrap(HealthProviderSections.normalized(from: [record], whoopResources: [.cycles]))
+        return (data, record)
+    }
+
+    func testHistoricalWHOOPV1DecodesAndSelectionDoesNotUpgradeItsGrammar() throws {
+        var root = URL(fileURLWithPath: #filePath)
+        for _ in 0..<5 { root.deleteLastPathComponent() }
+        let bytes = try Data(contentsOf: root.appendingPathComponent(
+            "packages/contracts/proposals/provider-sections-v1/fixtures/whoop-complete.providers.json"
+        ))
+        let decoded = try JSONDecoder().decode(HealthProviderSections.self, from: bytes)
+        let old = try XCTUnwrap(decoded.whoop)
+        XCTAssertEqual(old.schemaVersion, 1)
+        XCTAssertNil(old.cycles.first?.stepCount)
+        let selected = try XCTUnwrap(old.selectingResources([.cycles]))
+        XCTAssertEqual(selected.schemaVersion, 1)
+        XCTAssertNil(selected.cycles.first?.stepCount)
+        let original = try JSONSerialization.jsonObject(with: bytes) as? NSDictionary
+        let encoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(decoded)) as? NSDictionary
+        XCTAssertEqual(encoded, original)
+    }
+
+    func testWHOOPV2SnapshotRoundTripsAndDisabledCyclesDoNotRetainSteps() throws {
+        let (data, _) = try cycleExport([.number(0)])
+        let decoded = try JSONDecoder().decode(HealthData.self, from: JSONEncoder().encode(data))
+        XCTAssertEqual(decoded.providers?.whoop?.schemaVersion, 2)
+        XCTAssertEqual(decoded.providers?.whoop?.cycles.first?.stepCount, 0)
+        let selected = try XCTUnwrap(decoded.providers?.whoop?.selectingResources([.recovery]))
+        XCTAssertTrue(selected.cycles.isEmpty)
+        XCTAssertFalse(selected.flatScalars.contains { $0.definition.key == "whoop_cycle_step_count" })
+        var providerOnly = decoded
+        providerOnly.activity = ActivityData()
+        XCTAssertFalse(providerOnly.hasAnyData)
+    }
+
+    func testTypedCycleStepsAreNotLegalInWHOOPV1AndUnknownVersionsAreRejected() throws {
+        let (data, _) = try cycleExport([.number(0)])
+        let bytes = try JSONEncoder().encode(try XCTUnwrap(data.providers))
+        let original = try XCTUnwrap(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+        for version in [1, 3] {
+            var object = original
+            var whoop = try XCTUnwrap(object["whoop"] as? [String: Any])
+            whoop["schema_version"] = version
+            object["whoop"] = whoop
+            XCTAssertThrowsError(try JSONDecoder().decode(
+                HealthProviderSections.self, from: JSONSerialization.data(withJSONObject: object)
+            ))
+        }
+    }
+
     func testFoundationJSONNumbersZeroAndOneRemainNumbersDuringNormalization() throws {
-        let decoded = try JSONSerialization.jsonObject(with: Data(#"{"records":[{"id":1,"start":"2026-03-15T09:00:00Z","score":{"strain":0}}]}"#.utf8))
+        let decoded = try JSONSerialization.jsonObject(with: Data(#"{"records":[{"id":1,"start":"2026-03-15T09:00:00Z","step_count":1,"score":{"strain":0}}]}"#.utf8))
         let record = ExternalDailyRecord(
             provider: .whoop,
             date: "2026-03-15",
@@ -20,6 +135,7 @@ final class WHOOPProviderSectionsExportTests: XCTestCase {
         let whoop = try XCTUnwrap(HealthProviderSections.normalized(from: [record])?.whoop)
         XCTAssertEqual(whoop.cycles.first?.id, "1")
         XCTAssertEqual(whoop.cycles.first?.strainScore, 0)
+        XCTAssertEqual(whoop.cycles.first?.stepCount, 1)
         XCTAssertEqual(whoop.resources.first { $0.resource == .cycles }?.status, .success)
     }
 
@@ -27,7 +143,7 @@ final class WHOOPProviderSectionsExportTests: XCTestCase {
         let whoop = try XCTUnwrap(ExportFixtures.whoopDay.providers?.whoop)
 
         XCTAssertEqual(whoop.schema, "healthmd.provider.whoop_daily")
-        XCTAssertEqual(whoop.schemaVersion, 1)
+        XCTAssertEqual(whoop.schemaVersion, 2)
         XCTAssertEqual(whoop.captureStatus, .complete)
         XCTAssertEqual(whoop.resources.map(\.resource), [.cycles, .recovery, .sleep, .workouts, .body])
         XCTAssertEqual(whoop.resources.map(\.recordCount), [1, 1, 1, 1, 1])
@@ -47,6 +163,81 @@ final class WHOOPProviderSectionsExportTests: XCTestCase {
         XCTAssertEqual(first, second)
         XCTAssertFalse(first.contains("sport_id"))
         XCTAssertTrue(first.contains("\"sport_name\":\"running\""))
+    }
+
+    func testDocumentedWorkoutZoneDurationsPreserveEveryZoneAndExactMilliseconds() throws {
+        let whoop = try workoutSection(score: ["zone_durations": .object([
+            "zone_zero_milli": .number(0),
+            "zone_one_milli": .number(600_001),
+            "zone_two_milli": .number(900_002),
+            "zone_three_milli": .number(1_800_003),
+            "zone_four_milli": .number(400_004),
+            "zone_five_milli": .number(250_005)
+        ])])
+        let zones = try XCTUnwrap(whoop.workouts.first?.zoneDurations)
+        XCTAssertEqual(zones.zoneZeroMilliseconds, 0)
+        XCTAssertEqual(zones.zoneOneMilliseconds, 600_001)
+        XCTAssertEqual(zones.zoneTwoMilliseconds, 900_002)
+        XCTAssertEqual(zones.zoneThreeMilliseconds, 1_800_003)
+        XCTAssertEqual(zones.zoneFourMilliseconds, 400_004)
+        XCTAssertEqual(zones.zoneFiveMilliseconds, 250_005)
+        XCTAssertEqual(whoop.captureStatus, .complete)
+        XCTAssertTrue(whoop.recordCountsAreValid)
+    }
+
+    func testLegacyWorkoutZoneDurationStillDecodesWhenCanonicalKeyIsAbsent() throws {
+        let whoop = try workoutSection(score: ["zone_duration": .object([
+            "zone_zero_milli": .number(0), "zone_one_milli": .number(600_001)
+        ])])
+        XCTAssertEqual(whoop.workouts.first?.zoneDurations?.zoneZeroMilliseconds, 0)
+        XCTAssertEqual(whoop.workouts.first?.zoneDurations?.zoneOneMilliseconds, 600_001)
+    }
+
+    func testCanonicalWorkoutZoneKeyWinsWithoutBlendingLegacyValues() throws {
+        let whoop = try workoutSection(score: [
+            "zone_durations": .object(["zone_zero_milli": .number(0)]),
+            "zone_duration": .object([
+                "zone_zero_milli": .number(42), "zone_one_milli": .number(600_001)
+            ])
+        ])
+        XCTAssertEqual(whoop.workouts.first?.zoneDurations?.zoneZeroMilliseconds, 0)
+        XCTAssertNil(whoop.workouts.first?.zoneDurations?.zoneOneMilliseconds)
+    }
+
+    func testCanonicalNullEmptyOrMalformedZonesDoNotResurrectLegacyData() throws {
+        let canonicalValues: [JSONValue] = [.null, .object([:]), .array([]), .string("invalid")]
+        for value in canonicalValues {
+            let whoop = try workoutSection(score: [
+                "zone_durations": value,
+                "zone_duration": .object(["zone_zero_milli": .number(42)])
+            ])
+            XCTAssertNil(whoop.workouts.first?.zoneDurations)
+        }
+    }
+
+    private func workoutSection(score: [String: JSONValue]) throws -> WHOOPDailyProviderSection {
+        let record = ExternalDailyRecord(
+            provider: .whoop,
+            date: "2026-03-15",
+            fetchedAt: ExportFixtures.referenceDate,
+            payloads: [ExternalProviderPayload(
+                name: "workouts",
+                endpoint: "https://redacted.invalid/workout",
+                statusCode: 200,
+                fetchedAt: ExportFixtures.referenceDate,
+                data: .object(["records": .array([.object([
+                    "id": .string("synthetic-workout"),
+                    "start": .string("2026-03-15T16:00:00Z"),
+                    "end": .string("2026-03-15T17:00:00Z"),
+                    "sport_name": .string("running"),
+                    "score_state": .string("SCORED"),
+                    "score": .object(score)
+                ])])])
+            )]
+        )
+        return try XCTUnwrap(HealthProviderSections.normalized(
+            from: [record], whoopResources: [.workouts]
+        )?.whoop)
     }
 
     func testSuccessfulEmptyCaptureIsCompleteAndDoesNotMakeProviderOnlyDayExportable() throws {
@@ -229,7 +420,7 @@ final class WHOOPProviderSectionsExportTests: XCTestCase {
         XCTAssertFalse(markdown.contains(fetchedAt))
 
         let bases = data.toObsidianBases()
-        XCTAssertTrue(bases.contains("schema_version: 8"))
+        XCTAssertTrue(bases.contains("schema_version: 10"))
         XCTAssertTrue(bases.contains("whoop_capture_status: complete"))
         XCTAssertTrue(bases.contains("whoop_hrv_rmssd_ms: 54.3"))
 

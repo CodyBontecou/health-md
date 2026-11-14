@@ -1,0 +1,14 @@
+{
+  "base_profile_id": "apple_health_data_v8",
+  "core_api_version": 5,
+  "profile_id": "apple_health_data_v10",
+  "profile_revision": 1,
+  "public_profile_id": "apple-v10",
+  "public_schema": "healthmd.health_data",
+  "public_schema_version": 10,
+  "registry_sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+  "registry_version": 1,
+  "schema": "healthmd.metric_profile_extension",
+  "schema_version": 1,
+  "whoop_schema_version": 2
+}

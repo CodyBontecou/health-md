@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="color-scheme" content="light dark">
+  <title>Dashboard · Health.md Cloud</title>
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/app-icon.png">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/dashboard.js" defer></script>
+  <script src="/repair.js" defer></script>
+</head>
+<body class="account-app" data-page="dashboard">
+  <a class="skip-link" href="#workspace">Skip to workspace</a>
+  <div class="dashboard-shell">
+    <div id="dashboard-sidebar" class="dashboard-sidebar" role="complementary" aria-label="Workspace navigation">
+      <div class="sidebar-brand"><a class="brand" href="/dashboard" aria-label="Health.md Cloud overview"><img class="brand-mark" src="/app-icon.png" width="27" height="27" alt=""> Health.md <span class="brand-suffix">Cloud</span></a><button id="sidebar-close" type="button" class="subtle icon-button" aria-label="Close navigation" hidden>×</button></div>
+      <div class="sidebar-workspace"><span class="workspace-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6z"/><path d="m8 12 3 3 5-6"/></svg></span><div><strong id="workspace-kind">Personal workspace</strong><span id="workspace-access">Private pilot</span></div></div>
+      <nav id="account-nav" class="sidebar-nav" aria-label="Account pages"><a href="/dashboard">Overview</a><a href="/explore">Explore data</a><a href="#repair-planner">Plan missing exports</a></nav>
+      <div class="sidebar-footer"><div class="sidebar-notice"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><div><strong>Uploaded evidence only</strong><span>No live device connection</span></div></div><button id="logout" class="subtle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H4v16h5M13 8l4 4-4 4M8 12h13"/></svg>Sign out</button></div>
+    </div>
+    <button id="sidebar-backdrop" class="sidebar-backdrop" type="button" aria-label="Close navigation" tabindex="-1" hidden></button>
+    <div id="dashboard-inset" class="dashboard-inset">
+      <header class="dashboard-header"><div class="header-title"><button id="sidebar-toggle" type="button" class="subtle icon-button" aria-label="Toggle sidebar" aria-controls="dashboard-sidebar" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button><span class="header-divider" aria-hidden="true"></span><span id="workspace-breadcrumb">Overview</span></div><span class="pilot-label">Private pilot</span></header>
+      <main id="workspace" class="dashboard-main" tabindex="-1">
+        <div class="dashboard-intro"><div><h1 id="workspace-title" tabindex="-1">Health overview</h1><p id="workspace-description">Your retained days, trends, and exports in one place.</p></div><span id="account" class="account-label" aria-live="polite">Loading account…</span></div>
+        <p id="workspace-status" role="status" aria-live="polite"></p>
+        <p id="synthetic-warning" class="token-panel" hidden><strong>Synthetic preview only.</strong> Export uploads and token creation are disabled. Do not enter this URL in a real device or send personal health data.</p>
+        <p id="unbacked-warning" class="token-panel" hidden><strong>Unbacked personal trial.</strong> Exports are retained without a time limit, but the current storage quota applies. There is no off-host backup: VM, disk or key loss may permanently destroy everything. Do not mistake this for a production cloud service.</p>
+        <p id="message" role="status" aria-live="polite"></p>
+
+        <div data-workspace-views="overview">
+        <div class="overview-grid" role="group" aria-label="Latest retained values and archive overview">
+          <div id="trend-cards" class="metric-cards" aria-busy="true"><article class="stat-card loading-card"><span class="stat-label">Steps</span><strong class="stat-value">—</strong><span class="stat-foot">Loading retained values…</span></article><article class="stat-card loading-card"><span class="stat-label">Resting Heart Rate</span><strong class="stat-value">—</strong><span class="stat-foot">Loading retained values…</span></article><article class="stat-card loading-card"><span class="stat-label">Total Sleep</span><strong class="stat-value">—</strong><span class="stat-foot">Loading retained values…</span></article></div>
+          <article class="stat-card archive-stat"><div class="stat-card-head"><span class="stat-label">Uploaded days</span><span class="stat-badge">Archive</span></div><strong id="stat-days" class="stat-value">—</strong><span class="stat-description">Current daily snapshots</span><span class="stat-foot">Latest exported day <span id="stat-latest">—</span></span></article>
+        </div>
+
+        </div>
+        <div data-workspace-views="overview trends">
+        <section class="trends-section" aria-labelledby="trends-title">
+          <div class="section-heading"><div><h2 id="trends-title">Daily trends</h2><p id="trends-window" class="note" aria-live="polite">Loading daily summaries…</p></div><div id="trend-ranges" class="segmented-control" role="group" aria-label="Chart calendar window"><button type="button" class="subtle" data-range="30" aria-pressed="true">Last 30 days</button><button type="button" class="subtle" data-range="14" aria-pressed="false">14 days</button><button type="button" class="subtle" data-range="7" aria-pressed="false">7 days</button></div></div>
+          <div class="chart-toolbar"><div id="trend-metrics" class="metric-switch" role="group" aria-label="Chart metric"></div><span id="chart-unit" class="note"></span></div>
+          <div id="main-chart" class="main-chart" aria-busy="true"><p class="chart-empty">Loading retained trends…</p></div>
+          <div class="chart-footer"><span id="chart-coverage" class="note"></span><span class="note"><span class="legend-dot" aria-hidden="true"></span> Retained daily value · gaps are not zero</span></div>
+          <p id="trends-note" class="note">Reviewed Apple v8/v10 primary summaries only. Android, archive, and provider data are not mapped into these charts. No clinical interpretation or live device readings.</p>
+        </section>
+
+        </div>
+        <div data-workspace-views="overview trends history">
+        <section class="dashboard-data" aria-labelledby="data-title">
+          <div class="section-heading"><div><h2 id="data-title">Your data</h2><p class="note">Daily values and original exports, without filling in the gaps.</p></div><button type="button" id="plan-unlisted-day" class="subtle"><span aria-hidden="true">+</span> Plan an unlisted day</button></div>
+          <div class="data-toolbar"><div class="data-tabs" role="tablist" aria-label="Retained data views"><button type="button" class="subtle" id="tab-summaries" role="tab" aria-selected="true" aria-controls="panel-summaries" tabindex="0" data-view="summaries">Daily summaries <span id="summary-count" class="tab-count">—</span></button><button type="button" class="subtle" id="tab-snapshots" role="tab" aria-selected="false" aria-controls="panel-snapshots" tabindex="-1" data-view="snapshots">Current snapshots</button><button type="button" class="subtle" id="tab-exports" role="tab" aria-selected="false" aria-controls="panel-exports" tabindex="-1" data-view="exports">Export history</button></div></div>
+          <div id="panel-summaries" role="tabpanel" aria-labelledby="tab-summaries" tabindex="0">
+            <div class="table-controls"><label class="sr-only" for="summary-filter">Filter owner dates</label><input id="summary-filter" type="search" placeholder="Filter dates…" autocomplete="off" spellcheck="false"><div class="table-control-actions"><label class="sr-only" for="summary-evidence">Filter evidence</label><select id="summary-evidence"><option value="all">All evidence</option><option value="available">Reviewed summary</option><option value="not_uploaded">Not uploaded</option><option value="unsupported_profile">Unmapped profile</option><option value="read_limit">Read limit</option></select><details id="column-menu" class="column-menu"><summary><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg>Columns <span aria-hidden="true">⌄</span></summary><div id="column-options" class="column-options"></div></details></div></div>
+            <div class="table-scroll" role="region" aria-label="Daily summary values" tabindex="0"><table class="data-table" id="summary-table"><caption class="sr-only">Reviewed Apple v8/v10 primary daily values in the selected calendar window. Missing values are not zero.</caption><thead id="summary-head"></thead><tbody id="summary-body"><tr><td>Loading daily values…</td></tr></tbody></table></div>
+            <div class="table-pagination"><span id="summary-row-count" class="note" role="status">Loading…</span><div class="pagination-actions"><label for="summary-page-size">Rows per page</label><select id="summary-page-size"><option value="10">10</option><option value="20">20</option><option value="30">30</option></select><span id="summary-page-label">Page 1 of 1</span><button type="button" id="summary-prev" class="subtle icon-button" aria-label="Previous daily values page" disabled>‹</button><button type="button" id="summary-next" class="subtle icon-button" aria-label="Next daily values page" disabled>›</button></div></div>
+          </div>
+          <div id="panel-snapshots" role="tabpanel" aria-labelledby="tab-snapshots" tabindex="0" hidden><p class="note">All uploaded days. Capture status describes the optional raw archive, not whether every summary value was available.</p><div class="table-scroll" role="region" aria-label="Current daily snapshots" tabindex="0"><table class="data-table"><caption class="sr-only">Current daily snapshot inventory</caption><thead><tr><th scope="col">Owner date</th><th scope="col">Source</th><th scope="col">Daily schema</th><th scope="col">Archive capture</th><th scope="col">Actions</th></tr></thead><tbody id="day-list"><tr><td colspan="5">Loading snapshots…</td></tr></tbody></table></div><button type="button" id="more-days" class="subtle table-load-more" hidden>Load more days</button></div>
+          <div id="panel-exports" role="tabpanel" aria-labelledby="tab-exports" tabindex="0" hidden><div class="inventory-summary"><div><h3 id="storage-title">Original export history</h3><p id="storage" class="note">Loading…</p></div><span class="stat-badge"><span id="stat-exports">—</span> retained exports</span></div><p id="stat-bytes" class="sr-only">Loading storage…</p><p class="note">Repeated dates replace the current daily pointer; a narrow export could hide older fields. Separate supplements never replace that pointer. Downloads are original, sensitive JSON—not normalized reports.</p><div class="table-scroll" role="region" aria-label="Retained export history" tabindex="0"><table class="data-table"><caption class="sr-only">Retained original exports and revisions</caption><thead><tr><th scope="col">Declared dates</th><th scope="col">Source</th><th scope="col">Records</th><th scope="col">Retention role</th><th scope="col">Received</th><th scope="col">Download</th></tr></thead><tbody id="export-list"><tr><td colspan="6">Loading exports…</td></tr></tbody></table></div><button type="button" id="more-exports" class="subtle table-load-more" hidden>Load more exports</button>
+            <div id="account-export-panel" class="archive-download" hidden><div><h4>Account data export</h4><p class="note">Each TAR page includes up to five exact, verified JSON envelopes and a manifest. Keep these sensitive files private.</p></div><div class="archive-download-actions"><label for="account-export-page">Archive page <span id="account-export-pages"></span></label><input id="account-export-page" type="number" min="1" value="1"><a id="download-account-export" class="subtle-link" href="/api/account/export/page/1" download>Download archive page</a></div></div>
+          </div>
+          <p class="table-footnote note">Summary rows cover the selected window ending on the latest uploaded day, not today. An unavailable value does not establish whether a reading exists on your phone. “Add to plan” uses the selected chart metric.</p>
+        </section>
+
+        </div>
+        <div data-workspace-views="plan" hidden><div id="repair-mount" class="repair-mount"><p class="note">Loading private planner…</p></div></div>
+
+        <div data-workspace-views="connections" hidden>
+        <div class="section-heading collection-heading"><div><h2 id="connect-title">Connections</h2><p class="note">Separate credentials for phone uploads and authorized agent reads.</p></div></div>
+        <div class="collection-grid">
+          <section id="connect-section" aria-labelledby="phone-title" hidden>
+            <h3 id="phone-title">Phone uploads <span class="section-tag">Write only</span></h3>
+            <p>In Health.md, choose <strong>Export → API Endpoint</strong>. Use this URL and a separate write-only token. Start with one Summary day.</p>
+            <label for="endpoint">API Endpoint URL</label><input id="endpoint" readonly>
+            <p class="note">Copy the token immediately. It cannot read your exports and is shown only once. The app saves it in Keychain. Never put it in the URL.</p>
+            <form id="create-token-form"><label for="token-name">Token name (for example, My iPhone)</label><input id="token-name" required maxlength="80" autocomplete="off"><button type="submit">Create export token</button></form>
+            <div id="new-token-panel" class="token-panel" hidden><label for="new-token">New write-only token · copy now</label><input id="new-token" readonly autocomplete="off"><button type="button" id="hide-token" class="subtle">Hide token</button></div>
+            <h4>Export tokens</h4><ul id="token-list" class="record-list"></ul>
+          </section>
+          <section id="agents-section" aria-labelledby="agents-title" hidden>
+            <h3 id="agents-title">Agent access <span class="section-tag">Read only</span></h3>
+            <p>Connect a compatible agent to <code>https://mcp.healthmd.app/mcp</code> with its own Bearer credential. Each new credential can read <strong>every retained export JSON field</strong>, including historical revisions, free text, embedded source archives and binary data. It cannot access data your device never uploaded. The agent provider may retain or use returned data under its own policies.</p>
+            <p class="note">Existing aggregate-only credentials stay restricted. Revoke a credential at any time; it cannot upload or delete exports.</p>
+            <form id="create-agent-form">
+              <label for="agent-name">Agent or provider name</label><input id="agent-name" required maxlength="80" autocomplete="off" placeholder="My approved agent">
+              <label for="agent-days">Expiry in days (1–90)</label><input id="agent-days" type="number" required min="1" max="90" value="30">
+              <label for="agent-password">Confirm your account password</label><input id="agent-password" type="password" autocomplete="current-password" required minlength="16">
+              <label><input id="agent-consent" type="checkbox" required> I authorize this named agent to read all my retained Health.md export data and have reviewed how its provider handles health data.</label>
+              <button type="submit">Create full-export agent credential</button>
+            </form>
+            <div id="new-agent-panel" class="token-panel" hidden><label for="new-agent-token">New agent credential · copy once into the agent's secure vault, not a chat or URL</label><input id="new-agent-token" readonly autocomplete="off"><button type="button" id="hide-agent-token" class="subtle">Hide credential</button></div>
+            <h4>Agent credentials</h4><ul id="agent-list" class="record-list"></ul>
+          </section>
+        </div>
+
+        </div>
+        <div data-workspace-views="security" hidden>
+        <div class="section-heading view-heading"><div><h2>Account access</h2><p class="note">Session and deletion controls depend on the features supported by this service.</p></div></div>
+        <section id="deletion-section" class="danger-section" aria-labelledby="deletion-title" hidden>
+          <div id="session-management" hidden><h3 id="sessions-title">Signed-in browsers</h3><p class="note">Review active browser sessions and revoke any you no longer recognize.</p><ul id="session-list" class="record-list"></ul><button type="button" id="revoke-other-sessions" class="subtle">Sign out other browsers</button></div>
+          <div id="security-activity" hidden><h3 id="security-activity-title">Recent security activity</h3><p class="note">Up to 50 recent sign-in, session, credential, download, and approved repair-device events. Target identifiers and health metadata are never shown.</p><ul id="security-activity-list" class="record-list" aria-labelledby="security-activity-title"></ul></div>
+          <h3 id="deletion-title">Delete this account</h3><p id="deletion-copy">Deleting your account disables sign-in, uploads, and read credentials immediately. Stored exports are then erased by a durable background deletion job.</p>
+          <form id="delete-account-form" hidden><span id="delete-password-field"><label for="delete-password">Enter your password again</label><input id="delete-password" type="password" autocomplete="current-password" minlength="16"></span><label for="delete-confirmation">Type DELETE to confirm</label><input id="delete-confirmation" required autocomplete="off" pattern="DELETE"><button type="submit" class="danger-button">Request permanent deletion</button></form>
+        </section>
+        <section id="deletion-receipt-section" class="token-panel" hidden><h3>Save your deletion status receipt</h3><p class="note">This credential is shown once. Save it securely if you want to check deletion after sign-out. Do not put it in a URL, chat, or support message.</p><label for="deletion-status-token">Deletion status receipt</label><input id="deletion-status-token" readonly autocomplete="off" spellcheck="false"><a href="/deletion-status">Open the status checker</a></section>
+        </div>
+        <footer>Health.md Cloud · Optional retained exports · No live device access</footer>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

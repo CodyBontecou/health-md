@@ -84,7 +84,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
             }
         }
         let containsRange = rollupPeriods.contains(.range)
-        guard !containsRange || registry.profileId == "apple_health_data_v8"
+        guard !containsRange || registry.profileId == "apple_health_data_v8" || registry.profileId == "apple_health_data_v10"
                 || (inputVersion == AppleExportEnginePin.wakeDateHandoffVersion
                     && registry.profileId == AppleExportEnginePin.wakeDateProfileID),
               containsRange == (requestedRange != nil),
@@ -155,7 +155,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
               }) else {
             throw AdapterError.invalidTimeZone
         }
-        // Provider sections are native-authoritative in v8. Reject them at the
+        // Provider sections remain native-authoritative in v10. Reject them at the
         // semantic boundary instead of allowing an older scalar-only path to drop them.
         guard healthData.allSatisfy({ $0.providers?.isEmpty != false }) else {
             throw AdapterError.invalidSessionResult

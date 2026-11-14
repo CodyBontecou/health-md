@@ -1846,6 +1846,7 @@ Arrays are traversed exhaustively and heterogeneous element shapes are unioned a
 | `$["providers"]["whoop"]["cycles"][]["max_heart_rate_bpm"]` | number |
 | `$["providers"]["whoop"]["cycles"][]["score_state"]` | string |
 | `$["providers"]["whoop"]["cycles"][]["start_time"]` | string |
+| `$["providers"]["whoop"]["cycles"][]["step_count"]` | number |
 | `$["providers"]["whoop"]["cycles"][]["strain_score"]` | number |
 | `$["providers"]["whoop"]["cycles"][]["timezone_offset"]` | string |
 | `$["providers"]["whoop"]["fetched_at"]` | string |

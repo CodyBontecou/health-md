@@ -11,9 +11,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::{
-    CANONICAL_MODEL_VERSION, CORE_API_VERSION, CoreError, REGISTRY_VERSION, SEMANTIC_INPUT_VERSION,
+    CANONICAL_MODEL_VERSION, CoreError, REGISTRY_VERSION, SEMANTIC_INPUT_VERSION,
     SEMANTIC_RESULT_CORE_API_VERSION, SLEEP_CANONICAL_MODEL_VERSION, SLEEP_REGISTRY_VERSION,
-    SLEEP_SEMANTIC_INPUT_VERSION, WORKOUT_RANGE_REGISTRY_VERSION,
+    SLEEP_RESULT_CORE_API_VERSION, SLEEP_SEMANTIC_INPUT_VERSION, WORKOUT_RANGE_REGISTRY_VERSION,
 };
 
 /// Maximum semantic-session configuration size.
@@ -47,6 +47,7 @@ pub enum SemanticProfile {
     AndroidAnalyticalV5,
     AppleHealthDataV11,
     AndroidSleepV6,
+    AppleHealthDataV10,
 }
 
 impl SemanticProfile {
@@ -54,10 +55,19 @@ impl SemanticProfile {
         match self {
             Self::AppleHealthDataV7 => "apple_health_data_v7",
             Self::AppleHealthDataV8 => "apple_health_data_v8",
+            Self::AppleHealthDataV10 => "apple_health_data_v10",
             Self::AndroidFrozenV4 => "android_frozen_v4",
             Self::AndroidAnalyticalV5 => "android_analytical_v5",
             Self::AppleHealthDataV11 => "apple_health_data_v11",
             Self::AndroidSleepV6 => "android_sleep_v6",
+        }
+    }
+
+    fn registry_base_id(self) -> &'static str {
+        if self == Self::AppleHealthDataV10 {
+            Self::AppleHealthDataV8.id()
+        } else {
+            self.id()
         }
     }
 
@@ -68,7 +78,10 @@ impl SemanticProfile {
     pub(crate) const fn is_apple(self) -> bool {
         matches!(
             self,
-            Self::AppleHealthDataV7 | Self::AppleHealthDataV8 | Self::AppleHealthDataV11
+            Self::AppleHealthDataV7
+                | Self::AppleHealthDataV8
+                | Self::AppleHealthDataV10
+                | Self::AppleHealthDataV11
         )
     }
 
@@ -80,6 +93,7 @@ impl SemanticProfile {
         match self {
             Self::AppleHealthDataV7 => 7,
             Self::AppleHealthDataV8 => 8,
+            Self::AppleHealthDataV10 => 10,
             Self::AndroidFrozenV4 => 4,
             Self::AndroidAnalyticalV5 => 5,
             Self::AppleHealthDataV11 => 11,
@@ -91,6 +105,7 @@ impl SemanticProfile {
         match self {
             Self::AppleHealthDataV7 => "apple-v7",
             Self::AppleHealthDataV8 => "apple-v8",
+            Self::AppleHealthDataV10 => "apple-v10",
             Self::AndroidFrozenV4 => "android-frozen-v4",
             Self::AndroidAnalyticalV5 => "android-analytical-v5",
             Self::AppleHealthDataV11 => "apple-v11",
@@ -1108,7 +1123,7 @@ impl SemanticSession {
             semantic_input_version: self.config.profile.semantic_input_version(),
             canonical_model_version: self.config.profile.canonical_model_version(),
             core_api_version: if self.config.profile.is_wake_date() {
-                CORE_API_VERSION
+                SLEEP_RESULT_CORE_API_VERSION
             } else {
                 SEMANTIC_RESULT_CORE_API_VERSION
             },
@@ -1326,7 +1341,7 @@ fn build_profile_index(profile: SemanticProfile, hash: &str) -> Result<ProfileIn
     let raw_profile = registry
         .profiles
         .into_iter()
-        .find(|candidate| candidate.id == profile.id())
+        .find(|candidate| candidate.id == profile.registry_base_id())
         .ok_or(CoreError::UnsupportedRegistryProfile)?;
     let outputs = raw_profile
         .outputs

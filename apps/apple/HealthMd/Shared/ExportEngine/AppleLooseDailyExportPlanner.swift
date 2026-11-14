@@ -91,7 +91,7 @@ extension AppleLooseDailyCoreExecuting {
     }
 
     nonisolated func loadContext(profile: CoreMetricRegistryProfile) async throws -> AppleLooseDailyCoreContext {
-        guard profile == .appleHealthDataV8 else {
+        guard profile == .appleHealthDataV10 else {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
         }
         return try await loadContext()
@@ -99,7 +99,7 @@ extension AppleLooseDailyCoreExecuting {
 
     /// A resumed operation chooses its original registry, not the new-operation default.
     nonisolated func loadContext(pin: AppleExportEnginePin?) async throws -> AppleLooseDailyCoreContext {
-        let current = try await loadContext(profile: pin?.coreProfile ?? .appleHealthDataV8, expectedRegistryVersion: pin?.registryVersion ?? 1)
+        let current = try await loadContext(profile: pin?.coreProfile ?? .appleHealthDataV10, expectedRegistryVersion: pin?.registryVersion ?? 1)
         guard let pin,
               pin.registrySHA256 != current.registry.registrySha256
                 || pin.profile != current.registry.profileId else { return current }
@@ -120,7 +120,7 @@ nonisolated struct SystemAppleLooseDailyCoreExecutor: AppleLooseDailyCoreExecuti
     }
 
     func loadContext() async throws -> AppleLooseDailyCoreContext {
-        try await loadContext(profile: .appleHealthDataV8)
+        try await loadContext(profile: .appleHealthDataV10)
     }
 
     func loadContext(profile: CoreMetricRegistryProfile) async throws -> AppleLooseDailyCoreContext {
@@ -129,7 +129,7 @@ nonisolated struct SystemAppleLooseDailyCoreExecutor: AppleLooseDailyCoreExecuti
     }
 
     func loadContext(profile: CoreMetricRegistryProfile, expectedRegistryVersion: UInt32) async throws -> AppleLooseDailyCoreContext {
-        guard profile == .appleHealthDataV7 || profile == .appleHealthDataV8 || profile == .appleHealthDataV11 else {
+        guard profile == .appleHealthDataV7 || profile == .appleHealthDataV8 || profile == .appleHealthDataV10 || profile == .appleHealthDataV11 else {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
         }
         return try await runDetached {
@@ -360,6 +360,25 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         surface: AppleExportOperationSurface,
         operationIdentity suppliedOperationIdentity: AppleExportOperationIdentity? = nil
     ) async throws -> AppleLooseDailyPlanResolution {
+        let suppliedPin = settingsSnapshot.appleExportEnginePin
+        // Even an empty or legacy-marked recovered operation must validate its original pin.
+        let persistedContext: AppleLooseDailyCoreContext?
+        if let suppliedPin, records.isEmpty || suppliedPin.engine == .legacy {
+            do {
+                let context = try await coreExecutor.loadContext(pin: suppliedPin)
+                guard suppliedPin.calendarTimeZoneIdentifier == settingsSnapshot.calendarTimeZoneIdentifier,
+                      suppliedPin.isCompatible(buildInfo: context.buildInfo, registrySnapshot: context.registry) else {
+                    throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+                }
+                persistedContext = context
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+            }
+        } else {
+            persistedContext = nil
+        }
         let wakeDateContext = try Self.wakeDateCaptureContext(records: records, settings: settingsSnapshot)
         if wakeDateContext != nil, settingsSnapshot.appleExportEnginePin?.hasExplicitWakeDateContracts != true {
             // Fresh production selection stays gated. A successor never borrows legacy policy.
@@ -415,7 +434,6 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 || requestedRange?.calendarTimeZoneIdentifier == calendarTimeZoneIdentifier else {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
         }
-        let suppliedPin = settingsSnapshot.appleExportEnginePin
         let requestedMode: ExportEngineMode
         if let suppliedPin {
             requestedMode = suppliedPin.engine
@@ -427,7 +445,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             requestedMode = .legacy
         } else {
             requestedMode = policyResolver.requestedModeForNewOperation(
-                profile: .appleHealthDataV8
+                profile: .appleHealthDataV10
             )
         }
         guard requestedMode != .legacy else { return .legacy }
@@ -464,11 +482,13 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
 
         let context: AppleLooseDailyCoreContext
         do {
-            if let suppliedPin {
+            if let persistedContext {
+                context = persistedContext
+            } else if let suppliedPin {
                 context = try await coreExecutor.loadContext(pin: suppliedPin)
             } else {
                 context = try await coreExecutor.loadContext(profile: wakeDateContext == nil
-                    ? .appleHealthDataV8 : .appleHealthDataV11,
+                    ? .appleHealthDataV10 : .appleHealthDataV11,
                     expectedRegistryVersion: wakeDateContext == nil ? 1 : HealthMdSleepProfileContract.registryVersion)
             }
         } catch is CancellationError {

@@ -1,4 +1,4 @@
-//! Apple `healthmd.health_data` v8 profile renderer.
+//! Apple profile renderer. Explicit profiles retain frozen v8 or emit v10 metadata.
 
 use serde_json::Value;
 
@@ -52,6 +52,7 @@ pub(crate) fn render_api_record(
 
 #[allow(clippy::too_many_lines)]
 pub(crate) fn render_api_envelope(
+    daily_schema_version: u32,
     api: &ApiSettings,
     records: &[(String, Vec<u8>)],
 ) -> Result<Vec<u8>, RenderError> {
@@ -88,7 +89,7 @@ pub(crate) fn render_api_envelope(
         ),
         (
             "daily_record_schema_version".to_owned(),
-            encode(Value::from(8))?,
+            encode(Value::from(daily_schema_version))?,
         ),
         (
             "exported_at".to_owned(),

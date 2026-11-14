@@ -3,8 +3,14 @@ from __future__ import annotations
 
 from copy import deepcopy
 import importlib.util
+import json
 from pathlib import Path
 import unittest
+
+try:  # Package-qualified unittest and standalone discovery have different import roots.
+    from .localization_fixtures import mutation_inputs
+except ImportError:
+    from localization_fixtures import mutation_inputs
 
 PATH = Path(__file__).resolve().parents[1] / "validate-metric-selection-localizations.py"
 SPEC = importlib.util.spec_from_file_location("metric_selection_localizations", PATH)
@@ -19,7 +25,27 @@ class MetricSelectionLocalizationTests(unittest.TestCase):
         cls.catalog, cls.manifest, cls.sources = validator.load_inputs()
 
     def inputs(self) -> tuple[dict, dict, dict[str, str]]:
-        return deepcopy(self.catalog), deepcopy(self.manifest), dict(self.sources)
+        return mutation_inputs(self.catalog, self.manifest, self.sources)
+
+    def test_mutation_fixtures_preserve_owned_keys_and_nested_isolation(self) -> None:
+        for name in ["metric-selection", "frontmatter", "daily-note", "individual-tracking"]:
+            with self.subTest(manifest=name):
+                manifest = json.loads((PATH.parent / "fixtures" / f"{name}-localization-keys.json").read_text())
+                catalog, changed_manifest, sources = mutation_inputs(self.catalog, manifest, self.sources)
+                original_sources = dict(self.sources)
+                keys = set(manifest["keys"]) | set(manifest.get("displayDependencies", []))
+                self.assertEqual(set(catalog["strings"]), keys)
+                key, locale = manifest["keys"][0], validator.LOCALES[0]
+                original = deepcopy(self.catalog["strings"][key]["localizations"][locale])
+                catalog["strings"][key]["localizations"][locale].clear()
+                changed_manifest["locales"].clear()
+                sources.clear()
+                fresh, fresh_manifest, fresh_sources = mutation_inputs(self.catalog, manifest, self.sources)
+                self.assertEqual(fresh["strings"][key]["localizations"][locale], original)
+                self.assertEqual(self.catalog["strings"][key]["localizations"][locale], original)
+                self.assertEqual(fresh_manifest["locales"], validator.LOCALES)
+                self.assertEqual(fresh_sources, original_sources)
+                self.assertEqual(self.sources, original_sources)
 
     def test_production_catalog_and_localized_adapter_bindings(self) -> None:
         self.assertEqual(validator.validate(self.catalog, self.manifest, self.sources), [])

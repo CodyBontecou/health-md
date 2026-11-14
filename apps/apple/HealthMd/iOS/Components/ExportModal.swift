@@ -632,10 +632,10 @@ struct FilenameFormatEditor: View {
                 tempFormat = filenameFormat
             }
         }
-        .overlay(alignment: .top) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             ConfigurationProtectionToast(configurationProtection: configurationProtection)
                 .padding(.horizontal, Spacing.s4)
-                .padding(.top, Spacing.s2)
+                .padding(.bottom, Spacing.s2)
         }
         .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
             if requestID != nil {
@@ -904,10 +904,10 @@ struct FolderStructureEditor: View {
                 tempOrganizeFormatsIntoFolders = organizeFormatsIntoFolders
             }
         }
-        .overlay(alignment: .top) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             ConfigurationProtectionToast(configurationProtection: configurationProtection)
                 .padding(.horizontal, Spacing.s4)
-                .padding(.top, Spacing.s2)
+                .padding(.bottom, Spacing.s2)
         }
         .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
             if requestID != nil {
@@ -1139,10 +1139,10 @@ struct SubfolderEditor: View {
                 tempSubfolder = subfolder
             }
         }
-        .overlay(alignment: .top) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             ConfigurationProtectionToast(configurationProtection: configurationProtection)
                 .padding(.horizontal, Spacing.s4)
-                .padding(.top, Spacing.s2)
+                .padding(.bottom, Spacing.s2)
         }
         .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
             if requestID != nil {

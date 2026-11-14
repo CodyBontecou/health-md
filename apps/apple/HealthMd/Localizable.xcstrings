@@ -18206,6 +18206,71 @@
         "zh-Hans": {"stringUnit":{"state":"translated","value":"取消导出"}}
       }
     },
+    "Cancel range check" : {
+      "comment" : "Interactive All Time readable-date discovery; no history-verification bypass.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datumsprüfung abbrechen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel range check"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancelar comprobación del intervalo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annuler la vérification de la période"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annulla verifica dell’intervallo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "期間の確認をキャンセル"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기간 확인 취소"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datumbereikcontrole annuleren"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancelar verificação do intervalo"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消日期范围检查"
+          }
+        }
+      }
+    },
     "Cancelled" : {
       "comment" : "macOS production UI",
       "localizations" : {
@@ -64890,6 +64955,71 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Finding the readable range for the selected metrics…" : {
+      "comment" : "Interactive All Time readable-date discovery; no history-verification bypass.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lesbaren Zeitraum für die ausgewählten Messwerte ermitteln…"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finding the readable range for the selected metrics…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buscando el intervalo accesible para las métricas seleccionadas…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recherche de la période accessible pour les mesures sélectionnées…"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ricerca dell’intervallo leggibile per le metriche selezionate…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択した指標の読み取り可能な期間を検索中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "선택한 지표에서 읽을 수 있는 기간을 찾는 중…"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leesbaar bereik voor de geselecteerde meetwaarden zoeken…"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buscando o intervalo acessível para as métricas selecionadas…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在查找所选指标的可读取日期范围…"
           }
         }
       }

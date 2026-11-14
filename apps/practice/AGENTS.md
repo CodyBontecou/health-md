@@ -18,6 +18,8 @@ The referenced product protocol `1.0-draft.4` and common instructions `practice-
 
 This is an independent Node 24/npm component with its own lockfile and generated output.
 
+Follow the root [verification policy](../../AGENTS.md#verification-policy) and [test selection guide](../../docs/testing-strategy.md). During iteration use `npm test -- <owning-test-file>` and `npm run typecheck`; run `npm run check` once for the affected finished change. Install locked dependencies when missing or the lockfile changes, not before every test run. The following is full synthetic qualification, not a per-edit checklist:
+
 ```bash
 npm ci
 npm run check
