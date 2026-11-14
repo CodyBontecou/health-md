@@ -1160,6 +1160,33 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         XCTAssertEqual(settings.enabledRollupPeriods, [.range])
     }
 
+    func testISOWeekPathsUseOwnerTimezoneAndPreserveCalendarYear() throws {
+        let suite = "healthmd.tests.iso-week.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        let daily = LifecycleHarness.retain(DailyNoteInjectionSettings())
+        settings.exportTimeZoneOverride = TimeZone(secondsFromGMT: 0)!
+        settings.folderStructure = ISOWeekDateTokens.folderTemplate
+        daily.filenamePattern = "{weekYear}/Week {week}/{date}"
+        let parser = ISO8601DateFormatter()
+        for (day, expected) in [
+            ("2026-11-01", "2026/Week 44"),
+            ("2027-01-01", "2026/Week 53"),
+            ("2027-01-04", "2027/Week 01"),
+            ("2029-12-31", "2030/Week 01"),
+        ] {
+            let date = try XCTUnwrap(parser.date(from: day + "T12:00:00Z"))
+            XCTAssertEqual(settings.formatFolderPath(for: date), expected)
+            XCTAssertEqual(settings.formatFilename(for: date), day)
+            XCTAssertEqual(daily.formatFilename(for: date, timeZone: TimeZone(secondsFromGMT: 0)!), "\(expected)/\(day)")
+        }
+        let boundary = try XCTUnwrap(parser.date(from: "2027-01-04T00:30:00Z"))
+        settings.exportTimeZoneOverride = try XCTUnwrap(TimeZone(identifier: "America/Los_Angeles"))
+        XCTAssertEqual(settings.formatFolderPath(for: boundary), "2026/Week 53")
+        XCTAssertEqual(settings.formatFilename(for: boundary), "2027-01-03")
+    }
+
     func testDailyNotesOnlyAllowsFileDestinationWithoutAggregateFormats() throws {
         let suiteName = "healthmd.tests.daily-note-only-no-formats.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))

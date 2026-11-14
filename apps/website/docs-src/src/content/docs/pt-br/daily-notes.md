@@ -34,6 +34,8 @@ Wrote launch notes...</code></pre></div>
 ## Espaços reservados do nome
 <p>Combine-os livremente:</p>
 <ul><li><code>{date}</code> — data ISO completa (<code>2026-04-28</code>)</li><li><code>{year}</code>, <code>{month}</code>, <code>{day}</code></li><li><code>{weekday}</code> — nome abreviado (<code>Tue</code>)</li><li><code>{monthName}</code> — nome completo (<code>April</code>)</li><li><code>{quarter}</code> — Q1 / Q2 / Q3 / Q4</li></ul>
+<li><code>{week}</code>, Número da semana ISO (<code>01</code>–<code>53</code>)</li>
+<li><code>{weekYear}</code>, Ano da semana ISO (<code>2027-01-01 → 2026</code>)</li>
 <p>Exemplo: <code>{year}/{monthName}/{date}-{weekday}</code> → <code>2026/April/2026-04-28-Tue.md</code>. A linha de prévia mostra o caminho resultante em tempo real.</p>
 
 ## Opções

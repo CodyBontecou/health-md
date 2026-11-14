@@ -85,7 +85,7 @@
     <string name="section_write_mode">Mod de scriere</string>
     <string name="section_filename_template">Șablon pentru numele fișierului</string>
     <string name="filename_template_hint">{date}</string>
-    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}</string>
+    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}, {week}, {weekYear}</string>
     <string name="section_format_options">Opțiuni de format</string>
     <string name="toggle_include_frontmatter">Includeți Frontmatter</string>
     <string name="toggle_group_by_category">Grupați după Categorie</string>

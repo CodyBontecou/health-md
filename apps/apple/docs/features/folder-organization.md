@@ -50,6 +50,8 @@ This keeps large backfills and scheduled exports organized by year, month, week,
 - `{weekday}` → `Tuesday`
 - `{monthName}` → `May`
 - `{quarter}` → `Q2`
+- `{week}` → ISO week number, zero-padded (`01`–`53`)
+- `{weekYear}` → ISO week-numbering year (`2026`)
 - `{date}` → `2026-05-12`
 
 ## Example paths
@@ -109,3 +111,10 @@ Assume:
 - `formatFolderPath(for:format:)` returns `nil` when the date structure is empty and no file-type folder applies.
 - The same placeholder expansion method powers both filenames and folder paths.
 - Directories are created with intermediate directories before files are written.
+
+ISO weeks start on Monday and week 1 contains January 4. Use **By Year and Week**
+(`{weekYear}/Week {week}`) for weekly folders: January 1, 2027 resolves to
+`2026/Week 53`, while `{year}` stays `2027`. Week tokens use the export owner-day
+timezone, independently of locale or the device calendar. Existing templates and
+daily export schema versions are unchanged. Keep `{date}` in daily filenames to
+avoid collisions between days in the same week.

@@ -137,6 +137,7 @@ class ProductCapabilityManifestTest {
             "purchase.free-export-journey",
             "account.myself_lifetime_claim",
             "export.daily-files",
+            "export.iso-week-paths",
             "export.sleep-summary",
             "export.activity-basics",
             "export.cardiorespiratory-summary",

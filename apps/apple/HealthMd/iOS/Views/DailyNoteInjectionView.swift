@@ -121,7 +121,7 @@ struct DailyNoteInjectionView: View {
                     title: "Filename Pattern",
                     placeholder: "{date}",
                     text: $settings.filenamePattern,
-                    helper: "Supports {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, and {quarter}.",
+                    helper: "Supports {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}, {week}, and {weekYear}.",
                     accessibilityLabel: "Daily note filename pattern",
                     accessibilityHint: "Enter the filename pattern without an extension."
                 )

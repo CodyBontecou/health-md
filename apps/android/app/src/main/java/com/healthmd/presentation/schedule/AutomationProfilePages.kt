@@ -696,6 +696,10 @@ private fun ProfileOutputPage(
                         },
                         onSelect = { state.value = draft.copy(folderOrganization = it) },
                     )
+                    SecondaryButton(
+                        text = stringResource(R.string.folder_organization_by_year_week_label),
+                        onClick = { state.value = draft.copy(folderStructure = ExportSettings.YEAR_WEEK_FOLDER_TEMPLATE) },
+                    )
                     TemplateField(
                         value = draft.folderStructure,
                         label = stringResource(R.string.folder_structure_template_label),

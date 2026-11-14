@@ -223,7 +223,7 @@
     <string name="section_write_mode">写入模式</string>
     <string name="section_filename_template">文件名模板</string>
     <string name="filename_template_hint">{date}</string>
-    <string name="filename_template_tokens">{date}、{year}、{month}、{day}、{weekday}、{monthName}、{quarter}</string>
+    <string name="filename_template_tokens">{date}、{year}、{month}、{day}、{weekday}、{monthName}、{quarter}、{week}、{weekYear}</string>
     <string name="section_format_options">格式选项</string>
     <string name="toggle_include_frontmatter">包含 Frontmatter 元数据</string>
     <string name="toggle_group_by_category">按类别分组</string>

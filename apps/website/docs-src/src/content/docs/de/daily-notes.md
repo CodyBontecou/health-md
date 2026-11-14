@@ -46,6 +46,8 @@ Wrote launch notes...</code></pre>
 <li><code>{weekday}</code> – Kurzname (<code>Tue</code>)</li>
 <li><code>{monthName}</code> – ausgeschriebener Name (<code>April</code>)</li>
 <li><code>{quarter}</code> – Q1 / Q2 / Q3 / Q4</li>
+<li><code>{week}</code>, ISO-Wochennummer (<code>01</code>–<code>53</code>)</li>
+<li><code>{weekYear}</code>, ISO-Wochenjahr (<code>2027-01-01 → 2026</code>)</li>
 </ul>
 <p>Beispiel: <code>{year}/{monthName}/{date}-{weekday}</code> → <code>2026/April/2026-04-28-Tue.md</code>. Die Vorschauzeile unter dem Feld zeigt den aufgelösten Pfad sofort an.</p>
 

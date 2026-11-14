@@ -1128,7 +1128,7 @@ struct ExportProfileEditorSheet: View {
         GlassPalette.resolved(colorScheme: colorScheme, reduceTransparency: reduceTransparency)
     }
 
-    private static let dateTokens = ["{date}", "{year}", "{month}", "{day}", "{weekday}", "{monthName}", "{quarter}"]
+    private static let dateTokens = ["{date}", "{year}", "{month}", "{day}", "{weekday}", "{monthName}", "{quarter}", "{week}", "{weekYear}"]
 
     private var titleText: String {
         if usesAutomationWording && editingProfile == nil { return String(localized: "New automation") }
@@ -1558,7 +1558,10 @@ struct ExportProfileEditorSheet: View {
                     tokens: Self.dateTokens
                 )
             }
-            footnote(String(localized: "Templates accept {date}, {year}, {month}, {day}, {weekday}, {monthName}, and {quarter}."))
+            Button(String(localized: "By Year and Week")) {
+                draft.folderStructure = ISOWeekDateTokens.folderTemplate
+            }
+            footnote(String(localized: "Templates accept {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}, {week}, and {weekYear}."))
 
             GlassPanel {
                 GlassToggleRow(

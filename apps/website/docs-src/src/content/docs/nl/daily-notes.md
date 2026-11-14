@@ -46,6 +46,8 @@ Wrote launch notes...</code></pre>
 <li><code>{weekday}</code> — korte naam (<code>Tue</code>)</li>
 <li><code>{monthName}</code> — lange naam (<code>April</code>)</li>
 <li><code>{quarter}</code> — Q1 / Q2 / Q3 / Q4</li>
+<li><code>{week}</code>, ISO-weeknummer (<code>01</code>–<code>53</code>)</li>
+<li><code>{weekYear}</code>, ISO-weekjaar (<code>2027-01-01 → 2026</code>)</li>
 </ul>
 <p>Voorbeeld: <code>{year}/{monthName}/{date}-{weekday}</code> → <code>2026/April/2026-04-28-Tue.md</code>. Onder het veld zie je direct een voorbeeld van het uiteindelijke pad.</p>
 

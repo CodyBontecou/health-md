@@ -32,7 +32,7 @@ struct GlassDailyNoteScreen: View {
                     GlassTemplateField(
                         title: String(localized: "Filename"),
                         text: $draft.dailyNoteInjection.filenamePattern,
-                        tokens: ["{date}", "{year}", "{month}", "{day}", "{weekday}"]
+                        tokens: ["{date}", "{year}", "{month}", "{day}", "{weekday}", "{week}", "{weekYear}"]
                     )
                     // Daily note paths always resolve from the destination's root, never the
                     // Health subfolder, so this is a fact rather than a choice.
