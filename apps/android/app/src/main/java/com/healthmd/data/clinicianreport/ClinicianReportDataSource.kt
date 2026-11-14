@@ -55,6 +55,17 @@ class DefaultClinicianReportDataSource @Inject constructor(
         )
         return try {
             val captureContext = healthRepository.resolveCaptureContext(zoneId)
+            // Reading Health Connect directly skips the repository's readiness
+            // checks. Keep them: unavailable or missing access is a source
+            // failure for every day, never an empty "no data" report.
+            if (!healthConnect.isAvailable() || !healthConnect.hasPermissions()) {
+                return ClinicianReportInput(
+                    configuration = normalized,
+                    zoneId = zoneId,
+                    generatedAt = Instant.now(),
+                    warnings = range.dates().map { ClinicianReportWarning.SourceFailure(it) },
+                )
+            }
             val records = healthConnect.fetchHealthDataRange(
                 dates = range.dates(),
                 dataTypes = dataTypes,

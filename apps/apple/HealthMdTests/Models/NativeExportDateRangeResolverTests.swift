@@ -60,17 +60,41 @@ final class NativeExportDateRangeResolverTests: XCTestCase {
         }
     }
 
-    func testUnknownSelectedMetricRejectsOtherwiseCompleteDiscovery() async throws {
+    func testMetricWithoutQueryableHistoryDoesNotBlockTheOtherMetricsRange() async throws {
+        // Clinical records, attachments and types this build or OS lacks have
+        // no earliest-date query. They export for the range the rest establish.
         let store = FakeHealthStore()
         let stepType = try XCTUnwrap(HKObjectType.quantityType(forIdentifier: .stepCount))
         store.earliestSampleDates[stepType.identifier] = earliestDate
 
+        let range = try await resolve(makeRequest(metricIDs: ["steps", "future_metric"]), store: store)
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        XCTAssertEqual(range.startDate, calendar.startOfDay(for: earliestDate))
+        XCTAssertEqual(range.endDate, calendar.startOfDay(for: referenceDate))
+    }
+
+    func testOnlyMetricsWithoutQueryableHistoryReportNoReadableData() async {
         do {
-            _ = try await resolve(makeRequest(metricIDs: ["steps", "future_metric"]), store: store)
-            XCTFail("Every selected metric must be discoverable")
+            _ = try await resolve(makeRequest(metricIDs: ["future_metric"]), store: FakeHealthStore())
+            XCTFail("No queryable history is not a resolved All Time range")
         } catch {
-            XCTAssertEqual(error as? Resolver.ResolutionError, .incompleteDiscovery)
+            XCTAssertEqual(error as? Resolver.ResolutionError, .noHealthData)
         }
+    }
+
+    func testAppSurfacesBuildEqualRequestsWhateverDatesAllTimeStored() {
+        let zone = "America/Los_Angeles"
+        let fresh = Resolver.Request(preset: .allTime, startDate: referenceDate, endDate: referenceDate,
+                                     enabledMetricIDs: ["steps"], timeZoneIdentifier: zone)
+        let restored = Resolver.Request(preset: .allTime, startDate: earliestDate, endDate: referenceDate,
+                                        enabledMetricIDs: ["steps"], timeZoneIdentifier: zone)
+        XCTAssertEqual(fresh, restored, "All Time discovery doesn't depend on stored dates")
+        XCTAssertEqual(fresh.timeZone, TimeZone(identifier: zone))
+        let custom = Resolver.Request(preset: .custom, startDate: earliestDate, endDate: referenceDate,
+                                      enabledMetricIDs: ["steps"], timeZoneIdentifier: zone)
+        XCTAssertEqual(custom.selection.startDate, earliestDate, "Explicit ranges keep their dates")
     }
 
     func testEmptyReadableStoreDoesNotFallBackToTodayAsAllTime() async {
@@ -84,7 +108,8 @@ final class NativeExportDateRangeResolverTests: XCTestCase {
 
     func testIncompleteAndFutureDatedDiscoveriesRejectAllTime() {
         assertRejected(makeDiscovery(failedTypeIdentifiers: ["synthetic.type"]), as: .incompleteDiscovery)
-        assertRejected(makeDiscovery(unresolvedMetricIDs: ["future_metric"]), as: .incompleteDiscovery)
+        assertRejected(makeDiscovery(failedTypeIdentifiers: ["synthetic.type"], unresolvedMetricIDs: ["future_metric"]),
+                       as: .incompleteDiscovery)
         assertRejected(makeDiscovery(earliestDate: referenceDate.addingTimeInterval(86_400)), as: .incompleteDiscovery)
     }
 

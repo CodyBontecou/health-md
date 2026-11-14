@@ -80,12 +80,28 @@ struct ExportNowSheet: View {
     @EnvironmentObject private var healthKitManager: HealthKitManager
     @State private var range: ExportNowRange = .yesterday
     @State private var showPreview = false
+    /// Display-only All Time range; the export itself resolves again when it starts.
+    @State private var allTimeDisplayRange: NativeExportDateRangeResolver.ResolvedRange?
 
     private var calendar: Calendar { .current }
 
+    private var allTimeRangeRequest: NativeExportDateRangeResolver.Request? {
+        guard dateRangePreset == .allTime else { return nil }
+        return .init(preset: .allTime, startDate: startDate, endDate: endDate, settings: advancedSettings)
+    }
+
+    /// The dates this sheet describes: the resolved All Time range when known.
+    private var shownStartDate: Date {
+        allTimeRangeRequest.flatMap { allTimeDisplayRange.range(for: $0)?.startDate } ?? startDate
+    }
+
+    private var shownEndDate: Date {
+        allTimeRangeRequest.flatMap { allTimeDisplayRange.range(for: $0)?.endDate } ?? endDate
+    }
+
     private var dayCount: Int {
-        let start = calendar.startOfDay(for: startDate)
-        let end = calendar.startOfDay(for: endDate)
+        let start = calendar.startOfDay(for: shownStartDate)
+        let end = calendar.startOfDay(for: shownEndDate)
         return (calendar.dateComponents([.day], from: start, to: end).day ?? 0) + 1
     }
 
@@ -108,6 +124,10 @@ struct ExportNowSheet: View {
                 }
                 .padding(GlassMetrics.screenMargin)
             }
+            .modifier(AllTimeDisplayRangeResolution(
+                request: allTimeRangeRequest,
+                healthKitManager: healthKitManager,
+                resolved: $allTimeDisplayRange))
             // ExportNowG: a plain-text Cancel beside the centred title, and the CTA in a
             // glass footer bar separated from the content.
             .safeAreaInset(edge: .top, spacing: 0) { header }
@@ -285,15 +305,15 @@ struct ExportNowSheet: View {
         let night = healthKitManager.sleepDayAttribution == .nightBegins
             ? calendar.date(byAdding: .day, value: -1, to: today) ?? today
             : today
-        return calendar.startOfDay(for: startDate) <= night && night <= calendar.startOfDay(for: endDate)
+        return calendar.startOfDay(for: shownStartDate) <= night && night <= calendar.startOfDay(for: shownEndDate)
     }
 
     private var rangeText: String {
-        let start = startDate.formatted(.dateTime.month(.abbreviated).day())
-        guard !calendar.isDate(startDate, inSameDayAs: endDate) else {
-            return startDate.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+        let start = shownStartDate.formatted(.dateTime.month(.abbreviated).day())
+        guard !calendar.isDate(shownStartDate, inSameDayAs: shownEndDate) else {
+            return shownStartDate.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
         }
-        return "\(start) – \(endDate.formatted(.dateTime.month(.abbreviated).day()))"
+        return "\(start) – \(shownEndDate.formatted(.dateTime.month(.abbreviated).day()))"
     }
 
     private var summaryText: String {

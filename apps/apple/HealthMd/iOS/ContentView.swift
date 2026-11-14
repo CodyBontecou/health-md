@@ -178,6 +178,7 @@ struct ContentView: View {
                     executionHistoryAssessment: executionHistoryAssessment,
                     isAssessingHistory: isAssessingHistory && pendingScaleRequest == nil,
                     isDiscoveringExportRange: isAssessingHistory && !hasBegunHistoryAssessment && pendingScaleRequest == nil,
+                    executionHistoryScope: currentExecutionHistoryScope,
                     historyCheckAwaitsDecision: historyCheckAwaitsDecision,
                     onContinueWithoutHistoryVerification: historyContinuationAction,
                     onCancelHistoryVerification: historyCancellationAction,
@@ -795,7 +796,9 @@ struct ContentView: View {
         let selection = ExportDateRangeLaunchPolicy.selectionToRestore(
             persisted: persisted,
             hadInterruptedInteractiveExport: hadInterruptedInteractiveExport,
-            resolvesAllTimeRange: isInitialLaunch
+            // Every Export and Preview rediscovers All Time, so a foreground
+            // activation keeps the preset instead of falling back to Today.
+            resolvesAllTimeRange: true
         )
 
         dateRangePreset = selection.preset
@@ -1619,6 +1622,8 @@ struct ContentView: View {
     }
 
     private func prepareInteractiveHistoryExport(selection: HealthHistoryExecutionSelection) {
+        // A superseded discovery must not keep running its HealthKit queries.
+        historyExecutionTask?.cancel()
         let request = historyExecutionCoordinator.beginExportRequest(selection: selection)
         activeHistoryRequest = request
         pendingHistoryRequestID = request.id

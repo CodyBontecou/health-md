@@ -35,6 +35,7 @@ struct GlassAppShell: View {
     let executionHistoryAssessment: HealthHistoryAssessment?
     let isAssessingHistory: Bool
     let isDiscoveringExportRange: Bool
+    var executionHistoryScope: HealthHistoryScope? = nil
     let historyCheckAwaitsDecision: Bool
     let onContinueWithoutHistoryVerification: () -> Void
     let onCancelHistoryVerification: () -> Void
@@ -581,6 +582,8 @@ struct GlassAppShell: View {
             historyProfileStore: profileCoordinator?.profileStore,
             executionHistoryAssessment: executionHistoryAssessment,
             isAssessingHistory: isAssessingHistory,
+            isDiscoveringExportRange: isDiscoveringExportRange,
+            executionHistoryScope: executionHistoryScope,
             onContinueWithoutHistoryVerification: onContinueWithoutHistoryVerification,
             onCancelHistoryVerification: onCancelHistoryVerification
         )
@@ -1110,9 +1113,7 @@ struct GlassExportPreviewSheet: View {
     @State private var rangeError: String?
 
     private var rangeRequest: NativeExportDateRangeResolver.Request {
-        .init(selection: .init(preset: dateRangePreset, startDate: startDate, endDate: endDate),
-              enabledMetricIDs: advancedSettings.metricSelection.enabledMetrics,
-              timeZone: advancedSettings.exportTimeZoneOverride ?? .current)
+        .init(preset: dateRangePreset, startDate: startDate, endDate: endDate, settings: advancedSettings)
     }
 
     @EnvironmentObject private var healthKitManager: HealthKitManager

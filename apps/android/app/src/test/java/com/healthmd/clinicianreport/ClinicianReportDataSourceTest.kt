@@ -62,6 +62,8 @@ class ClinicianReportDataSourceTest {
         val pinnedZone = ZoneId.of("Pacific/Chatham")
         val manager = mockk<HealthConnectManager>()
         val provider = HealthConnectDataProvider(manager)
+        every { manager.isAvailable() } returns true
+        coEvery { manager.hasAllPermissions() } returns true
         val registry = mockk<HealthProviderRegistry>()
         val settings = mockk<SettingsRepository>()
         coEvery { settings.getSelectedHealthProviderId() } returns "health_connect"
@@ -87,6 +89,8 @@ class ClinicianReportDataSourceTest {
     @Test fun explicitNightBeginsOverrideIsNotRepopulatedFromStoredMorningEnds() = runTest {
         val manager = mockk<HealthConnectManager>()
         val provider = HealthConnectDataProvider(manager)
+        every { manager.isAvailable() } returns true
+        coEvery { manager.hasAllPermissions() } returns true
         val registry = mockk<HealthProviderRegistry>()
         val settings = mockk<SettingsRepository>()
         coEvery { settings.getSelectedHealthProviderId() } returns "health_connect"
@@ -122,6 +126,8 @@ class ClinicianReportDataSourceTest {
             TimeZone.setDefault(TimeZone.getTimeZone(capturedZone))
             val manager = mockk<HealthConnectManager>()
             val provider = HealthConnectDataProvider(manager)
+        every { manager.isAvailable() } returns true
+        coEvery { manager.hasAllPermissions() } returns true
             val registry = mockk<HealthProviderRegistry>()
             val settings = mockk<SettingsRepository>()
             coEvery { settings.getSelectedHealthProviderId() } returns "health_connect"
@@ -275,6 +281,28 @@ class ClinicianReportDataSourceTest {
         assertThat(capture.requestedZoneId).isEqualTo(zone)
     }
 
+    @Test fun unavailableOrUnpermittedHealthConnectWarnsForEveryDayInsteadOfReportingNoData() = runTest {
+        val range = ReportDateRange(day.minusDays(1), day)
+        for ((available, permitted) in listOf(false to true, true to false)) {
+            val capture = FakeHealthRepository().also {
+                it.available = available
+                it.permitted = permitted
+            }
+            val input = source(capture).load(
+                ReportConfiguration(range, setOf(ReportMetric.STEPS)),
+                ZoneId.of("UTC"),
+            )
+            assertThat(input.warnings).containsExactly(
+                ClinicianReportWarning.SourceFailure(day.minusDays(1)),
+                ClinicianReportWarning.SourceFailure(day),
+            )
+            assertThat(input.dailyValues).isEmpty()
+            coVerify(exactly = 0) {
+                capture.localProvider.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any())
+            }
+        }
+    }
+
     private fun source(
         repository: FakeHealthRepository,
         dateProvider: ClinicianReportDateProvider = SystemClinicianReportDateProvider(),
@@ -304,7 +332,12 @@ class ClinicianReportDataSourceTest {
         var includeGranular = false
         var pinnedCalendarDays = false
 
+        var available = true
+        var permitted = true
+
         init {
+            coEvery { localProvider.isAvailable() } answers { available }
+            coEvery { localProvider.hasPermissions() } answers { permitted }
             coEvery { localProvider.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
                 requestedDates = firstArg()
                 requestedTypes = secondArg()
