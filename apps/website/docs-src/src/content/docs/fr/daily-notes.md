@@ -36,6 +36,8 @@ Wrote launch notes...</code></pre>
 ## Variables du nom de fichier
 <p>Vous pouvez les combiner librement :</p>
 <ul><li><code>{date}</code> — date ISO complète (<code>2026-04-28</code>)</li><li><code>{year}</code>, <code>{month}</code>, <code>{day}</code></li><li><code>{weekday}</code> — nom court (<code>Tue</code>)</li><li><code>{monthName}</code> — nom long (<code>April</code>)</li><li><code>{quarter}</code> — Q1 / Q2 / Q3 / Q4</li></ul>
+<li><code>{week}</code>, Numéro de semaine ISO (<code>01</code>–<code>53</code>)</li>
+<li><code>{weekYear}</code>, Année de semaine ISO (<code>2027-01-01 → 2026</code>)</li>
 <p>Exemple : <code>{year}/{monthName}/{date}-{weekday}</code> → <code>2026/April/2026-04-28-Tue.md</code>. La ligne d’aperçu sous le champ affiche immédiatement le chemin obtenu.</p>
 
 ## Options

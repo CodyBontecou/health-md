@@ -46,6 +46,8 @@ Wrote launch notes...</code></pre>
 <li><code>{weekday}</code> — 짧은 이름(<code>Tue</code>)</li>
 <li><code>{monthName}</code> — 전체 이름(<code>April</code>)</li>
 <li><code>{quarter}</code> — Q1 / Q2 / Q3 / Q4</li>
+<li><code>{week}</code>, ISO 주 번호 (<code>01</code>–<code>53</code>)</li>
+<li><code>{weekYear}</code>, ISO 주 기준 연도 (<code>2027-01-01 → 2026</code>)</li>
 </ul>
 <p>예: <code>{year}/{monthName}/{date}-{weekday}</code> → <code>2026/April/2026-04-28-Tue.md</code>. 필드 아래의 미리보기 줄에 변환된 경로가 실시간으로 표시됩니다.</p>
 
