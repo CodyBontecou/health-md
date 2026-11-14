@@ -115,6 +115,27 @@ class HostCoreDailyNoteTest {
         }
     }
 
+    @Test fun scopedNightWorkoutPropertiesRespectFieldToggles() {
+        for (sections in listOf(false, true)) {
+            val customization = FormatCustomization(frontmatterConfig = FrontmatterConfiguration(
+                fields = FrontmatterConfiguration.defaultFields.map { field -> field.copy(
+                    isEnabled = field.originalKey == "workout_count",
+                    customKey = if (field.originalKey == "workout_count") "My workout count" else field.customKey,
+                ) },
+            ))
+            val patch = DailyNoteInjector().prepareScopedNightPatch(ExportFixtures.fullDay,
+                DailyNoteInjectionSettings(enabled = true, injectMarkdownSections = sections), customization,
+                MetricSelectionState(enabledMetrics = setOf("workouts")),
+                context.copy(sleepDayAttribution = SleepDayAttribution.NIGHT_BEGINS, exportProfileID = null))
+            val header = patch.lineSequence().drop(1).takeWhile { it != "---" }.toList()
+            assertThat(header).contains("My workout count: 1")
+            for (key in listOf("workout_count", "workout_minutes", "workout_calories", "workouts")) {
+                assertThat(header.any { it.startsWith("$key:") }).isFalse()
+            }
+            assertThat(patch).contains("healthmd_injection_kind:")
+        }
+    }
+
     @Test fun morningExportsRetainAllNativeWriteModesAndPreviewTheirDestinationEffect() = runTest {
         for (mode in WriteMode.entries) {
             val destination = NoteDestination(null)
@@ -156,7 +177,7 @@ class HostCoreDailyNoteTest {
             assertThat(note).contains("sleep_deep_hours: 9 # history\r\n")
             assertThat(note).contains("My introduction.")
             assertThat(note).contains("Keep this section.")
-            assertThat(note.contains("My steps: 42") || note.contains("\"My steps\": 42")).isTrue()
+            assertThat(note.lineSequence().any { it.startsWith("My steps:") || it.startsWith("\"My steps\":") }).isFalse()
             assertThat(note.contains("## Activity")).isEqualTo(sections)
             val value = note.lineSequence().first { it.startsWith("healthmd_daily_injection_v1:") }.substringAfter(':').trim()
             val envelope = Json.parseToJsonElement(Json.decodeFromString<String>(value)).jsonObject

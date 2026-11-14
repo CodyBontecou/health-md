@@ -10,6 +10,7 @@ import androidx.health.connect.client.records.metadata.DataOrigin
 import androidx.health.connect.client.request.ChangesTokenRequest
 import com.healthmd.rawexport.HealthConnectRecordCatalog
 import com.healthmd.rawexport.RawProviderCapabilities
+import com.healthmd.testing.TestMode
 import kotlin.reflect.KClass
 
 /** Opaque by construction: no value-bearing toString, serialization, logging, or exception API. */
@@ -64,6 +65,8 @@ class HealthConnectChangesSource(
         descriptors.associateBy { it.recordClass }
 
     override suspend fun capabilities(): RawProviderCapabilities {
+        // UI test mode serves synthetic summaries only; raw records stay out of reach.
+        if (TestMode.isActive) return RawProviderCapabilities(available = false)
         val available = HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
         if (!available) return RawProviderCapabilities(available = false)
         val permissions = try {
@@ -83,6 +86,7 @@ class HealthConnectChangesSource(
     }
 
     override suspend fun createToken(scope: RawChangesScope): SecretChangesToken {
+        if (TestMode.isActive) throw RawChangesProviderException("Health Connect is unavailable in UI test mode.")
         val canonical = scope.canonical()
         val requested = canonical.recordTypeKeys
         val selected = descriptors.filter { it.wireType in requested }

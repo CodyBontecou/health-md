@@ -131,7 +131,7 @@ class PreparedWakeDateDailyNote private constructor(
             val names = HealthDataFields.extractForWakeDate(selected, request.customization.unitConverter,
                 request.customization.timeFormat, request.customization.includeLegacyAndroidAliases,
                 request.customization.includeAndroidNativeFields)
-                .filter { it.value != null }.map { field ->
+                .filter { it.value != null && presentation.frontmatterConfig.isFieldEnabled(it.key) }.map { field ->
                 request.customization.frontmatterConfig.fields.firstOrNull { it.originalKey == field.key }
                     ?.outputKey ?: field.key
             }

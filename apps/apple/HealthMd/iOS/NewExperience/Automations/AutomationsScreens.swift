@@ -5,6 +5,9 @@ import UIKit
 /// Shared derivations for automation screens.
 struct AutomationFacts {
     let coordinator: ExportProfileCoordinator
+    /// Scheduled runs need paid access. Without it a schedule never runs, so the
+    /// status must not promise a next run.
+    var hasPaidAccess: Bool = PurchaseManager.shared.isUnlocked
 
     func entry(_ profile: ExportProfile) -> ScheduledExportEntry? {
         coordinator.scheduledEntryStore.entry(profileID: profile.id)
@@ -16,11 +19,13 @@ struct AutomationFacts {
             profile: profile,
             vault: store.vault(id: profile.folderVaultID),
             endpoint: store.apiEndpoint(id: profile.apiEndpointID),
+            googleDriveDestination: coordinator.googleDriveDestinationStore.destination(id: profile.googleDriveDestinationID),
             gateway: store.agentDataGateway(id: store.agentDataGatewayBinding(profileID: profile.id))
         )
         switch summary {
         // A profile without its own folder writes to the Settings folder, so name that one.
         case .localFolder(let name): return name ?? coordinator.sharedFolderName ?? String(localized: "iPhone folder")
+        case .googleDrive(let label): return label ?? "Google Drive"
         case .connectedMac: return String(localized: "Connected Mac")
         case .apiEndpoint(let url), .agentDataGateway(let url):
             return url ?? String(localized: "not configured")
@@ -49,6 +54,11 @@ struct AutomationFacts {
     }
 
     func statusLine(_ profile: ExportProfile, now: Date = Date()) -> String {
+        if !hasPaidAccess {
+            return entry(profile)?.isEnabled == true
+                ? String(localized: "Daily schedule needs paid access")
+                : String(localized: "Manual")
+        }
         guard let entry = entry(profile) else { return String(localized: "No schedule") }
         guard entry.isEnabled else { return String(localized: "Paused") }
         guard let next = nextRun(profile, now: now) else { return String(localized: "Scheduled") }
@@ -57,10 +67,23 @@ struct AutomationFacts {
 
     /// The short status of the iPad list: "Sun 7:30", "Paused" or "No schedule".
     func shortStatus(_ profile: ExportProfile, now: Date = Date()) -> String {
+        if !hasPaidAccess {
+            return entry(profile)?.isEnabled == true ? String(localized: "Needs access") : String(localized: "Manual")
+        }
         guard let entry = entry(profile) else { return String(localized: "No schedule") }
         guard entry.isEnabled else { return String(localized: "Paused") }
         guard let next = nextRun(profile, now: now) else { return String(localized: "Scheduled") }
         return next.formatted(.dateTime.weekday(.abbreviated).hour().minute())
+    }
+
+    /// "8:00 AM": the schedule time the access strip names.
+    func scheduleTimeDescription(_ profile: ExportProfile) -> String {
+        let entry = entry(profile)
+        var components = DateComponents()
+        components.hour = entry?.preferredHour ?? 8
+        components.minute = entry?.preferredMinute ?? 0
+        let date = Calendar.current.date(from: components) ?? Date()
+        return date.formatted(date: .omitted, time: .shortened)
     }
 
     /// Coverage of the 14 completed days before today, oldest first.
@@ -247,7 +270,9 @@ struct AutomationsScreen: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @EnvironmentObject private var schedulingManager: SchedulingManager
+    @ObservedObject private var purchaseManager = PurchaseManager.shared
     @State private var showCreation = false
+    @State private var showAccessPaywall = false
     @State private var createdAutomation: AutomationEditRequest?
     @State private var composingAutomation: AutomationEditRequest?
     @State private var runAfterComposer: UUID?
@@ -280,7 +305,9 @@ struct AutomationsScreen: View {
         _createOnArrival = createOnArrival
     }
 
-    private var facts: AutomationFacts { AutomationFacts(coordinator: coordinator) }
+    private var facts: AutomationFacts {
+        AutomationFacts(coordinator: coordinator, hasPaidAccess: purchaseManager.isUnlocked)
+    }
 
     private func consumeCreationRequest() {
         guard createOnArrival else { return }
@@ -341,6 +368,11 @@ struct AutomationsScreen: View {
         }
         .onAppear { consumeCreationRequest() }
         .onChange(of: createOnArrival) { _, _ in consumeCreationRequest() }
+        .sheet(isPresented: $showAccessPaywall) {
+            PaywallView(context: .schedule, profileCoordinator: coordinator)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showCreation, onDismiss: {
             composingAutomation = createdAutomation
             createdAutomation = nil
@@ -439,6 +471,8 @@ struct AutomationsScreen: View {
                                 .accessibilityIdentifier("glass.automation.card")
                                 .buttonStyle(.plain)
                                 .overlay(alignment: .topTrailing) { enabledSwitch(profile) }
+                            // Outside the link so the button keeps its own tap and accessibility element.
+                            if !purchaseManager.isUnlocked { accessStrip(profile) }
                         }
                     }
                 }
@@ -528,6 +562,39 @@ struct AutomationsScreen: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassSurface()
         .contentShape(Rectangle())
+    }
+
+    /// Onboarding v2's no-access state: the daily schedule is off and says why,
+    /// with the trial one tap away. Never shows a next run it cannot keep.
+    private func accessStrip(_ profile: ExportProfile) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "clock.badge.exclamationmark")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(palette.coral)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(facts.entry(profile).map { $0.frequency == .daily } ?? true
+                     ? String(localized: "Daily at \(facts.scheduleTimeDescription(profile)) is off")
+                     : String(localized: "Scheduled runs are off"))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(palette.text)
+                Text("Automatic notes need a subscription")
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(palette.sec)
+            }
+            Spacer(minLength: 8)
+            Button(String(localized: "Try free")) { showAccessPaywall = true }
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(palette.bg)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 36)
+                .background(Capsule().fill(palette.text))
+                .frame(minHeight: GlassMetrics.touchTarget)
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("glass.automation.tryFree")
+        }
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(palette.coral.opacity(0.10)))
     }
 
     /// iPadAutomationsG's list row: a plain row (no card) with the profile dot, name,

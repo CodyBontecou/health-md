@@ -1,1 +1,5 @@
-Meet the redesigned Health.md with a refreshed Archive, Automations, and Settings. Create your first automation during setup and try your first export free. Includes accessible paywall and reliability improvements.
+v3.5.2 — Health.md, redesigned
+• Refreshed Archive, Automations and Settings, with your first automation created during setup.
+• New plans: weekly or yearly subscriptions with a 7-day free trial when eligible, or a one-time Lifetime purchase.
+• Your first export is free. Existing Lifetime and grandfathered access is preserved.
+• Accessible paywall, clearer purchase restore and reliability improvements.

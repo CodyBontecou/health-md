@@ -43,6 +43,7 @@ nonisolated struct PurchasePresentationSource: Equatable, Sendable {
 nonisolated enum ExportPreviewTargetType: String, CaseIterable, Sendable {
     case localFile = "local_file"
     case connectedMac = "connected_mac"
+    case googleDrive = "google_drive"
     case apiEndpoint = "api_endpoint"
     case agentDataGateway = "agent_data_gateway"
     case previewOnly = "preview_only"
