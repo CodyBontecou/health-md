@@ -33,13 +33,18 @@ nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendab
         weak var owner: BoundedURLSessionDataLoader?
         let challengeHandler: ChallengeHandler?
         let redirectHandler: RedirectHandler?
+        let maximumRedirects: Int
+        private let redirectLock = NSLock()
+        private var redirectCounts: [Int: Int] = [:]
 
         init(
             challengeHandler: ChallengeHandler?,
-            redirectHandler: RedirectHandler?
+            redirectHandler: RedirectHandler?,
+            maximumRedirects: Int
         ) {
             self.challengeHandler = challengeHandler
             self.redirectHandler = redirectHandler
+            self.maximumRedirects = max(0, maximumRedirects)
         }
 
         func urlSession(
@@ -80,11 +85,19 @@ nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendab
             newRequest request: URLRequest,
             completionHandler: @escaping @Sendable (URLRequest?) -> Void
         ) {
-            if let redirectHandler {
-                completionHandler(redirectHandler(response, request))
-            } else {
-                completionHandler(request)
+            let proposed = redirectHandler?(response, request) ??
+                (redirectHandler == nil ? request : nil)
+            guard let proposed else {
+                completionHandler(nil)
+                return
             }
+            redirectLock.lock()
+            let count = redirectCounts[task.taskIdentifier, default: 0]
+            if count < maximumRedirects {
+                redirectCounts[task.taskIdentifier] = count + 1
+            }
+            redirectLock.unlock()
+            completionHandler(count < maximumRedirects ? proposed : nil)
         }
 
         func urlSession(
@@ -117,18 +130,32 @@ nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendab
             task: URLSessionTask,
             didCompleteWithError error: Error?
         ) {
+            redirectLock.lock()
+            redirectCounts.removeValue(forKey: task.taskIdentifier)
+            redirectLock.unlock()
             owner?.complete(task: task, error: error)
         }
     }
 
-    private final class FileBodyStreamTaskDelegate: NSObject, URLSessionTaskDelegate,
+    private final class InjectedSessionTaskDelegate: NSObject, URLSessionTaskDelegate,
         @unchecked Sendable {
-        let fileURL: URL
+        let fileURL: URL?
         let forwardingDelegate: URLSessionTaskDelegate?
+        let redirectHandler: RedirectHandler?
+        let maximumRedirects: Int
+        private let lock = NSLock()
+        private var redirectCount = 0
 
-        init(fileURL: URL, forwardingDelegate: URLSessionTaskDelegate?) {
+        init(
+            fileURL: URL? = nil,
+            forwardingDelegate: URLSessionTaskDelegate?,
+            redirectHandler: RedirectHandler?,
+            maximumRedirects: Int
+        ) {
             self.fileURL = fileURL
             self.forwardingDelegate = forwardingDelegate
+            self.redirectHandler = redirectHandler
+            self.maximumRedirects = max(0, maximumRedirects)
         }
 
         func urlSession(
@@ -136,7 +163,16 @@ nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendab
             task: URLSessionTask,
             needNewBodyStream completionHandler: @escaping @Sendable (InputStream?) -> Void
         ) {
-            completionHandler(InputStream(url: fileURL))
+            if let fileURL {
+                completionHandler(InputStream(url: fileURL))
+            } else {
+                let forwarded: Void? = forwardingDelegate?.urlSession?(
+                    session,
+                    task: task,
+                    needNewBodyStream: completionHandler
+                )
+                if forwarded == nil { completionHandler(nil) }
+            }
         }
 
         func urlSession(
@@ -166,16 +202,37 @@ nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendab
             newRequest request: URLRequest,
             completionHandler: @escaping @Sendable (URLRequest?) -> Void
         ) {
-            let forwarded: Void? = forwardingDelegate?.urlSession?(
-                session,
-                task: task,
-                willPerformHTTPRedirection: response,
-                newRequest: request,
-                completionHandler: completionHandler
-            )
-            if forwarded == nil {
-                completionHandler(request)
+            let proposed = redirectHandler?(response, request) ??
+                (redirectHandler == nil ? request : nil)
+            guard let proposed else {
+                completionHandler(nil)
+                return
             }
+            lock.lock()
+            let allowed = redirectCount < maximumRedirects
+            if allowed { redirectCount += 1 }
+            lock.unlock()
+            guard allowed else {
+                completionHandler(nil)
+                return
+            }
+            if redirectHandler == nil {
+                let forwarded: Void? = forwardingDelegate?.urlSession?(
+                    session,
+                    task: task,
+                    willPerformHTTPRedirection: response,
+                    newRequest: proposed,
+                    completionHandler: completionHandler
+                )
+                if forwarded == nil { completionHandler(proposed) }
+                return
+            }
+            // An explicit loader redirect handler is the final authority.
+            // Forwarding this callback would let an injected session delegate
+            // replace the validated request with a cross-origin request after
+            // the Health.md policy check. Authentication and body-stream
+            // callbacks are still forwarded independently.
+            completionHandler(proposed)
         }
     }
 
@@ -204,17 +261,21 @@ nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendab
     private let delegateProxy: DelegateProxy?
     private let session: URLSession
     private let ownsSession: Bool
+    private let injectedRedirectHandler: RedirectHandler?
+    private let injectedMaximumRedirects: Int
     private let lock = NSLock()
     private var states: [Int: RequestState] = [:]
 
     init(
         configuration: URLSessionConfiguration,
         challengeHandler: ChallengeHandler? = nil,
-        redirectHandler: RedirectHandler? = nil
+        redirectHandler: RedirectHandler? = nil,
+        maximumRedirects: Int = 20
     ) {
         let delegateProxy = DelegateProxy(
             challengeHandler: challengeHandler,
-            redirectHandler: redirectHandler
+            redirectHandler: redirectHandler,
+            maximumRedirects: maximumRedirects
         )
         self.delegateProxy = delegateProxy
         self.session = URLSession(
@@ -223,18 +284,27 @@ nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendab
             delegateQueue: nil
         )
         self.ownsSession = true
+        self.injectedRedirectHandler = nil
+        self.injectedMaximumRedirects = 0
         super.init()
         delegateProxy.owner = self
     }
 
     /// Uses the supplied session itself instead of cloning only its
     /// configuration. This is intentionally a separate path because URLSession
-    /// does not expose a safe way to replace its data delegate while forwarding
-    /// every custom authentication and task-delegate behavior.
-    init(session: URLSession) {
+    /// does not expose a safe way to replace its data delegate. Authentication
+    /// and body-stream behavior are forwarded; the loader's redirect policy is
+    /// deliberately final so a session delegate cannot bypass it.
+    init(
+        session: URLSession,
+        redirectHandler: RedirectHandler? = nil,
+        maximumRedirects: Int = 20
+    ) {
         self.delegateProxy = nil
         self.session = session
         self.ownsSession = false
+        self.injectedRedirectHandler = redirectHandler
+        self.injectedMaximumRedirects = max(0, maximumRedirects)
         super.init()
     }
 
@@ -250,9 +320,15 @@ nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendab
     ) async throws -> (Data, URLResponse) {
         let maximumBytes = max(1, maximumBytes)
         guard delegateProxy != nil else {
+            let taskDelegate = InjectedSessionTaskDelegate(
+                forwardingDelegate: session.delegate as? URLSessionTaskDelegate,
+                redirectHandler: injectedRedirectHandler,
+                maximumRedirects: injectedMaximumRedirects
+            )
             return try await dataUsingInjectedSession(
                 for: request,
-                maximumBytes: maximumBytes
+                maximumBytes: maximumBytes,
+                taskDelegate: taskDelegate
             )
         }
 
@@ -295,9 +371,11 @@ nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendab
                     )
                 }
             }
-            let taskDelegate = FileBodyStreamTaskDelegate(
+            let taskDelegate = InjectedSessionTaskDelegate(
                 fileURL: fileURL,
-                forwardingDelegate: session.delegate as? URLSessionTaskDelegate
+                forwardingDelegate: session.delegate as? URLSessionTaskDelegate,
+                redirectHandler: injectedRedirectHandler,
+                maximumRedirects: injectedMaximumRedirects
             )
             return try await dataUsingInjectedSession(
                 for: streamedRequest,

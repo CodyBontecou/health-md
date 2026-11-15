@@ -43,6 +43,8 @@ EXPECTED_TESTS = [
     "ExportProfilesJourneyUITests/testCreatingAPIProfileKeepsSelectedEndpointOnFirstSave",
     "ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard",
     "ExportProfilesJourneyUITests/testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter",
+    "ExportProfilesJourneyUITests/testQA_ProfileThirtyMinuteRefreshPersistsWithWeeklyCadence",
+    "ExportProfilesJourneyUITests/testQA_ProfileHourlyRefreshPersistsWithWeeklyCadence",
     "ExportProfilesJourneyUITests/testQA_ManageProfilesViewDetailCopyIDActivateAndRename",
     "HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide",
     "HistoryAuthorizationJourneyUITests/testBoundedUnknownHistoryRechecksExecutionWithoutClaimingFullAccess",
@@ -506,7 +508,7 @@ class DiagnosticExecutionTests(unittest.TestCase):
 
     def test_every_phone_and_tablet_case_has_an_implemented_test_method(self) -> None:
         from ios_ui_shards import SHARDS
-        self.assertEqual(sum(map(len, SHARDS)), 25)
+        self.assertEqual(sum(map(len, SHARDS)), 27)
         for lane in SHARDS:
             for selection in lane:
                 suite, method = selection.split("/")

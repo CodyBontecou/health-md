@@ -2,7 +2,9 @@
 """Run the WHOOP URLSession seam tests without building an app or using HealthKit.
 
 The temporary Swift package copies production sources and the existing XCTest
-suite unchanged. Its URLProtocol intercepts every request; no provider service
+transport/selection suites. Two HealthData renderer integrations remain in the
+app-hosted suite and are explicitly excluded by HEALTHMD_FOUNDATION_CLIENT_TESTS.
+Its URLProtocol intercepts every request; no provider service
 or credentials are used. Only the standalone timestamp enum is extracted from
 the HealthKit serializer, whose other types require the app's native build.
 """
@@ -34,6 +36,8 @@ def main() -> int:
         "HealthMd/Shared/Integrations/ExternalIntegrationModels.swift",
         "HealthMd/Shared/Integrations/ExternalProviderAPIClient.swift",
         "HealthMd/Shared/Integrations/WHOOPProviderSections.swift",
+        "HealthMd/Shared/Integrations/WHOOPDataSelection.swift",
+        "HealthMd/Shared/Integrations/WHOOPExportResourceSelection.swift",
         "HealthMd/Shared/Utilities/BoundedURLSessionDataLoader.swift",
     ]:
         source = APPLE_ROOT / relative
@@ -48,6 +52,7 @@ def main() -> int:
     )
     for relative in [
         "HealthMdTests/Integrations/WHOOPProviderAPIClientTests.swift",
+        "HealthMdTests/Integrations/WHOOPExportResourceSelectionTests.swift",
         "HealthMdTests/Support/ExternalIntegrationURLProtocolStub.swift",
     ]:
         source = APPLE_ROOT / relative
@@ -58,6 +63,7 @@ def main() -> int:
         # Match the app/test targets' Swift 5, MainActor-default, approachable
         # concurrency settings; this remains a Foundation-only host package.
         'let settings: [SwiftSetting] = [\n'
+        '    .define("HEALTHMD_FOUNDATION_CLIENT_TESTS"),\n'
         '    .unsafeFlags(["-default-isolation", "MainActor"]),\n'
         '    .enableUpcomingFeature("DisableOutwardActorInference"),\n'
         '    .enableUpcomingFeature("GlobalActorIsolatedTypesUsability"),\n'

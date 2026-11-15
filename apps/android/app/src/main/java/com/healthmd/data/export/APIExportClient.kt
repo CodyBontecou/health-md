@@ -41,9 +41,16 @@ class APIExportClientException(
 ) : Exception(message, cause)
 
 class APIExportClient @Inject constructor(
-    private val client: OkHttpClient,
+    client: OkHttpClient,
     private val entitlements: com.healthmd.domain.repository.EntitlementRepository,
 ) : APIExportUploader {
+    // Compatibility exports may contain arbitrary encrypted request headers.
+    // Handle the narrow safe redirect case here instead of allowing OkHttp to
+    // replay those headers or health bytes according to its general policy.
+    private val client = client.newBuilder()
+        .followRedirects(false)
+        .followSslRedirects(false)
+        .build()
     override suspend fun upload(
         endpointUrl: String,
         payload: String,
@@ -84,7 +91,7 @@ class APIExportClient @Inject constructor(
                 com.healthmd.domain.billing.ClinicExportAuthorization.canonicalClinicEndpoint(normalized)
         } == true
 
-        val request = Request.Builder()
+        var request = Request.Builder()
             .url(normalized)
             .post(payload.toRequestBody(JSON_MEDIA_TYPE))
             .header("Accept", "application/json")
@@ -102,13 +109,43 @@ class APIExportClient @Inject constructor(
             }
             .build()
 
-        val deliveryClient = if (personalAccess && !managedClinicEndpoint) client else client.newBuilder()
-            .followRedirects(false).followSslRedirects(false).build()
-        val call = deliveryClient.newCall(request)
-        val response = try {
-            // Wire cooperative cancellation to the exact OkHttp call so a user cancellation
-            // aborts the in-flight upload immediately instead of waiting for the read timeout.
-            suspendCancellableCoroutine<Response> { continuation ->
+        val originalUrl = request.url
+        var redirectCount = 0
+        while (true) {
+            val response = execute(request)
+            response.use {
+                val redirectedUrl = safeRedirectTarget(it, originalUrl)
+                if (personalAccess && !managedClinicEndpoint && redirectedUrl != null && redirectCount < MAX_REDIRECTS) {
+                    // Only 307/308 reach this branch, so the immutable POST body
+                    // and exact frozen headers remain valid for the next hop.
+                    request = request.newBuilder().url(redirectedUrl).build()
+                    redirectCount += 1
+                    return@use
+                }
+
+                if (!it.isSuccessful) {
+                    // Response bodies are untrusted and may echo request data or
+                    // credentials. Do not materialize them for rejected requests;
+                    // keep every durable/UI failure status-only.
+                    throw APIExportClientException(
+                        failureReason = ExportFailureReason.API_REJECTED,
+                        retryable = it.code == 408 || it.code == 429 || it.code >= 500,
+                        statusCode = it.code,
+                        message = "API endpoint returned HTTP ${it.code}.",
+                    )
+                }
+                return@withContext APIExportUploadResult(it.code, if (personalAccess && !managedClinicEndpoint) responsePreview(it) else null)
+            }
+        }
+        @Suppress("UNREACHABLE_CODE")
+        error("Unreachable API redirect state")
+    }
+
+    private suspend fun execute(request: Request): Response {
+        val call = client.newCall(request)
+        return try {
+            // Wire cooperative cancellation to every exact redirect-hop call.
+            suspendCancellableCoroutine { continuation ->
                 continuation.invokeOnCancellation { call.cancel() }
                 call.enqueue(object : Callback {
                     override fun onResponse(call: Call, response: Response) {
@@ -129,22 +166,14 @@ class APIExportClient @Inject constructor(
                 cause = error,
             )
         }
+    }
 
-        response.use {
-            val preview = if (personalAccess && !managedClinicEndpoint) responsePreview(it) else null
-            if (!it.isSuccessful) {
-                val message = buildString {
-                    append("API endpoint returned HTTP ").append(it.code).append('.')
-                    preview?.let { body -> append(' ').append(body) }
-                }
-                throw APIExportClientException(
-                    failureReason = ExportFailureReason.API_REJECTED,
-                    retryable = it.code == 408 || it.code == 429 || it.code >= 500,
-                    statusCode = it.code,
-                    message = message,
-                )
-            }
-            APIExportUploadResult(it.code, preview)
+    private fun safeRedirectTarget(response: Response, originalUrl: okhttp3.HttpUrl): okhttp3.HttpUrl? {
+        if (response.code != 307 && response.code != 308) return null
+        val target = response.header("Location")?.let(response.request.url::resolve) ?: return null
+        if (target.username.isNotEmpty() || target.password.isNotEmpty()) return null
+        return target.takeIf {
+            it.scheme == originalUrl.scheme && it.host == originalUrl.host && it.port == originalUrl.port
         }
     }
 
@@ -211,5 +240,6 @@ class APIExportClient @Inject constructor(
     companion object {
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
         private const val MAX_RESPONSE_PREVIEW_CHARS = 500
+        private const val MAX_REDIRECTS = 5
     }
 }

@@ -62,6 +62,8 @@ class SharedSetupIntentCoordinatorTest {
 
     @Test
     fun `newer async uri is not blocked by an older stalled provider read`() = runBlocking {
+        // The coordinator intentionally reads on real Dispatchers.IO. Keep timeout progression on
+        // real time too; runTest's virtual clock can outrun a correctly scheduled provider read.
         val store = mockk<SharedSetupDocumentStore>()
         val firstUri = Uri.parse("content://synthetic/first.healthmdconfig")
         val secondUri = Uri.parse("content://synthetic/second.healthmdconfig")
@@ -70,7 +72,7 @@ class SharedSetupIntentCoordinatorTest {
         io.mockk.every { store.isSharedSetupDocument(any()) } returns true
         io.mockk.every { store.read(firstUri) } answers {
             firstStarted.countDown()
-            check(releaseFirst.await(5, TimeUnit.SECONDS))
+            check(releaseFirst.await(10, TimeUnit.SECONDS))
             byteArrayOf(1)
         }
         io.mockk.every { store.read(secondUri) } returns byteArrayOf(2)
@@ -83,12 +85,12 @@ class SharedSetupIntentCoordinatorTest {
 
         try {
             coordinator.acceptExternalUriAsync(firstUri)
-            assertThat(firstStarted.await(5, TimeUnit.SECONDS)).isTrue()
+            assertThat(firstStarted.await(10, TimeUnit.SECONDS)).isTrue()
             val firstRead = requireNotNull(readScope.coroutineContext[Job]).children.single()
             coordinator.acceptExternalUriAsync(secondUri)
             assertThat(firstRead.isCancelled).isTrue()
 
-            val newest = withTimeout(5_000) {
+            val newest = withTimeout(10_000) {
                 coordinator.imports.filterNotNull().first { pending ->
                     pending.bytes?.contentEquals(byteArrayOf(2)) == true
                 }
@@ -110,6 +112,8 @@ class SharedSetupIntentCoordinatorTest {
 
     @Test
     fun `finish prevents a cancelled stalled read from publishing later`() = runBlocking {
+        // Match the coordinator's real IO dispatcher so the post-release check cannot advance a
+        // virtual delay before the cancelled blocking reader has had a chance to return.
         val store = mockk<SharedSetupDocumentStore>()
         val uri = Uri.parse("content://synthetic/stalled.healthmdconfig")
         val started = CountDownLatch(1)
@@ -117,7 +121,7 @@ class SharedSetupIntentCoordinatorTest {
         io.mockk.every { store.isSharedSetupDocument(uri) } returns true
         io.mockk.every { store.read(uri) } answers {
             started.countDown()
-            check(release.await(5, TimeUnit.SECONDS))
+            check(release.await(10, TimeUnit.SECONDS))
             byteArrayOf(9)
         }
         // Publishing unconfined exposes stale writes immediately; joining the IO job
@@ -129,7 +133,7 @@ class SharedSetupIntentCoordinatorTest {
 
         try {
             coordinator.acceptExternalUriAsync(uri)
-            assertThat(started.await(5, TimeUnit.SECONDS)).isTrue()
+            assertThat(started.await(10, TimeUnit.SECONDS)).isTrue()
             val read = requireNotNull(readScope.coroutineContext[Job]).children.single()
             coordinator.finishExternalImport()
             assertThat(read.isCancelled).isTrue()

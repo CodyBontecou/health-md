@@ -1,5 +1,6 @@
 """Cloud security stays blocking in the existing portable lane; no SDKs or services."""
 import importlib.util
+import json
 import os
 from pathlib import Path
 import re
@@ -95,6 +96,43 @@ if [[ "$count" -eq "$FAIL_STAGE" ]]; then exit 23; fi
             self.assertIn('          /apps/cloud/public/' + name, workflow)
         for forbidden in ('continue-on-error', 'wrangler deploy', '--testNamePattern', '--exclude'):
             self.assertNotIn(forbidden, (ROOT / 'scripts/ci/cloud.sh').read_text())
+
+    def test_safety_verifier_rejects_broken_portable_authority_paths(self):
+        # Mutate reads in an isolated Node process, never the repository or live state.
+        cases = [
+            ('scripts/ci/wake.sh', 'bash scripts/ci/cloud.sh', ': # removed Cloud lane',
+             'portable Cloud lane'),
+            ('scripts/ci/cloud.sh', 'vitest run --maxWorkers=1',
+             'vitest run --maxWorkers=1 --testNamePattern=smoke', '--testNamePattern'),
+            ('.github/workflows/cloud-ci.yml', '  workflow_dispatch:',
+             '  pull_request:\n  workflow_dispatch:', 'revive automatic component CI'),
+            ('.github/workflows/ci.yml', '  pull_request:',
+             '  pull_request:\n    paths: ["apps/website/**"]', 'every source change'),
+        ]
+        for target, before, after, expected in cases:
+            with self.subTest(target=target), tempfile.TemporaryDirectory() as directory:
+                probe = Path(directory) / 'probe.mjs'
+                probe.write_text("""import fs from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
+const read = fs.readFileSync;
+const target = TARGET;
+fs.readFileSync = function(path, ...args) {
+  const value = read.call(this, path, ...args);
+  if (String(path) !== target) return value;
+  const original = String(value);
+  if (!original.includes(BEFORE)) throw new Error('Mutation input missing');
+  const changed = original.replace(BEFORE, AFTER);
+  return typeof value === 'string' ? changed : Buffer.from(changed);
+};
+syncBuiltinESMExports();
+await import(VERIFIER);
+""".replace('TARGET', json.dumps(str(ROOT / target)))
+                     .replace('BEFORE', json.dumps(before)).replace('AFTER', json.dumps(after))
+                     .replace('VERIFIER', json.dumps((ROOT / 'apps/cloud/scripts/verify-production-safety.mjs').as_uri())))
+                result = subprocess.run(['node', str(probe)], cwd=ROOT,
+                                        capture_output=True, text=True, timeout=15)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn(expected, result.stderr)
 
     def test_actual_sparse_checkout_retains_security_fixture_assets_only(self):
         workflow = (ROOT / '.github/workflows/ci.yml').read_text()
