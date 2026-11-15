@@ -34,10 +34,9 @@ struct GlassAppShell: View {
     /// Commits a folder chosen inside the classic export sheet.
     let onSelectFolder: (URL) -> Void
     let executionHistoryAssessment: HealthHistoryAssessment?
-    let executionHistoryScope: HealthHistoryScope?
     let isAssessingHistory: Bool
     let isDiscoveringExportRange: Bool
-    @Binding var isPreparingExport: Bool
+    var executionHistoryScope: HealthHistoryScope? = nil
     let historyCheckAwaitsDecision: Bool
     let onContinueWithoutHistoryVerification: () -> Void
     let onCancelHistoryVerification: () -> Void
@@ -94,7 +93,6 @@ struct GlassAppShell: View {
     /// because a sheet presented while another is still dismissing can be dropped.
     @State private var afterSheetDismiss: (() -> Void)?
     /// LargeConfirmG: asked over the Archive once the Export now sheet has closed.
-    @State private var pendingLargeExport: ExportScaleGuard.Scale?
     @ObservedObject private var gapBackfillRouter = WeeklyGapBackfillRouter.shared
     /// Set once this phone has shown its unfolded (inner display) layout. Only then
     /// does the folded layout invite the user to unfold.
@@ -206,7 +204,6 @@ struct GlassAppShell: View {
             }
         }
         .overlay { exportMoment }
-        .overlay { largeExportDecision }
         .overlay { historyDecision }
         .ignoresSafeArea(.keyboard)
         .onGeometryChange(for: CGSize.self) { proxy in
@@ -231,7 +228,6 @@ struct GlassAppShell: View {
                 destinationLabel: destinationLabel(for: exportTargetSelection, profile: nil),
                 activeProfileID: profileCoordinator?.profileStore.activeProfileID,
                 onSelectProfile: { _ = profileCoordinator?.activate(profileID: $0) },
-                resolveAllTime: resolveAllTimeRange,
                 preview: { exportFromPreview in
                     AnyView(GlassExportPreviewSheet(
                         vaultManager: vaultManager,
@@ -244,8 +240,7 @@ struct GlassAppShell: View {
                         presentation: .glassPushed
                     ))
                 },
-                onExport: onExport,
-                onConfirmLargeExport: { pendingLargeExport = $0 }
+                onExport: onExport
             )
             .glassTheme()
         }
@@ -587,36 +582,12 @@ struct GlassAppShell: View {
             },
             historyProfileStore: profileCoordinator?.profileStore,
             executionHistoryAssessment: executionHistoryAssessment,
-            executionHistoryScope: executionHistoryScope,
             isAssessingHistory: isAssessingHistory,
             isDiscoveringExportRange: isDiscoveringExportRange,
-            isPreparingExport: $isPreparingExport,
+            executionHistoryScope: executionHistoryScope,
             onContinueWithoutHistoryVerification: onContinueWithoutHistoryVerification,
             onCancelHistoryVerification: onCancelHistoryVerification
         )
-    }
-
-    // MARK: - Large export
-
-    /// LargeConfirmG: the Export now sheet has closed; the decision sits over the Archive.
-    @ViewBuilder private var largeExportDecision: some View {
-        if let scale = pendingLargeExport {
-            GlassDecisionDialog(
-                title: String(localized: "Export \(scale.dayCount) days?"),
-                message: String(localized: "This writes about \(scale.estimatedFileCount) files and can take several minutes. Keep Health.md open until it finishes. Completed days are kept if you stop."),
-                actions: [
-                    .init(
-                        title: String(localized: "Export \(scale.dayCount) days"),
-                        role: .primary,
-                        accessibilityIdentifier: "glass.exportNow.largeConfirm"
-                    ) {
-                        pendingLargeExport = nil
-                        onExport()
-                    },
-                    .init(title: String(localized: "Cancel")) { pendingLargeExport = nil }
-                ]
-            )
-        }
     }
 
     // MARK: - Weekly gap backfill
@@ -681,22 +652,18 @@ struct GlassAppShell: View {
     @ViewBuilder private var historyCard: some View {
         if awaitsHistoryDecision {
             EmptyView()
-        } else if isDiscoveringExportRange {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(String(localized: "Checking readable date range")).glassFont(.navTitle)
-                HealthHistoryRangeDiscoveryContent(cancel: onCancelHistoryVerification)
-            }
-            .padding(GlassMetrics.panelPadding)
-            .glassSurface(cornerRadius: GlassMetrics.panelSmallRadius, style: .strong)
-            .padding(.horizontal, GlassMetrics.screenMargin)
         } else if isAssessingHistory {
             VStack(alignment: .leading, spacing: 8) {
                 Text(String(localized: "Checking history access"))
                     .glassFont(.navTitle)
-                HealthHistoryPendingContent(
-                    continueUnverified: onContinueWithoutHistoryVerification,
-                    cancel: onCancelHistoryVerification
-                )
+                if isDiscoveringExportRange {
+                    HealthHistoryRangeDiscoveryContent(cancel: onCancelHistoryVerification)
+                } else {
+                    HealthHistoryPendingContent(
+                        continueUnverified: onContinueWithoutHistoryVerification,
+                        cancel: onCancelHistoryVerification
+                    )
+                }
             }
             .padding(GlassMetrics.panelPadding)
             .glassSurface(cornerRadius: GlassMetrics.panelSmallRadius, style: .strong)
@@ -1097,10 +1064,7 @@ struct GlassAppShell: View {
         }
     }
 
-    private func resolveAllTimeRange() async -> (start: Date, end: Date)? {
-        guard let earliest = await healthKitManager.findEarliestHealthDataDate() else { return nil }
-        return (earliest, Date())
-    }
+
 }
 
 /// Opens one automation's detail from the Archive's "Edit".
@@ -1146,15 +1110,49 @@ struct GlassExportPreviewSheet: View {
     let destinationLabel: String
     let onExport: () -> Void
     var presentation: ExportPreviewPresentation = .glass
+    @State private var resolvedRange: ExportDateRange?
+    @State private var rangeError: String?
+
+    private var rangeRequest: NativeExportDateRangeResolver.Request {
+        .init(preset: dateRangePreset, startDate: startDate, endDate: endDate, settings: advancedSettings)
+    }
 
     @EnvironmentObject private var healthKitManager: HealthKitManager
     @EnvironmentObject private var advancedSettings: AdvancedExportSettings
     @EnvironmentObject private var apiExportSettings: APIExportSettings
 
     var body: some View {
+        Group {
+            if let resolvedRange {
+                preview(range: resolvedRange)
+            } else if let rangeError {
+                Text(rangeError).padding()
+            } else {
+                ProgressView("Finding the readable range for the selected metrics…")
+            }
+        }
+        .task(id: rangeRequest) {
+            let request = rangeRequest
+            resolvedRange = nil
+            rangeError = nil
+            do {
+                let range = try await NativeExportDateRangeResolver.resolve(request,
+                    using: healthKitManager, currentRequest: { rangeRequest })
+                try Task.checkCancellation()
+                resolvedRange = range
+            } catch is CancellationError {
+                return
+            } catch {
+                guard !Task.isCancelled, request == rangeRequest else { return }
+                rangeError = error.localizedDescription
+            }
+        }
+    }
+
+    private func preview(range: ExportDateRange) -> some View {
         ExportPreviewView(
-            startDate: startDate,
-            endDate: endDate,
+            startDate: range.startDate,
+            endDate: range.endDate,
             vaultManager: vaultManager,
             settings: advancedSettings,
             destinationLabel: destinationLabel,

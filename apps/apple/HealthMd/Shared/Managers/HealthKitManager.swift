@@ -63,6 +63,17 @@ nonisolated struct HealthKitEarliestDataDiscovery: Equatable, Sendable {
     let unresolvedMetricIDs: [String]
     let historyAuthorization: HealthHistoryAuthorizationAssessment
 
+    init(earliestDate: Date?, queriedTypeIdentifiers: [String], snapshotOnlyTypeIdentifiers: [String],
+         failedTypeIdentifiers: [String], unresolvedMetricIDs: [String],
+         historyAuthorization: HealthHistoryAuthorizationAssessment = .unknown) {
+        self.earliestDate = earliestDate
+        self.queriedTypeIdentifiers = queriedTypeIdentifiers
+        self.snapshotOnlyTypeIdentifiers = snapshotOnlyTypeIdentifiers
+        self.failedTypeIdentifiers = failedTypeIdentifiers
+        self.unresolvedMetricIDs = unresolvedMetricIDs
+        self.historyAuthorization = historyAuthorization
+    }
+
     /// Every selected catalog query resolved without failure. This says nothing
     /// about whether older samples exist outside the app's readable history.
     var isQueryComplete: Bool {

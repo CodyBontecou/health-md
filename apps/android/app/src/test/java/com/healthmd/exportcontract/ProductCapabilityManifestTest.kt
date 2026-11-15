@@ -42,6 +42,7 @@ class ProductCapabilityManifestTest {
             setOf(
                 "account.clinic-sync-requests",
                 "cloud.opt-in-export-receiver", "cloud.read-only-mcp",
+                "export.scheduled-receiver-coverage",
                 "core.shared-rust-profile-engine",
                 "destination.google-drive",
                 "automation.api-recovery-authority",
@@ -221,7 +222,8 @@ class ProductCapabilityManifestTest {
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
             "support.native-review-introduction",
             "account.clinic-sync-requests",
-                "cloud.opt-in-export-receiver", "cloud.read-only-mcp",
+            "cloud.opt-in-export-receiver", "cloud.read-only-mcp",
+            "export.scheduled-receiver-coverage",
             "source.private-platform-database",
             "apple.ads-purchase-attribution",
             "automation.api-recovery-authority",

@@ -40,7 +40,6 @@ struct ContentView: View {
     @State private var startDate = Date()
     @State private var endDate = Date()
     @State private var dateRangePreset: ExportDateRangePreset = .today
-    @State private var hasResolvedAllTimeRangeThisLaunch = false
     @State private var showFolderPicker = false
     @State private var showDestinationChangedAlert = false
     @State private var presentFirstAutomationCreator = false
@@ -193,11 +192,10 @@ struct ContentView: View {
                     onBrowseExportFolder: browseExportFolder,
                     onPreviewExport: presentExportPreview,
                     onSelectFolder: commitVaultFolderSelection,
-                    executionHistoryAssessment: currentExecutionHistoryScope == nil ? nil : executionHistoryAssessment,
-                    executionHistoryScope: currentExecutionHistoryScope,
-                    isAssessingHistory: hasBegunHistoryAssessment,
+                    executionHistoryAssessment: executionHistoryAssessment,
+                    isAssessingHistory: isAssessingHistory && pendingScaleRequest == nil,
                     isDiscoveringExportRange: isAssessingHistory && !hasBegunHistoryAssessment && pendingScaleRequest == nil,
-                    isPreparingExport: Binding(get: { activeHistoryRequest != nil }, set: { _ in }),
+                    executionHistoryScope: currentExecutionHistoryScope,
                     historyCheckAwaitsDecision: historyCheckAwaitsDecision,
                     onContinueWithoutHistoryVerification: historyContinuationAction,
                     onCancelHistoryVerification: historyCancellationAction,
@@ -235,6 +233,29 @@ struct ContentView: View {
                 )
             } else if wasExporting && !nowExporting, !exportStatusMessage.isEmpty {
                 UIAccessibility.post(notification: .announcement, argument: exportStatusMessage)
+            }
+        }
+        .overlay {
+            if let request = pendingScaleRequest {
+                GlassDecisionDialog(
+                    title: String(localized: "Confirm Large Export"),
+                    message: request.scaleConfirmationMessage,
+                    messageAccessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationMessage,
+                    actions: [
+                        .init(title: String(localized: "Export Anyway"), role: .primary,
+                              accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationConfirmButton) {
+                            guard pendingScaleRequest?.id == request.id, isCurrentHistoryRequest(request) else { return }
+                            pendingScaleRequest = nil
+                            assessPreparedHistoryExport(request)
+                        },
+                        .init(title: String(localized: "Cancel"), role: .cancel,
+                              accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationCancelButton) {
+                            cancelHistoryRequest(request)
+                        }
+                    ]
+                )
+                .glassTheme()
+                .accessibilityIdentifier(AccessibilityID.Export.largeExportConfirmationTitle)
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
@@ -403,13 +424,6 @@ struct ContentView: View {
         }
         #endif
         .geistDialog(
-            isPresented: scaleConfirmationBinding,
-            title: Text("Confirm Large Export"),
-            message: Text(pendingScaleRequest?.scaleConfirmationMessage ?? ""),
-            messageAccessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationMessage,
-            actions: scaleConfirmationActions
-        )
-        .geistDialog(
             isPresented: $showDestinationChangedAlert,
             title: Text("Export Folder Changed"),
             message: Text("The saved folder now points to a different location. Health.md paused local exports so it won’t write somewhere you did not select. Review any duplicate or conflict in Files, then re-select the intended folder."),
@@ -526,7 +540,8 @@ struct ContentView: View {
                 if TestMode.noExportFormats {
                     advancedSettings.exportFormats = []
                 }
-                if ProcessInfo.processInfo.environment["UITEST_HISTORY_ASSESSMENT"] != nil {
+                if ProcessInfo.processInfo.environment["UITEST_HISTORY_ASSESSMENT"] != nil
+                    || TestMode.earliestStepDiscovery != nil {
                     advancedSettings.metricSelection.enabledMetrics = ["steps"]
                 }
                 advancedSettings.archiveExportFiles = TestMode.archiveExports
@@ -775,7 +790,9 @@ struct ContentView: View {
         let selection = ExportDateRangeLaunchPolicy.selectionToRestore(
             persisted: persisted,
             hadInterruptedInteractiveExport: hadInterruptedInteractiveExport,
-            resolvesAllTimeRange: isInitialLaunch
+            // Every Export and Preview rediscovers All Time, so a foreground
+            // activation keeps the preset instead of falling back to Today.
+            resolvesAllTimeRange: true
         )
 
         dateRangePreset = selection.preset
@@ -791,31 +808,7 @@ struct ContentView: View {
             endDate = refreshed.endDate
         }
 
-        guard isInitialLaunch,
-              !hasResolvedAllTimeRangeThisLaunch,
-              selection.preset == .allTime,
-              healthKitManager.isAuthorized else {
-            return
-        }
-
-        hasResolvedAllTimeRangeThisLaunch = true
-
-        guard let earliestDate = await healthKitManager.findEarliestHealthDataDate() else {
-            return
-        }
-
-        guard dateRangePreset == .allTime,
-              let range = ExportDateRangePreset.allTime.resolvedRange(
-                currentStartDate: startDate,
-                currentEndDate: endDate,
-                allTimeStartDate: earliestDate,
-                allTimeEndDate: Date()
-              ) else {
-            return
-        }
-
-        startDate = range.startDate
-        endDate = range.endDate
+        // All Time discovery belongs to each Export/Preview action, never a launch task.
     }
 
     private func saveDateRangeSelection() {
@@ -926,6 +919,7 @@ struct ContentView: View {
             case .localIPhoneFolder: return "folder.fill"
             case .connectedMac: return "desktopcomputer"
             case .apiEndpoint, .agentDataGateway: return "network"
+            case .googleDrive: return "externaldrive.connected.to.line.below"
             }
         }
         if partialExportNotice != nil { return "exclamationmark.circle.fill" }
@@ -984,6 +978,7 @@ struct ContentView: View {
         case .connectedMac: return String(localized: "Connected Mac")
         case .apiEndpoint: return String(localized: "API Endpoint")
         case .agentDataGateway: return String(localized: "Agent Data gateway")
+        case .googleDrive: return "Google Drive" // Product name, as on the other target labels.
         }
     }
 
@@ -1749,6 +1744,7 @@ struct ContentView: View {
         // Durable work outlives this view and even the app process. Repeated
         // taps should focus that immutable export, not create a competing job.
         if restoreInteractiveCorpusExportIfNeeded() { return }
+        guard !isExporting else { return }
 
         dismissStatus()
 
@@ -1855,30 +1851,6 @@ struct ContentView: View {
         prepareInteractiveHistoryExport(selection: interactiveHistorySelection)
     }
 
-    private var scaleConfirmationBinding: Binding<Bool> {
-        let presentedID = pendingScaleRequest?.id
-        return Binding(get: { presentedID != nil && pendingScaleRequest?.id == presentedID },
-            set: { presented in
-                guard !presented, let presentedID, let request = pendingScaleRequest,
-                      request.id == presentedID else { return }
-                cancelHistoryRequest(request)
-            })
-    }
-
-    private var scaleConfirmationActions: [GeistDialogAction] {
-        guard let request = pendingScaleRequest else { return [] }
-        return [
-            .cancel(accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationCancelButton) {
-                cancelHistoryRequest(request)
-            },
-            .action("Export Anyway", accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationConfirmButton) {
-                guard pendingScaleRequest?.id == request.id, isCurrentHistoryRequest(request) else { return }
-                pendingScaleRequest = nil
-                assessPreparedHistoryExport(request)
-            }
-        ]
-    }
-
     private var historyContinuationAction: () -> Void {
         let presentedRequest = activeHistoryRequest
         return {
@@ -1903,7 +1875,7 @@ struct ContentView: View {
     private func isCurrentHistoryRequest(_ request: HealthHistoryExportRequest) -> Bool {
         activeHistoryRequest?.id == request.id
             && historyExecutionCoordinator.isCurrent(request, liveSelection: interactiveHistorySelection)
-            && scenePhase == .active && selectedTab == .export
+            && scenePhase == .active
     }
 
     private var currentExecutionHistoryScope: HealthHistoryScope? {
@@ -1913,6 +1885,8 @@ struct ContentView: View {
     }
 
     private func prepareInteractiveHistoryExport(selection: HealthHistoryExecutionSelection) {
+        // A superseded discovery must not keep running its HealthKit queries.
+        historyExecutionTask?.cancel()
         let request = historyExecutionCoordinator.beginExportRequest(selection: selection)
         activeHistoryRequest = request
         pendingHistoryRequestID = request.id
