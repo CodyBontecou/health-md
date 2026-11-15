@@ -623,6 +623,21 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             // An authorized simulator query is not a deterministic synthetic outcome.
             throw CocoaError(.coderReadCorrupt)
         }
+        if TestMode.isUITesting, let fixture = TestMode.earliestStepDiscovery {
+            guard sampleType.identifier == HKQuantityTypeIdentifier.stepCount.rawValue else {
+                throw NSError(domain: "UITestEarliestStepDiscovery", code: 1)
+            }
+            switch fixture {
+            case "complete": return Date().addingTimeInterval(-2 * 86_400)
+            case "empty": return nil
+            case "delayed":
+                // Beyond the UI lane's 300s allowance, like the independent
+                // pending-history fixture. Cancellation must not admit capture.
+                try await Task.sleep(nanoseconds: 600_000_000_000)
+                return Date().addingTimeInterval(-2 * 86_400)
+            default: throw NSError(domain: "UITestEarliestStepDiscovery", code: 2)
+            }
+        }
         #endif
         let predicate = HKSamplePredicate.sample(type: sampleType, predicate: nil)
         let descriptor = HKSampleQueryDescriptor(

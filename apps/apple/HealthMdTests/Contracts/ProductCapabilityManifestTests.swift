@@ -33,6 +33,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
             [
                 "account.clinic-sync-requests",
                 "cloud.opt-in-export-receiver", "cloud.read-only-mcp",
+                "export.scheduled-receiver-coverage",
                 "core.shared-rust-profile-engine",
                 "setup.share-portable-configuration", "destination.google-drive",
             ]
@@ -156,12 +157,12 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "apple.typed-whoop-provider-section",
         "export.whoop-resource-selection",
         "export.whoop-physiological-cycle-steps",
+        "authorization.history-window-detection",
         "automation.api-recovery-authority",
         "automation.include-today",
         "automation.run-overlap-policy",
         "direct.cli_agent_push_wake",
         "export.range-summary",
-        "authorization.history-window-detection",
         "support.local-reporting-fallback",
     ]
 
@@ -180,7 +181,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         sharedCapabilities
             .union(appleCapabilities)
             .union(androidCapabilities)
-            .union(["source.private-platform-database", "apple.ads-purchase-attribution", "core.shared-rust-profile-engine", "setup.share-portable-configuration", "destination.google-drive", "account.clinic-sync-requests"])
+            .union(["source.private-platform-database", "apple.ads-purchase-attribution", "core.shared-rust-profile-engine", "setup.share-portable-configuration", "destination.google-drive", "account.clinic-sync-requests", "export.scheduled-receiver-coverage"])
     }
 
     private enum ManifestError: Error {

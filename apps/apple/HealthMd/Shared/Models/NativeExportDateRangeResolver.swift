@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 /// Admission for native iPhone/iPad exports, including restored selections and
 /// Preview actions. All Time resolves readable query coverage; the capture-time
@@ -10,6 +11,41 @@ enum NativeExportDateRangeResolver {
         let selection: ExportDateRangeSelection
         let enabledMetricIDs: Set<String>
         let timeZone: TimeZone
+
+        init(selection: ExportDateRangeSelection, enabledMetricIDs: Set<String>, timeZone: TimeZone) {
+            self.selection = selection
+            self.enabledMetricIDs = enabledMetricIDs
+            self.timeZone = timeZone
+        }
+
+        /// The constructor every app surface uses every surface uses, so identical selections
+        /// compare equal. All Time ignores the stored dates (discovery decides
+        /// them) and the zone is normalized through its identifier, as the
+        /// history scope records it.
+        init(preset: ExportDateRangePreset, startDate: Date, endDate: Date,
+             enabledMetricIDs: Set<String>, timeZoneIdentifier: String) {
+            let placeholder = Date(timeIntervalSinceReferenceDate: 0)
+            self.init(
+                selection: ExportDateRangeSelection(
+                    preset: preset,
+                    startDate: preset == .allTime ? placeholder : startDate,
+                    endDate: preset == .allTime ? placeholder : endDate),
+                enabledMetricIDs: enabledMetricIDs,
+                timeZone: TimeZone(identifier: timeZoneIdentifier) ?? TimeZone(secondsFromGMT: 0)!)
+        }
+
+        init(preset: ExportDateRangePreset, startDate: Date, endDate: Date,
+             settings: AdvancedExportSettings) {
+            self.init(preset: preset, startDate: startDate, endDate: endDate,
+                      enabledMetricIDs: settings.metricSelection.enabledMetrics,
+                      timeZoneIdentifier: (settings.exportTimeZoneOverride ?? .current).identifier)
+        }
+    }
+
+    /// A resolved range together with the exact request it answers.
+    struct ResolvedRange: Equatable {
+        let request: Request
+        let range: ExportDateRange
     }
 
     enum ResolutionError: LocalizedError, Equatable {
@@ -73,9 +109,13 @@ enum NativeExportDateRangeResolver {
         referenceDate: Date,
         calendar: Calendar
     ) throws -> ExportDateRange {
-        // A completed empty boundary query cannot prove unrestricted access.
-        // Preserve main's all-readable semantics and its separate history evidence.
-        guard discovery.isQueryComplete else {
+        // A failed query could hide older data, so it blocks All Time. Metrics
+        // with no queryable history (clinical records, attachments, types this
+        // OS or build lacks) are not failures: they are exported for whatever
+        // range the other metrics establish, as before range admission existed.
+        // Completion never proves unrestricted access; history assessment
+        // records that separately.
+        guard discovery.failedTypeIdentifiers.isEmpty else {
             throw ResolutionError.incompleteDiscovery
         }
         guard let earliestDate = discovery.earliestDate else {
@@ -88,5 +128,31 @@ enum NativeExportDateRangeResolver {
             startDate: calendar.startOfDay(for: earliestDate),
             endDate: calendar.startOfDay(for: referenceDate)
         )
+    }
+}
+
+/// Display-only All Time range for day counts, size estimates and path
+/// previews. It never admits an export: Export and Preview resolve again.
+struct AllTimeDisplayRangeResolution: ViewModifier {
+    let request: NativeExportDateRangeResolver.Request?
+    let healthKitManager: HealthKitManager
+    @Binding var resolved: NativeExportDateRangeResolver.ResolvedRange?
+
+    func body(content: Content) -> some View {
+        content.task(id: request) {
+            guard let request, request.selection.preset == .allTime else { return }
+            guard resolved?.request != request, healthKitManager.isAuthorized else { return }
+            guard let range = try? await NativeExportDateRangeResolver.resolve(
+                request, using: healthKitManager, currentRequest: { request }) else { return }
+            resolved = .init(request: request, range: range)
+        }
+    }
+}
+
+extension NativeExportDateRangeResolver.ResolvedRange? {
+    /// The resolved range when it answers `request`, otherwise nil.
+    func range(for request: NativeExportDateRangeResolver.Request) -> ExportDateRange? {
+        guard let self, self.request == request else { return nil }
+        return self.range
     }
 }
