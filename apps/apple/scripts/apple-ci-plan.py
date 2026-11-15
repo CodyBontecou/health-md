@@ -17,7 +17,7 @@ import urllib.request
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-JOBS = ("prepare", "ios", "ios_ui", "macos", "connectivity", "policy")
+JOBS = ("prepare", "ios", "ios_ui", "macos", "connectivity", "watch", "policy")
 ALL = frozenset(JOBS)
 UNIT = frozenset(("ios", "macos"))
 MAX_PR_FILES = 3000
@@ -125,7 +125,7 @@ def plan(paths: set[str]) -> dict[str, bool]:
     selected: set[str] = set()
     for path in paths:
         selected.update(jobs_for_path(valid_path(path)))
-    if selected & {"ios", "ios_ui", "macos"}:
+    if selected & {"ios", "ios_ui", "macos", "watch"}:
         selected.add("prepare")
     if selected:
         selected.add("policy")

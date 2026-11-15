@@ -17,7 +17,7 @@
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Health.md reads Apple Health data on Apple Watch to show your metrics in watch widgets and complications.</string>
+	<string>Health.md reads local Apple Health data for Watch widgets and complications, and exports supported activity metrics to your chosen API only when you tap Sync Now.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Health.md on Apple Watch does not write health data; this permission is included only to satisfy HealthKit requirements.</string>
 	<key>WKCompanionAppBundleIdentifier</key>

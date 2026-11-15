@@ -234,6 +234,10 @@ struct WatchDashboardView: View {
                 Label("Refresh", systemImage: "arrow.clockwise")
             }
             .disabled(viewModel.isLoading)
+
+            NavigationLink("API Sync / Sync Now") {
+                WatchExportView()
+            }
         }
     }
 }
