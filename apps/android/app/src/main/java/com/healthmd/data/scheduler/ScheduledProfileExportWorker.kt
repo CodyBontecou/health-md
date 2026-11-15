@@ -110,6 +110,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     private val googleDriveExportOrchestrator: GoogleDriveExportOrchestrator,
     private val entitlementRepository: EntitlementRepository,
     private val distributionPolicy: DistributionPolicy,
+    private val receiverCredentials: com.healthmd.data.export.APIExportCredentialStore = com.healthmd.data.export.EncryptedAPIExportCredentialStore(appContext),
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -188,11 +189,21 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         val nowMillis = System.currentTimeMillis()
         var due = ScheduledProfileOccurrenceMath.dueOccurrence(entry, nowMillis)
             ?: return Result.success() // Nothing actionable (no boundary passed or fully caught up).
+        if (due.pendingExport?.receiverPlanId == com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.QUARANTINED_PLAN_ID) {
+            // An inconsistent receiver record is kept for explicit recovery. Never capture or
+            // upload from it, and never disable the entry or touch other profiles.
+            Timber.e("Profile occurrence blocked: receiver pending export needs recovery profileId=%s", profileId)
+            return Result.failure()
+        }
         var profile = due.pendingExport?.asFrozenProfile(storedProfile) ?: storedProfile
         val current = settingsRepository.getExportSettings()
+        var receiverConfiguration = if (due.pendingExport != null) due.pendingExport?.receiverCoverageJson
+            else if (profile.target == ExportTarget.API_ENDPOINT &&
+                com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson)?.exportMode == ExportMode.COMPATIBILITY)
+                ReceiverCoverageRuntime.configuration(applicationContext, profileId) else null
         val freshProfile = if (due.pendingExport == null) {
             try {
-                snapshotFactory.captureForNewOccurrence(storedProfile, current, entry.zone, healthRepository)
+                snapshotFactory.captureForNewOccurrence(storedProfile, current, entry.zone, healthRepository, forceFresh = receiverConfiguration != null)
             } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
             catch (_: Exception) { return Result.retry() }
         } else profile
@@ -200,20 +211,46 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             profile = freshProfile
             if (due.pendingExport == null) {
                 val accepted = com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson)
-                if (accepted?.providerCaptureAuthority != null) {
-                    val pending = ScheduledProfilePendingExport(id = operationId(profileId, due),
-                        ownerEpochDays = due.exportDates.map(LocalDate::toEpochDay).distinct().sorted(),
-                        fireAtMillis = due.fireAtMillis, settingsSnapshotJson = profile.settingsSnapshotJson,
-                        target = profile.target, profileName = profile.name, apiEndpointUrl = profile.apiEndpointUrl,
-                        agentDataGatewayUrl = profile.agentDataGatewayUrl, folderUri = profile.folderUri,
-                        folderDisplayName = profile.folderDisplayName, destinationId = profile.destinationId,
-                        refreshSlotMillis = due.refreshSlotMillis)
-                    if (!entryStore.admitOccurrence(entry, pending)) return Result.retry()
-                    due = due.copy(pendingExport = pending)
+                if (accepted?.providerCaptureAuthority != null || receiverConfiguration != null) {
+                    val receiverDestination = receiverConfiguration?.let { configuration ->
+                        try {
+                            ReceiverCoverageRuntime(applicationContext, receiverCredentials, entitlementRepository).destination(
+                                configuration, profile.apiEndpointUrl ?: current.apiEndpointUrl,
+                                profile.settingsSnapshotJson, requireNotNull(accepted).ianaTimeZone)
+                        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                        catch (_: ReceiverCoverageRuntime.SelectionUnavailable) {
+                            // New occurrence only: its scope is bound to another output profile or
+                            // the snapshot has no source authority. Admit an ordinary full lookback.
+                            Timber.w("Receiver selection unavailable for this occurrence; using full lookback")
+                            null
+                        }
+                        catch (_: Exception) { return boundedRetry() }
+                    }
+                    if (receiverDestination == null) receiverConfiguration = null
+                    // Without receiver selection only a source-authority snapshot needs an admission.
+                    if (receiverDestination != null || accepted?.providerCaptureAuthority != null) {
+                        val pending = ScheduledProfilePendingExport(id = operationId(profileId, due),
+                            ownerEpochDays = due.exportDates.map(LocalDate::toEpochDay).distinct().sorted(),
+                            fireAtMillis = due.fireAtMillis, settingsSnapshotJson = if (receiverDestination != null)
+                                com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.wrap(profile.settingsSnapshotJson,
+                                    requireNotNull(receiverConfiguration), operationId(profileId, due), receiverDestination.preflight.destinationBinding,
+                                    receiverDestination.fingerprint) else profile.settingsSnapshotJson,
+                            target = profile.target, profileName = profile.name, apiEndpointUrl = profile.apiEndpointUrl,
+                            agentDataGatewayUrl = profile.agentDataGatewayUrl, folderUri = profile.folderUri,
+                            folderDisplayName = profile.folderDisplayName, destinationId = profile.destinationId,
+                            refreshSlotMillis = due.refreshSlotMillis,
+                            receiverCoverageJson = receiverConfiguration,
+                            receiverDestinationBinding = receiverDestination?.preflight?.destinationBinding,
+                            receiverDestinationFingerprint = receiverDestination?.fingerprint,
+                            receiverPlanId = operationId(profileId, due).takeIf { receiverConfiguration != null })
+                        if (!entryStore.admitOccurrence(entry, pending)) return Result.retry()
+                        due = due.copy(pendingExport = pending)
+                        profile = pending.asFrozenProfile(profile)
+                    }
                 }
             }
         }
-        val settings = freshProfile?.let { snapshotFactory.restoreForRun(it, current, entry.lookbackDays) }
+        val settings = freshProfile?.let { snapshotFactory.restoreForRun(profile, current, entry.lookbackDays) }
         if (settings == null) {
             Timber.e("Profile snapshot invalid, disabling entry profileId=%s", profileId)
             recordHistory(
@@ -235,7 +272,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             return Result.failure()
         }
 
-        val dates = due.exportDates
+        var dates = due.exportDates
         // Today Refresh bookkeeping: the occurrence may carry today's partial file alongside
         // completed-day catch-up. Refresh-only runs must not advance the completed-day frontier.
         val refreshSlotMillis = due.refreshSlotMillis
@@ -263,6 +300,45 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             )
             showFailureNotification(profile.name)
             return Result.failure()
+        }
+
+        val receiverRuntime = ReceiverCoverageRuntime(applicationContext, receiverCredentials, entitlementRepository)
+        var receiverLease: ReceiverCoverageRuntime.Lease? = null
+        if (receiverConfiguration != null && settings.exportMode == ExportMode.COMPATIBILITY) {
+            try {
+                val frozenDestination = requireNotNull(due.pendingExport?.receiverDestinationBinding)
+                val currentDestination = receiverRuntime.destination(requireNotNull(receiverConfiguration), settings.apiEndpointUrl,
+                    profile.settingsSnapshotJson, com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decodeScheduled(profile.settingsSnapshotJson).ianaTimeZone)
+                check(currentDestination.preflight.destinationBinding == frozenDestination &&
+                    currentDestination.fingerprint == due.pendingExport?.receiverDestinationFingerprint)
+                val boundary = Instant.ofEpochMilli(due.fireAtMillis).atZone(
+                    java.time.ZoneId.of(com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decodeScheduled(profile.settingsSnapshotJson).ianaTimeZone)).toLocalDate()
+                val completed = dates.filter { it < boundary }
+                val planID = due.pendingExport?.receiverPlanId ?: operationId(profileId, due)
+                if (completed.isNotEmpty() || receiverRuntime.hasPlan(planID)) {
+                    val lease = receiverRuntime.resolve(planID, "profile:$profileId:${entry.recoveryGeneration}:${due.fireAtMillis}",
+                        receiverConfiguration, settings.apiEndpointUrl, profile.settingsSnapshotJson,
+                        com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decodeScheduled(profile.settingsSnapshotJson).ianaTimeZone,
+                        completed, refreshSlotMillis != null, Instant.ofEpochMilli(nowMillis), expectedBinding = frozenDestination,
+                        precomputed = currentDestination,
+                        query = { request -> ScheduledExportCancellationCoordinator.run(id) {
+                            com.healthmd.data.receivercoverage.ReceiverCoverageHTTPClient.shared.query(request)
+                        } },
+                        authorized = {
+                            entryStore.entry(profileId)?.let { it.isEnabled && it.recoveryGeneration == entry.recoveryGeneration } == true
+                        })
+                    receiverLease = lease
+                    dates = lease.plan.residual.map(LocalDate::parse).filter { it in due.exportDates || (refreshSlotMillis != null && it.toString() == lease.plan.today) }
+                    due = due.copy(exportDates = dates)
+                    if (dates.isEmpty()) {
+                        entryStore.recordSuccess(profileId, due.fireAtMillis.takeIf { hasCompletedDayWork }, due.pendingExport?.id, entry.recoveryGeneration)
+                        return Result.success()
+                    }
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                kotlin.coroutines.coroutineContext.ensureActive()
+                return Result.success() // Original atomic admission/plan remains pending; no upload.
+            } catch (_: Exception) { return boundedRetry() }
         }
 
         val acceptedPending = due.pendingExport
@@ -373,6 +449,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                                 dates = dates,
                                 settings = settings.copy(exportTarget = ExportTarget.API_ENDPOINT),
                                 onProgress = exportProgress,
+                                expectedDestinationFingerprint = receiverLease?.fingerprint ?: due.pendingExport?.receiverDestinationFingerprint,
                                 durableOperationId = durableOperationId,
                                 durableSettingsSnapshotJson = snapshotJson,
                                 requireExistingDurableOperation = pendingOperationId != null,
@@ -425,6 +502,15 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         kotlin.coroutines.coroutineContext.ensureActive()
         if (entryStore.entry(profileId)?.recoveryGeneration != entry.recoveryGeneration) {
             return Result.success()
+        }
+        if (receiverLease != null) {
+            // The upload already happened: always finish the bookkeeping below. A failed
+            // acknowledgement leaves a larger residual, which only causes a conservative re-export.
+            try {
+                val remaining = cancellationRemainingDates(dates, target, settings.exportMode, result)
+                receiverRuntime.acknowledge(receiverLease, dates.filterNot { it in remaining })
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { Timber.w("Receiver plan acknowledgement failed; residual kept for re-export") }
         }
         if (result.wasCancelled) {
             val remainingDates = cancellationRemainingDates(dates, target, settings.exportMode, result)
@@ -560,6 +646,10 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         return Result.success()
     }
 
+    /** Receiver failures share the attempt cap; reconcile re-arms the next slot either way. */
+    private fun boundedRetry(): Result =
+        if (runAttemptCount < MAX_WORKER_ATTEMPTS) Result.retry() else Result.failure()
+
     private fun ExportResult.requiresGoogleDriveReauthorization(): Boolean =
         target == ExportTarget.GOOGLE_DRIVE && failedDateDetails.any {
             it.errorDetails == GoogleDriveErrorId.REAUTHORIZATION_REQUIRED.serialId
@@ -653,7 +743,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     ): List<ScheduledProfilePendingExport> {
         val operationByDate = result.retryOperationIds + result.retryFolderOperationIds + result.retryDriveOperationIds
         val refreshZone = if (due.pendingExport?.refreshSlotMillis != null)
-            requireNotNull(com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decodeOrNull(
+            requireNotNull(com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decodeScheduledOrNull(
                 profile.settingsSnapshotJson)?.sleepCaptureContext).zoneId else due.entry.zone
         val refreshDate = due.refreshSlotMillis?.let {
             Instant.ofEpochMilli(it).atZone(refreshZone).toLocalDate()
@@ -693,6 +783,10 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 folderDisplayName = profile.folderDisplayName,
                 durableOperationId = operationID,
                 destinationId = profile.destinationId,
+                receiverCoverageJson = due.pendingExport?.receiverCoverageJson,
+                receiverPlanId = due.pendingExport?.receiverPlanId,
+                receiverDestinationBinding = due.pendingExport?.receiverDestinationBinding,
+                receiverDestinationFingerprint = due.pendingExport?.receiverDestinationFingerprint,
                 refreshSlotMillis = due.refreshSlotMillis?.takeIf { refreshDate in dates },
             )
         }
