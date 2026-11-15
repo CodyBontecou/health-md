@@ -60,7 +60,8 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
     companion object {
         private var receiver: LocalReceiver? = null
         private val cases = listOf("legacy_success", "profile_success", "legacy_empty", "profile_empty", "profile_today",
-            "legacy_partial", "profile_partial", "legacy_wide_window", "legacy_today", "legacy_cancel", "profile_cancel")
+            "legacy_partial", "profile_partial", "legacy_wide_window", "legacy_today", "legacy_cancel", "profile_cancel",
+            "legacy_rebound", "profile_rebound")
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -112,6 +113,9 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
         val cancelled = case.endsWith("_cancel")
         val empty = case.endsWith("_empty")
         val today = case.endsWith("_today")
+        // The scope is already bound to another output profile (an app update changed the engine
+        // pin, a provider reconnected, ...). A new occurrence must run the full lookback, not stall.
+        val rebound = case.endsWith("_rebound")
         val lookback = if (wide) 31 else if (partial) 30 else 3
         state.update(mapOf("coverage_mode" to if (empty || today) "all" else if (partial) "holes" else "one_hole",
             "fail_upload_after" to if (partial) "1" else "disabled", "case" to case))
@@ -147,6 +151,7 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
             for (older in olderProfiles) check(profiles.delete(older.id))
             profileId = profile.id
             ReceiverCoverageRuntime.save(this@ReceiverCoverageQaActivity, profile.id, config, endpoint, credentials)
+            if (rebound) bindScopeElsewhere(config.scopeId)
             val fired = now.minusMinutes(1)
             check(entries.upsert(ScheduledProfileEntry(profile.id, isEnabled = true,
                 anchorEpochDay = fired.toLocalDate().toEpochDay(), hour = fired.hour, minute = fired.minute,
@@ -154,6 +159,7 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
             profileScheduler.handleAlarm(profile.id) // Production alarm delivery, enqueue and admission.
         } else {
             ReceiverCoverageRuntime.save(this@ReceiverCoverageQaActivity, "legacy", config, endpoint, credentials)
+            if (rebound) bindScopeElsewhere(config.scopeId)
             scheduler.reconcile()
             val armed = requireNotNull(stateStore.load())
             check(scheduler.handleOccurrence(armed, expedited = true)) // Actual armed occurrence, no fabricated WorkData/admission.
@@ -242,9 +248,12 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
             state == if (id in fixtureStoppedBackoffIds) WorkInfo.State.CANCELLED else WorkInfo.State.SUCCEEDED
         }) { "Worker states: ${finalStates.values}" }
         val newPlans = planFiles().filterKeys { it !in previousPlans }
-        if (wide) {
-            check(newPlans.isEmpty() && count("coverage") == 0)
-            check(values("capture").distinct().size == 31) { "Wide fallback must not truncate capture" }
+        if (wide || rebound) {
+            check(newPlans.isEmpty() && count("coverage") == 0) { "Fallback must not preflight or save a plan" }
+            check(values("capture").distinct().size == lookback) { "Fallback must capture the full lookback" }
+            if (rebound) check(count("upload") >= 1 && history.getAllEntries().first().isNotEmpty()) {
+                "Rebound scope must still upload and record history"
+            }
         } else {
             check(count("coverage") == 1) { "Expected one preflight, observed ${count("coverage")}" }
             val plan = newPlans.values.single().second
@@ -283,6 +292,11 @@ class ReceiverCoverageQaActivity : ComponentActivity() {
             profileScheduler.cancelProfileRuntime(id)
         }
         result
+    }
+    /** Synthetic stand-in for a binding written by an earlier output profile; never a real digest. */
+    private fun bindScopeElsewhere(scopeId: String) {
+        val file = filesDir.toPath().resolve("receiver-coverage/scope-$scopeId.binding")
+        com.healthmd.data.receivercoverage.ReceiverCoverageAtomicFile.write(file, "0".repeat(64).toByteArray())
     }
     private suspend fun awaitCondition(condition: suspend () -> Boolean) {
         while (!condition()) delay(100)

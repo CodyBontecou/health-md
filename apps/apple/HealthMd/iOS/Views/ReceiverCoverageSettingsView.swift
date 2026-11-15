@@ -54,15 +54,16 @@ private struct ReceiverCoverageSettingsEditor: View {
     @State private var preflightURL = ""
     @State private var scopeID = ""
     @State private var correction = ""
-    @State private var hasError = false
+    private enum Failure { case load, save }
+    @State private var failure: Failure?
     /// Bumped on every failure so a repeated, identical error is announced again.
     @State private var failedAttempts = 0
     var body: some View {
         NavigationStack {
             Form {
                 // First in the form so a failed Save is visible without scrolling.
-                if hasError {
-                    Section { Text("Could not save receiver-aware scheduling. Check the endpoint, scope, correction choice and secure credential storage.").foregroundStyle(.red) }
+                if let failure {
+                    Section { Text(Self.message(failure)).foregroundStyle(.red) }
                 }
                 Section {
                     Toggle("Skip retained completed days", isOn: $enabled)
@@ -93,7 +94,7 @@ private struct ReceiverCoverageSettingsEditor: View {
                 }
             }
             .onChange(of: failedAttempts) {
-                AccessibilityNotification.Announcement(String(localized: "Could not save receiver-aware scheduling. Check the endpoint, scope, correction choice and secure credential storage.")).post()
+                if let failure { AccessibilityNotification.Announcement(Self.message(failure)).post() }
             }
             .navigationTitle("Receiver coverage")
             .navigationBarTitleDisplayMode(.inline)
@@ -102,7 +103,7 @@ private struct ReceiverCoverageSettingsEditor: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         guard !protection.isEnabled else { protection.presentBlockedChangeToast(); return }
-                        hasError = false
+                        failure = nil
                         do {
                             let config: ReceiverCoverageConfiguration?
                             if enabled {
@@ -120,13 +121,21 @@ private struct ReceiverCoverageSettingsEditor: View {
                     if let value = try ReceiverCoverageSettings.shared.configuration(scope) {
                         enabled = true; preflightURL = value.preflightURL; scopeID = value.scopeID; correction = String(value.refreshRecentDays)
                     }
-                } catch { fail() }
+                } catch { fail(.load) }
             }
         }
     }
 
-    private func fail() {
-        hasError = true
+    /// A corrupt saved setting is a read problem, not a failed save; the schedule treats it as off.
+    private static func message(_ failure: Failure) -> String {
+        switch failure {
+        case .load: String(localized: "Couldn\u{2019}t read the saved receiver-aware setting, so scheduled exports treat it as off. Save to replace it.")
+        case .save: String(localized: "Could not save receiver-aware scheduling. Check the endpoint, scope, correction choice and secure credential storage.")
+        }
+    }
+
+    private func fail(_ kind: Failure = .save) {
+        failure = kind
         failedAttempts += 1
     }
 }
