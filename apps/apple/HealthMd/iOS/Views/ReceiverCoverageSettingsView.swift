@@ -4,16 +4,44 @@ import SwiftUI
 /// Reuses the schedule's native sheet and Form controls. Saving opts in only future occurrences;
 /// pending work keeps its frozen scope, correction choice and destination authority.
 struct ReceiverCoverageSettingsButton: View {
+    enum Style { case form, glass }
     var profile: ExportProfile? = nil
+    /// `.glass` matches the card rows of the Glass schedule screens; `.form` is a plain Form row.
+    var style: Style = .form
     @EnvironmentObject private var schedulingManager: SchedulingManager
+    @Environment(\.glassPalette) private var palette
     @State private var showing = false
     var body: some View {
-        Button("Receiver-aware scheduling") { showing = true }
+        trigger
             .configurationChangesProtected()
             .sheet(isPresented: $showing) {
                 ReceiverCoverageSettingsEditor(scope: ReceiverCoverageSettings.scope(profile?.id),
                     uploadURL: schedulingManager.receiverCoverageUploadURL(for: profile) ?? "")
             }
+    }
+
+    @ViewBuilder private var trigger: some View {
+        switch style {
+        case .form:
+            Button("Receiver-aware scheduling") { showing = true }
+        case .glass:
+            GlassPanel {
+                Button { showing = true } label: {
+                    GlassRow(
+                        title: String(localized: "Receiver-aware scheduling"),
+                        subtitle: String(localized: "Skip completed days your receiver already has")
+                    ) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(palette.muted)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .buttonStyle(.plain)
+                .padding(.vertical, 4)
+            }
+            .accessibilityIdentifier("receiverCoverage.open")
+        }
     }
 }
 
@@ -27,6 +55,8 @@ private struct ReceiverCoverageSettingsEditor: View {
     @State private var scopeID = ""
     @State private var correction = ""
     @State private var hasError = false
+    /// Bumped on every failure so a repeated, identical error is announced again.
+    @State private var failedAttempts = 0
     var body: some View {
         NavigationStack {
             Form {
@@ -41,11 +71,18 @@ private struct ReceiverCoverageSettingsEditor: View {
                 }
                 if enabled {
                     Section {
+                        // Explicit labels: placeholders vanish once typed and are not reliably spoken.
                         TextField("Explicit HTTPS preflight URL", text: $preflightURL)
                             .textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
+                            .accessibilityLabel("Explicit HTTPS preflight URL")
+                            .accessibilityIdentifier("receiverCoverage.preflightURL")
                         TextField("Receiver scope ID", text: $scopeID)
                             .textInputAutocapitalization(.never).autocorrectionDisabled()
+                            .accessibilityLabel("Receiver scope ID")
+                            .accessibilityIdentifier("receiverCoverage.scopeID")
                         TextField("Correction window (0–30 days)", text: $correction).keyboardType(.numberPad)
+                            .accessibilityLabel("Correction window (0–30 days)")
+                            .accessibilityIdentifier("receiverCoverage.correction")
                     } header: {
                         Text("Receiver configuration")
                     } footer: {
@@ -55,8 +92,7 @@ private struct ReceiverCoverageSettingsEditor: View {
                     Section { Text("Personal compatibility API destinations only. Managed clinic credentials are not supported for receiver-aware scheduling.") }
                 }
             }
-            .onChange(of: hasError) { _, failed in
-                guard failed else { return }
+            .onChange(of: failedAttempts) {
                 AccessibilityNotification.Announcement(String(localized: "Could not save receiver-aware scheduling. Check the endpoint, scope, correction choice and secure credential storage.")).post()
             }
             .navigationTitle("Receiver coverage")
@@ -70,12 +106,12 @@ private struct ReceiverCoverageSettingsEditor: View {
                         do {
                             let config: ReceiverCoverageConfiguration?
                             if enabled {
-                                guard let count = Int(correction), (0...30).contains(count) else { hasError = true; return }
+                                guard let count = Int(correction), (0...30).contains(count) else { fail(); return }
                                 config = ReceiverCoverageConfiguration(preflightURL: preflightURL, scopeID: scopeID, refreshRecentDays: count)
                             } else { config = nil }
                             try ReceiverCoverageSettings.shared.save(config, scope: scope, uploadURL: uploadURL)
                             dismiss()
-                        } catch { hasError = true }
+                        } catch { fail() }
                     }
                 }
             }
@@ -84,9 +120,14 @@ private struct ReceiverCoverageSettingsEditor: View {
                     if let value = try ReceiverCoverageSettings.shared.configuration(scope) {
                         enabled = true; preflightURL = value.preflightURL; scopeID = value.scopeID; correction = String(value.refreshRecentDays)
                     }
-                } catch { hasError = true }
+                } catch { fail() }
             }
         }
+    }
+
+    private func fail() {
+        hasError = true
+        failedAttempts += 1
     }
 }
 #endif

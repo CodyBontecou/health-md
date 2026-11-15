@@ -74,7 +74,7 @@ struct GlassScheduleSheet: View {
                     }
                 }
 
-                if profile.target == .apiEndpoint { ReceiverCoverageSettingsButton(profile: profile) }
+                if profile.target == .apiEndpoint { ReceiverCoverageSettingsButton(profile: profile, style: .glass) }
                 if hasPendingRecovery { pendingRecoveryCard }
 
                 VStack(alignment: .leading, spacing: 6) {

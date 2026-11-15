@@ -386,7 +386,7 @@ struct ScheduleSettingsView: View {
                         .configurationChangesProtected()
                     scheduleConfigurationCard
                     if schedulingManager.schedule.target == .apiEndpoint {
-                        ReceiverCoverageSettingsButton()
+                        ReceiverCoverageSettingsButton(style: .glass)
                     }
                 }
             }

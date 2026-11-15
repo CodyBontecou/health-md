@@ -12,9 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import com.healthmd.R
 import com.healthmd.data.export.EncryptedAPIExportCredentialStore
@@ -31,6 +29,8 @@ fun ReceiverCoverageSettingsButton(scope: String, uploadUrl: String) {
     val context = LocalContext.current
     val protection = LocalConfigurationProtection.current
     val coroutineScope = rememberCoroutineScope()
+    val view = LocalView.current
+    val saveError = stringResource(R.string.receiver_coverage_save_error)
     var showing by remember(scope) { mutableStateOf(false) }
     var enabled by remember(scope) { mutableStateOf(false) }
     var preflight by remember(scope) { mutableStateOf("") }
@@ -38,13 +38,16 @@ fun ReceiverCoverageSettingsButton(scope: String, uploadUrl: String) {
     var correction by remember(scope) { mutableStateOf("") }
     var error by remember(scope) { mutableStateOf(false) }
     var saving by remember(scope) { mutableStateOf(false) }
+    // Announce every failed attempt; a live region stays silent when the same error repeats.
+    @Suppress("DEPRECATION")
+    fun fail() { error = true; view.announceForAccessibility(saveError) }
     TextButton(onClick = {
         if (protection.enabled) { protection.onBlockedChange(); return@TextButton }
         try {
             val config = ReceiverCoverageRuntime.configuration(context, scope)?.let(ReceiverCoverageConfiguration::parse)
             enabled = config != null; preflight = config?.preflightUrl.orEmpty(); namespace = config?.scopeId.orEmpty()
             correction = config?.refreshRecentDays?.toString().orEmpty(); error = false
-        } catch (_: Exception) { error = true }
+        } catch (_: Exception) { fail() }
         showing = true
     }) { Text(stringResource(R.string.receiver_coverage_title)) }
     if (!showing) return
@@ -53,12 +56,8 @@ fun ReceiverCoverageSettingsButton(scope: String, uploadUrl: String) {
         title = { Text(stringResource(R.string.receiver_coverage_title)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3)) {
-                // First in the dialog so a failed OK is visible without scrolling and is announced.
-                if (error) Text(
-                    stringResource(R.string.receiver_coverage_save_error),
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                )
+                // First in the dialog so a failed OK is visible without scrolling.
+                if (error) Text(saveError, color = MaterialTheme.colorScheme.error)
                 Text(stringResource(R.string.receiver_coverage_enable))
                 AppSwitch(enabled, { enabled = it }, enabled = !saving)
                 Text(stringResource(R.string.receiver_coverage_default_note))
@@ -77,7 +76,7 @@ fun ReceiverCoverageSettingsButton(scope: String, uploadUrl: String) {
                 if (protection.enabled) { protection.onBlockedChange(); return@TextButton }
                 error = false
                 val count = correction.toIntOrNull()
-                if (enabled && count !in 0..30) { error = true; return@TextButton }
+                if (enabled && count !in 0..30) { fail(); return@TextButton }
                 saving = true
                 coroutineScope.launch {
                     try {
@@ -86,7 +85,7 @@ fun ReceiverCoverageSettingsButton(scope: String, uploadUrl: String) {
                             uploadUrl, EncryptedAPIExportCredentialStore(context))
                         showing = false
                     } catch (cancelled: CancellationException) { throw cancelled }
-                    catch (_: Exception) { error = true }
+                    catch (_: Exception) { fail() }
                     finally { saving = false }
                 }
             }) { Text(stringResource(android.R.string.ok)) }

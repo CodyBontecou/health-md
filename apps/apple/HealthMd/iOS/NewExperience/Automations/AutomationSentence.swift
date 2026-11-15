@@ -366,7 +366,7 @@ struct SentenceFlowLayout: Layout {
         for line in lines(width: bounds.width, subviews: subviews) {
             var x = bounds.minX
             for index in line.indices {
-                let size = subviews[index].sizeThatFits(.unspecified)
+                let size = Self.size(of: subviews[index], width: bounds.width)
                 subviews[index].place(
                     at: CGPoint(x: x, y: y + (line.height - size.height) / 2),
                     proposal: ProposedViewSize(size)
@@ -375,6 +375,15 @@ struct SentenceFlowLayout: Layout {
             }
             y += line.height + lineSpacing
         }
+    }
+
+    /// A piece wider than the line (a long endpoint URL has no spaces to wrap at) is
+    /// offered the line width so it wraps inside its own line instead of widening the
+    /// sentence, and with it the whole screen, past the available width.
+    private static func size(of subview: LayoutSubview, width: CGFloat) -> CGSize {
+        let natural = subview.sizeThatFits(.unspecified)
+        guard width.isFinite, natural.width > width else { return natural }
+        return subview.sizeThatFits(ProposedViewSize(width: width, height: nil))
     }
 
     private struct Line {
@@ -386,7 +395,7 @@ struct SentenceFlowLayout: Layout {
     private func lines(width: CGFloat, subviews: Subviews) -> [Line] {
         var lines: [Line] = [Line()]
         for index in subviews.indices {
-            let size = subviews[index].sizeThatFits(.unspecified)
+            let size = Self.size(of: subviews[index], width: width)
             if lines[lines.count - 1].width + size.width > width, !lines[lines.count - 1].indices.isEmpty {
                 lines.append(Line())
             }
