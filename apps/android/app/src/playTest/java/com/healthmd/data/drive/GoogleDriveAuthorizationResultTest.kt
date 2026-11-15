@@ -69,7 +69,10 @@ class GoogleDriveAuthorizationResultTest {
         every { task.addOnCanceledListener(any<com.google.android.gms.tasks.OnCanceledListener>()) } returns task
         every { client.authorize(any()) } returns task
         mockkStatic(Identity::class)
+        // Readiness must not depend on the developer's local Drive client-ID configuration.
+        io.mockk.mockkObject(GoogleDriveConfiguration)
         try {
+            every { GoogleDriveConfiguration.isConfigured(any()) } returns true
             every { Identity.getAuthorizationClient(context) } returns client
             val manager = GoogleDriveAuthorizationManager(context, destinations, mockk(), api, mockk(), mockk())
             io.mockk.coEvery { api.about("synthetic-token") } returns DriveApiResult.Success(GoogleDriveAbout("permission"))
@@ -77,6 +80,7 @@ class GoogleDriveAuthorizationResultTest {
             io.mockk.coEvery { api.about("synthetic-token") } returns DriveApiResult.Success(GoogleDriveAbout("other-permission"))
             assertThat(manager.silentToken(destination)).isEqualTo(GoogleDriveAccessTokenResult.Failed(GoogleDriveErrorId.ACCOUNT_MISMATCH))
         } finally {
+            io.mockk.unmockkObject(GoogleDriveConfiguration)
             unmockkStatic(Identity::class)
         }
     }
