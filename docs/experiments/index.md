@@ -14,7 +14,7 @@
 
 ## Proposals
 
-- [Business-model options: free manual exports and paid automation](./2026-10-03-business-model-options.md): research and proposed test design; not deployed.
+- [Business-model options: free manual exports and paid automation](./2026-10-03-business-model-options.md): research and proposed test design; not deployed as written. Superseded by the five-free-exports change and the subscription rollout.
 
 ## Operational sources
 

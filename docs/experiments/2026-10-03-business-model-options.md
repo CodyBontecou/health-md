@@ -5,6 +5,11 @@ entitlements, store listings, or experiments changed. Store documentation was ch
 on this date. Recommendations below are proposals, not measured results or a promise
 of App Review approval.
 
+Later direction: this proposal was not adopted as written. See
+[five free exports and the next export journey](./2026-10-24-five-free-exports.md) and
+[paid access, trials, and subscriptions](../../apps/apple/docs/experiments/subscription-pricing-rollout.md)
+for what was subsequently implemented.
+
 ## Store feasibility
 
 Both stores permit recurring subscriptions for continuing value. Apple requires ongoing
