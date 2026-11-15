@@ -38,7 +38,7 @@ const CREDENTIAL_OPERATION_TIMEOUT: Duration = Duration::from_secs(10);
 static CREDENTIAL_HELPER_GATE: Semaphore = Semaphore::const_new(1);
 
 #[cfg(target_os = "macos")]
-static MACOS_KEYCHAIN_INTERACTION_LOCK: Mutex<()> = Mutex::new(());
+pub(crate) static MACOS_KEYCHAIN_INTERACTION_LOCK: Mutex<()> = Mutex::new(());
 
 /// Keychain Services can otherwise open an authorization dialog from a blocking worker and wait
 /// indefinitely after the CLI has lost its terminal/UI context. Serialize the process-global

@@ -12,11 +12,15 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.export.AgentDataGatewayExportRunner
 import com.healthmd.data.export.APIEndpointExportRunner
+import com.healthmd.data.export.APIExportCredentialStore
+import com.healthmd.data.export.APIExportRequestConfiguration
+import com.healthmd.data.export.APIRecoveryAuthorities
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportFailureReason
+import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportResult
@@ -33,6 +37,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.isMockKMock
 import io.mockk.slot
 import io.mockk.CapturingSlot
 import java.time.LocalDate
@@ -257,7 +262,7 @@ class ScheduledProfileExportWorkerCancellationTest {
             entryStore.recordRetry(
                 profileId = profileId,
                 fireAtMillis = any(),
-                attemptedPendingID = null,
+                attemptedPendingID = any(),
                 replacements = capture(retryGroups),
                 expectedRecoveryGeneration = 1L,
             )
@@ -319,7 +324,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         assertThat(frozen.apiEndpointUrl).isEqualTo("https://original.example.test/health")
         assertThat(frozen.durableOperationId).startsWith("profile-api-")
         assertThat(frozen.durableOperationId).endsWith("-g1")
-        coVerify(exactly = 1) { entryStore.recordRetry(any(), any(), null, any(), 1L) }
+        coVerify(exactly = 1) { entryStore.recordRetry(any(), any(), any(), any(), 1L) }
         coVerify(exactly = 0) { entryStore.recordSuccess(any(), any(), any(), any()) }
     }
 
@@ -352,7 +357,7 @@ class ScheduledProfileExportWorkerCancellationTest {
             assertThat(harness.history.captured.exportMode).isEqualTo(ExportMode.RAW_SNAPSHOT)
             assertThat(harness.history.captured.target).isEqualTo(target)
             coVerify(exactly = 1) {
-                harness.rawRunner.exportRange(any(), any(), harness.runSettings, target, expectedDestinationFingerprint = null, allowInteractiveRouteConsent = false)
+                harness.rawRunner.exportRange(any(), any(), any(), target, expectedDestinationFingerprint = null, allowInteractiveRouteConsent = false)
             }
             coVerify(exactly = 0) { harness.apiRunner.exportDates(any(), any(), any(), any(), any(), any(), any()) }
             coVerify(exactly = 0) { harness.exportRepository.exportHealthData(any(), any()) }
@@ -366,7 +371,8 @@ class ScheduledProfileExportWorkerCancellationTest {
     @Test
     fun `delayed raw cadence and Today Refresh do not capture intervening days`() = runTest {
         val today = LocalDate.now(ZoneId.of("UTC"))
-        for (target in listOf(ExportTarget.DEVICE_FOLDER, ExportTarget.API_ENDPOINT)) {
+        // Google Drive raw exports intentionally upload one range bundle, not per-owner-date ranges.
+        for (target in ExportTarget.entries.filter { it != ExportTarget.API_ENDPOINT && it != ExportTarget.GOOGLE_DRIVE }) {
             val harness = rawHarness(
                 target = target,
                 todayRefresh = true,
@@ -391,9 +397,11 @@ class ScheduledProfileExportWorkerCancellationTest {
         val today = LocalDate.now(ZoneId.of("UTC"))
         val first = today.minusDays(10)
         val second = today.minusDays(7)
-        for (target in listOf(ExportTarget.DEVICE_FOLDER, ExportTarget.API_ENDPOINT)) {
+        // Google Drive raw exports intentionally upload one range bundle, not per-owner-date ranges.
+        for (target in ExportTarget.entries.filter { it != ExportTarget.API_ENDPOINT && it != ExportTarget.GOOGLE_DRIVE }) {
             val pending = ScheduledProfilePendingExport(
                 id = "separated-raw-retry",
+                agentDataGatewayUrl = "https://gateway.example.test",
                 ownerEpochDays = listOf(first.toEpochDay(), second.toEpochDay()),
                 fireAtMillis = 1_000L,
                 settingsSnapshotJson = "frozen-raw-snapshot",
@@ -416,7 +424,7 @@ class ScheduledProfileExportWorkerCancellationTest {
     }
 
     @Test
-    fun `raw retry ignores a compatibility operation left by the old profile worker`() = runTest {
+    fun `legacy raw retry fails closed instead of blessing a compatibility operation`() = runTest {
         val pending = ScheduledProfilePendingExport(
             id = "old-raw-retry",
             ownerEpochDays = listOf(LocalDate.now(ZoneId.of("UTC")).minusDays(10).toEpochDay()),
@@ -431,17 +439,17 @@ class ScheduledProfileExportWorkerCancellationTest {
             ExportResult(1, 1, target = ExportTarget.API_ENDPOINT, exportMode = ExportMode.RAW_SNAPSHOT)
         }
 
-        assertThat(harness.worker.doWork()).isEqualTo(ListenableWorker.Result.success())
-
-        assertThat(harness.rawStart.captured).isEqualTo(pending.ownerDates.single())
-        assertThat(harness.rawEnd.captured).isEqualTo(pending.ownerDates.single())
-        assertThat(harness.history.captured.profileName).isEqualTo("Frozen raw profile")
-        coVerify(exactly = 1) { harness.entryStore.recordSuccess(any(), 1_000L, pending.id, 0L) }
+        val rejected = harness.worker.doWork()
+        assertThat(rejected.outputData.getString(ScheduledProfileExportWorker.OUTPUT_PROFILE_ERROR))
+            .isEqualTo("api_recovery_authority_required")
+        coVerify(exactly = 0) { harness.rawRunner.exportRange(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { harness.healthRepository.hasBackgroundReadPermission() }
+        coVerify(exactly = 0) { harness.entryStore.recordSuccess(any(), any(), any(), any()) }
         coVerify(exactly = 0) { harness.apiRunner.exportDates(any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
-    fun `partial raw providers retain every completed date and do not satisfy Today Refresh`() = runTest {
+    fun `partial raw providers retain the exact admitted range and do not satisfy Today Refresh`() = runTest {
         // Provider successes outnumber the owner dates. Neither those counts nor a start-date
         // diagnostic prove that another provider captured any day of the range.
         val harness = rawHarness(todayRefresh = true) { dates ->
@@ -456,9 +464,10 @@ class ScheduledProfileExportWorkerCancellationTest {
 
         val residual = harness.replacements.captured.single()
         assertThat(residual.ownerDates).containsExactly(
-            harness.rawStart.captured, harness.rawStart.captured.plusDays(1),
+            harness.rawStart.captured, harness.rawStart.captured.plusDays(1), harness.rawEnd.captured,
         ).inOrder()
-        assertThat(residual.durableOperationId).isNull()
+        assertThat(residual.durableOperationId).startsWith("profile-api-")
+        assertThat(residual.apiAuthorityJson).isNotNull()
         coVerify(exactly = 0) { harness.entryStore.recordRefreshSuccess(any(), any(), any()) }
         coVerify(exactly = 0) { harness.entryStore.recordSuccess(any(), any(), any(), any()) }
     }
@@ -477,12 +486,13 @@ class ScheduledProfileExportWorkerCancellationTest {
 
         assertThat(harness.replacements.captured.single().ownerDates)
             .containsExactly(harness.rawStart.captured, harness.rawEnd.captured).inOrder()
-        assertThat(harness.replacements.captured.single().durableOperationId).isNull()
-        coVerify(exactly = 1) { harness.entryStore.recordCancellation(any(), any(), null, any(), 0L) }
+        assertThat(harness.replacements.captured.single().durableOperationId).startsWith("profile-api-")
+        assertThat(harness.replacements.captured.single().apiAuthorityJson).isNotNull()
+        coVerify(exactly = 1) { harness.entryStore.recordCancellation(any(), any(), any(), any(), 0L) }
     }
 
     @Test
-    fun `raw refresh-only failure waits for the next slot without a historical checkpoint`() = runTest {
+    fun `raw refresh-only failure retains immutable API recovery without completed-day checkpoint`() = runTest {
         val harness = rawHarness(todayRefresh = true, refreshOnly = true) { dates ->
             ExportResult(
                 successCount = 0, totalCount = 1,
@@ -491,11 +501,29 @@ class ScheduledProfileExportWorkerCancellationTest {
             )
         }
 
-        assertThat(harness.worker.doWork()).isEqualTo(ListenableWorker.Result.success())
+        assertThat(harness.worker.doWork()).isEqualTo(ListenableWorker.Result.retry())
 
-        assertThat(harness.replacements.captured).isEmpty()
-        coVerify(exactly = 1) { harness.entryStore.recordRetry(any(), null, null, emptyList(), 0L) }
+        assertThat(harness.replacements.captured.single().ownerDates).containsExactly(harness.rawStart.captured)
+        assertThat(harness.replacements.captured.single().apiAuthorityJson).isNotNull()
+        coVerify(exactly = 1) { harness.entryStore.recordRetry(any(), null, any(), any(), 0L) }
         coVerify(exactly = 0) { harness.entryStore.recordRefreshSuccess(any(), any(), any()) }
+    }
+
+    @Test
+    fun `replacement native profile identity rejects API recovery before permissions or runner reads`() = runTest {
+        val configuration = APIExportRequestConfiguration("https://example.test/raw", "Bearer synthetic-profile",
+            emptyList(), APIExportEndpoint.fingerprint("https://example.test/raw")!!)
+        val evidence = APIRecoveryAuthorities.create(configuration, "profile-v1\nraw-profile\n1")
+        val pending = ScheduledProfilePendingExport(id = "bound-original", ownerEpochDays = listOf(LocalDate.now().minusDays(1).toEpochDay()),
+            fireAtMillis = 1_000L, settingsSnapshotJson = "frozen-original", target = ExportTarget.API_ENDPOINT,
+            profileName = "Synthetic original", apiEndpointUrl = configuration.endpointUrl,
+            durableOperationId = "raw-original", apiAuthorityJson = evidence)
+        val harness = rawHarness(pending = pending, profileCreatedAt = 2L) { ExportResult(1, 1) }
+        val rejected = harness.worker.doWork()
+        assertThat(rejected.outputData.getString(ScheduledProfileExportWorker.OUTPUT_PROFILE_ERROR))
+            .isEqualTo("api_recovery_authority_required")
+        coVerify(exactly = 0) { harness.healthRepository.hasBackgroundReadPermission() }
+        coVerify(exactly = 0) { harness.rawRunner.exportRange(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -507,7 +535,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         assertThat(harness.worker.doWork()).isEqualTo(ListenableWorker.Result.success())
 
         coVerify(exactly = 0) { harness.healthRepository.hasBackgroundReadPermission() }
-        coVerify(exactly = 0) { harness.rawRunner.exportRange(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { harness.rawRunner.exportRange(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
         coVerify(exactly = 0) { harness.apiRunner.exportDates(any(), any(), any(), any(), any(), any(), any()) }
     }
 
@@ -516,7 +544,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         val harness = rawHarness(todayRefresh = true) {
             ExportResult(0, 1, exportMode = ExportMode.RAW_SNAPSHOT)
         }
-        coEvery { harness.rawRunner.exportRange(any(), any(), any(), any(), any(), any()) } coAnswers {
+        coEvery { harness.rawRunner.exportRange(any(), any(), any(), any(), any(), any(), any(), any(), any()) } coAnswers {
             coEvery { harness.entryStore.entry(harness.entry.profileId) } returns
                 harness.entry.copy(recoveryGeneration = 1L)
             ExportResult(0, 1, exportMode = ExportMode.RAW_SNAPSHOT)
@@ -586,23 +614,29 @@ class ScheduledProfileExportWorkerCancellationTest {
                 val api = mockk<APIEndpointExportRunner>(relaxed = true)
                 var apiCalls = 0
                 var acceptedJson: String? = null
+                var acceptedOperationId: String? = null
                 coEvery { api.exportDates(any(), any(), any(), any(), any(), any(), any()) } coAnswers {
                     apiCalls++
                     assertThat(arg<Boolean>(6)).isEqualTo(apiCalls > 1)
                     val dates = firstArg<List<LocalDate>>()
                     val frozen = secondArg<ExportSettings>()
                     val snapshotJson = arg<String?>(5)
+                    val operationId = requireNotNull(arg<String?>(4))
+                    assertThat(frozen.executionAPIRecoveryRequired).isTrue()
+                    assertThat(frozen.executionAPIRecovery?.requireExistingJournal).isEqualTo(apiCalls > 1)
                     assertThat(frozen.exportFormats).containsExactly(com.healthmd.domain.model.ExportFormat.JSON)
                     assertThat(frozen.apiEndpointUrl).isEqualTo(endpoint)
                     assertThat(frozen.executionSleepCaptureContext?.sleepDayAttribution).isEqualTo(com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)
                     assertThat(frozen.executionProviderCaptureAuthority?.selectedProviderId).isEqualTo("health_connect")
                     if (apiCalls == 1) {
                         acceptedJson = snapshotJson
+                        acceptedOperationId = operationId
                         assertThat(entries.entry(entry.profileId)?.pendingExports?.single()?.settingsSnapshotJson).isEqualTo(snapshotJson)
                         ExportResult(0, dates.size, dates.map { FailedDateDetail(it, ExportFailureReason.UNKNOWN) },
-                            retryOperationIds = dates.associateWith { "prepared-morning-profile" })
+                            retryOperationIds = dates.associateWith { operationId })
                     } else {
                         assertThat(snapshotJson).isEqualTo(acceptedJson)
+                        assertThat(operationId).isEqualTo(acceptedOperationId)
                         ExportResult(dates.size, dates.size)
                     }
                 }
@@ -619,9 +653,17 @@ class ScheduledProfileExportWorkerCancellationTest {
                     assertThat(permissionChecks).isEqualTo(1)
                     assertThat(apiCalls).isEqualTo(1)
                     val pending = requireNotNull(entries.entry(entry.profileId)).pendingExports.single()
-                    assertThat(pending.durableOperationId).isEqualTo("prepared-morning-profile")
+                    assertThat(pending.durableOperationId).isEqualTo(acceptedOperationId)
                     preference = com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS
                     storedProfile = original.copy(name = "Edited", target = ExportTarget.DEVICE_FOLDER, apiEndpointUrl = null)
+                    val retargeted = newWorker().doWork()
+                    assertThat(retargeted.outputData.getString(ScheduledProfileExportWorker.OUTPUT_PROFILE_ERROR))
+                        .isEqualTo("api_recovery_authority_required")
+                    assertThat(apiCalls).isEqualTo(1)
+                    assertThat(permissionChecks).isEqualTo(1)
+                    assertThat(entries.entry(entry.profileId)?.pendingExports?.single()).isEqualTo(pending)
+                    // Restore the authorized destination; mutable labels cannot replace frozen output.
+                    storedProfile = original.copy(name = "Edited")
                     coEvery { sdk.hasBackgroundReadPermission() } returns false
                     assertThat(newWorker().doWork()).isEqualTo(ListenableWorker.Result.success())
                     assertThat(apiCalls).isEqualTo(2)
@@ -635,11 +677,163 @@ class ScheduledProfileExportWorkerCancellationTest {
         }
     }
 
+    @Test fun `unmarked API journal replays original bytes without provider permission`() = runTest { assertUnmarkedJournal("valid") }
+    @Test fun `unprepared API admission still requires provider permission`() = runTest { assertUnmarkedJournal("absent") }
+    @Test fun `required missing API journal cannot capture`() = runTest { assertUnmarkedJournal("required-missing") }
+    @Test fun `corrupt unmarked API journal cannot capture`() = runTest { assertUnmarkedJournal("corrupt") }
+    @Test fun `retargeted unmarked API journal cannot replay`() = runTest { assertUnmarkedJournal("retarget") }
+    @Test fun `rotated credentials cannot replay unmarked API journal`() = runTest { assertUnmarkedJournal("key") }
+    @Test fun `foreign snapshot cannot replay unmarked API journal`() = runTest { assertUnmarkedJournal("snapshot") }
+    @Test fun `foreign operation cannot replay unmarked API journal`() = runTest { assertUnmarkedJournal("operation") }
+    @Test fun `proven API journal remains required across two workers after deletion`() = runTest { assertUnmarkedJournal("probe-delete") }
+    @Test fun `discarded unmarked API journal cannot replay`() = runTest { assertUnmarkedJournal("discard") }
+
+    private suspend fun assertUnmarkedJournal(mode: String) {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val root = java.nio.file.Files.createTempDirectory("unmarked-api-entry-").toFile()
+            var scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+            val operationId = "unmarked-${java.util.UUID.randomUUID()}"
+            val store = com.healthmd.data.export.FileAPIExportOperationStore(context)
+            try {
+                val day = LocalDate.now(ZoneId.of("UTC")).minusDays(1)
+                val endpoint = "https://original.example.invalid/health"
+                val output = ExportSettings(exportTarget = ExportTarget.API_ENDPOINT, apiEndpointUrl = endpoint)
+                val captureContext = com.healthmd.domain.model.AndroidCaptureContext(ZoneId.of("UTC"),
+                    com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS)
+                val snapshot = com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.encodeCanonical(
+                    com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot.capture(output, null, captureContext.zoneId, captureContext))
+                val profile = ExportProfile(id = operationId, name = "Original", target = ExportTarget.API_ENDPOINT,
+                    apiEndpointUrl = endpoint, settingsSnapshotJson = snapshot, createdAtEpochMillis = 1L, updatedAtEpochMillis = 1L)
+                val credentials = object : APIExportCredentialStore {
+                    override suspend fun authorizationHeader() = if (mode == "key") "Bearer rotated" else "Bearer synthetic-profile"
+                    override suspend fun hasAuthorization() = true
+                    override suspend fun saveAuthorization(value: String) = Unit
+                    override suspend fun clearAuthorization() = Unit
+                }
+                val configuration = APIExportRequestConfiguration(endpoint, "Bearer synthetic-profile", emptyList(),
+                    APIExportEndpoint.fingerprint(endpoint)!!)
+                val authority = APIRecoveryAuthorities.create(configuration, scheduledAPIProfileBinding(profile))
+                val pending = ScheduledProfilePendingExport("pending", listOf(day.toEpochDay()), 1000L, snapshot,
+                    ExportTarget.API_ENDPOINT, profile.name, apiEndpointUrl = endpoint, durableOperationId = operationId,
+                    apiAuthorityJson = authority, apiJournalRequired = mode == "required-missing")
+                var dataStore = androidx.datastore.preferences.core.PreferenceDataStoreFactory.create(scope = scope,
+                    produceFile = { java.io.File(root, "entries.preferences_pb") })
+                val entries = ScheduledProfileEntryStore(dataStore, context)
+                entries.upsert(ScheduledProfileEntry(profileId = profile.id, isEnabled = true,
+                    anchorEpochDay = day.toEpochDay(), hour = 0, zoneId = "UTC", pendingExports = listOf(pending)))
+                val body = "{\"original\":1234}"
+                if (mode !in listOf("absent", "required-missing")) {
+                    store.create(com.healthmd.data.export.DurableAPIExportOperation(operationId,
+                        configuration.destinationFingerprint, com.healthmd.domain.exportengine.ExportEngineMode.legacy,
+                        null, if (mode == "snapshot") "foreign" else snapshot, listOf(day), setOf(day), emptyList(),
+                        listOf(com.healthmd.data.export.DurableAPIExportBatch(0, "original.json", listOf(day), body.toByteArray())),
+                        apiAuthorityJson = authority))
+                }
+                if (mode == "corrupt") java.io.File(context.noBackupFilesDir,
+                    "scheduled-api-export-v1/${com.healthmd.data.export.RecoveryDiscardFence.operationHash(operationId)}/body-0000.bin").writeText("corrupt")
+                if (mode == "operation") {
+                    val journal = java.io.File(context.noBackupFilesDir,
+                        "scheduled-api-export-v1/${com.healthmd.data.export.RecoveryDiscardFence.operationHash(operationId)}/journal.json")
+                    journal.writeText(journal.readText().replace(operationId, "foreign-operation"))
+                }
+                if (mode == "discard") entries.discardPendingRecovery(profile.id)
+                val settings = mockk<SettingsRepository>(relaxed = true)
+                coEvery { settings.getExportSettings() } returns output
+                every { settings.isPurchased } returns flowOf(true)
+                val health = mockk<HealthRepository>(relaxed = true)
+                coEvery { health.hasBackgroundReadPermission() } returns false
+                var queries = 0
+                val bodies = mutableListOf<String>()
+                var removedAfterProbe = false
+                val restartedStore = com.healthmd.data.export.FileAPIExportOperationStore(context)
+                val replayStore = object : com.healthmd.data.export.APIExportOperationStore by restartedStore {
+                    override suspend fun load(operationId: String): com.healthmd.data.export.DurableAPIExportOperation? {
+                        val actual = restartedStore.load(operationId)
+                        if (mode == "probe-delete" && actual != null && !removedAfterProbe) {
+                            removedAfterProbe = true
+                            restartedStore.delete(operationId)
+                        }
+                        return actual
+                    }
+                }
+                val runner = APIEndpointExportRunner(captureSource = object : com.healthmd.data.export.APIExportCaptureSource {
+                    override fun isBeforeFirstUnlock() = false
+                    override suspend fun capture(date: LocalDate, settings: ExportSettings): com.healthmd.domain.model.HealthData {
+                        queries++; error("Recovery must not query health")
+                    }
+                }, envelopeBuilder = com.healthmd.data.export.APIExportEnvelopeBuilder(com.healthmd.data.export.JsonExporter()),
+                    uploader = object : com.healthmd.data.export.APIExportUploader {
+                        override suspend fun upload(endpointUrl: String, payload: String, authorizationHeader: String?,
+                            requestHeaders: List<com.healthmd.data.export.APIExportRequestHeader>): com.healthmd.data.export.APIExportUploadResult {
+                            bodies += payload
+                            assertThat(entries.entry(profile.id)!!.pendingExports.single().apiJournalRequired).isTrue()
+                            return com.healthmd.data.export.APIExportUploadResult(202, null)
+                        }
+                    }, credentialStore = credentials,
+                    policyResolver = com.healthmd.domain.exportengine.ProfileScopedAPIExportEnginePolicyResolver(),
+                    nativePlanner = com.healthmd.domain.exportengine.APIExportNativePlanBuilder { error("No planning") },
+                    rustPlanner = com.healthmd.domain.exportengine.APIExportRustPlanner { error("No planning") }, operationStore = replayStore)
+                val profiles = mockk<ExportProfileRepository>(relaxed = true)
+                coEvery { profiles.profileById(profile.id) } returns if (mode == "retarget") profile.copy(apiEndpointUrl = "$endpoint/changed") else profile
+                fun restartedWorker() = worker(profileId = profile.id, settingsRepository = settings, healthRepository = health,
+                    exportHistoryRepository = mockk(relaxed = true), apiEndpointExportRunner = runner,
+                    profileRepository = profiles, entryStore = ScheduledProfileEntryStore(dataStore, context),
+                    snapshotFactory = ScheduledProfileSnapshotFactory(com.healthmd.domain.exportengine.ExportEnginePinPlanner(), settings),
+                    profileScheduler = mockk(relaxed = true))
+                val result = restartedWorker().doWork()
+                assertThat(queries).isEqualTo(0)
+                if (mode == "probe-delete") {
+                    assertThat(removedAfterProbe).isTrue()
+                    assertThat(result).isNotEqualTo(ListenableWorker.Result.success())
+                    val first = ScheduledProfileEntryStore(dataStore, context).entry(profile.id)!!.pendingExports.single()
+                    assertThat(first.apiJournalRequired).isTrue()
+                    assertThat(first.durableOperationId).isEqualTo(operationId)
+                    assertThat(first.settingsSnapshotJson).isEqualTo(snapshot)
+                    assertThat(first.apiAuthorityJson).isEqualTo(authority)
+                    scope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
+                    scope.coroutineContext[kotlinx.coroutines.Job]?.join()
+                    scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+                    dataStore = androidx.datastore.preferences.core.PreferenceDataStoreFactory.create(scope = scope,
+                        produceFile = { java.io.File(root, "entries.preferences_pb") })
+                    assertThat(ScheduledProfileEntryStore(dataStore, context).entry(profile.id)!!.recoveryGeneration).isEqualTo(0L)
+                    coEvery { health.hasBackgroundReadPermission() } returns true
+                    val second = restartedWorker().doWork()
+                    assertThat(second.outputData.getString(ScheduledProfileExportWorker.OUTPUT_PROFILE_ERROR))
+                        .isEqualTo("api_recovery_authority_required")
+                    val after = ScheduledProfileEntryStore(dataStore, context).entry(profile.id)!!.pendingExports.single()
+                    assertThat(after).isEqualTo(first)
+                    assertThat(after.apiJournalRequired).isTrue()
+                    assertThat(queries).isEqualTo(0)
+                    assertThat(bodies).isEmpty()
+                    coVerify(exactly = 0) { health.hasBackgroundReadPermission() }
+                } else if (mode == "valid") {
+                    assertThat(result).isEqualTo(ListenableWorker.Result.success())
+                    assertThat(bodies).containsExactly(body)
+                    assertThat(bodies.single().toByteArray()).isEqualTo(body.toByteArray())
+                    coVerify(exactly = 0) { health.hasBackgroundReadPermission() }
+                } else {
+                    assertThat(bodies).isEmpty()
+                    if (mode == "absent") {
+                        coVerify(exactly = 1) { health.hasBackgroundReadPermission() }
+                    } else if (mode != "discard") {
+                        assertThat(result.outputData.getString(ScheduledProfileExportWorker.OUTPUT_PROFILE_ERROR))
+                            .isEqualTo("api_recovery_authority_required")
+                        coVerify(exactly = 0) { health.hasBackgroundReadPermission() }
+                    }
+                }
+            } finally {
+                runCatching { store.delete(operationId) }
+                scope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
+                root.deleteRecursively()
+            }
+    }
+
     private fun rawHarness(
         target: ExportTarget = ExportTarget.API_ENDPOINT,
         pending: ScheduledProfilePendingExport? = null,
         todayRefresh: Boolean = false,
         refreshOnly: Boolean = false,
+        profileCreatedAt: Long = 1L,
         entryTransform: (ScheduledProfileEntry) -> ScheduledProfileEntry = { it },
         result: (List<LocalDate>) -> ExportResult,
     ): RawHarness {
@@ -654,11 +848,13 @@ class ScheduledProfileExportWorkerCancellationTest {
         val profile = ExportProfile(
             id = entry.profileId, name = "Raw profile", settingsSnapshotJson = "raw-profile-snapshot",
             target = target, apiEndpointUrl = "https://example.test/raw",
-            folderUri = "content://synthetic/profile", createdAtEpochMillis = 1L, updatedAtEpochMillis = 1L,
+            agentDataGatewayUrl = "https://gateway.example.test",
+            folderUri = "content://synthetic/profile", createdAtEpochMillis = profileCreatedAt, updatedAtEpochMillis = profileCreatedAt,
         )
         val settings = ExportSettings(
             exportTarget = target, scheduledExportTarget = target,
             apiEndpointUrl = requireNotNull(profile.apiEndpointUrl), exportMode = ExportMode.RAW_SNAPSHOT,
+            agentDataGatewayUrl = requireNotNull(profile.agentDataGatewayUrl),
         )
         val settingsRepository = mockk<SettingsRepository>(relaxed = true)
         // Frozen profile mode must win over the current interactive mode.
@@ -681,7 +877,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         val rawStart = slot<LocalDate>()
         val rawEnd = slot<LocalDate>()
         val rawRanges = mutableListOf<Pair<LocalDate, LocalDate>>()
-        coEvery { rawRunner.exportRange(capture(rawStart), capture(rawEnd), settings, target, expectedDestinationFingerprint = null, allowInteractiveRouteConsent = false) } coAnswers {
+        coEvery { rawRunner.exportRange(capture(rawStart), capture(rawEnd), any(), target, expectedDestinationFingerprint = null, allowInteractiveRouteConsent = false) } coAnswers {
             rawRanges += rawStart.captured to rawEnd.captured
             result(rawStart.captured.datesUntil(rawEnd.captured.plusDays(1)).toList())
         }
@@ -756,7 +952,7 @@ class ScheduledProfileExportWorkerCancellationTest {
             entryStore.recordCancellation(
                 profileId = profileId,
                 fireAtMillis = any(),
-                attemptedPendingID = null,
+                attemptedPendingID = any(),
                 replacements = capture(replacementGroups),
                 expectedRecoveryGeneration = 0L,
             )
@@ -845,6 +1041,20 @@ class ScheduledProfileExportWorkerCancellationTest {
         recoveryGeneration: Long = 0L,
         foregroundUpdater: ForegroundUpdater? = null,
     ): ScheduledProfileExportWorker {
+        val credentials = object : APIExportCredentialStore {
+            override suspend fun authorizationHeader(): String? = "Bearer synthetic-profile"
+            override suspend fun hasAuthorization() = true
+            override suspend fun saveAuthorization(value: String) = Unit
+            override suspend fun clearAuthorization() = Unit
+        }
+        if (isMockKMock(entryStore)) {
+            coEvery { entryStore.admitAPIExport(profileId, any(), any()) } coAnswers {
+                val current = entryStore.entry(profileId)!!
+                val admitted = thirdArg<ScheduledProfilePendingExport>()
+                coEvery { entryStore.entry(profileId) } returns current.copy(pendingExports = current.pendingExports + admitted)
+                true
+            }
+        }
         val context = ApplicationProvider.getApplicationContext<Context>()
         val factory = object : WorkerFactory() {
             override fun createWorker(
@@ -869,6 +1079,7 @@ class ScheduledProfileExportWorkerCancellationTest {
                 googleDriveExportOrchestrator = mockk(relaxed = true),
                 entitlementRepository = FakeBillingRepository(initialUnlocked = true),
                 distributionPolicy = DistributionPolicy.play(),
+                apiCredentialStore = credentials,
             )
         }
         return TestListenableWorkerBuilder<ScheduledProfileExportWorker>(context)

@@ -68,6 +68,17 @@ impl ErrorContext {
     }
 }
 
+fn profile_reference_guidance() -> Value {
+    json!({
+        "profileID": "Authoritative hyphenated UUID; names cannot replace the ID.",
+        "id_pattern": healthmd_operations::normalize::PROFILE_ID_PATTERN,
+        "name": "MCP optional display-only name: 1–128 characters; no outer whitespace or controls.",
+        "conflicts": ["saved settings", "metric/category/source/detail selectors"],
+        "missing_or_blocked": "fail closed; never fall back to saved settings"
+    })
+}
+
+#[allow(clippy::too_many_lines)]
 pub(super) fn export(missing_dates: bool, missing_mode: bool) -> Value {
     let mut missing = Vec::new();
     if missing_dates {
@@ -126,7 +137,8 @@ pub(super) fn export(missing_dates: bool, missing_mode: bool) -> Value {
                     "--all-metrics",
                     "--detail <summary|lossless>"
                 ],
-                "platform_note": "Android generated files use saved device settings or a profile and do not accept CLI metric/category selectors."
+                "platform_note": "Android generated files use saved device settings or an advertised profile policy and do not accept CLI metric/category/detail selectors. iOS profiles fail closed until explicit policy advertisement exists.",
+                "profile_reference": profile_reference_guidance()
             },
             {
                 "name": "raw",
@@ -533,7 +545,7 @@ pub(super) fn group(group: &'static str) -> Value {
             "Configure a supported local AI host.",
             vec![json!({
                 "command": "healthmd setup codex",
-                "description": "Configure Codex to launch this executable and pair an iPhone when needed."
+                "description": "Configure Codex to launch this executable and pair an iPhone or Android phone when needed. Android typed queries remain unsupported."
             })],
         ),
         _ => ("Choose one documented Health.md command.", root_commands()),
@@ -552,6 +564,34 @@ pub(super) fn group(group: &'static str) -> Value {
             "description": "Read the complete command help."
         }]
     })
+}
+
+pub(super) fn execute() -> Value {
+    json!({
+        "schema": GUIDANCE_SCHEMA, "schema_version": SCHEMA_VERSION, "status": "guidance",
+        "command": "healthmd execute", "request_sent": false,
+        "message": "Supply identifiers for an existing exact approved Agent Bridge plan. No device was contacted or export started.",
+        "required": [{"argument":"--arguments", "description":"Strict JSON with plan_id, job_id, idempotency_key and request_id; no approval fields or destination paths."}],
+        "before_continuing": ["The selected mobile source must support Agent Bridge.", "The host destination and both separate exact decisions must already be authorized."],
+        "next_actions": [{"command":"healthmd mcp schema healthmd_export_execute", "description":"Inspect the exact input schema locally."},
+            {"command":"healthmd execute --help", "description":"Inspect timeout and argument options."}]
+    })
+}
+
+pub(super) fn resume_execution() -> Value {
+    json!({"schema": GUIDANCE_SCHEMA, "schema_version": SCHEMA_VERSION, "status":"guidance",
+        "command":"healthmd resume-execution", "request_sent":false,
+        "message":"Supply only job_id for an existing retained Agent Bridge export. No device was contacted or recovery started.",
+        "required":[{"argument":"--arguments", "description":"Strict JSON containing only the existing job_id; no frontier, receipt, approval or destination fields."}],
+        "next_actions":[{"command":"healthmd mcp schema healthmd_export_execution_resume", "description":"Inspect the exact local schema."}]})
+}
+
+pub(super) fn cancel_execution() -> Value {
+    json!({"schema": GUIDANCE_SCHEMA, "schema_version": SCHEMA_VERSION, "status":"guidance",
+        "command":"healthmd cancel-execution", "request_sent":false,
+        "message":"Supply only job_id for an existing retained Agent Bridge export. No device was contacted or Stop requested.",
+        "required":[{"argument":"--arguments", "description":"Strict JSON containing only the existing job_id; no frontier, receipt, approval or destination fields."}],
+        "next_actions":[{"command":"healthmd mcp schema healthmd_export_execution_cancel", "description":"Inspect the exact local schema."}]})
 }
 
 pub(super) fn resume() -> Value {

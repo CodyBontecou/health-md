@@ -1,7 +1,7 @@
 ---
 name: healthmd-cli-operator
 description: Operate the standalone Health.md CLI against an open, paired iPhone. Use when the user asks to run pairing/status/export/extract/resume/cancel, automate an Apple Health export, inspect CLI JSON, or troubleshoot Manual IP/Tailscale connectivity without the Health.md macOS app.
-compatibility: Requires the installed portable `healthmd` command on macOS, Linux, or Windows and a current Health.md iPhone app. Direct CLI Access is required for live commands. Generated-file destinations work on macOS/Linux in protocol v1; Windows supports raw and extract.
+compatibility: Requires installed portable `healthmd` on macOS, Linux, or Windows and an exact compatible Health.md iPhone build with Direct CLI Access. Generated-file destinations are source-implemented on macOS, Linux, and Windows under protocol v1; exact-build release qualification remains pending.
 ---
 
 # Health.md CLI Operator
@@ -38,7 +38,7 @@ NO_COLOR=1 TERM=dumb timeout 15 healthmd --version </dev/null
 NO_COLOR=1 TERM=dumb timeout 30 healthmd direct devices </dev/null
 ```
 
-`direct devices` reads local trust without contacting iPhone. Pair if the intended iPhone is absent.
+`direct devices` reads local trust without contacting iPhone. Ask for explicit pairing approval if the intended iPhone is absent. Verify the installed CLI/mobile build against the [compatibility ledger](../../../apps/cli/docs/mobile-compatibility.md) before live work; source-implemented Windows file mode is not a qualified release claim.
 
 ### Pair
 
@@ -64,13 +64,15 @@ NO_COLOR=1 TERM=dumb timeout 30 healthmd status </dev/null
 
 Require:
 
-- the source reports `connected` and a `platform` of `ios` or `android` with readiness fields;
-- `iphone.connected == true`;
-- `iphone.app_active == true` for new work;
-- `iphone.protected_data_available == true`;
-- `iphone.can_trigger_raw_exports == true` for raw/extract;
-- `iphone.can_trigger_exports == true` for generated files;
-- no conflicting `iphone.active_job_id`.
+- `source.platform == ios` for this iPhone-only skill;
+- `source.connected == true`;
+- `source.app_active == true` for new work;
+- `source.protected_data_available == true`;
+- `source.can_trigger_raw_exports == true` for raw/extract;
+- `source.can_trigger_exports == true` for generated files;
+- no conflicting `source.active_job_id`.
+
+`source` is the current canonical branch. `iphone` is an iOS-only compatibility alias, null for Android; neither creates permissions. If the selected source is Android, use the cross-platform [consumer skill](../healthmd-cli/SKILL.md) and its native lifecycle/product gates instead of borrowing iPhone flags or silently switching peer.
 
 Status reports no destination: direct file mode uses the command's explicit destination. `wake_window` reports the shared local wait policy plus this device's truthful wake enrollment: `unavailable`/`wait_only` without a stored wake credential (no push is sent), `available`/`enrolled` when the paired iPhone enrolled wake material. Published alpha.6 binaries are still wait-only; in subsequent official builds an enrolled locked-phone wait sends one best-effort APNs notification. Android remains wait-only until FCM ships. If status fails, report its JSON and ask for the minimum action. Never switch device, port, or transport silently.
 
@@ -90,6 +92,8 @@ Neither expiry nor local cancellation is terminal phone-side job cancellation.
 
 ## Strict raw
 
+Check history against the exact app/build/SDK before promising completeness. The current pinned Apple adapter reports `api_unavailable`; missing metadata or `unknown` cannot prove denial, no data or full access. Use explicit date ranges with completeness unverified and retain denied-versus-empty ambiguity. OS upgrades, pairing and earliest samples are not history authorization. `--full-corpus` expands type scope, not date scope. See [current source history limitations](../../../apps/cli/docs/mobile-compatibility.md#current-source-history-limitations) before considering `--all`; this source assessment is not installed alpha.7 qualification.
+
 Prefer output files so health data does not enter logs:
 
 ```bash
@@ -104,7 +108,7 @@ NO_COLOR=1 TERM=dumb timeout 600 \
     --raw --output range.json </dev/null
 ```
 
-Use `--all` only when explicitly requested, with a protected path and a large outer timeout. Afterward inspect only status, job ID, requested/retained days, capture summary, missing dates, schema versions, and counts. Never dump the corpus.
+`--all` needs verified selected-source support/history grants as well as explicit user scope and a protected path; user approval alone cannot enable this build's missing boundary API. If that scope is unavailable, stop and ask for a revised range rather than silently narrowing it. Example dates are illustrative. After bounded work, inspect only status, job ID, requested/retained days, capture summary, missing dates, schema versions, and counts. Never dump the corpus.
 
 A strict partial result exits nonzero unless `--allow-partial` is explicit. Do not add that flag merely to make automation green.
 
@@ -127,17 +131,16 @@ Validate the receipt, selected dates/source/detail, and day outcomes. JSONL file
 
 ## Generated files
 
-On macOS/Linux, use only an existing absolute destination chosen or approved by the user:
+On macOS, Linux, and Windows, use an existing user-approved absolute non-symlink destination. Set `PRIVATE_HEALTH_DIR` to that existing private directory; do not create or guess it. The shell examples below use macOS/Linux timeout syntax; Windows needs its automation host's timeout and native absolute path:
 
 ```bash
-mkdir -p "$HOME/Documents/HealthVault"
 NO_COLOR=1 TERM=dumb timeout 300 \
   healthmd export --yesterday \
-    --destination "$HOME/Documents/HealthVault" </dev/null
+    --destination "$PRIVATE_HEALTH_DIR" </dev/null
 
 NO_COLOR=1 TERM=dumb timeout 600 \
   healthmd export --last 7 --category Sleep --detail summary \
-    --destination "$HOME/Documents/HealthVault" </dev/null
+    --destination "$PRIVATE_HEALTH_DIR" </dev/null
 ```
 
 Do not guess a path, use a relative path, or reuse a Mac app bookmark. `--output` is raw/extract; `--destination` is generated-file mode.

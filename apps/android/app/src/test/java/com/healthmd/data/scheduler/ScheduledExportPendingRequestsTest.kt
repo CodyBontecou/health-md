@@ -26,16 +26,17 @@ class ScheduledExportPendingRequestsTest {
         val settings = ExportSettings(scheduledExportTarget = ExportTarget.API_ENDPOINT, scheduleLookbackDays = 1,
             pendingScheduledExportRequests = listOf(
                 com.healthmd.domain.model.PendingScheduledExportRequest(date = broken, exportTarget = ExportTarget.API_ENDPOINT,
-                    destinationFingerprint = "original",
+                    destinationFingerprint = "original", apiAuthorityJson = "original-authority",
                     settingsSnapshotJson = "{\"schema\":\"${com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.SCHEMA}\",\"version\":4}"),
+                // Both rows carry the same original API authority, so only quarantine separates them.
                 com.healthmd.domain.model.PendingScheduledExportRequest(date = legacy, exportTarget = ExportTarget.API_ENDPOINT,
-                    destinationFingerprint = "original"),
+                    destinationFingerprint = "original", apiAuthorityJson = "original-authority"),
             ))
         val pending = ScheduledExportPendingRequests.pendingRequests(settings)
         assertThat(pending.map { it.date to it.receiverPlanId }).containsExactly(broken to quarantined, legacy to null).inOrder()
         // The quarantined row never joins a new admission; the unrelated legacy row still does.
         val dates = ScheduledExportPendingRequests.scheduledRunDates(settings, listOf(legacy.plusDays(1)),
-            destinationFingerprint = "original", receiverPlanId = "new-occurrence")
+            destinationFingerprint = "original", apiAuthorityJson = "original-authority", receiverPlanId = "new-occurrence")
         assertThat(dates).contains(legacy)
         assertThat(dates).doesNotContain(broken)
         // Its bytes are retained for explicit recovery and it stays quarantined after a rewrite.
@@ -102,6 +103,23 @@ class ScheduledExportPendingRequestsTest {
         org.junit.Assert.assertNull(fresh.pendingScheduledExportRequests.single().apiOperationId)
     }
 
+
+    @Test
+    fun preparedFenceRequiresExactPendingAuthorityAndCannotReviveDiscardedDates() {
+        val date = LocalDate.ofEpochDay(10_000)
+        val initial = ExportSettings(pendingScheduledExportRequests = listOf(PendingScheduledExportRequest(
+            date, ExportTarget.API_ENDPOINT, apiAuthorityJson = "original", apiOperationId = "operation")))
+        val wrong = ScheduledExportPendingRequests.markAPIJournalRequired(initial, listOf(date), "replacement", "operation")
+        assertThat(wrong.pendingScheduledExportRequests.single().apiJournalRequired).isFalse()
+        val prepared = ScheduledExportPendingRequests.markAPIJournalRequired(initial, listOf(date), "original", "operation")
+        assertThat(prepared.pendingScheduledExportRequests.single().apiJournalRequired).isTrue()
+        val discarded = ScheduledExportPendingRequests.clearDates(prepared, listOf(date))
+        val late = ScheduledExportPendingRequests.markAPIJournalRequired(discarded, listOf(date), "original", "operation")
+        assertThat(late.pendingScheduledExportRequests).isEmpty()
+        val unverified = initial.copy(pendingScheduledExportRequests = listOf(initial.pendingScheduledExportRequests.single().copy(apiAuthorityJson = null)))
+        assertThat(ScheduledExportPendingRequests.markAPIJournalRequired(unverified, listOf(date), "original", "operation")
+            .pendingScheduledExportRequests.single().apiJournalRequired).isFalse()
+    }
 
     @Test
     fun pendingRequests_mergesLegacyDatesWithExplicitRequests() {
@@ -530,6 +548,7 @@ class ScheduledExportPendingRequestsTest {
                     date = first,
                     exportTarget = ExportTarget.API_ENDPOINT,
                     apiOperationId = operationId,
+                    apiAuthorityJson = "original-authority",
                 ),
                 PendingScheduledExportRequest(
                     date = second,
@@ -545,6 +564,7 @@ class ScheduledExportPendingRequestsTest {
             destinationFingerprint = null,
             apiOperationId = operationId,
             resumeExistingApiOperation = true,
+            apiAuthorityJson = "original-authority",
         )
 
         assertThat(dates).containsExactly(first)

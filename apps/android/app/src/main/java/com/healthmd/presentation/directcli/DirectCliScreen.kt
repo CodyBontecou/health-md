@@ -102,6 +102,7 @@ fun DirectCliScreen(
         onConnect = viewModel::connect,
         onDisconnect = viewModel::disconnect,
         onForget = { configurationChange(viewModel::forget) },
+        agentPermissionsSetup = { AgentExportPermissionsSetupCard() },
     )
     if (showPairingScanner) {
         DirectCliPairingScanner(
@@ -128,6 +129,7 @@ fun DirectCliContent(
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
     onForget: () -> Unit,
+    agentPermissionsSetup: @Composable () -> Unit = {},
 ) {
     val colors = LocalGeistColors.current
     val fieldShape = RoundedCornerShape(GeistRadii.small)
@@ -143,6 +145,8 @@ fun DirectCliContent(
                 .padding(start = GeistSpacing.space4, end = GeistSpacing.space4, bottom = GeistSpacing.space8),
         ) {
             DirectCliStatusCard(connection)
+
+            agentPermissionsSetup()
 
             if (!ui.hasTrust) {
                 ToolGroupHeading(stringResource(R.string.m3_tools_direct_cli_pairing))

@@ -265,7 +265,7 @@ final class AppleContextAutomationTests: XCTestCase {
         settings.metricSelection.enabledMetrics = ["steps"]
         settings.detailPolicy = .summary
         let profiles = LifecycleHarness.retain(ExportProfileStore(userDefaults: defaults))
-        let profile = profiles.add(name: "Foreground", settings: .from(settings), target: .connectedMac)
+        let profile = try XCTUnwrap(profiles.add(name: "Foreground", settings: .from(settings), target: .connectedMac))
         let journal = AppleContextJournal(root: root.appendingPathComponent("phone"))
         var foreground = true
         var protected = true
@@ -373,7 +373,7 @@ final class AppleContextAutomationTests: XCTestCase {
         settings.metricSelection.enabledMetrics = ["steps"]
         settings.detailPolicy = .summary
         let profiles = LifecycleHarness.retain(ExportProfileStore(userDefaults: defaults))
-        let profile = profiles.add(name: "Context", settings: .from(settings), target: .connectedMac)
+        let profile = try XCTUnwrap(profiles.add(name: "Context", settings: .from(settings), target: .connectedMac))
         let journalRoot = root.appendingPathComponent("phone")
         let bindings = root.appendingPathComponent("bindings")
         let journal = AppleContextJournal(root: journalRoot)
@@ -417,7 +417,7 @@ final class AppleContextAutomationTests: XCTestCase {
         settings.metricSelection.enabledMetrics = ["steps"]
         settings.detailPolicy = .summary
         let profiles = LifecycleHarness.retain(ExportProfileStore(userDefaults: defaults))
-        let profile = profiles.add(name: "Context", settings: .from(settings), target: .connectedMac)
+        let profile = try XCTUnwrap(profiles.add(name: "Context", settings: .from(settings), target: .connectedMac))
         let journal = AppleContextJournal(root: root.appendingPathComponent("phone"))
         var locked = false
         let client = AppleContextPhoneClient(journal: journal, bindingRoot: root.appendingPathComponent("bindings"), protectedDataAvailable: { !locked }, executionBlocked: { _ in false })
@@ -448,7 +448,7 @@ final class AppleContextAutomationTests: XCTestCase {
         settings.metricSelection.enabledMetrics = ["steps"]
         settings.detailPolicy = .summary
         let profiles = LifecycleHarness.retain(ExportProfileStore(userDefaults: defaults))
-        let profile = profiles.add(name: "Context", settings: .from(settings), target: .connectedMac)
+        let profile = try XCTUnwrap(profiles.add(name: "Context", settings: .from(settings), target: .connectedMac))
         let directory = root.appendingPathComponent("phone")
         let bindings = root.appendingPathComponent("bindings")
         let journal = AppleContextJournal(root: directory)

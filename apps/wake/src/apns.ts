@@ -5,6 +5,8 @@
  * gesture and suspended apps do not reliably budget silent pushes).
  */
 
+import { providerJson } from "./http";
+
 export interface ApnsCredentials {
   authKey: string;
   keyId: string;
@@ -24,9 +26,6 @@ export interface SendPushResult {
   reason?: string;
   apnsId?: string;
 }
-
-const JWT_LIFETIME_SEC = 50 * 60;
-let cachedJwt: { token: string; expiresAt: number; keyId: string } | null = null;
 
 function base64urlEncode(bytes: ArrayBuffer | Uint8Array): string {
   const arr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
@@ -69,10 +68,6 @@ export async function signApnsJwt(
   creds: ApnsCredentials,
   nowSec: number = Math.floor(Date.now() / 1000),
 ): Promise<string> {
-  if (cachedJwt && cachedJwt.keyId === creds.keyId && cachedJwt.expiresAt > nowSec + 60) {
-    return cachedJwt.token;
-  }
-
   const header = { alg: "ES256", kid: creds.keyId, typ: "JWT" };
   const payload = { iss: creds.teamId, iat: nowSec };
   const signingInput = `${base64urlEncodeJson(header)}.${base64urlEncodeJson(payload)}`;
@@ -83,41 +78,40 @@ export async function signApnsJwt(
     key,
     new TextEncoder().encode(signingInput),
   );
-  const token = `${signingInput}.${base64urlEncode(signature)}`;
-  cachedJwt = { token, expiresAt: nowSec + JWT_LIFETIME_SEC, keyId: creds.keyId };
-  return token;
+  return `${signingInput}.${base64urlEncode(signature)}`;
 }
 
 export async function sendVisiblePush(
   creds: ApnsCredentials,
   opts: SendVisiblePushOptions,
 ): Promise<SendPushResult> {
-  const jwt = await signApnsJwt(creds);
   const host = opts.host ?? "api.push.apple.com";
-  const url = `https://${host}/3/device/${opts.apnsToken}`;
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      authorization: `bearer ${jwt}`,
-      "apns-push-type": "alert",
-      "apns-priority": "10",
-      "apns-topic": opts.bundleId,
-      "apns-expiration": String(opts.expirationSec),
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(opts.payload),
-  });
-
-  const apnsId = response.headers.get("apns-id") ?? undefined;
-  if (response.status === 200) return { status: 200, apnsId };
-
-  let reason: string | undefined;
+  if (
+    !["api.push.apple.com", "api.sandbox.push.apple.com"].includes(host)
+    || !/^[A-Fa-f0-9]{32,200}$/.test(opts.apnsToken)
+    || !/^[A-Za-z0-9.-]{1,255}$/.test(opts.bundleId)
+    || !/^[A-Za-z0-9]{10}$/.test(creds.keyId) || !/^[A-Za-z0-9]{10}$/.test(creds.teamId)
+    || creds.authKey.length > 8192 || !creds.authKey.startsWith("-----BEGIN PRIVATE KEY-----")
+  ) return { status: 0, reason: "ApnsConfigInvalid" };
   try {
-    const text = await response.text();
-    if (text) reason = (JSON.parse(text) as { reason?: string }).reason;
+    // Request-local signing avoids stale credentials across reused isolates.
+    const jwt = await signApnsJwt(creds);
+    const response = await providerJson(`https://${host}/3/device/${opts.apnsToken}`, {
+      method: "POST",
+      headers: {
+        authorization: `bearer ${jwt}`,
+        "apns-push-type": "alert",
+        "apns-priority": "10",
+        "apns-topic": opts.bundleId,
+        "apns-expiration": String(opts.expirationSec),
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(opts.payload),
+    }, "discard");
+    const apnsId = response.headers.get("apns-id") ?? undefined;
+    return response.status === 200 ? { status: 200, apnsId }
+      : { status: response.status, reason: "ApnsRejected", apnsId };
   } catch {
-    // Non-JSON APNs response body; leave reason unset.
+    return { status: 0, reason: "ApnsTransportFailed" };
   }
-  return { status: response.status, reason, apnsId };
 }

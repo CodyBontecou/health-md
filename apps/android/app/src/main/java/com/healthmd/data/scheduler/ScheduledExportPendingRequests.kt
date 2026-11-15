@@ -129,6 +129,7 @@ object ScheduledExportPendingRequests {
         resumeExistingApiOperation: Boolean = false,
         folderOperationId: String? = null,
         resumeExistingFolderOperation: Boolean = false,
+        apiAuthorityJson: String? = null,
         receiverPlanId: String? = null,
     ): List<LocalDate> {
         val normalizedRunDates = intendedRunDates.distinct().sorted()
@@ -160,8 +161,10 @@ object ScheduledExportPendingRequests {
             }
         val matchingPendingDates = pendingForDestination
             .filter { request ->
+                (settings.scheduledExportTarget != ExportTarget.API_ENDPOINT ||
+                    (apiAuthorityJson != null && request.apiAuthorityJson == apiAuthorityJson)) &&
                 (request.receiverPlanId == null || request.receiverPlanId == receiverPlanId) &&
-                    request.enginePin == enginePin &&
+                request.enginePin == enginePin &&
                     // A missing snapshot is explicit legacy/current-settings behavior. It may join
                     // the next matching-pin operation, whose snapshot was captured from then-current
                     // settings before any provider read.
@@ -186,10 +189,14 @@ object ScheduledExportPendingRequests {
             }
             .map { it.date }
             .filter { !it.isAfter(pendingCutoff) }
-        val datesPinnedToAnotherOperation = pendingForDestination
+        val datesPinnedToAnotherOperation = pendingRequests(settings)
+            .filter { it.exportTarget == settings.scheduledExportTarget }
             .filter { request ->
+                (settings.scheduledExportTarget == ExportTarget.API_ENDPOINT &&
+                    (request.destinationFingerprint != destinationFingerprint ||
+                        request.apiAuthorityJson == null || request.apiAuthorityJson != apiAuthorityJson)) ||
                 (request.receiverPlanId != null && request.receiverPlanId != receiverPlanId) ||
-                    request.enginePin != enginePin ||
+                request.enginePin != enginePin ||
                     (request.settingsSnapshotJson != null &&
                         !com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.outputMatches(request.settingsSnapshotJson, settingsSnapshotJson)) ||
                     (settings.scheduledExportTarget == ExportTarget.API_ENDPOINT &&
@@ -221,6 +228,7 @@ object ScheduledExportPendingRequests {
         folderOperationIds: Map<LocalDate, String> = emptyMap(),
         driveOperationIds: Map<LocalDate, String> = emptyMap(),
         freshCaptureRetryDates: Set<LocalDate> = emptySet(),
+        apiAuthorityJson: String? = null,
         receiverPlanId: String? = null,
     ): ExportSettings = applyAttemptResult(
         settings = settings,
@@ -235,6 +243,7 @@ object ScheduledExportPendingRequests {
         folderOperationIds = folderOperationIds,
         driveOperationIds = driveOperationIds,
         freshCaptureRetryDates = freshCaptureRetryDates,
+        apiAuthorityJson = apiAuthorityJson,
         receiverPlanId = receiverPlanId,
     )
 
@@ -251,6 +260,7 @@ object ScheduledExportPendingRequests {
         folderOperationIds: Map<LocalDate, String> = emptyMap(),
         driveOperationIds: Map<LocalDate, String> = emptyMap(),
         freshCaptureRetryDates: Set<LocalDate> = emptySet(),
+        apiAuthorityJson: String? = null,
         receiverPlanId: String? = null,
     ): ExportSettings {
         val attempted = attemptedDates.toSet()
@@ -282,12 +292,15 @@ object ScheduledExportPendingRequests {
                         } else {
                             existing.settingsSnapshotJson
                         },
+                        apiAuthorityJson = if (existing == null) apiAuthorityJson else existing.apiAuthorityJson,
                         receiverPlanId = existing?.receiverPlanId ?: receiverPlanId,
                         apiOperationId = if (failure.date in freshCaptureRetryDates) {
                             null
                         } else {
                             existing?.apiOperationId ?: apiOperationIds[failure.date]
                         },
+                        apiJournalRequired = failure.date !in freshCaptureRetryDates &&
+                            (existing?.apiJournalRequired == true || failure.date in apiOperationIds),
                         folderOperationId = if (failure.date in freshCaptureRetryDates) {
                             null
                         } else {
@@ -328,6 +341,7 @@ object ScheduledExportPendingRequests {
         folderOperationIds: Map<LocalDate, String> = emptyMap(),
         driveOperationIds: Map<LocalDate, String> = emptyMap(),
         freshCaptureRetryDates: Set<LocalDate> = emptySet(),
+        apiAuthorityJson: String? = null,
         receiverPlanId: String? = null,
     ): ExportSettings {
         val attempted = attemptedDates.toSet()
@@ -350,12 +364,15 @@ object ScheduledExportPendingRequests {
                 destinationFingerprint = existing?.destinationFingerprint ?: destinationFingerprint,
                 enginePin = existing?.enginePin ?: enginePin,
                 settingsSnapshotJson = existing?.settingsSnapshotJson ?: settingsSnapshotJson,
+                apiAuthorityJson = if (existing == null) apiAuthorityJson else existing.apiAuthorityJson,
                 receiverPlanId = existing?.receiverPlanId ?: receiverPlanId,
                 apiOperationId = if (date in freshCaptureRetryDates) {
                     null
                 } else {
                     apiOperationIds[date] ?: existing?.apiOperationId
                 },
+                apiJournalRequired = date !in freshCaptureRetryDates &&
+                    (existing?.apiJournalRequired == true || date in apiOperationIds),
                 folderOperationId = if (date in freshCaptureRetryDates) {
                     null
                 } else {
@@ -372,6 +389,50 @@ object ScheduledExportPendingRequests {
         }
 
         return settings.withPendingRequests(retained.sortedBy { it.date })
+    }
+
+    /** Durably admits exact API dates before permission checks or source reads, without a failure. */
+    fun admitAPIDates(
+        settings: ExportSettings,
+        dates: List<LocalDate>,
+        destinationFingerprint: String?,
+        enginePin: ExportEnginePin?,
+        settingsSnapshotJson: String?,
+        apiAuthorityJson: String,
+        operationId: String,
+    ): ExportSettings {
+        val existing = pendingRequests(settings)
+        val fresh = dates.distinct().filterNot { date ->
+            existing.any { it.exportTarget == ExportTarget.API_ENDPOINT && it.date == date }
+        }.map { date ->
+            PendingScheduledExportRequest(
+                date = date, exportTarget = ExportTarget.API_ENDPOINT,
+                destinationFingerprint = destinationFingerprint, enginePin = enginePin,
+                settingsSnapshotJson = settingsSnapshotJson, apiAuthorityJson = apiAuthorityJson,
+                apiOperationId = operationId,
+            )
+        }
+        return settings.withPendingRequests(existing + fresh)
+    }
+
+    /** A durable delivery fence: losing prepared bytes after this commit never permits capture. */
+    fun markAPIJournalRequired(
+        settings: ExportSettings,
+        dates: List<LocalDate>,
+        authority: String,
+        operationId: String,
+        allowUnassignedOperation: Boolean = false,
+    ): ExportSettings {
+        val requests = pendingRequests(settings)
+        fun matches(request: PendingScheduledExportRequest): Boolean =
+            request.exportTarget == ExportTarget.API_ENDPOINT && request.apiAuthorityJson == authority &&
+                (request.apiOperationId == operationId || (allowUnassignedOperation && request.apiOperationId == null))
+        if (dates.isEmpty() || dates.any { date -> requests.none { it.date == date && matches(it) } }) return settings
+        return settings.withPendingRequests(requests.map { request ->
+            if (request.date in dates && matches(request)) {
+                request.copy(apiOperationId = operationId, apiJournalRequired = true)
+            } else request
+        })
     }
 
     fun clearDates(
@@ -419,6 +480,8 @@ object ScheduledExportPendingRequests {
             // pin/snapshot metadata.
             enginePin = existing.enginePin,
             settingsSnapshotJson = existing.settingsSnapshotJson,
+            apiAuthorityJson = existing.apiAuthorityJson,
+            apiJournalRequired = existing.apiJournalRequired,
             apiOperationId = existing.apiOperationId,
             receiverPlanId = existing.receiverPlanId,
             folderOperationId = existing.folderOperationId,

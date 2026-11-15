@@ -39,23 +39,7 @@ class ProductCapabilityManifestTest {
         assertEquals(sharedCapabilities + androidCapabilities, idsWithState(states, "available"))
         assertEquals(appleCapabilities + setOf("source.private-platform-database", "apple.ads-purchase-attribution"), idsWithState(states, "unavailable"))
         assertEquals(
-            setOf(
-                "account.clinic-sync-requests",
-                "cloud.opt-in-export-receiver", "cloud.read-only-mcp",
-                "export.scheduled-receiver-coverage",
-                "core.shared-rust-profile-engine",
-                "destination.google-drive",
-                "automation.api-recovery-authority",
-                "automation.include-today",
-                "automation.run-overlap-policy",
-                "direct.cli_agent_push_wake",
-                "export.range-summary",
-                "export.whoop-resource-selection",
-                "export.whoop-physiological-cycle-steps",
-                "setup.share-portable-configuration",
-                "support.local-reporting-fallback",
-                "support.native-review-introduction",
-            ),
+            plannedCapabilities,
             idsWithState(states, "planned"),
         )
         assertEquals(allCapabilities, states.keys)
@@ -185,6 +169,7 @@ class ProductCapabilityManifestTest {
             "export.agent-data-gateway",
             "export.scheduled-today-refresh",
             "core.shared-rust-metric-registry",
+            "automation.discard-pending-recovery",
             "automation.cancel-active-export",
             "automation.discard-pending-recovery",
             "direct.full_public_authorized_corpus",
@@ -219,27 +204,40 @@ class ProductCapabilityManifestTest {
             "export.sleep-session-detail",
         )
 
-        val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
-            "support.native-review-introduction",
+        val agentBridgeCapabilities = setOf(
+            "agent.export.explicit-settings",
+            "agent.export.zero-health-plan",
+            "agent.export.bound-execution",
+            "direct.source-aware-queries",
+            "direct.scoped-source-projection",
+            "agent.host-recipes",
+            "agent.native-profile-controls",
+            "agent.host-schedule-controls",
+            "agent.native-schedule-destination-controls",
+            "agent.export.zip-packaging",
+            "agent.export.profile-dictionary",
+        )
+
+        val plannedCapabilities = agentBridgeCapabilities + setOf(
             "account.clinic-sync-requests",
-            "cloud.opt-in-export-receiver", "cloud.read-only-mcp",
+            "support.native-review-introduction",
+            "cloud.opt-in-export-receiver",
+            "cloud.read-only-mcp",
             "export.scheduled-receiver-coverage",
-            "source.private-platform-database",
-            "apple.ads-purchase-attribution",
             "automation.api-recovery-authority",
             "automation.include-today",
             "automation.run-overlap-policy",
             "direct.cli_agent_push_wake",
-            "export.coverage-calendar",
             "export.range-summary",
             "export.whoop-resource-selection",
             "export.whoop-physiological-cycle-steps",
             "setup.share-portable-configuration",
             "destination.google-drive",
-            "account.myself_lifetime_claim",
             "core.shared-rust-profile-engine",
-            "settings.sleep-attribution",
             "support.local-reporting-fallback",
         )
+
+        val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities +
+            plannedCapabilities + setOf("source.private-platform-database", "apple.ads-purchase-attribution")
     }
 }

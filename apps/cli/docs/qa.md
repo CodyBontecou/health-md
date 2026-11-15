@@ -20,6 +20,9 @@ Resolve unfamiliar files with `git ls-files` in the active worktree before guess
 
 ## Automated gate
 
+Use Python 3.11+ for the release-policy scripts (`tomllib` is required). Static documentation checks
+are not native history-authorization or physical qualification.
+
 The shared smoke harness requires Python 3.11+ and builds only this CLI workspace. Its default
 **hermetic discovery smoke** uses temporary file/Codex state and credential-free operations: help,
 schemas, setup without pairing, MCP initialization, catalogs/resources, static capabilities, and
@@ -118,7 +121,10 @@ same bounded stdio initialize/tools calls to both serve modes: the complete mode
 authoritative `healthmd mcp schema` catalog, while read-only mode contains only approved readiness,
 catalog, and query tools with `readOnlyHint`, no pairing resource, and no pairing/export-job/artifact
 operations. The shared smoke harness derives the omitted names from the catalog and requires
-`Unknown tool` for every one before command dispatch. Confirm that neither stdio mode starts an MCP HTTP listener, that the
+`Unknown tool` for every one before command dispatch. Neither stdio mode may start an MCP HTTP listener. The
+complete development mode also retains agent plan, exact approval, Execute, retained Resume and
+retained Cancel. Those tools do not qualify installed native setup or full feature acceptance.
+The frozen public-release catalog and alpha.7 draft gates remain independent. Confirm that the
 default release rejects `mcp serve-http`, and that every build rejects the removed
 `mcp serve-hosted` command. Separately run
 source builds with `cargo run --features streamable-http -- mcp serve-http --help` and
@@ -177,6 +183,11 @@ Never attach raw output to an issue or CI log.
    redial on its own within roughly 20 seconds of its heartbeat/reconnect window (no toggle of
    Direct CLI Access, no QR re-scan), and the command must succeed. Repeat once over Tailscale.
 6. Export one day, seven days, complete-empty data, warning-only data, and an honest partial result.
+   Check the peer's history assessment separately: the current pinned Apple SDK reports `api_unavailable`,
+   and missing/`unknown` assessment cannot prove full access. Use explicit ranges with completeness
+   unverified; an empty result does not prove permission or absence. Exercise verified limited/full
+   boundaries only with an exact native build that actually supports the assessment, not from its OS
+   number. See [current source history limitations](mobile-compatibility.md#current-source-history-limitations).
 7. Run summary and lossless extraction with category, metric, object, and JSON Pointer selectors;
    confirm partial extraction emits no retained values without `--allow-partial`.
 8. Interrupt during a multi-partition raw job, inspect `status --job`, resume, compare the final
@@ -215,9 +226,10 @@ wake plus the operation bound. Expect the identical in-flight command to complet
 opened — never accept a re-run as success.
 
 ```bash
-# unreachable/locked phone, default window: command holds, then completes when Health.md opens
+# Dates are illustrative: replace this bounded week with the authorized test range before running.
+# Unreachable/locked phone: the same command waits, then proceeds when Health.md opens.
 NO_COLOR=1 TERM=dumb timeout 300 healthmd query healthmd_sleep_sessions \
-  --arguments '{"dates":{"type":"all_available"}}' </dev/null
+  --arguments '{"dates":{"type":"exact","range":{"start_date":"2026-01-01","end_date":"2026-01-07"}}}' </dev/null
 
 # fail-fast and custom window
 NO_COLOR=1 TERM=dumb timeout 60 healthmd export --yesterday --raw --wake-timeout 0 \

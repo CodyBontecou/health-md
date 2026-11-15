@@ -30,7 +30,9 @@ Apple-v10 is an independently versioned profile extension in `apple-health-data-
 
 It owns stable semantic and persisted native identities, order, source units/aggregation metadata, aliases, output keys, profile availability, and explicit platform non-equivalences. It does not own SDK type objects or runtime availability decisions.
 
-`import-native-registry.py` checks the immutable pre-cutover Apple/Android snapshots plus the reviewed semantic crosswalk and is retained as independent migration evidence. It preserves the canonical registry's reviewed `known_capability_ids` subset rather than importing every new product capability. The subset must cover every metric capability, preserve product-manifest order, and match current platform availability; adding unrelated automation capabilities does not invalidate the registry hash or durable pins. `generate-registry-adapters.py` projects the authoritative JSON into thin Swift/Kotlin catalog constants and generated website/reference data. Generated regions are committed and checked for drift; edit the registry, not generated rows.
+`import-native-registry.py` checks the immutable pre-cutover Apple/Android snapshots plus the reviewed semantic crosswalk and is retained as independent migration evidence. The entire v1 registry, including its historical capability lists, remains digest-frozen because semantic/render fixtures bind those exact bytes. `native-baseline-capability-index-v1.json` records that original metadata; the importer rejects any resulting registry digest change.
+
+Current capability governance is independently generated as `capability-index-v1.json`, bound to `packages/contracts/product-capabilities.json`. Its known/available IDs describe source governance, never installed-build support, native permissions, or physical qualification. Planned additions must not alter old semantic/render identities. `generate-registry-adapters.py` projects the unchanged metric JSON into thin Swift/Kotlin catalog constants and generated website/reference data. Generated regions are committed and checked for drift; do not edit generated rows.
 
 `metric-registry-v2.json` is a separate, successor-only inventory for `apple_health_data_v11` and `android_sleep_v6`, derived by `generate-sleep-profile-registry.py`, which also generates Android's and Apple's separate successor registry-hash constants. It does not replace v1, change its hash, or change the native catalogs' legacy default. Android Light and Apple Core have distinct semantic identities in this inventory; v6 never emits the historical Core alias. Explicit successor sessions use independent semantic input/canonical model v2 and render input/artifact plan v2 alongside registry v2; historical defaults, schemas and exact fixtures remain v1. Daily successor rendering and `sleep::read_public_sleep_context` are shared-core compatibility foundations, not evidence of qualified native capture, writers or readers. See [the qualification contract](../contracts/sleep-attribution/v1/contract.md).
 
@@ -66,6 +68,12 @@ credentials, persistence,
 lifecycle, sockets, and health exporters remain untouched. Stateful secure-channel sequence,
 replay rejection, nonce/key lifecycle, seal/open, reconnect/trusted transcripts, and session
 persistence remain security-review gated and are not exported by UniFFI.
+
+## Deferred agent v4 foundation
+
+`healthmd-protocol::v4` adds independently negotiated, bounded pure generated-export/discovery DTOs, strict integer-only raw JSON and canonical UTF-8, exact source identity/time helpers, and supplied-context integrity comparisons. It does not change the legacy hello, dispatch, crypto, frame or transfer bytes, and does not advertise installed v4 support. Query/projection/control execution, private authority issuance/persistence, native consent, capture and filesystem transactions remain outside this foundation.
+
+The new protocol tests use byte-identical crate-local mirrors of the deferred contract candidates and frozen registry. Contract checks compare every mirror with its authority; native constructor evidence is distinct from decoding/re-encoding those candidates. Local `cargo package` archives can run all protocol tests without the monorepo. See [the implementation ledger](../../docs/qa/agent-bridge-implementation.md) for per-language coverage and unrun qualification.
 
 ## Binding generation
 

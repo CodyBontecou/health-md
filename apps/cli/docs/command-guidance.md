@@ -79,14 +79,18 @@ commands. Add `--json`, or pipe the command, to receive the complete `input_sche
 shapes, bounds, enums, structured example arguments, and shell-safe `argv` arrays. Independent MCP
 inspection follows the same rule through `healthmd mcp schema`.
 
-After resolving the user's actual dates, execute the returned shape:
+After resolving the user's actual dates, use a bounded exact range:
 
 ```bash
 healthmd query healthmd_sleep_sessions \
-  --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
+  --arguments '{"dates":{"type":"exact","range":{"start_date":"2026-01-01","end_date":"2026-01-07"}},"all_pages":true}'
 ```
 
-The schema's dates are illustrative. Never silently substitute example dates for a user's request.
+These dates are illustrative. Never silently substitute them for a user's request. `all_available`
+remains a valid contract shape, not proof of installed full-history support. The current pinned Apple
+SDK cannot assess that boundary; `api_unavailable`, missing metadata and `unknown` do not prove denial,
+no data or full access. Use explicit ranges with completeness unverified and inspect the selected
+peer's metadata. See [current source history limitations](mobile-compatibility.md#current-source-history-limitations).
 
 ### Destructive-command discovery
 
@@ -149,9 +153,10 @@ empty arguments object reports `dates are required` and embeds that exact operat
 Operational errors provide code-specific recovery, for example:
 
 - multiple paired devices → list devices, then retry with global `--device <UUID>`;
-- unavailable foreground source → keep Health.md open, run `healthmd status`, inspect trust;
+- unavailable source → inspect `healthmd status` and trust; iPhone new work requires the foreground
+  app/protected data, while Android requires its already-active user-started direct service after first unlock;
 - paused durable export → inspect `status --job`, then `resume` the exact job;
-- cancellation pending → keep the source foreground and inspect acknowledgement state;
+- cancellation pending → restore that platform's required source availability and inspect acknowledgement state;
 - invalid native trust → inspect devices before entering explicit reset guidance;
 - unsupported Nearby transport → retry with portable `--transport manual-ip`.
 
@@ -202,3 +207,24 @@ explicit opt-in where supported.
 
 This contract does not turn real failures into successful empty data. It makes discovery safe and
 makes every retained failure explicit, machine-readable, bounded, and recoverable.
+
+## Approved Agent Bridge cancellation
+
+`healthmd cancel-execution --arguments '{"job_id":"JOB_UUID"}'` and the fixed local
+MCP tool `healthmd_export_execution_cancel` accept only an existing canonical job UUID.
+Omitting CLI arguments returns local guidance without accessing credentials or the source.
+Caller-supplied phase, receipt, approval, frontier and destination fields are rejected.
+
+The operation persists/replays exact local Stop intent before contacting the paired source.
+It supports accepted-only and manifest-bound jobs and can return authenticated historical
+native confirmation without contacting the source. Revoking an export delegation does not
+renew the grant or prevent stopping its original job. Lost pairing trust/key or changed
+retained evidence rejects. No legacy export fallback is used.
+
+The result has schema `healthmd.agent_source_stop_result`, version 1, a native
+`source_receipt`, and `output_verified: false`. A native completed/partial/empty status wins
+if completion preceded Stop. This result records source facts; it does not verify current
+destination files or turn a local timeout/disconnect into source cancellation. A terminal
+receipt requires native acknowledgement or its previously authenticated retained proof.
+If an Execute/Resume request still holds the host operation gate, cancel that local request
+first, then request job Stop; local request cancellation alone is not native cancellation.

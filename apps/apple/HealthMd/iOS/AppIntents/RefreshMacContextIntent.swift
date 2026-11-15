@@ -1,3 +1,4 @@
+#if os(iOS)
 import AppIntents
 import Foundation
 
@@ -111,7 +112,7 @@ final class IPhoneMacContextRefreshCoordinator {
             dateRangeStart: allAvailable ? end : start,
             dateRangeEnd: end,
             selection: CanonicalHealthDataSelection(
-                metricIDs: Array(settings.metricSelection.enabledMetrics),
+                metricIDs: settings.metricSelection.enabledMetrics.sorted(),
                 sourceIDs: ["apple_health"],
                 detailLevel: detailLevel
             ),
@@ -155,7 +156,7 @@ struct RefreshMacContextIntent: AppIntent {
 
     @Parameter(
         title: "All Available History",
-        description: "Ask for all readable authorized history. This fails closed unless OS 27+ verifies full-history authorization for the entire profile scope.",
+        description: "Ask for all readable authorized history. This build cannot verify full-history authorization boundaries; choose an explicit date window.",
         default: false
     )
     var allAvailableHistory: Bool
@@ -200,3 +201,4 @@ struct GetMacContextRefreshStatusIntent: AppIntent {
         return .result(dialog: IntentDialog(stringLiteral: "\(status.state.rawValue): \(status.message) Job: \(status.jobID.uuidString.lowercased())."))
     }
 }
+#endif

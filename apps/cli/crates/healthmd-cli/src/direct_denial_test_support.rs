@@ -87,7 +87,13 @@ pub(crate) async fn encrypted_denial(malformed: bool) -> (ClientError, Uuid) {
             profile_reference: None,
         },
         destination: Some(v2::DestinationBinding {
-            binding_sha256: "a".repeat(64),
+            // Android generated-file exports bind the exact local destination identity.
+            binding_sha256: healthmd_client::file_receiver::GeneratedDestination::open(
+                &destination,
+            )
+            .unwrap()
+            .binding_sha256()
+            .unwrap(),
             display_name: "destination".into(),
         }),
     };
@@ -179,7 +185,7 @@ pub(crate) async fn encrypted_denial(malformed: bool) -> (ClientError, Uuid) {
                     products: vec![v2::ProductCapability {
                         product_id: v2::ProductId::GeneratedFilesV1,
                         artifact_schema: v2::ArtifactSchema {
-                            id: "healthmd.generated_files".into(),
+                            id: "healthmd.generated-files".into(),
                             major: 1,
                         },
                         formats: vec![v2::ArtifactFormat::Markdown],

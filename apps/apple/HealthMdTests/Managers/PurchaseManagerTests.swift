@@ -18,6 +18,85 @@ final class PurchaseManagerTests: XCTestCase {
         return manager
     }
 
+    func testNativePlanningEligibilityReadsOnlyCachedStateBetweenNativeRefreshes() {
+        let manager = makeManager()
+        XCTAssertTrue(manager.nativePlanningCanExport)
+        let reads = keychain.strictReadCount
+        for _ in 0..<10 { XCTAssertTrue(manager.nativePlanningCanExport) }
+        XCTAssertEqual(keychain.strictReadCount, reads)
+        manager.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+        XCTAssertFalse(manager.nativePlanningCanExport)
+        manager.resetFreeExports()
+        XCTAssertTrue(manager.nativePlanningCanExport)
+    }
+
+    func testNativePlanningEligibilityTracksDurableQuotaAndUnlockDowngrade() throws {
+        let manager = makeManager()
+        manager.setFreeExportsUsed(PurchaseManager.freeExportLimit - 1)
+        try manager.recordExportUse(jobID: UUID())
+        XCTAssertFalse(manager.nativePlanningCanExport)
+        manager.setUnlocked(true)
+        XCTAssertTrue(manager.nativePlanningCanExport)
+        manager.setUnlocked(false)
+        XCTAssertFalse(manager.nativePlanningCanExport) // Purchase/expiry preserves the consumed quota.
+        manager.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+        XCTAssertFalse(manager.nativePlanningCanExport)
+    }
+
+    func testNativePlanningEligibilityCannotOutliveCachedSubscriptionExpiration() {
+        let manager = makeManager()
+        manager.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+        let product = HealthMdPurchaseOption.yearly.productID
+        manager.setUnlockedProductID(product, expirationDate: .distantFuture)
+        XCTAssertTrue(manager.nativePlanningCanExport)
+        let reads = keychain.strictReadCount
+        manager.setUnlockedProductID(product, expirationDate: .distantPast)
+        XCTAssertFalse(manager.nativePlanningCanExport)
+        XCTAssertEqual(keychain.strictReadCount, reads)
+        XCTAssertEqual(manager.freeExportsUsed, PurchaseManager.freeExportLimit)
+    }
+
+    func testNativePlanningEligibilityRejectsUnreadableAndMalformedQuotaWithoutRepair() {
+        let manager = makeManager()
+        let error = NSError(domain: "SyntheticKeychain", code: 1)
+        for failInteger in [true, false] {
+            if failInteger { keychain.nextReadIntError = error }
+            else { keychain.nextReadStringError = error }
+            manager.refreshNativePlanningExportEligibility()
+            XCTAssertFalse(manager.nativePlanningCanExport)
+            XCTAssertTrue(keychain.storage.isEmpty)
+            XCTAssertTrue(keychain.stringStorage.isEmpty)
+        }
+        keychain.storage["freeExportsUsed"] = -1
+        manager.refreshNativePlanningExportEligibility()
+        XCTAssertFalse(manager.nativePlanningCanExport)
+        keychain.storage["freeExportsUsed"] = 0
+        for raw in ["not-a-job", ",", "00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000001"] {
+            keychain.stringStorage["directExportUseIDs"] = raw
+            manager.refreshNativePlanningExportEligibility()
+            XCTAssertFalse(manager.nativePlanningCanExport)
+            XCTAssertEqual(keychain.stringStorage["directExportUseIDs"], raw)
+        }
+    }
+
+    func testStrictProductionIntegerDecoderRejectsTruncatedAndTrailingBytes() throws {
+        for count in [0, 1, 3, 5, 8] {
+            XCTAssertThrowsError(try SystemKeychainStore.decodeStrictInteger(Data(repeating: 0, count: count)))
+        }
+        var value: Int32 = 9
+        XCTAssertEqual(try SystemKeychainStore.decodeStrictInteger(Data(bytes: &value, count: 4)), 9)
+    }
+
+    // MARK: - Legacy Unlock Decision
+
+    /// Build a UTC date for use in date-based assertions.
+    private func date(_ year: Int, _ month: Int, _ day: Int) -> Date {
+        var components = DateComponents()
+        components.year = year; components.month = month; components.day = day
+        components.timeZone = TimeZone(identifier: "UTC")
+        return Calendar(identifier: .gregorian).date(from: components)!
+    }
+
     func testLegacyCutoffIsUnchangedAndStrict() {
         let cutoff = PurchaseManager.grandfatherCutoffDate
         XCTAssertTrue(PurchaseManager.isLegacyUnlock(originalPurchaseDate: cutoff.addingTimeInterval(-1)))

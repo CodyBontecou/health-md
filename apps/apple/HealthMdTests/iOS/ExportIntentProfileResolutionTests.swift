@@ -45,7 +45,7 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
     func testUnnamedResolutionUsesActiveProfile() throws {
         let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
         store.add(name: "Daily", settings: makeSettings(filenameFormat: "d-{date}"), target: .localIPhoneFolder)
-        let weekly = store.add(name: "Weekly Sleep", settings: makeSnapshot(), target: .apiEndpoint)
+        let weekly = try XCTUnwrap(store.add(name: "Weekly Sleep", settings: makeSnapshot(), target: .apiEndpoint))
         store.activate(id: weekly.id)
 
         let resolution = ExportIntentRunner.resolveProfile(named: nil, profileStore: store)
@@ -60,7 +60,7 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
 
     func testNamedResolutionIsTrimmedAndCaseInsensitive() throws {
         let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
-        let weekly = store.add(name: "Weekly Sleep", settings: makeSnapshot(), target: .apiEndpoint)
+        let weekly = try XCTUnwrap(store.add(name: "Weekly Sleep", settings: makeSnapshot(), target: .apiEndpoint))
 
         let resolution = ExportIntentRunner.resolveProfile(named: "  weekly sleep ", profileStore: store)
 
@@ -80,11 +80,11 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
 
     func testProfileRunUsesProfileSnapshotAndAdoptsDestinations() async throws {
         let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
-        let profile = store.add(
+        let profile = try XCTUnwrap(store.add(
             name: "Sleep",
             settings: makeSettings(filenameFormat: "sleep-{date}"),
             target: .localIPhoneFolder
-        )
+        ))
 
         let recorder = ProfileRunRecorder()
         let outcome = await ExportIntentRunner.run(
@@ -107,11 +107,11 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
     func testConnectedMacProfileShortcutStillUsesLocalPipelineAndFileQuota() async throws {
         for target in [ExportTargetSelection.connectedMac] {
             let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
-            let profile = store.add(
+            let profile = try XCTUnwrap(store.add(
                 name: "Remote-\(target.rawValue)",
                 settings: makeSettings(filenameFormat: "remote-{date}"),
                 target: target
-            )
+            ))
             let recorder = ProfileRunRecorder()
             let outcome = await ExportIntentRunner.run(
                 dates: [Date()],
@@ -131,9 +131,9 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
         }
     }
 
-    func testRemoteProfileShortcutDoesNotBypassFileQuota() async {
+    func testRemoteProfileShortcutDoesNotBypassFileQuota() async throws {
         let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
-        let profile = store.add(name: "Mac", settings: makeSnapshot(), target: .connectedMac)
+        let profile = try XCTUnwrap(store.add(name: "Mac", settings: makeSnapshot(), target: .connectedMac))
         let recorder = ProfileRunRecorder()
         var dependencies = recorder.makeDependencies(defaults: defaults)
         dependencies.canExport = { false }

@@ -7,7 +7,7 @@ import {
   fcmMessageBody,
   parseServiceAccount,
   signServiceAccountAssertion,
-} from "./fcm";
+} from "./delegated-fcm";
 import {
   parseRegistrationTarget,
   SYNC_REQUEST_CATEGORY,

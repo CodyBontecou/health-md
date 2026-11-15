@@ -25,6 +25,11 @@ use crate::{
     secure_channel::{SecureChannel, SecurePayload},
 };
 
+#[path = "agent_bridge_fake_peer_tests.rs"]
+mod agent_tests;
+#[path = "direct_generated_fake_tests.rs"]
+mod generated_tests;
+
 #[derive(Default)]
 struct MemoryCredentials(Mutex<HashMap<String, String>>);
 
@@ -1316,7 +1321,10 @@ async fn android_export_rejection_preserves_reason_and_terminal_state() {
                 }
             },
             destination: generated.then(|| v2::DestinationBinding {
-                binding_sha256: "a".repeat(64),
+                binding_sha256: GeneratedDestination::open(&destination)
+                    .unwrap()
+                    .binding_sha256()
+                    .unwrap(),
                 display_name: "destination".into(),
             }),
         };
@@ -1348,6 +1356,12 @@ async fn android_export_rejection_preserves_reason_and_terminal_state() {
             let mut hello = android_source_hello(&reconnect);
             if generated {
                 hello.products[0].product_id = v2::ProductId::GeneratedFilesV1;
+                hello.products[0].artifact_schema = v2::ArtifactSchema {
+                    id: "healthmd.generated-files".into(),
+                    major: 1,
+                };
+                hello.products[0].settings_policies = vec![v2::SettingsPolicy::RequestedScope];
+                hello.products[0].providers.clear();
             }
             channel
                 .send_v2(&v2::Envelope::new(v2::Message::SourceHello(hello)))

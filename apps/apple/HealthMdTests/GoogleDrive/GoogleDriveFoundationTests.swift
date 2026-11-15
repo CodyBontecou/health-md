@@ -135,10 +135,10 @@ final class GoogleDriveFoundationTests: XCTestCase {
                 ))
                 let activeID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
                 _ = coordinator.profileStore.setGoogleDriveBinding(profileID: activeID, destinationID: destination.id)
-                let other = coordinator.profileStore.add(
+                let other = try XCTUnwrap(coordinator.profileStore.add(
                     name: "Another Drive profile", settings: ExportSettingsSnapshot.from(settings),
                     target: .googleDrive, googleDriveDestinationID: destination.id
-                )
+                ))
                 for id in [activeID, other.id] {
                     _ = coordinator.scheduledEntryStore.upsert(ScheduledExportEntry(profileID: id, isEnabled: true))
                 }

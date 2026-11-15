@@ -34,6 +34,12 @@ const DIRECT_TOOLS: &[&str] = &[
     "healthmd_pairing_status",
     // Durable export family.
     "healthmd_export_files",
+    // Development Agent Bridge planning, stored approval relay and approved execution.
+    "healthmd_export_plan",
+    "healthmd_export_approval",
+    "healthmd_export_execute",
+    "healthmd_export_execution_resume",
+    "healthmd_export_execution_cancel",
     // Main's approval-gated public corpus and bounded job-artifact operations.
     "healthmd_export_raw",
     "healthmd_raw_artifact_read",

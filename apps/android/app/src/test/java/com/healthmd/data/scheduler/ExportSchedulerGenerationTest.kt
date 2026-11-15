@@ -806,6 +806,13 @@ class ExportSchedulerGenerationTest {
         coEvery { credentialStore.destinationFingerprint(any()) } answers {
             fingerprintForEndpoint(firstArg())
         }
+        // API admissions pin a valid original recovery authority (relaxed mocks return "").
+        coEvery { credentialStore.createRecoveryAuthority(any(), any()) } answers {
+            com.healthmd.data.export.APIRecoveryAuthorities.create(
+                com.healthmd.data.export.APIExportRequestConfiguration(firstArg(), null, emptyList(), fingerprintForEndpoint(firstArg()) ?: "a".repeat(64)),
+                secondArg(),
+            )
+        }
         val enginePinPlanner = mockk<ExportEnginePinPlanner>()
         every { enginePinPlanner.forScheduledExport(any(), any(), any()) } returns pin
         every {

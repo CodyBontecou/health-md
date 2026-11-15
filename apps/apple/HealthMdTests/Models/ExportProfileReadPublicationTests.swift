@@ -129,7 +129,7 @@ final class ExportProfileReadPublicationTests: XCTestCase {
     func testExternalProfileAndActivationChangesPublishThenSettle() throws {
         let observer = try migratedStore()
         let writer = ExportProfileStore(userDefaults: defaults)
-        let other = writer.add(name: "Other", settings: snapshot(), target: .connectedMac)
+        let other = try XCTUnwrap(writer.add(name: "Other", settings: snapshot(), target: .connectedMac))
         XCTAssertTrue(writer.activate(id: other.id))
         var changes = 0
         let subscription = observer.objectWillChange.sink { changes += 1 }

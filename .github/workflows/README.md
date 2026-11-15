@@ -27,6 +27,18 @@ later. Hosted completion timestamps, not local runtime alone, establish success.
 
 ## Cloud and verification tooling
 
+Native sharding remains explicitly invoked diagnostic tooling. Apple's
+`apps/apple/scripts/native_test_shards.py` prepares compiled inventories and
+validates product, source/run/SDK and per-method result receipts. Android's
+`apps/android/scripts/ci-jvm-shards.init.gradle` is inactive unless
+`HEALTHMD_JVM_LANE` is set; explicit use also requires the variant, source SHA and
+run/attempt identities checked by that script. Its companion
+`verify-jvm-shards.py` reconciles the selected compiled methods with actual XML
+results. Neither helper is wired into portable PR, nightly or release regression
+requirements. Executing native/device diagnostics still follows the current
+task's authorization and component setup rules; host fixture tests do not prove
+native execution or Android authority-store behavior.
+
 Cloud host auth, persistence and security regressions run in the existing portable
 Wake group through `scripts/ci/cloud.sh`, with isolated Cloud dependencies and
 resources. Both type checks, the full synthetic host suite, fail-closed production

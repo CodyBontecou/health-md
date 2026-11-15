@@ -8,6 +8,107 @@ final class ExportSettingsSnapshotTests: XCTestCase {
     // to avoid platform-specific deinit crashes while the process tears down.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
+    func testReadOnlyNativeSettingsLoadAndSavedSnapshotDoNotMigrateOrPersistMutations() throws {
+        let suite = "SavedConfiguration.ReadOnly.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set("legacy-{date}", forKey: "advancedExportSettings.filenameFormat")
+        defaults.set(true, forKey: "advancedExportSettings.generateWeeklyRollups")
+        let before = try XCTUnwrap(defaults.persistentDomain(forName: suite)) as NSDictionary
+        let detached = AdvancedExportSettings(userDefaults: defaults, persistChanges: false)
+        Self.retainedSettings.append(detached)
+        XCTAssertTrue(detached.generateRangeSummary)
+        detached.filenameFormat = "detached-{date}"
+        detached.exportFormats = [.json]
+        detached.metricSelection.deselectAll()
+        let read = try XCTUnwrap(VaultManager.readSavedExportConfiguration(defaults: defaults, expectedRevision: 1))
+        XCTAssertEqual(read.settings.filenameFormat, "legacy-{date}")
+        XCTAssertTrue(read.settings.generateRangeSummary)
+        XCTAssertEqual(read.settings.healthSubfolder, VaultManager.defaultHealthSubfolder)
+        XCTAssertEqual(try XCTUnwrap(defaults.persistentDomain(forName: suite)) as NSDictionary, before)
+    }
+
+    func testNativeSavedSettingsRevisionNeverReusesPinAfterSettingsReturn() throws {
+        let suite = "SavedConfiguration.Edits.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        XCTAssertNil(VaultManager.readSavedExportConfiguration(defaults: defaults, expectedRevision: 1))
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let storage = SystemUserDefaults(defaults: defaults)
+        settings.filenameFormat = "first-{date}"
+        let first = try XCTUnwrap(AdvancedExportSettings.nativeConfigurationRevision(defaults: storage))
+        let original = try XCTUnwrap(VaultManager.readSavedExportConfiguration(defaults: defaults, expectedRevision: first))
+        settings.filenameFormat = "changed-{date}"
+        settings.filenameFormat = "first-{date}"
+        let current = try XCTUnwrap(AdvancedExportSettings.nativeConfigurationRevision(defaults: storage))
+        XCTAssertEqual(current, first + 2)
+        XCTAssertNil(VaultManager.readSavedExportConfiguration(defaults: defaults, expectedRevision: first))
+        XCTAssertEqual(try XCTUnwrap(VaultManager.readSavedExportConfiguration(defaults: defaults, expectedRevision: current)).settings, original.settings)
+    }
+
+    func testMalformedOrExhaustedNativeSavedRevisionNeverRepairsIntoValidPin() throws {
+        let suite = "SavedConfiguration.Invalid.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let storage = SystemUserDefaults(defaults: defaults)
+        let key = AdvancedExportSettings.nativeConfigurationRevisionKey
+        defaults.set("malformed native object", forKey: key)
+        XCTAssertNil(AdvancedExportSettings.nativeConfigurationRevision(defaults: storage))
+        settings.filenameFormat = "changed-{date}"
+        XCTAssertNil(AdvancedExportSettings.nativeConfigurationRevision(defaults: storage))
+        for raw in [Data("\"1\"".utf8), Data("null".utf8), Data("true".utf8), Data("0".utf8), Data("-1".utf8), Data(String(Int32.max).utf8)] {
+            defaults.set(raw, forKey: key)
+            settings.filenameFormat = "changed-{date}"
+            XCTAssertNil(AdvancedExportSettings.nativeConfigurationRevision(defaults: storage))
+            XCTAssertNil(VaultManager.readSavedExportConfiguration(defaults: defaults, expectedRevision: 1))
+            settings.filenameFormat = "changed-again-{date}"
+            XCTAssertNil(AdvancedExportSettings.nativeConfigurationRevision(defaults: storage))
+        }
+    }
+
+    func testNativeNestedSavedSettingEditsInvalidatePinsAfterPersistence() async throws {
+        let suite = "SavedConfiguration.Nested.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let storage = SystemUserDefaults(defaults: defaults)
+        let edits: [() -> Void] = [
+            { settings.exportFormats = [.json] },
+            { settings.metricSelection.deselectAll() },
+            { settings.formatCustomization.unitPreference = .imperial },
+            { settings.individualTracking.globalEnabled = true },
+            { settings.dailyNoteInjection.enabled = true }
+        ]
+        for edit in edits {
+            let before = try XCTUnwrap(AdvancedExportSettings.nativeConfigurationRevision(defaults: storage))
+            edit()
+            try await Task.sleep(for: .milliseconds(350))
+            XCTAssertGreaterThan(try XCTUnwrap(AdvancedExportSettings.nativeConfigurationRevision(defaults: storage)), before)
+            XCTAssertNil(VaultManager.readSavedExportConfiguration(defaults: defaults, expectedRevision: before))
+        }
+    }
+
+    func testFailedSharedSetupRestoreCannotReviveOldSavedSettingsRevision() throws {
+        let suite = "SavedConfiguration.Rollback.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let storage = SystemUserDefaults(defaults: defaults)
+        let oldRevision = try XCTUnwrap(AdvancedExportSettings.nativeConfigurationRevision(defaults: storage))
+        let original = SharedSetupPortableSnapshot.capture(settings)
+        var candidate = original
+        candidate.filenameFormat = "candidate-{date}"
+        XCTAssertThrowsError(try settings.applySharedSetupBatch(candidate, verificationOverride: { false }))
+        XCTAssertEqual(SharedSetupPortableSnapshot.capture(settings), original)
+        XCTAssertGreaterThan(try XCTUnwrap(AdvancedExportSettings.nativeConfigurationRevision(defaults: storage)), oldRevision)
+        XCTAssertNil(VaultManager.readSavedExportConfiguration(defaults: defaults, expectedRevision: oldRevision))
+    }
+
     func testSnapshotFromAdvancedSettings_preservesAllExportAffectingFields() throws {
         let settings = makeConfiguredSettings()
 

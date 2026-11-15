@@ -33,7 +33,8 @@ final class CIQualityGateTests: XCTestCase {
 
     func testNativeDiagnosticsRemainExplicitAndPreserveLogsAndTimeouts() throws {
         let makefile = try source("Makefile")
-        for snippet in ["test: test-ios test-macos", "coverage: prepare-healthmd-core-rust",
+        for snippet in ["test: test-macos", "test-platforms: test-ios test-macos",
+                        "coverage: prepare-healthmd-core-rust",
                         "XCODE_TEST_TIMEOUT_FLAGS := -test-timeouts-enabled YES",
                         "-resultBundlePath \"$(IOS_XCRESULT_PATH)\"", "tee \"$(IOS_TEST_RAW_LOG)\"",
                         "-test-timeouts-enabled NO", "-enableCodeCoverage YES"] {
