@@ -22,3 +22,4 @@ enum ScheduledExportKind: String, Codable { case completedDay, todayRefresh }
 enum ExportTargetSelection: String, Codable { case apiEndpoint }
 enum ExportNotificationIdentifiers { static func pendingExport(for request: PendingExportRequest) -> String {request.id.uuidString} }
 @MainActor enum ReceiverCoverageSettings { static let directory = FileManager.default.temporaryDirectory }
+struct GoogleDriveDestinationSnapshot: Codable, Equatable {}

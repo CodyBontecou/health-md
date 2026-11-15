@@ -1659,16 +1659,22 @@ class SchedulingManager: ObservableObject {
                     uploadHeaders: headers, scopeID: config.scopeID, calendarTimeZone: zoneID,
                     frozenOutputSettings: frozenOutput,
                     refreshRecentDays: config.refreshRecentDays, installationKey: ReceiverCoverageSettings.shared.key())!
-                try ReceiverCoverageSettings.shared.bindScope(config.scopeID, settings: frozenOutput)
                 let authority = "\(pending.profileID?.uuidString ?? "legacy"):\(pending.recoveryGeneration):\(pending.scheduleEnabledAt?.timeIntervalSince1970 ?? 0):\(pending.scheduledFireDate?.timeIntervalSince1970 ?? 0):\(pending.scheduledKind.rawValue)"
                 // Stable across a crash between queue completion and the schedule marker write.
                 // Recreating a native pending UUID must never cause another receiver query.
                 let id = ReceiverCoverageSettings.planID(authority: authority)
+                // A scope bound to another output profile (engine, account, zone or settings
+                // changed) cannot select this new occurrence: run the full lookback instead of
+                // failing every run. A saved plan keeps its frozen recovery path.
+                let scopeMatches = try ReceiverCoverageSettings.shared.bindScope(config.scopeID, settings: frozenOutput)
+                if !scopeMatches, try ReceiverCoverageSettings.journal.exists(id) {
+                    throw ReceiverCoveragePreflight.BoundaryError.destinationChanged
+                }
                 var calendar = Calendar(identifier: .gregorian); calendar.timeZone = zone
                 let boundary = calendar.startOfDay(for: pending.scheduledFireDate ?? pending.createdAt)
                 let completed = pending.originalRequestedDates.filter { $0 < boundary }.map { ReceiverCoveragePlan.label($0, zone: zone) }
                 // Refresh-only slots have no completed-day query and retain their existing path.
-                if !completed.isEmpty {
+                if scopeMatches, !completed.isEmpty {
                     let refresh = pending.originalRequestedDates.contains { calendar.isDate($0, inSameDayAs: boundary) }
                     let plan = try await ReceiverCoverageSettings.journal.resolve(id: id, authority: authority,
                         preflight: preflight, candidates: completed, now: now(), todayRefresh: refresh,

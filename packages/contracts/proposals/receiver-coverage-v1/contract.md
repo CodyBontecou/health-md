@@ -266,6 +266,13 @@ and retain frozen output settings. Missing/unreadable recovery keys block work;
 initial setup never replaces a key while saved plans exist. A separate keyed
 scope-to-settings ledger rejects reusing a scope after changing its output profile,
 provider grants or capture calendar; choose a new receiver scope for that change.
+Rejection never stalls scheduling: a new occurrence with no saved plan whose scope is
+bound to another profile (or whose snapshot lacks source authority) runs the ordinary
+full lookback without preflight, exactly like an absent opt-in. Only an occurrence that
+already has a saved plan keeps failing closed for explicit recovery. Likewise a
+missing, unreadable or corrupt local opt-in file reads as absent (full lookback), and a
+malformed stored receiver row is quarantined to its own entry rather than failing every
+pending-work reader. Receiver admission failures share the worker's ordinary attempt cap.
 Known set-valued Swift fields are sorted for stable identity; ordered arrays retain
 their order. URLs, credentials and keys are not stored in identity digests. This transcript adds no authority to legacy journals.
 

@@ -36,15 +36,21 @@ fun main()=runBlocking {
   ReceiverCoverageRuntime.save(context,"legacy",changed,"https://example.com/upload",credentials)
   check(runtime.configurationForOccurrence("occurrence","legacy",true)==config.json())
   check(runtime.configurationForOccurrence("next-occurrence","legacy",true)==changed.json())
+  // A corrupt opt-in file is the full-lookback default, not a stalled schedule.
+  val configurationFile=root.resolve("receiver-coverage/configuration-legacy.json"); val saved=Files.readAllBytes(configurationFile)
+  Files.write(configurationFile,"{\"truncated".toByteArray())
+  check(ReceiverCoverageRuntime.configuration(context,"legacy")==null)
+  check(runtime.configurationForOccurrence("corrupt-occurrence","legacy",true)==null)
+  Files.write(configurationFile,saved)
   val unbound="{\"version\":2,\"settings\":\"original\"}"
   try {runtime.destination(config.json(),"https://example.com/upload",unbound,"UTC"); error("Unbound source accepted")}
-  catch(e:IllegalArgumentException){}
+  catch(e:ReceiverCoverageRuntime.SelectionUnavailable){}
   val output="{\"version\":5,\"settings\":\"original\",\"providerCaptureAuthority\":{\"selectedProviderId\":\"whoop\",\"connectionIds\":{\"whoop\":\"11111111-1111-4111-8111-111111111111\"}}}"
   val destination=runtime.destination(config.json(),"https://example.com/upload",output,"UTC")
   try {runtime.destination(config.json(),"https://example.com/upload",output.replace("original","edited"),"UTC"); error("Scope reused after output edit")}
-  catch(e:IllegalStateException){}
+  catch(e:ReceiverCoverageRuntime.SelectionUnavailable){}
   try {runtime.destination(config.json(),"https://example.com/upload",output.replace("11111111-1111-4111-8111-111111111111","22222222-2222-4222-8222-222222222222"),"UTC"); error("Scope reused after provider account change")}
-  catch(e:IllegalStateException){}
+  catch(e:ReceiverCoverageRuntime.SelectionUnavailable){}
   val journal=ReceiverCoverageJournal(root.resolve("receiver-coverage/plans"))
   val now=Instant.parse("2026-03-09T08:00:00Z"); val dates=listOf("2026-03-06","2026-03-07","2026-03-08")
   val accepted=journal.resolve("occurrence","legacy:occurrence",destination.preflight,dates,now,false,{true}) { request ->

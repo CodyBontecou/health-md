@@ -21,7 +21,7 @@ import okhttp3.Response
 
 /** Dedicated read-only preflight; never reuse an upload client's redirects/interceptors/credentials. */
 class ReceiverCoverageHTTPClient internal constructor(
-    private val calls: Call.Factory = isolatedClient(),
+    private val calls: Call.Factory = isolated,
     private val deadlineMillis: Long = ReceiverCoveragePreflight.DEADLINE_SECONDS * 1000L,
 ) {
     init { require(deadlineMillis in 1..ReceiverCoveragePreflight.DEADLINE_SECONDS * 1000L) }
@@ -95,6 +95,9 @@ class ReceiverCoverageHTTPClient internal constructor(
     }
 
     companion object {
+        /** One isolated client per process: its dispatcher and pool are reused, never shared with uploads. */
+        val shared: ReceiverCoverageHTTPClient by lazy { ReceiverCoverageHTTPClient() }
+        private val isolated: OkHttpClient by lazy { isolatedClient() }
         internal fun isolatedClient(): OkHttpClient = OkHttpClient.Builder()
             .followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false)
             .authenticator(Authenticator.NONE).proxyAuthenticator(Authenticator.NONE)

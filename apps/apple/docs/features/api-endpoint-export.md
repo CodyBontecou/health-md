@@ -51,7 +51,10 @@ capturing or uploading health data. Cancellation keeps exact pending work; an
 interrupted preflight recovers its saved conservative full-window fallback.
 Changing or disabling this setting affects new occurrences only. Pending work
 keeps its original settings and destination; changing credentials does not reroute
-it. Choose a new receiver scope after changing output settings. Discard obsolete
+it. Choose a new receiver scope after changing output settings, the export
+engine (an app update can change it), the provider account or the time zone. Until
+you do, new scheduled runs skip the receiver check and send the full lookback
+window, so exports continue but are not narrowed. Discard obsolete
 pending recovery explicitly before replacing its authority.
 
 ## Historical v7 payload illustration (abridged)

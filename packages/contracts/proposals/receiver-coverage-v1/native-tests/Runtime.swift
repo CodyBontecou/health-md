@@ -18,9 +18,14 @@ private nonisolated final class MemoryKeychain:KeychainStoring,@unchecked Sendab
         let config=ReceiverCoverageConfiguration(preflightURL:"https://example.com/coverage",scopeID:"scope-1",refreshRecentDays:0)
         try runtime.save(config,scope:"profile-1",uploadURL:"https://example.com/upload")
         let saved=try restarted.configuration("profile-1"); precondition(saved==config)
-        try runtime.bindScope("scope-1",settings:Data("original-output".utf8))
-        try restarted.bindScope("scope-1",settings:Data("original-output".utf8))
-        do{try restarted.bindScope("scope-1",settings:Data("edited-output".utf8)); fatalError("Scope reused after output edit")}catch{}
+        let created=try runtime.bindScope("scope-1",settings:Data("original-output".utf8))
+        let reused=try restarted.bindScope("scope-1",settings:Data("original-output".utf8))
+        // A rebound scope is reported, not thrown, so a new occurrence can fall back to full lookback.
+        let edited=try restarted.bindScope("scope-1",settings:Data("edited-output".utf8))
+        let kept=try restarted.bindScope("scope-1",settings:Data("original-output".utf8))
+        precondition(created && reused, "Scope binding not reusable")
+        precondition(!edited, "Scope reused after output edit")
+        precondition(kept, "Original binding was overwritten")
         do{try runtime.bindScope("../escape",settings:Data()); fatalError("Scope escaped directory")}catch{}
         let first=try ReceiverCoverageSettings.snapshotBytes(ExportSettingsSnapshot(exportFormats:Set(["json","markdown"])))
         let second=try ReceiverCoverageSettings.snapshotBytes(ExportSettingsSnapshot(exportFormats:Set(["markdown","json"])))

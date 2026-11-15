@@ -18,6 +18,35 @@ import java.time.ZoneId
 
 class ScheduledExportPendingRequestsTest {
     @Test
+    fun malformedReceiverRowIsQuarantinedWithoutBreakingOtherWork() {
+        val quarantined = com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.QUARANTINED_PLAN_ID
+        val broken = LocalDate.parse("2026-03-07")
+        val legacy = LocalDate.parse("2026-03-08")
+        // A receiver wrapper missing its required fields, next to an ordinary legacy row.
+        val settings = ExportSettings(scheduledExportTarget = ExportTarget.API_ENDPOINT, scheduleLookbackDays = 1,
+            pendingScheduledExportRequests = listOf(
+                com.healthmd.domain.model.PendingScheduledExportRequest(date = broken, exportTarget = ExportTarget.API_ENDPOINT,
+                    destinationFingerprint = "original",
+                    settingsSnapshotJson = "{\"schema\":\"${com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.SCHEMA}\",\"version\":4}"),
+                com.healthmd.domain.model.PendingScheduledExportRequest(date = legacy, exportTarget = ExportTarget.API_ENDPOINT,
+                    destinationFingerprint = "original"),
+            ))
+        val pending = ScheduledExportPendingRequests.pendingRequests(settings)
+        assertThat(pending.map { it.date to it.receiverPlanId }).containsExactly(broken to quarantined, legacy to null).inOrder()
+        // The quarantined row never joins a new admission; the unrelated legacy row still does.
+        val dates = ScheduledExportPendingRequests.scheduledRunDates(settings, listOf(legacy.plusDays(1)),
+            destinationFingerprint = "original", receiverPlanId = "new-occurrence")
+        assertThat(dates).contains(legacy)
+        assertThat(dates).doesNotContain(broken)
+        // Its bytes are retained for explicit recovery and it stays quarantined after a rewrite.
+        val rewritten = ScheduledExportPendingRequests.applyAttemptResult(settings, dates, emptyList(),
+            target = ExportTarget.API_ENDPOINT, destinationFingerprint = "original", receiverPlanId = "new-occurrence")
+        val kept = ScheduledExportPendingRequests.pendingRequests(rewritten).single { it.date == broken }
+        assertThat(kept.receiverPlanId).isEqualTo(quarantined)
+        assertThat(kept.settingsSnapshotJson).isEqualTo(settings.pendingScheduledExportRequests.first().settingsSnapshotJson)
+    }
+
+    @Test
     fun newerTodayAdmissionRetriesEvenWhenEveryRequestedDateHasAnOlderReceiverOwner() {
         val today = LocalDate.parse("2026-03-10")
         val original = ScheduledExportPendingRequests.applyCancellationResult(

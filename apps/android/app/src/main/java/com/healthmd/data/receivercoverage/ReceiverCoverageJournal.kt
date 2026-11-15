@@ -82,7 +82,7 @@ class ReceiverCoverageJournal(private val directory: Path) {
                         candidates: List<String>, now: Instant, todayRefresh: Boolean,
                         authorized: suspend () -> Boolean,
                         admit: suspend (ReceiverCoveragePlan) -> Unit = {},
-                        query: suspend (ReceiverCoverageRequest) -> ReceiverCoverageOutcome = { ReceiverCoverageHTTPClient().query(it) }): ReceiverCoveragePlan {
+                        query: suspend (ReceiverCoverageRequest) -> ReceiverCoverageOutcome = { ReceiverCoverageHTTPClient.shared.query(it) }): ReceiverCoveragePlan {
         restore(id, authority, preflight.destinationBinding)?.let { admit(it); return it }
         val today = now.atZone(ZoneId.of(preflight.calendarTimezone)).toLocalDate().toString()
         val requestId = UUID.randomUUID().toString()

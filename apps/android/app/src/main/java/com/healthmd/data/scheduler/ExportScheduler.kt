@@ -438,8 +438,11 @@ class ExportScheduler @Inject constructor(
         val receiver = configuration.target == ExportTarget.API_ENDPOINT &&
             snapshot?.exportMode == com.healthmd.rawexport.ExportMode.COMPATIBILITY &&
             ReceiverCoverageRuntime.configuration(context, "legacy") != null
-        val nextConfiguration = if (snapshot != null && (receiver || snapshot.providerCaptureAuthority != null ||
-            snapshot.sleepCaptureContext?.sleepDayAttribution == com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)) {
+        // Source authority lives only in capture-context snapshots (v3/v5). A v1 snapshot has no
+        // capture context; stamping authority onto it would create an invalid v3 that the worker
+        // rejects. It advances unchanged, and the worker runs it as an ordinary full lookback.
+        val nextConfiguration = if (snapshot?.sleepCaptureContext != null && (receiver || snapshot.providerCaptureAuthority != null ||
+            snapshot.sleepCaptureContext.sleepDayAttribution == com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)) {
             val authority = (healthRepository as? com.healthmd.domain.repository.RestorableHealthRepository
                 ?: error("Provider capture authority is unavailable")).captureProviderAuthority()
             configuration.copy(settingsSnapshot = snapshot.copy(

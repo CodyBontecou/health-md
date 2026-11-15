@@ -217,8 +217,10 @@ final class ScheduledExportCoordinator {
             for: frozenSettings?.calendarTimeZoneIdentifier
         )
         let target = profile?.target ?? schedule.target
-        let coverage = target == .apiEndpoint ? try ReceiverCoverageSettings.shared.configuration(
-            ReceiverCoverageSettings.scope(profile?.profileID)) : nil
+        // Opt-in only: an unreadable or corrupt setting means the full-lookback default,
+        // never a schedule that stops admitting occurrences.
+        let coverage = target == .apiEndpoint ? (try? ReceiverCoverageSettings.shared.configuration(
+            ReceiverCoverageSettings.scope(profile?.profileID))) ?? nil : nil
         return PendingExportRequest(
             id: makeID(),
             dates: ScheduleDateMath.exportDates(

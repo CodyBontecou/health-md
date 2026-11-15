@@ -312,7 +312,7 @@ class ExportWorker @AssistedInject constructor(
                 .filter { it.enginePin == enginePin }
                 .filter {
                     it.settingsSnapshotJson == null ||
-                        com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.outputSettings(it.settingsSnapshotJson) == capturedSnapshotJson
+                        com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.outputMatches(it.settingsSnapshotJson, capturedSnapshotJson)
                 }
                 .mapNotNull { it.apiOperationId }
                 .firstOrNull()
@@ -329,7 +329,7 @@ class ExportWorker @AssistedInject constructor(
                 .filter { it.enginePin == enginePin }
                 .filter {
                     it.settingsSnapshotJson == null ||
-                        com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.outputSettings(it.settingsSnapshotJson) == capturedSnapshotJson
+                        com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.outputMatches(it.settingsSnapshotJson, capturedSnapshotJson)
                 }
         } else {
             emptyList()
@@ -377,13 +377,13 @@ class ExportWorker @AssistedInject constructor(
                         ScheduledExportPendingRequests.pendingRequests(settings).none {
                             it.exportTarget == ExportTarget.API_ENDPOINT && it.receiverPlanId == null
                         })
-            } catch (_: Exception) { return Result.retry() }
+            } catch (_: Exception) { return boundedRetry() }
         } else null
         val refreshDue = capturedOccurrence.configuration.dateWindow == com.healthmd.domain.model.ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY
         val refreshDate = selectionNow.atZone(java.time.ZoneId.of(capturedOccurrence.configuration.zoneId)).toLocalDate()
         when (ScheduledExportPendingRequests.receiverAdmissionAction(settings, dates,
             receiverConfiguration != null, refreshDate.takeIf { refreshDue }, destinationFingerprint, admissionOperationId)) {
-            ScheduledExportPendingRequests.ReceiverAdmissionAction.RETRY -> return Result.retry()
+            ScheduledExportPendingRequests.ReceiverAdmissionAction.RETRY -> return boundedRetry()
             ScheduledExportPendingRequests.ReceiverAdmissionAction.COMPLETE -> return Result.success()
             ScheduledExportPendingRequests.ReceiverAdmissionAction.EXECUTE -> Unit
         }
@@ -431,14 +431,25 @@ class ExportWorker @AssistedInject constructor(
                 val completed = completedCandidates
                 if (configuration != null) {
                     val refresh = refreshDue
-                    if (completed.isNotEmpty() || receiverRuntime.hasPlan(planID)) {
-                        receiverPlanId = planID
-                        val frozenDestination = receiverRuntime.destination(configuration, settings.apiEndpointUrl,
+                    val hasPlan = receiverRuntime.hasPlan(planID)
+                    val frozenDestination = if (completed.isNotEmpty() || hasPlan) try {
+                        receiverRuntime.destination(configuration, settings.apiEndpointUrl,
                             capturedSnapshotJson, capturedOccurrence.configuration.zoneId)
+                    } catch (unavailable: ReceiverCoverageRuntime.SelectionUnavailable) {
+                        // A saved plan stays frozen for explicit recovery. A new occurrence whose
+                        // scope or source authority no longer matches runs the full lookback.
+                        if (hasPlan) throw unavailable
+                        Timber.w("Receiver selection unavailable for this occurrence; using full lookback")
+                        null
+                    } else null
+                    if (frozenDestination != null) {
+                        receiverPlanId = planID
+                        val scheduledDates = dates
                         receiverSnapshotJson = com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.wrap(capturedSnapshotJson,
                             configuration, planID, frozenDestination.preflight.destinationBinding, frozenDestination.fingerprint)
                         val lease = receiverRuntime.resolve(planID, "legacy:$planID", configuration, settings.apiEndpointUrl,
                             capturedSnapshotJson, capturedOccurrence.configuration.zoneId, completed, refresh, selectionNow,
+                            precomputed = frozenDestination,
                             admit = { conservativePlan ->
                                 // The journal saves conservative intent first. Only then publish
                                 // native recovery rows, before a queued notification cancel can
@@ -450,18 +461,22 @@ class ExportWorker @AssistedInject constructor(
                             },
                             query = { request ->
                                 ScheduledExportCancellationCoordinator.run(id) {
-                                    com.healthmd.data.receivercoverage.ReceiverCoverageHTTPClient().query(request)
+                                    com.healthmd.data.receivercoverage.ReceiverCoverageHTTPClient.shared.query(request)
                                 }
                             },
                             authorized = { stateStore.matchesAdmission(capturedOccurrence, admissionOperationId, id) })
                         receiverLease = lease
                         receiverPlanId = lease.id
-                        val originalDates = dates
-                        dates = lease.plan.residual.map(LocalDate::parse).filter { it in originalDates || (refresh && it.toString() == lease.plan.today) }
-                        persistCancelledRetryDates((originalDates + dates).distinct().sorted(), dates.toSet(), capturedTarget, destinationFingerprint,
+                        // `dates` may already hold the admitted conservative residual. Filter
+                        // against the dates this occurrence was scheduled for, and reconcile
+                        // every row either set published.
+                        val admittedDates = dates
+                        dates = lease.plan.residual.map(LocalDate::parse).filter { it in scheduledDates || (refresh && it.toString() == lease.plan.today) }
+                        val reconciledDates = (scheduledDates + admittedDates + dates).distinct().sorted()
+                        persistCancelledRetryDates(reconciledDates, dates.toSet(), capturedTarget, destinationFingerprint,
                             enginePin, capturedSnapshotJson, ExportResult(0, dates.size, wasCancelled = true))
                         if (dates.isEmpty()) {
-                            persistPendingRetryDates(originalDates, emptyList(), capturedTarget, destinationFingerprint, enginePin, capturedSnapshotJson)
+                            persistPendingRetryDates(reconciledDates, emptyList(), capturedTarget, destinationFingerprint, enginePin, capturedSnapshotJson)
                             return Result.success() // Covered/acknowledged occurrence, no health capture or upload history.
                         }
                     }
@@ -469,7 +484,7 @@ class ExportWorker @AssistedInject constructor(
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
                 kotlin.coroutines.coroutineContext.ensureActive()
                 return Result.success() // Keep the fixed/provisional plan and exact native residuals.
-            } catch (_: Exception) { return Result.retry() }
+            } catch (_: Exception) { return boundedRetry() }
         }
 
         startDate = dates.first()
@@ -658,9 +673,14 @@ class ExportWorker @AssistedInject constructor(
             }
 
             if (receiverLease != null) {
-                if (!stateStore.matchesAdmission(capturedOccurrence, admissionOperationId, id)) return Result.success()
-                val remaining = cancellationRemainingDates(dates, settings, result)
-                receiverRuntime.acknowledge(receiverLease, dates.filterNot { it in remaining })
+                // The upload already happened, so always finish the native bookkeeping below,
+                // even if a reschedule replaced this admission mid-flight. Acknowledgement only
+                // shrinks this plan's own residual; a failure leaves a conservative re-export.
+                try {
+                    val remaining = cancellationRemainingDates(dates, settings, result)
+                    receiverRuntime.acknowledge(receiverLease, dates.filterNot { it in remaining })
+                } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                catch (_: Exception) { Timber.w("Receiver plan acknowledgement failed; residual kept for re-export") }
             }
             if (result.wasCancelled) {
                 val remainingDates = cancellationRemainingDates(dates, settings, result)
@@ -820,6 +840,11 @@ class ExportWorker @AssistedInject constructor(
             if (runAttemptCount < MAX_WORKER_ATTEMPTS) Result.retry() else Result.failure()
         }
     }
+
+    /** Receiver admission failures share the worker's attempt cap, so a permanent error
+     * completes the admission and re-arms the schedule instead of retrying forever. */
+    private fun boundedRetry(): Result =
+        if (runAttemptCount < MAX_WORKER_ATTEMPTS) Result.retry() else Result.failure()
 
     private fun scheduledDates(
         settings: ExportSettings,

@@ -62,7 +62,9 @@ import CryptoKit
         guard try keychain.readStringOrThrow(key: name) == data.base64EncodedString() else { throw ReceiverCoveragePreflight.BoundaryError.invalidConfiguration }
         return data
     }
-    func bindScope(_ scope: String, settings: Data) throws {
+    /// Returns false when the scope is already bound to another output profile. A new
+    /// occurrence then runs the ordinary full lookback; a saved plan keeps its recovery path.
+    @discardableResult func bindScope(_ scope: String, settings: Data) throws -> Bool {
         guard scope.range(of: "^[A-Za-z0-9_-]{1,128}$", options: .regularExpression) != nil else { throw ReceiverCoveragePreflight.BoundaryError.invalidConfiguration }
         // A scope is immutable for one output profile, including capture calendar/semantics.
         // Persist only a keyed digest, never provider authority or credentials in this ledger.
@@ -70,8 +72,10 @@ import CryptoKit
             using: SymmetricKey(data: try key())).map { String(format: "%02x", $0) }.joined()
         let path = storageDirectory.appendingPathComponent("scope-\(scope).binding")
         if FileManager.default.fileExists(atPath: path.path) {
-            guard try String(contentsOf: path, encoding: .utf8) == digest else { throw ReceiverCoveragePreflight.BoundaryError.destinationChanged }
-        } else { try ReceiverCoverageAtomicFile.write(Data(digest.utf8), to: path) }
+            return try String(contentsOf: path, encoding: .utf8) == digest
+        }
+        try ReceiverCoverageAtomicFile.write(Data(digest.utf8), to: path)
+        return true
     }
     static func snapshotBytes(_ snapshot: ExportSettingsSnapshot) throws -> Data {
         let encoder = JSONEncoder(); encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true

@@ -20,6 +20,12 @@ class ReceiverCoverageRuntime(
     private val directory = context.filesDir.toPath().resolve("receiver-coverage")
     private val journal = ReceiverCoverageJournal(directory.resolve("plans"))
     data class Lease(val id: String, val authority: String, val plan: ReceiverCoveragePlan, val fingerprint: String)
+    /**
+     * A new occurrence cannot use receiver selection: its scope is bound to another output
+     * profile (contract: choose a new scope) or its snapshot carries no source authority.
+     * Callers with no saved plan run the ordinary full lookback instead of failing forever.
+     */
+    class SelectionUnavailable(message: String) : IllegalStateException(message)
     companion object {
         private val lock = Any()
         /** Wide legacy catch-up stays full lookback; never truncate dates to fit the query. */
@@ -34,9 +40,15 @@ class ReceiverCoverageRuntime(
             require(Regex("[A-Za-z0-9_-]{1,128}").matches(scope))
             return context.filesDir.toPath().resolve("receiver-coverage/configuration-$scope.json")
         }
+        /** Opt-in only. An unreadable or corrupt file means the full-lookback default, never a stalled schedule. */
         fun configuration(context: Context, scope: String): String? = synchronized(lock) {
-            val file = path(context, scope)
-            if (!Files.exists(file)) null else String(Files.readAllBytes(file), Charsets.UTF_8).also { ReceiverCoverageConfiguration.parse(it) }
+            readConfiguration(path(context, scope))
+        }
+        internal fun readConfiguration(file: Path): String? = try {
+            if (!Files.exists(file)) null
+            else String(Files.readAllBytes(file), Charsets.UTF_8).also { ReceiverCoverageConfiguration.parse(it) }
+        } catch (_: Exception) {
+            null // Never surface the payload: it holds private receiver URLs/scope.
         }
         suspend fun save(context: Context, scope: String, configuration: ReceiverCoverageConfiguration?, uploadUrl: String,
                          credentials: APIExportCredentialStore) {
@@ -66,15 +78,13 @@ class ReceiverCoverageRuntime(
             ReceiverCoverageAtomicFile.write(path, json.toString().toByteArray()); value
         }
     }
-    private fun configurationAt(scope: String): String? {
-        val file = directory.resolve("configuration-$scope.json")
-        return if (Files.exists(file)) String(Files.readAllBytes(file), Charsets.UTF_8).also { ReceiverCoverageConfiguration.parse(it) } else null
-    }
+    private fun configurationAt(scope: String): String? = readConfiguration(directory.resolve("configuration-$scope.json"))
     fun hasPlan(id: String): Boolean = journal.exists(id)
     class Destination(val preflight: ReceiverCoveragePreflight, val fingerprint: String)
     suspend fun destination(configJson: String, endpoint: String, snapshot: String, zone: String): Destination {
         val outputSettings = ReceiverCoverageSnapshot.outputSettings(snapshot)
-        ReceiverCoverageSnapshot.requireProviderBinding(outputSettings)
+        try { ReceiverCoverageSnapshot.requireProviderBinding(outputSettings) }
+        catch (_: IllegalArgumentException) { throw SelectionUnavailable("Original receiver source authority is missing") }
         val config = ReceiverCoverageConfiguration.parse(configJson)
         check(entitlements.verifyAccess()) { "Receiver-aware selection needs independent API access" }
         val sponsored = entitlements.sponsoredEndpoint.value?.let(com.healthmd.domain.billing.ClinicExportAuthorization::canonicalClinicEndpoint)
@@ -93,8 +103,9 @@ class ReceiverCoverageRuntime(
             mac.init(javax.crypto.spec.SecretKeySpec(key, "HmacSHA256"))
             val digest = mac.doFinal("receiver-coverage-scope-v1:$outputSettings".toByteArray()).joinToString("") { "%02x".format(it) }
             val scopeFile = directory.resolve("scope-${config.scopeId}.binding")
-            if (Files.exists(scopeFile)) check(String(Files.readAllBytes(scopeFile), Charsets.UTF_8) == digest) {
-                "This receiver scope belongs to another frozen output profile; choose a new scope"
+            if (Files.exists(scopeFile)) {
+                if (String(Files.readAllBytes(scopeFile), Charsets.UTF_8) != digest)
+                    throw SelectionUnavailable("This receiver scope belongs to another frozen output profile; choose a new scope")
             } else ReceiverCoverageAtomicFile.write(scopeFile, digest.toByteArray())
         }
         return Destination(preflight, request.destinationFingerprint)
@@ -102,10 +113,13 @@ class ReceiverCoverageRuntime(
     suspend fun resolve(id: String, authority: String, configJson: String, endpoint: String, snapshot: String,
                         zone: String, dates: List<LocalDate>, todayRefresh: Boolean, now: Instant,
                         restoreOnly: Boolean = false, expectedBinding: String? = null,
+                        precomputed: Destination? = null,
                         admit: suspend (ReceiverCoveragePlan) -> Unit = {},
-                        query: suspend (ReceiverCoverageRequest) -> ReceiverCoverageOutcome = { ReceiverCoverageHTTPClient().query(it) },
+                        query: suspend (ReceiverCoverageRequest) -> ReceiverCoverageOutcome = { ReceiverCoverageHTTPClient.shared.query(it) },
                         authorized: suspend () -> Boolean): Lease {
-        val destination = destination(configJson, endpoint, snapshot, zone)
+        // Callers that already computed the destination for this run pass it in; each
+        // computation repeats entitlement checks, secure-key reads and ledger I/O.
+        val destination = precomputed ?: destination(configJson, endpoint, snapshot, zone)
         val preflight = destination.preflight
         if (expectedBinding != null) check(preflight.destinationBinding == expectedBinding) { "Original receiver destination changed" }
         val plan = if (restoreOnly) requireNotNull(journal.restore(id, authority, preflight.destinationBinding))

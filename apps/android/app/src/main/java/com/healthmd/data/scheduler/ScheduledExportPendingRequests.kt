@@ -28,10 +28,9 @@ object ScheduledExportPendingRequests {
         val byDestinationAndDate = linkedMapOf<Triple<ExportTarget, LocalDate, String?>, PendingScheduledExportRequest>()
 
         settings.pendingScheduledExportRequests.forEach { request ->
-            val authority = request.settingsSnapshotJson?.let(com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot::authority)
-            require(authority == null || request.receiverPlanId == null || request.receiverPlanId == authority.planId)
             val normalized = request.copy(
-                receiverPlanId = request.receiverPlanId ?: authority?.planId,
+                receiverPlanId = com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.quarantinedPlanId(
+                    request.settingsSnapshotJson, request.receiverPlanId),
                 firstFailedAtMillis = request.firstFailedAtMillis.coerceAtLeast(0L),
                 lastAttemptAtMillis = request.lastAttemptAtMillis.coerceAtLeast(0L),
                 attemptCount = request.attemptCount.coerceAtLeast(0),
@@ -167,7 +166,7 @@ object ScheduledExportPendingRequests {
                     // the next matching-pin operation, whose snapshot was captured from then-current
                     // settings before any provider read.
                     (request.settingsSnapshotJson == null ||
-                        com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.outputSettings(request.settingsSnapshotJson) == settingsSnapshotJson) &&
+                        com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.outputMatches(request.settingsSnapshotJson, settingsSnapshotJson)) &&
                     when (settings.scheduledExportTarget) {
                         ExportTarget.API_ENDPOINT -> if (resumeExistingApiOperation) {
                             request.apiOperationId == apiOperationId
@@ -192,7 +191,7 @@ object ScheduledExportPendingRequests {
                 (request.receiverPlanId != null && request.receiverPlanId != receiverPlanId) ||
                     request.enginePin != enginePin ||
                     (request.settingsSnapshotJson != null &&
-                        com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.outputSettings(request.settingsSnapshotJson) != settingsSnapshotJson) ||
+                        !com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.outputMatches(request.settingsSnapshotJson, settingsSnapshotJson)) ||
                     (settings.scheduledExportTarget == ExportTarget.API_ENDPOINT &&
                         request.apiOperationId != null && request.apiOperationId != apiOperationId) ||
                     (settings.scheduledExportTarget == ExportTarget.DEVICE_FOLDER &&

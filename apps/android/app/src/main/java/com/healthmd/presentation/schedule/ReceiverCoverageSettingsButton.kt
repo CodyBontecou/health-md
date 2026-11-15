@@ -15,14 +15,27 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import com.healthmd.R
-import com.healthmd.data.export.EncryptedAPIExportCredentialStore
+import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.receivercoverage.ReceiverCoverageConfiguration
 import com.healthmd.data.scheduler.ReceiverCoverageRuntime
 import com.healthmd.presentation.common.AppSwitch
 import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.theme.GeistSpacing
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/** The app-wide credential store: its lock serializes key creation with background workers. */
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface ReceiverCoverageSettingsEntryPoint {
+    fun apiExportCredentialStore(): APIExportCredentialStore
+}
 
 @Composable
 fun ReceiverCoverageSettingsButton(scope: String, uploadUrl: String) {
@@ -80,9 +93,14 @@ fun ReceiverCoverageSettingsButton(scope: String, uploadUrl: String) {
                 saving = true
                 coroutineScope.launch {
                     try {
-                        ReceiverCoverageRuntime.save(context, scope,
-                            if (enabled) ReceiverCoverageConfiguration(preflight, namespace, requireNotNull(count)) else null,
-                            uploadUrl, EncryptedAPIExportCredentialStore(context))
+                        val credentials = EntryPointAccessors.fromApplication(context.applicationContext,
+                            ReceiverCoverageSettingsEntryPoint::class.java).apiExportCredentialStore()
+                        // Directory listing, atomic write and fsync stay off the main thread.
+                        withContext(Dispatchers.IO) {
+                            ReceiverCoverageRuntime.save(context, scope,
+                                if (enabled) ReceiverCoverageConfiguration(preflight, namespace, requireNotNull(count)) else null,
+                                uploadUrl, credentials)
+                        }
                         showing = false
                     } catch (cancelled: CancellationException) { throw cancelled }
                     catch (_: Exception) { fail() }

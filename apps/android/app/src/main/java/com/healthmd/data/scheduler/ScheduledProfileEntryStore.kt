@@ -48,11 +48,10 @@ class ScheduledProfileEntryStore @Inject constructor(
     }
 
     val entries: Flow<List<ScheduledProfileEntry>> = dataStore.data.map { prefs ->
-        val raw = prefs[Keys.ENTRIES]
-        val decoded = decode(raw, prefs[Keys.MINUTE_INTENT])
-        if (decoded == null && raw?.contains(com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.SCHEMA) == true)
-            error("Saved receiver schedules need explicit recovery")
-        decoded.orEmpty()
+        // Malformed receiver rows are quarantined per pending export in decode(); a whole-list
+        // failure keeps the existing behavior (empty reads, blocked writes) instead of throwing
+        // inside every collector.
+        decode(prefs[Keys.ENTRIES], prefs[Keys.MINUTE_INTENT]).orEmpty()
     }
 
     suspend fun getEntries(): List<ScheduledProfileEntry> = entries.first()
@@ -202,7 +201,10 @@ class ScheduledProfileEntryStore @Inject constructor(
                 expected.profileId in prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()) return@edit
             require(pending.ownerEpochDays.size in 1..31 && pending.ownerEpochDays == pending.ownerEpochDays.distinct().sorted())
             val snapshot = com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decodeScheduled(pending.settingsSnapshotJson)
-            require((snapshot.version == com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot.PROVIDER_AUTHORITY_VERSION ||
+            // v5 Night begins authority may be admitted without selection when a new occurrence
+            // falls back to full lookback (scope rebound); it still carries frozen source authority.
+            require((snapshot.version in setOf(com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot.PROVIDER_AUTHORITY_VERSION,
+                com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot.RECEIVER_PROVIDER_AUTHORITY_VERSION) ||
                 pending.receiverCoverageJson != null) && snapshot.scheduledExportTarget == pending.target && snapshot.ianaTimeZone == expected.zoneId)
             val updated = entries.toMutableList()
             updated[index] = expected.copy(pendingExports = listOf(pending))
@@ -347,13 +349,21 @@ class ScheduledProfileEntryStore @Inject constructor(
             val choices = archived?.let { runCatching { json.parseToJsonElement(it).jsonObject }.getOrNull() }
             decoded.mapIndexed { index, original ->
                 val entry = original.copy(pendingExports = original.pendingExports.map { pending ->
-                    val authority = com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.authority(pending.settingsSnapshotJson)
-                    if (authority == null) pending else {
-                        require(pending.receiverPlanId == null || pending.receiverPlanId == authority.planId)
-                        require(pending.receiverCoverageJson == null || pending.receiverCoverageJson == authority.configuration)
-                        require(pending.receiverDestinationFingerprint == null || pending.receiverDestinationFingerprint == authority.fingerprint)
-                        require(pending.receiverDestinationBinding == null || pending.receiverDestinationBinding == authority.binding)
-                        pending.copy(receiverCoverageJson = authority.configuration, receiverPlanId = authority.planId,
+                    val read = runCatching {
+                        com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.authority(pending.settingsSnapshotJson)
+                    }
+                    val authority = read.getOrNull()
+                    val inconsistent = read.isFailure || authority != null && (
+                        (pending.receiverPlanId != null && pending.receiverPlanId != authority.planId) ||
+                            (pending.receiverCoverageJson != null && pending.receiverCoverageJson != authority.configuration) ||
+                            (pending.receiverDestinationFingerprint != null && pending.receiverDestinationFingerprint != authority.fingerprint) ||
+                            (pending.receiverDestinationBinding != null && pending.receiverDestinationBinding != authority.binding))
+                    when {
+                        // Keep the stored bytes for explicit recovery; only this entry stops running.
+                        inconsistent -> pending.copy(receiverPlanId =
+                            com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.QUARANTINED_PLAN_ID)
+                        authority == null -> pending
+                        else -> pending.copy(receiverCoverageJson = authority.configuration, receiverPlanId = authority.planId,
                             receiverDestinationBinding = authority.binding, receiverDestinationFingerprint = authority.fingerprint)
                     }
                 })

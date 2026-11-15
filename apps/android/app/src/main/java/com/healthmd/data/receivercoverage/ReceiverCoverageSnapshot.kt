@@ -23,6 +23,24 @@ object ReceiverCoverageSnapshot {
             it.getValue("destination_binding").jsonPrimitive.content,it.getValue("destination_fingerprint").jsonPrimitive.content)
     }
     fun outputSettings(raw: String): String = checked(raw)?.getValue("output_settings")?.jsonPrimitive?.content ?: raw
+    /** Comparison-only: a malformed wrapper matches no work instead of failing every reader. */
+    fun outputMatches(raw: String, expected: String?): Boolean =
+        try { outputSettings(raw) == expected } catch (_: Exception) { false }
+    /**
+     * Marks a stored receiver row whose wrapper is malformed or contradicts its plan ID. It is
+     * outside the plan-ID alphabet, so it never joins an admission; the row stays for explicit
+     * recovery instead of making every pending-request reader throw.
+     */
+    const val QUARANTINED_PLAN_ID = "!quarantined"
+    fun quarantinedPlanId(raw: String?, storedPlanId: String?): String? {
+        if (raw == null || storedPlanId == QUARANTINED_PLAN_ID) return storedPlanId
+        val authority = try { authority(raw) } catch (_: Exception) { return QUARANTINED_PLAN_ID }
+        return when {
+            authority == null -> storedPlanId
+            storedPlanId == null || storedPlanId == authority.planId -> authority.planId
+            else -> QUARANTINED_PLAN_ID
+        }
+    }
     /** Coverage and retry identity must include the accepted source, including Night begins. */
     fun requireProviderBinding(output: String) {
         val snapshot = Json.parseToJsonElement(output).jsonObject

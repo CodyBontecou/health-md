@@ -3,7 +3,7 @@ import java.time.LocalDate
 import kotlinx.serialization.Serializable
 import com.healthmd.domain.exportengine.*
 /*MODEL*/
-enum class ExportTarget {DEVICE_FOLDER,API_ENDPOINT,AGENT_DATA_GATEWAY}
+enum class ExportTarget {DEVICE_FOLDER,API_ENDPOINT,AGENT_DATA_GATEWAY,GOOGLE_DRIVE}
 enum class ScheduleDateWindow {PAST_COMPLETE_DAYS,TODAY,PAST_COMPLETE_DAYS_THROUGH_TODAY}
 enum class ExportFailureReason {UNKNOWN}
 data class FailedDateDetail(val date:LocalDate,val reason:ExportFailureReason=ExportFailureReason.UNKNOWN)
