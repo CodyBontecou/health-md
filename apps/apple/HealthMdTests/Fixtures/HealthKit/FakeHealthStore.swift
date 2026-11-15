@@ -57,10 +57,10 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var bloodPressureSampleResults: [BloodPressureSampleValue] = []
     /// Specialized earliest-date fixtures keyed by HKSampleType.identifier.
     /// Quantity/category/workout fixtures are inferred when no override exists.
+    var queriedEarliestSampleTypeIdentifiers: [String] = []
+    var earliestSampleDateQuery: ((HKSampleType) async throws -> Date?)?
     var earliestSampleDates: [String: Date] = [:]
     var errorsForEarliestSampleDates: [String: Error] = [:]
-    var earliestSampleDateQuery: (@MainActor (HKSampleType) async throws -> Date?)?
-    var queriedEarliestSampleTypeIdentifiers: [String] = []
     var earliestActivitySummaryDate: Date?
     var errorForEarliestActivitySummaryDate: Error?
 
@@ -324,11 +324,9 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     }
 
     func queryEarliestSampleDate(sampleType: HKSampleType) async throws -> Date? {
+        queriedEarliestSampleTypeIdentifiers.append(sampleType.identifier)
+        if let earliestSampleDateQuery { return try await earliestSampleDateQuery(sampleType) }
         let identifier = sampleType.identifier
-        queriedEarliestSampleTypeIdentifiers.append(identifier)
-        if let earliestSampleDateQuery {
-            return try await earliestSampleDateQuery(sampleType)
-        }
         if let error = errorsForEarliestSampleDates[identifier] { throw error }
         if let date = earliestSampleDates[identifier] { return date }
         if let quantityType = sampleType as? HKQuantityType {

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings › Subscription. Dates appear only after myself.md has read them from Google Play; until then the row names Google Play. -->
+    <string name="m3_subscription_title">Abonnement</string>
+    <string name="m3_subscription_plan_weekly">Health.md Wekelijks</string>
+    <string name="m3_subscription_plan_yearly">Health.md Jaarlijks</string>
+    <string name="m3_subscription_plan_lifetime">Health.md Levenslang</string>
+    <string name="m3_subscription_plan_full_access">Health.md volledige toegang</string>
+    <string name="m3_subscription_plan_free">Gratis abonnement</string>
+    <string name="m3_subscription_status_renews">Actief · wordt automatisch verlengd</string>
+    <string name="m3_subscription_status_cancelled">Opgezegd · toegang blijft tot het einde van de betaalde periode</string>
+    <string name="m3_subscription_status_lifetime">Levenslang · niets te verlengen</string>
+    <string name="m3_subscription_status_included">Inbegrepen bij je vroege installatie · niets te verlengen</string>
+    <string name="m3_subscription_status_free">Je eerste export is gratis. Abonnementen voegen onbeperkte exports en automatiseringen toe.</string>
+    <string name="m3_subscription_status_checking">Google Play controleren…</string>
+    <string name="m3_subscription_row_plan">Abonnement</string>
+    <string name="m3_subscription_value_weekly">Wekelijks</string>
+    <string name="m3_subscription_value_yearly">Jaarlijks</string>
+    <string name="m3_subscription_value_lifetime">Levenslang · eenmalige aankoop</string>
+    <string name="m3_subscription_row_billing_date">Volgende factuurdatum</string>
+    <string name="m3_subscription_value_billing_date">Zichtbaar in Google Play</string>
+    <string name="m3_subscription_row_access_until">Toegang tot</string>
+    <string name="m3_subscription_row_billed_by">Gefactureerd door</string>
+    <string name="m3_subscription_value_google_play">Google Play</string>
+    <string name="m3_subscription_row_includes">Inclusief</string>
+    <string name="m3_subscription_value_includes">Onbeperkte exports, geplande dagnotities, automatiseringen, rapporten voor zorgverleners en exports via de healthmd CLI</string>
+    <string name="m3_subscription_manage_or_cancel">Beheren of opzeggen</string>
+    <string name="m3_subscription_manage_in_play">Beheren in Google Play</string>
+    <string name="m3_subscription_cancel_note">Altijd opzegbaar in Google Play. Je houdt toegang tot het einde van de periode waarvoor je hebt betaald.</string>
+    <string name="m3_subscription_cancelled_note">Je abonnement wordt niet verlengd. Je kunt opnieuw abonneren of het wijzigen in Google Play.</string>
+    <string name="m3_subscription_see_plans">Abonnementen bekijken</string>
+
+    <!-- "Before you go": factual only. Both actions are the same size. -->
+    <string name="m3_subscription_sheet_title">Voordat je gaat</string>
+    <string name="m3_subscription_sheet_body">Je zegt op in Google Play. Je houdt toegang tot het einde van de periode waarvoor je hebt betaald, en Google Play toont die datum.</string>
+    <!-- %1$s: the verified end of the paid period, e.g. "December 1, 2026". -->
+    <string name="m3_subscription_sheet_body_dated">Je zegt op in Google Play. Je houdt toegang tot %1$s.</string>
+    <string name="m3_subscription_stops_heading">Wat stopt als je abonnement afloopt</string>
+    <string name="m3_subscription_stops_exports">Onbeperkte exports, inclusief exports via de healthmd CLI</string>
+    <string name="m3_subscription_stops_automations">Geplande dagnotities en automatiseringen</string>
+    <string name="m3_subscription_stops_reports">Rapporten voor zorgverleners</string>
+    <string name="m3_subscription_keep_heading">Wat je houdt</string>
+    <string name="m3_subscription_keep_files">Elke notitie die je hebt geëxporteerd. Het zijn gewone Markdown-, CSV- of JSON-bestanden in de map die je koos, en ze blijven daar.</string>
+    <string name="m3_subscription_keep_setup">Je instellingen. Metingen, formaten, bestemmingen en automatiseringen blijven bewaard, en schema’s draaien weer als je opnieuw abonneert.</string>
+    <string name="m3_subscription_continue_to_cancel">Doorgaan met opzeggen</string>
+    <string name="m3_subscription_keep_subscription">Abonnement behouden</string>
+    <!-- Weekly -> Yearly offer card (Play offer switch-yearly-1y). Prices come from Google Play. -->
+    <string name="m3_subscription_offer_eyebrow">Aanbod voor je weekabonnement</string>
+    <!-- %1$s: first-year offer price from Google Play, e.g. "$19.99". -->
+    <string name="m3_subscription_offer_title">Jaarlijks voor %1$s het eerste jaar</string>
+    <!-- %1$s: the regular Yearly price from Google Play, e.g. "$29.99". -->
+    <string name="m3_subscription_offer_detail">Daarna %1$s per jaar. Het gaat nu in, en Google Play verrekent het ongebruikte deel van je week.</string>
+    <string name="m3_subscription_offer_action">Overstappen naar Jaarlijks</string>
+    <string name="m3_subscription_sheet_footnote">Doorgaan met opzeggen opent Google Play › Abonnementen voor Health.md.</string>
+
+    <!-- After a lapse: what still works and what is paused, without nagging. -->
+    <string name="m3_subscription_ended_title">Abonnement beëindigd</string>
+    <string name="m3_subscription_ended_subtitle">%1$s is niet meer actief</string>
+    <string name="m3_subscription_still_works">Werkt nog steeds</string>
+    <string name="m3_subscription_works_files_title">Je geëxporteerde bestanden</string>
+    <string name="m3_subscription_works_files_body">Gewone Markdown, CSV of JSON in de map die je koos. Open ze in elke app.</string>
+    <string name="m3_subscription_works_setup_title">Je instellingen zijn bewaard</string>
+    <string name="m3_subscription_works_setup_body">Metingen, formaten, bestemmingen en automatiseringen blijven zoals je ze achterliet.</string>
+    <string name="m3_subscription_works_health_connect_title">Toegang tot Health Connect</string>
+    <string name="m3_subscription_works_health_connect_body">Machtigingen die je hebt verleend blijven zoals ze zijn. Wijzig ze in Health Connect.</string>
+    <string name="m3_subscription_paused_heading">Gepauzeerd tot je opnieuw abonneert</string>
+    <string name="m3_subscription_paused_body">Onbeperkte exports · geplande dagnotities en automatiseringen · rapporten voor zorgverleners · exports via de healthmd CLI</string>
+    <string name="m3_subscription_paused_schedule_note">Schema’s blijven aan, dus elke geplande run wordt gelogd als ‘toegang nodig’. Zet ze uit in Automatiseringen als je die meldingen liever niet ziet.</string>
+    <string name="m3_subscription_play_subscriptions">Google Play-abonnementen</string>
+</resources>

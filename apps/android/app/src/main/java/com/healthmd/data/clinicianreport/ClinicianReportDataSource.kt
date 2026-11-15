@@ -3,6 +3,7 @@ package com.healthmd.data.clinicianreport
 import com.healthmd.data.health.HealthConnectDataProvider
 import com.healthmd.domain.clinicianreport.*
 import com.healthmd.domain.model.*
+import com.healthmd.domain.repository.HealthRepository
 import kotlinx.coroutines.CancellationException
 import java.time.Instant
 import java.time.LocalDate
@@ -23,7 +24,8 @@ class SystemClinicianReportDateProvider @Inject constructor() : ClinicianReportD
 }
 
 class DefaultClinicianReportDataSource @Inject constructor(
-    // Reports are local-only; ordinary exports may select network-backed providers.
+    // Resolve device-local capture preferences only; never dispatch report reads through this repository.
+    private val healthRepository: HealthRepository,
     private val healthConnect: HealthConnectDataProvider,
     private val sourceLabelResolver: ClinicianReportSourceLabelResolver,
     private val dateProvider: ClinicianReportDateProvider,
@@ -52,13 +54,25 @@ class DefaultClinicianReportDataSource @Inject constructor(
             medicalResources = false,
         )
         return try {
+            val captureContext = healthRepository.resolveCaptureContext(zoneId)
+            // Reading Health Connect directly skips the repository's readiness
+            // checks. Keep them: unavailable or missing access is a source
+            // failure for every day, never an empty "no data" report.
+            if (!healthConnect.isAvailable() || !healthConnect.hasPermissions()) {
+                return ClinicianReportInput(
+                    configuration = normalized,
+                    zoneId = zoneId,
+                    generatedAt = Instant.now(),
+                    warnings = range.dates().map { ClinicianReportWarning.SourceFailure(it) },
+                )
+            }
             val records = healthConnect.fetchHealthDataRange(
                 dates = range.dates(),
                 dataTypes = dataTypes,
                 includeGranularData = true,
-                zoneId = zoneId,
+                zoneId = captureContext.zoneId,
                 pinnedCalendarDays = true,
-                sleepDayAttribution = SleepDayAttribution.DEFAULT,
+                sleepDayAttribution = captureContext.sleepDayAttribution,
             )
             adapt(normalized, zoneId, records)
         } catch (cancelled: CancellationException) {

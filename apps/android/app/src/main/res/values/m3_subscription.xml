@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings › Subscription. Dates appear only after myself.md has read them from Google Play; until then the row names Google Play. -->
+    <string name="m3_subscription_title">Subscription</string>
+    <string name="m3_subscription_plan_weekly">Health.md Weekly</string>
+    <string name="m3_subscription_plan_yearly">Health.md Yearly</string>
+    <string name="m3_subscription_plan_lifetime">Health.md Lifetime</string>
+    <string name="m3_subscription_plan_full_access">Health.md full access</string>
+    <string name="m3_subscription_plan_free">Free plan</string>
+    <string name="m3_subscription_status_renews">Active · renews automatically</string>
+    <string name="m3_subscription_status_cancelled">Canceled · access continues until the paid period ends</string>
+    <string name="m3_subscription_status_lifetime">Lifetime · nothing to renew</string>
+    <string name="m3_subscription_status_included">Included with your early install · nothing to renew</string>
+    <string name="m3_subscription_status_free">Your first export is free. Plans add unlimited exports and automations.</string>
+    <string name="m3_subscription_status_checking">Checking Google Play…</string>
+    <string name="m3_subscription_row_plan">Plan</string>
+    <string name="m3_subscription_value_weekly">Weekly</string>
+    <string name="m3_subscription_value_yearly">Yearly</string>
+    <string name="m3_subscription_value_lifetime">Lifetime · one-time purchase</string>
+    <string name="m3_subscription_row_billing_date">Next billing date</string>
+    <string name="m3_subscription_value_billing_date">Shown in Google Play</string>
+    <string name="m3_subscription_row_access_until">Access until</string>
+    <string name="m3_subscription_row_billed_by">Billed by</string>
+    <string name="m3_subscription_value_google_play">Google Play</string>
+    <string name="m3_subscription_row_includes">Includes</string>
+    <string name="m3_subscription_value_includes">Unlimited exports, scheduled daily notes, automations, clinician reports and healthmd CLI exports</string>
+    <string name="m3_subscription_manage_or_cancel">Manage or cancel</string>
+    <string name="m3_subscription_manage_in_play">Manage in Google Play</string>
+    <string name="m3_subscription_cancel_note">Cancel anytime in Google Play. You keep access until the end of the period you’ve paid for.</string>
+    <string name="m3_subscription_cancelled_note">Your subscription won’t renew. You can resubscribe or change it in Google Play.</string>
+    <string name="m3_subscription_see_plans">See plans</string>
+
+    <!-- "Before you go": factual only. Both actions are the same size. -->
+    <string name="m3_subscription_sheet_title">Before you go</string>
+    <string name="m3_subscription_sheet_body">You cancel in Google Play. You keep access until the end of the period you’ve paid for, and Google Play shows that date.</string>
+    <!-- %1$s: the verified end of the paid period, e.g. "December 1, 2026". -->
+    <string name="m3_subscription_sheet_body_dated">You cancel in Google Play. You keep access until %1$s.</string>
+    <string name="m3_subscription_stops_heading">What stops when your subscription ends</string>
+    <string name="m3_subscription_stops_exports">Unlimited exports, including healthmd CLI exports</string>
+    <string name="m3_subscription_stops_automations">Scheduled daily notes and automations</string>
+    <string name="m3_subscription_stops_reports">Clinician reports</string>
+    <string name="m3_subscription_keep_heading">What you keep</string>
+    <string name="m3_subscription_keep_files">Every note you’ve exported. They’re plain Markdown, CSV or JSON files in the folder you chose, and they stay there.</string>
+    <string name="m3_subscription_keep_setup">Your setup. Metrics, formats, destinations and automations stay saved, and schedules run again if you resubscribe.</string>
+    <string name="m3_subscription_continue_to_cancel">Continue to cancel</string>
+    <string name="m3_subscription_keep_subscription">Keep subscription</string>
+    <!-- Weekly -> Yearly offer card (Play offer switch-yearly-1y). Prices come from Google Play. -->
+    <string name="m3_subscription_offer_eyebrow">Offer for Weekly subscribers</string>
+    <!-- %1$s: first-year offer price from Google Play, e.g. "$19.99". -->
+    <string name="m3_subscription_offer_title">Yearly at %1$s for the first year</string>
+    <!-- %1$s: the regular Yearly price from Google Play, e.g. "$29.99". -->
+    <string name="m3_subscription_offer_detail">Then %1$s a year. It starts now, and Google Play credits the unused part of your week.</string>
+    <string name="m3_subscription_offer_action">Switch to Yearly</string>
+    <string name="m3_subscription_sheet_footnote">Continue to cancel opens Google Play › Subscriptions for Health.md.</string>
+
+    <!-- After a lapse: what still works and what is paused, without nagging. -->
+    <string name="m3_subscription_ended_title">Subscription ended</string>
+    <string name="m3_subscription_ended_subtitle">%1$s is no longer active</string>
+    <string name="m3_subscription_still_works">Still works</string>
+    <string name="m3_subscription_works_files_title">Your exported files</string>
+    <string name="m3_subscription_works_files_body">Plain Markdown, CSV or JSON in the folder you chose. Open them in any app.</string>
+    <string name="m3_subscription_works_setup_title">Your setup is saved</string>
+    <string name="m3_subscription_works_setup_body">Metrics, formats, destinations and automations stay as you left them.</string>
+    <string name="m3_subscription_works_health_connect_title">Health Connect access</string>
+    <string name="m3_subscription_works_health_connect_body">Permissions you granted stay as they are. Change them in Health Connect.</string>
+    <string name="m3_subscription_paused_heading">Paused until you subscribe again</string>
+    <string name="m3_subscription_paused_body">Unlimited exports · scheduled daily notes and automations · clinician reports · healthmd CLI exports</string>
+    <string name="m3_subscription_paused_schedule_note">Schedules stay on, so each scheduled run is logged as needing access. Turn them off in Automations if you’d rather not see those notices.</string>
+    <string name="m3_subscription_play_subscriptions">Google Play subscriptions</string>
+</resources>

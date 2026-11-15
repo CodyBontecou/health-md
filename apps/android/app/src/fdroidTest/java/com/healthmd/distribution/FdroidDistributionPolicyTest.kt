@@ -17,6 +17,21 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
 class FdroidDistributionPolicyTest {
+    @org.junit.Test
+    fun normalProviderSetIsUnchangedAndOptionalSdkAdaptersRemainSeparate() {
+        val healthConnect = io.mockk.mockk<com.healthmd.data.health.HealthConnectDataProvider> {
+            io.mockk.every { providerId } returns "health_connect"
+        }
+        val ordinary = com.healthmd.di.HealthDistributionModule.provideHealthProviderRegistry(healthConnect)
+        org.junit.Assert.assertEquals(listOf("health_connect"), ordinary.exportProviders.map { it.providerId })
+        val synthetic = io.mockk.mockk<com.healthmd.data.health.HealthDataProvider> {
+            io.mockk.every { providerId } returns "receiver_qa"
+        }
+        val extended = com.healthmd.di.HealthDistributionModule.provideHealthProviderRegistry(healthConnect, setOf(synthetic))
+        org.junit.Assert.assertEquals(listOf("health_connect", "receiver_qa"), extended.exportProviders.map { it.providerId })
+        org.junit.Assert.assertSame(healthConnect, extended.primaryExportProvider())
+    }
+
     private val policy = DistributionPolicy.fdroid()
 
     @Test

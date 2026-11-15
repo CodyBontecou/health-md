@@ -607,7 +607,11 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
                 }.joinToString("\n")
                 "unclipped=${control.getUnclippedBoundsInRoot()}\n$ancestors"
             }.getOrElse { "Unable to capture geometry: ${it.message}" }
-            throw AssertionError("Native visibility did not settle: $stage on $display\n$geometry", failure)
+            throw AssertionError(
+                "Native visibility did not settle: $stage on $display\n" +
+                    "$geometry",
+                failure,
+            )
         }
     }
 

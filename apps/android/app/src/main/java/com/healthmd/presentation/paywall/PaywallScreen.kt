@@ -64,6 +64,8 @@ fun PaywallScreen(
     fullAccessIncluded: Boolean = false,
     /** The three-slide carousel; false inside a host pager such as onboarding. */
     carousel: Boolean = true,
+    /** Play's page for the owned plan (see PlaySubscriptionLinks.forStatus), else its list. */
+    manageSubscriptionsUrl: String = com.healthmd.domain.billing.PlaySubscriptionLinks.SUBSCRIPTION_CENTER,
     // Debug props
     isDebugBuild: Boolean = false,
     debugUnlockOverride: Boolean? = null,
@@ -100,6 +102,7 @@ fun PaywallScreen(
             isPurchasing = isPurchasing,
             isRestoring = isRestoring,
             errorMessage = errorMessage,
+            manageSubscriptionsUrl = manageSubscriptionsUrl,
             debugControls = if (isDebugBuild) {
                 {
                     DebugPurchaseControls(
@@ -251,7 +254,7 @@ fun PaywallScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.textSecondary,
             )
-            TextButton(onClick = { uriHandler.openUri("https://play.google.com/store/account/subscriptions") }) {
+            TextButton(onClick = { uriHandler.openUri(manageSubscriptionsUrl) }) {
                 Text(stringResource(R.string.paywall_manage_subscriptions))
             }
             Row {

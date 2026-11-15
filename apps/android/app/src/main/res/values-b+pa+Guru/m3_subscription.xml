@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings › Subscription. Dates appear only after myself.md has read them from Google Play; until then the row names Google Play. -->
+    <string name="m3_subscription_title">ਗਾਹਕੀ</string>
+    <string name="m3_subscription_plan_weekly">Health.md ਹਫ਼ਤਾਵਾਰੀ</string>
+    <string name="m3_subscription_plan_yearly">Health.md ਸਾਲਾਨਾ</string>
+    <string name="m3_subscription_plan_lifetime">Health.md ਲਾਈਫ਼ਟਾਈਮ</string>
+    <string name="m3_subscription_plan_full_access">Health.md ਦੀ ਪੂਰੀ ਪਹੁੰਚ</string>
+    <string name="m3_subscription_plan_free">ਮੁਫ਼ਤ ਪਲਾਨ</string>
+    <string name="m3_subscription_status_renews">ਸਰਗਰਮ · ਆਪਣੇ-ਆਪ ਨਵਿਆਈ ਜਾਂਦੀ ਹੈ</string>
+    <string name="m3_subscription_status_cancelled">ਰੱਦ · ਭੁਗਤਾਨ ਕੀਤੀ ਮਿਆਦ ਖਤਮ ਹੋਣ ਤੱਕ ਪਹੁੰਚ ਜਾਰੀ ਰਹੇਗੀ</string>
+    <string name="m3_subscription_status_lifetime">ਲਾਈਫ਼ਟਾਈਮ · ਨਵਿਆਉਣ ਲਈ ਕੁਝ ਨਹੀਂ</string>
+    <string name="m3_subscription_status_included">ਤੁਹਾਡੇ ਸ਼ੁਰੂਆਤੀ ਇੰਸਟਾਲ ਨਾਲ ਸ਼ਾਮਲ · ਨਵਿਆਉਣ ਲਈ ਕੁਝ ਨਹੀਂ</string>
+    <string name="m3_subscription_status_free">ਤੁਹਾਡਾ ਪਹਿਲਾ ਐਕਸਪੋਰਟ ਮੁਫ਼ਤ ਹੈ। ਪਲਾਨ ਅਸੀਮਤ ਐਕਸਪੋਰਟ ਅਤੇ ਆਟੋਮੇਸ਼ਨ ਜੋੜਦੇ ਹਨ।</string>
+    <string name="m3_subscription_status_checking">Google Play ਦੀ ਜਾਂਚ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ…</string>
+    <string name="m3_subscription_row_plan">ਪਲਾਨ</string>
+    <string name="m3_subscription_value_weekly">ਹਫ਼ਤਾਵਾਰੀ</string>
+    <string name="m3_subscription_value_yearly">ਸਾਲਾਨਾ</string>
+    <string name="m3_subscription_value_lifetime">ਲਾਈਫ਼ਟਾਈਮ · ਇੱਕ ਵਾਰ ਦੀ ਖਰੀਦ</string>
+    <string name="m3_subscription_row_billing_date">ਅਗਲੀ ਬਿਲਿੰਗ ਮਿਤੀ</string>
+    <string name="m3_subscription_value_billing_date">Google Play ਵਿੱਚ ਦਿਖਾਈ ਜਾਂਦੀ ਹੈ</string>
+    <string name="m3_subscription_row_access_until">ਪਹੁੰਚ ਖਤਮ ਹੋਣ ਦੀ ਮਿਤੀ</string>
+    <string name="m3_subscription_row_billed_by">ਬਿਲ ਕਰਨ ਵਾਲਾ</string>
+    <string name="m3_subscription_value_google_play">Google Play</string>
+    <string name="m3_subscription_row_includes">ਸ਼ਾਮਲ ਹੈ</string>
+    <string name="m3_subscription_value_includes">ਅਸੀਮਤ ਐਕਸਪੋਰਟ, ਨਿਯਤ ਰੋਜ਼ਾਨਾ ਨੋਟ, ਆਟੋਮੇਸ਼ਨ, ਡਾਕਟਰ ਲਈ ਰਿਪੋਰਟਾਂ ਅਤੇ healthmd CLI ਐਕਸਪੋਰਟ</string>
+    <string name="m3_subscription_manage_or_cancel">ਪ੍ਰਬੰਧਿਤ ਜਾਂ ਰੱਦ ਕਰੋ</string>
+    <string name="m3_subscription_manage_in_play">Google Play ਵਿੱਚ ਪ੍ਰਬੰਧਿਤ ਕਰੋ</string>
+    <string name="m3_subscription_cancel_note">Google Play ਵਿੱਚ ਕਦੇ ਵੀ ਰੱਦ ਕਰੋ। ਤੁਸੀਂ ਜਿਸ ਮਿਆਦ ਦਾ ਭੁਗਤਾਨ ਕੀਤਾ ਹੈ, ਉਸਦੇ ਅੰਤ ਤੱਕ ਪਹੁੰਚ ਬਣੀ ਰਹਿੰਦੀ ਹੈ।</string>
+    <string name="m3_subscription_cancelled_note">ਤੁਹਾਡੀ ਗਾਹਕੀ ਨਵਿਆਈ ਨਹੀਂ ਜਾਵੇਗੀ। ਤੁਸੀਂ Google Play ਵਿੱਚ ਮੁੜ ਗਾਹਕੀ ਲੈ ਸਕਦੇ ਹੋ ਜਾਂ ਇਸਨੂੰ ਬਦਲ ਸਕਦੇ ਹੋ।</string>
+    <string name="m3_subscription_see_plans">ਪਲਾਨ ਦੇਖੋ</string>
+
+    <!-- "Before you go": factual only. Both actions are the same size. -->
+    <string name="m3_subscription_sheet_title">ਜਾਣ ਤੋਂ ਪਹਿਲਾਂ</string>
+    <string name="m3_subscription_sheet_body">ਰੱਦ ਕਰਨਾ Google Play ਵਿੱਚ ਹੁੰਦਾ ਹੈ। ਤੁਸੀਂ ਜਿਸ ਮਿਆਦ ਦਾ ਭੁਗਤਾਨ ਕੀਤਾ ਹੈ, ਉਸਦੇ ਅੰਤ ਤੱਕ ਪਹੁੰਚ ਬਣੀ ਰਹਿੰਦੀ ਹੈ, ਅਤੇ Google Play ਉਹ ਮਿਤੀ ਦਿਖਾਉਂਦਾ ਹੈ।</string>
+    <!-- %1$s: the verified end of the paid period, e.g. "December 1, 2026". -->
+    <string name="m3_subscription_sheet_body_dated">ਰੱਦ ਕਰਨਾ Google Play ਵਿੱਚ ਹੁੰਦਾ ਹੈ। ਪਹੁੰਚ %1$s ਤੱਕ ਬਣੀ ਰਹਿੰਦੀ ਹੈ।</string>
+    <string name="m3_subscription_stops_heading">ਗਾਹਕੀ ਖਤਮ ਹੋਣ ਤੇ ਕੀ ਬੰਦ ਹੁੰਦਾ ਹੈ</string>
+    <string name="m3_subscription_stops_exports">ਅਸੀਮਤ ਐਕਸਪੋਰਟ, healthmd CLI ਐਕਸਪੋਰਟ ਸਮੇਤ</string>
+    <string name="m3_subscription_stops_automations">ਨਿਯਤ ਰੋਜ਼ਾਨਾ ਨੋਟ ਅਤੇ ਆਟੋਮੇਸ਼ਨ</string>
+    <string name="m3_subscription_stops_reports">ਡਾਕਟਰ ਲਈ ਰਿਪੋਰਟਾਂ</string>
+    <string name="m3_subscription_keep_heading">ਤੁਹਾਡੇ ਕੋਲ ਕੀ ਰਹਿੰਦਾ ਹੈ</string>
+    <string name="m3_subscription_keep_files">ਤੁਹਾਡਾ ਐਕਸਪੋਰਟ ਕੀਤਾ ਹਰ ਨੋਟ। ਇਹ ਤੁਹਾਡੇ ਚੁਣੇ ਫੋਲਡਰ ਵਿੱਚ ਸਾਦੀਆਂ Markdown, CSV ਜਾਂ JSON ਫ਼ਾਈਲਾਂ ਹਨ, ਅਤੇ ਉੱਥੇ ਹੀ ਰਹਿੰਦੀਆਂ ਹਨ।</string>
+    <string name="m3_subscription_keep_setup">ਤੁਹਾਡਾ ਸੈੱਟਅੱਪ। ਮੈਟ੍ਰਿਕਸ, ਫਾਰਮੈਟ, ਮੰਜ਼ਿਲਾਂ ਅਤੇ ਆਟੋਮੇਸ਼ਨ ਸੰਭਾਲੇ ਰਹਿੰਦੇ ਹਨ, ਅਤੇ ਮੁੜ ਗਾਹਕੀ ਲੈਣ ਤੇ ਸ਼ਡਿਊਲ ਫਿਰ ਚੱਲਦੇ ਹਨ।</string>
+    <string name="m3_subscription_continue_to_cancel">ਰੱਦ ਕਰਨਾ ਜਾਰੀ ਰੱਖੋ</string>
+    <string name="m3_subscription_keep_subscription">ਗਾਹਕੀ ਰੱਖੋ</string>
+    <!-- Weekly -> Yearly offer card (Play offer switch-yearly-1y). Prices come from Google Play. -->
+    <string name="m3_subscription_offer_eyebrow">ਹਫ਼ਤਾਵਾਰੀ ਪਲਾਨ ਦੇ ਗਾਹਕਾਂ ਲਈ ਪੇਸ਼ਕਸ਼</string>
+    <!-- %1$s: first-year offer price from Google Play, e.g. "$19.99". -->
+    <string name="m3_subscription_offer_title">ਪਹਿਲੇ ਸਾਲ ਸਾਲਾਨਾ ਪਲਾਨ %1$s ਵਿੱਚ</string>
+    <!-- %1$s: the regular Yearly price from Google Play, e.g. "$29.99". -->
+    <string name="m3_subscription_offer_detail">ਫਿਰ %1$s ਪ੍ਰਤੀ ਸਾਲ। ਇਹ ਹੁਣੇ ਸ਼ੁਰੂ ਹੁੰਦਾ ਹੈ, ਅਤੇ Google Play ਤੁਹਾਡੇ ਹਫ਼ਤੇ ਦੇ ਨਾ ਵਰਤੇ ਹਿੱਸੇ ਦਾ ਕ੍ਰੈਡਿਟ ਦਿੰਦਾ ਹੈ।</string>
+    <string name="m3_subscription_offer_action">ਸਾਲਾਨਾ ਪਲਾਨ ਤੇ ਜਾਓ</string>
+    <string name="m3_subscription_sheet_footnote">“ਰੱਦ ਕਰਨਾ ਜਾਰੀ ਰੱਖੋ” Health.md ਲਈ Google Play › ਗਾਹਕੀਆਂ ਖੋਲ੍ਹਦਾ ਹੈ।</string>
+
+    <!-- After a lapse: what still works and what is paused, without nagging. -->
+    <string name="m3_subscription_ended_title">ਗਾਹਕੀ ਖਤਮ ਹੋ ਗਈ</string>
+    <string name="m3_subscription_ended_subtitle">%1$s ਹੁਣ ਸਰਗਰਮ ਨਹੀਂ ਹੈ</string>
+    <string name="m3_subscription_still_works">ਅਜੇ ਵੀ ਕੰਮ ਕਰਦਾ ਹੈ</string>
+    <string name="m3_subscription_works_files_title">ਤੁਹਾਡੀਆਂ ਐਕਸਪੋਰਟ ਕੀਤੀਆਂ ਫ਼ਾਈਲਾਂ</string>
+    <string name="m3_subscription_works_files_body">ਤੁਹਾਡੇ ਚੁਣੇ ਫੋਲਡਰ ਵਿੱਚ ਸਾਦੀਆਂ Markdown, CSV ਜਾਂ JSON। ਇਹਨਾਂ ਨੂੰ ਕਿਸੇ ਵੀ ਐਪ ਵਿੱਚ ਖੋਲ੍ਹੋ।</string>
+    <string name="m3_subscription_works_setup_title">ਤੁਹਾਡਾ ਸੈੱਟਅੱਪ ਸੰਭਾਲਿਆ ਹੋਇਆ ਹੈ</string>
+    <string name="m3_subscription_works_setup_body">ਮੈਟ੍ਰਿਕਸ, ਫਾਰਮੈਟ, ਮੰਜ਼ਿਲਾਂ ਅਤੇ ਆਟੋਮੇਸ਼ਨ ਉਸੇ ਤਰ੍ਹਾਂ ਰਹਿੰਦੇ ਹਨ ਜਿਵੇਂ ਤੁਸੀਂ ਛੱਡੇ ਸਨ।</string>
+    <string name="m3_subscription_works_health_connect_title">Health Connect ਪਹੁੰਚ</string>
+    <string name="m3_subscription_works_health_connect_body">ਤੁਹਾਡੀਆਂ ਦਿੱਤੀਆਂ ਇਜਾਜ਼ਤਾਂ ਉਸੇ ਤਰ੍ਹਾਂ ਰਹਿੰਦੀਆਂ ਹਨ। ਇਹਨਾਂ ਨੂੰ Health Connect ਵਿੱਚ ਬਦਲੋ।</string>
+    <string name="m3_subscription_paused_heading">ਮੁੜ ਗਾਹਕੀ ਲੈਣ ਤੱਕ ਰੁਕਿਆ ਹੋਇਆ</string>
+    <string name="m3_subscription_paused_body">ਅਸੀਮਤ ਐਕਸਪੋਰਟ · ਨਿਯਤ ਰੋਜ਼ਾਨਾ ਨੋਟ ਅਤੇ ਆਟੋਮੇਸ਼ਨ · ਡਾਕਟਰ ਲਈ ਰਿਪੋਰਟਾਂ · healthmd CLI ਐਕਸਪੋਰਟ</string>
+    <string name="m3_subscription_paused_schedule_note">ਸ਼ਡਿਊਲ ਚਾਲੂ ਰਹਿੰਦੇ ਹਨ, ਇਸ ਲਈ ਹਰ ਨਿਯਤ ਰਨ ਨੂੰ ਪਹੁੰਚ ਦੀ ਲੋੜ ਵਜੋਂ ਲੌਗ ਕੀਤਾ ਜਾਂਦਾ ਹੈ। ਜੇ ਤੁਸੀਂ ਇਹ ਸੂਚਨਾਵਾਂ ਨਹੀਂ ਦੇਖਣਾ ਚਾਹੁੰਦੇ, ਤਾਂ ਇਹਨਾਂ ਨੂੰ ਆਟੋਮੇਸ਼ਨ ਵਿੱਚ ਬੰਦ ਕਰੋ।</string>
+    <string name="m3_subscription_play_subscriptions">Google Play ਗਾਹਕੀਆਂ</string>
+</resources>
