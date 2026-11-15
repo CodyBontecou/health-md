@@ -61,8 +61,6 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var earliestSampleDateQuery: ((HKSampleType) async throws -> Date?)?
     var earliestSampleDates: [String: Date] = [:]
     var errorsForEarliestSampleDates: [String: Error] = [:]
-    var earliestSampleDateQuery: (@MainActor (HKSampleType) async throws -> Date?)?
-    var queriedEarliestSampleTypeIdentifiers: [String] = []
     var earliestActivitySummaryDate: Date?
     var errorForEarliestActivitySummaryDate: Error?
 
@@ -329,10 +327,6 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         queriedEarliestSampleTypeIdentifiers.append(sampleType.identifier)
         if let earliestSampleDateQuery { return try await earliestSampleDateQuery(sampleType) }
         let identifier = sampleType.identifier
-        queriedEarliestSampleTypeIdentifiers.append(identifier)
-        if let earliestSampleDateQuery {
-            return try await earliestSampleDateQuery(sampleType)
-        }
         if let error = errorsForEarliestSampleDates[identifier] { throw error }
         if let date = earliestSampleDates[identifier] { return date }
         if let quantityType = sampleType as? HKQuantityType {
