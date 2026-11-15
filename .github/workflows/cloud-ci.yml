@@ -27,6 +27,14 @@ jobs:
           cache-dependency-path: apps/cloud/package-lock.json
       - name: Install locked cloud dependencies
         run: npm ci
+      - name: Validate deferred account/profile contracts and frozen setup regressions
+        working-directory: .
+        run: |
+          python3 packages/contracts/validate.py
+          python3 packages/contracts/account-auth/v1/test_source_contract.py
+          python3 packages/contracts/profile-sync/v1/test_contract.py
+          PYTHONDONTWRITEBYTECODE=1 python3 -B packages/contracts/profile-sync/v1/reconciliation-source/test_reconciliation.py
+          python3 -m unittest discover -s packages/contracts -p test_validate_shared_setup.py
       - name: Typecheck and unit tests (synthetic only)
         run: npm run check
       - name: Verify production remains fail-closed and unapproved

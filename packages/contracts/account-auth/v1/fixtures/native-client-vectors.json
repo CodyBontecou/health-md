@@ -1,0 +1,1283 @@
+{
+  "callback_vectors_source": "packages/contracts/account-auth/v1/fixtures/security-vectors.json",
+  "error_cases": [
+    {
+      "expected": "unavailable",
+      "id": "error-unavailable",
+      "raw": "{\"error\":\"unavailable\"}",
+      "valid": true
+    },
+    {
+      "expected": "invalid_request",
+      "id": "error-invalid_request",
+      "raw": "{\"error\":\"invalid_request\"}",
+      "valid": true
+    },
+    {
+      "expected": "invalid_grant",
+      "id": "error-invalid_grant",
+      "raw": "{\"error\":\"invalid_grant\"}",
+      "valid": true
+    },
+    {
+      "expected": "unauthorized",
+      "id": "error-unauthorized",
+      "raw": "{\"error\":\"unauthorized\"}",
+      "valid": true
+    },
+    {
+      "expected": "forbidden",
+      "id": "error-forbidden",
+      "raw": "{\"error\":\"forbidden\"}",
+      "valid": true
+    },
+    {
+      "expected": "not_found",
+      "id": "error-not_found",
+      "raw": "{\"error\":\"not_found\"}",
+      "valid": true
+    },
+    {
+      "expected": "rate_limited",
+      "id": "error-rate_limited",
+      "raw": "{\"error\":\"rate_limited\"}",
+      "valid": true
+    },
+    {
+      "expected": "verification_pending",
+      "id": "error-verification_pending",
+      "raw": "{\"error\":\"verification_pending\"}",
+      "valid": true
+    },
+    {
+      "expected": "reuse_family_revoked",
+      "id": "error-reuse_family_revoked",
+      "raw": "{\"error\":\"reuse_family_revoked\"}",
+      "valid": true
+    },
+    {
+      "id": "error-private-message",
+      "raw": "{\"error\":\"invalid_grant\",\"message\":\"synthetic-only\"}",
+      "valid": false
+    },
+    {
+      "id": "error-future",
+      "raw": "{\"error\":\"future\"}",
+      "valid": false
+    },
+    {
+      "id": "error-success",
+      "raw": "{\"error\":\"ok\"}",
+      "valid": false
+    },
+    {
+      "id": "error-duplicate",
+      "raw": "{\"error\":\"invalid_grant\",\"error\":\"unavailable\"}",
+      "valid": false
+    },
+    {
+      "id": "error-null",
+      "raw": "{\"error\":null}",
+      "valid": false
+    },
+    {
+      "id": "revoke-success-not-error",
+      "raw": "{\"revoked\":true}",
+      "valid": false
+    }
+  ],
+  "lifecycle_required": [
+    "default_unavailable_zero_ports",
+    "one_pending_attempt",
+    "cancel_then_late_callback",
+    "callback_replay",
+    "switch_then_late_exchange",
+    "signout_before_secure_commit",
+    "commit_noop",
+    "commit_lost_reply_verified_readback",
+    "commit_unreadable_uncertain",
+    "initial_generation_zero",
+    "serialized_refresh_one_consumption",
+    "refresh_preserves_account_client_install_family",
+    "refresh_wrong_owner_quarantine",
+    "refresh_lost_reply_no_parent_replay",
+    "signout_immediate_local_fence",
+    "signout_clear_noop_not_verified",
+    "offline_remote_revocation_pending",
+    "revocation_proof_not_refresh_or_config",
+    "restart_stale_or_corrupt_no_resurrection",
+    "process_loss_invalidates_unsecured_attempt",
+    "generation_exhaustion_fail_closed",
+    "no_health_or_profile_or_destination_or_schedule_or_purchase_effects"
+  ],
+  "notes": [
+    "Context is a test-only captured trusted registration/request sentinel, never a wire claim or approval.",
+    "These repeated token/reference strings cannot authenticate to a service; no live credentials exist.",
+    "Initial source scope is exact requested; fresh family generation is0. General numeric parsing permits safe nonnegative values; operation/state checks separately verify initial0/refresh transition.",
+    "Raw malformed JSON must be checked before lossy decoding; successful parser output is not trusted transport/current-attempt or secure-storage proof.",
+    "Lifecycle/restart/commit/cancel/signout/refresh faults must exercise actual native state/transaction code, not copy symbolic predicates.",
+    "Default registration/consent unavailable means zero entropy/store/network/browser/health/profile/purchase operations."
+  ],
+  "pkce_vectors": [
+    {
+      "challenge": "lCAUrwMZXJf8imEhoD4WYLiQJ6U4MloQHrpCbazX5Yc",
+      "verifier": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"
+    },
+    {
+      "challenge": "tqw8wQOGMxx2XwTwQcFH0PJ48q7Y6qAh4tAFf8b2_54",
+      "verifier": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    },
+    {
+      "challenge": "_IwWJgAze59fHDPLwB084y7wcGV925rpkaEoftetbdM",
+      "verifier": "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._~"
+    }
+  ],
+  "response_cases": [
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "expected": {
+        "access_token": "hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "account_id": "synthetic-account-a",
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "expires_in": 300,
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "refresh_token": "hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write",
+        "session_generation": 0,
+        "session_id": "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA",
+        "token_type": "Bearer"
+      },
+      "id": "success-synthetic-apple-ios",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": true
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ipados/return",
+        "client_id": "synthetic-apple-ipados",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "expected": {
+        "access_token": "hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "account_id": "synthetic-account-a",
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "client_id": "synthetic-apple-ipados",
+        "environment": "synthetic",
+        "expires_in": 300,
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "refresh_token": "hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write",
+        "session_generation": 0,
+        "session_id": "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA",
+        "token_type": "Bearer"
+      },
+      "id": "success-synthetic-apple-ipados",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ipados\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": true
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-macos/return",
+        "client_id": "synthetic-apple-macos",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "expected": {
+        "access_token": "hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "account_id": "synthetic-account-a",
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "client_id": "synthetic-apple-macos",
+        "environment": "synthetic",
+        "expires_in": 300,
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "refresh_token": "hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write",
+        "session_generation": 0,
+        "session_id": "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA",
+        "token_type": "Bearer"
+      },
+      "id": "success-synthetic-apple-macos",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-macos\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": true
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/android-play/return",
+        "client_id": "synthetic-android-play",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "expected": {
+        "access_token": "hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "account_id": "synthetic-account-a",
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "client_id": "synthetic-android-play",
+        "environment": "synthetic",
+        "expires_in": 300,
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "refresh_token": "hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write",
+        "session_generation": 0,
+        "session_id": "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA",
+        "token_type": "Bearer"
+      },
+      "id": "success-synthetic-android-play",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-android-play\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": true
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/android-fdroid/return",
+        "client_id": "synthetic-android-fdroid",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "expected": {
+        "access_token": "hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "account_id": "synthetic-account-a",
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "client_id": "synthetic-android-fdroid",
+        "environment": "synthetic",
+        "expires_in": 300,
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "refresh_token": "hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write",
+        "session_generation": 0,
+        "session_id": "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA",
+        "token_type": "Bearer"
+      },
+      "id": "success-synthetic-android-fdroid",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-android-fdroid\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": true
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "expected": {
+        "access_token": "hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "account_id": "synthetic-account-a",
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "expires_in": 1,
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "refresh_token": "hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write",
+        "session_generation": 0,
+        "session_id": "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA",
+        "token_type": "Bearer"
+      },
+      "id": "ttl-one",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":1,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": true
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "expected": {
+        "access_token": "hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "account_id": "synthetic-account-a",
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "expires_in": 300,
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "refresh_token": "hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write",
+        "session_generation": 9007199254740991,
+        "session_id": "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA",
+        "token_type": "Bearer"
+      },
+      "id": "generation-safe-max",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":9007199254740991,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": true
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "expected": {
+        "access_token": "hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "account_id": "00000000-0000-4000-8000-000000000001",
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "expires_in": 300,
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "refresh_token": "hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write",
+        "session_generation": 0,
+        "session_id": "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA",
+        "token_type": "Bearer"
+      },
+      "id": "opaque-server-uuid",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"00000000-0000-4000-8000-000000000001\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": true
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "wrong-type",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "code-as-access",
+      "raw": "{\"access_token\":\"hmd_acode_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "refresh-as-access",
+      "raw": "{\"access_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "access-as-refresh",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "foreign-session-cookie",
+      "raw": "{\"access_token\":\"hmd_ses_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "noncanonical-token-tail",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "short-token",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "ttl-zero",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":0,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "ttl-negative",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":-1,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "ttl-over-cap",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":301,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "ttl-bool",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":true,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "ttl-string",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":\"300\",\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "ttl-null",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":null,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "generation-negative",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":-1,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "generation-unsafe",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":9007199254740992,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "generation-bool",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":false,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "generation-null",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":null,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "generation-string",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":\"0\",\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "wrong-issuer",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://other.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "wrong-environment",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"production\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "wrong-audience",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:health-read:synthetic\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "wrong-client",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-android-play\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "wrong-installation",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "email-as-account",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic@example.invalid\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "session-as-account",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "native-profile-as-account",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"profile-001\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "account-null",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":null,\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "account-bool",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":true,\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "account-empty",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "scope-expanded",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write health:read\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "scope-reduced-initial",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"config:profiles:read\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "scope-reordered",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"config:profiles:write config:profiles:read account:sessions:revoke:self account:sessions:read\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "scope-duplicate",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "scope-tabs",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read\\taccount:sessions:revoke:self\\tconfig:profiles:read\\tconfig:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "session-null",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":null,\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "session-not-reference",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"synthetic-account-a\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "missing-token_type",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "missing-access_token",
+      "raw": "{\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "missing-expires_in",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "missing-refresh_token",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "missing-session_id",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "missing-scope",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "missing-issuer",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "missing-environment",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "missing-audience",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "missing-client_id",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "missing-installation_id",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "missing-account_id",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "missing-session_generation",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "extra-cookie",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"cookie\":\"synthetic-only\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "extra-profile_id",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"profile_id\":\"profile-001\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "extra-upload_token",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\",\"upload_token\":\"synthetic-only\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "extra-sync_enabled",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"sync_enabled\":true,\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "extra-message",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"message\":\"synthetic-only\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "duplicate-decoded-key",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\",\"account_id\":\"synthetic-account-b\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "escaped-duplicate-key",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\",\"\\u0061ccount_id\":\"synthetic-account-b\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "generation-decimal",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0.0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "generation-exponent",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0e0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "generation-negative-zero",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":-0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "hex": "efbbbf7b226163636573735f746f6b656e223a22686d645f6e61635f41414141414141414141414141414141414141414141414141414141414141414141414141414141414141222c226163636f756e745f6964223a2273796e7468657469632d6163636f756e742d61222c2261756469656e6365223a2275726e3a6865616c74686d643a6163636f756e742d636f6e6669673a73796e7468657469633a7631222c22636c69656e745f6964223a2273796e7468657469632d6170706c652d696f73222c22656e7669726f6e6d656e74223a2273796e746865746963222c22657870697265735f696e223a3330302c22696e7374616c6c6174696f6e5f6964223a2249494949494949494949494949494949494949494949494949494949494949494949494949494949494941222c22697373756572223a2268747470733a2f2f6163636f756e742d617574682e73796e7468657469632e6578616d706c65222c22726566726573685f746f6b656e223a22686d645f6e72665f52525252525252525252525252525252525252525252525252525252525252525252525252525252525241222c2273636f7065223a226163636f756e743a73657373696f6e733a72656164206163636f756e743a73657373696f6e733a7265766f6b653a73656c6620636f6e6669673a70726f66696c65733a7265616420636f6e6669673a70726f66696c65733a7772697465222c2273657373696f6e5f67656e65726174696f6e223a302c2273657373696f6e5f6964223a2253535353535353535353535353535353535353535353535353535353535353535353535353535353535341222c22746f6b656e5f74797065223a22426561726572227d",
+      "id": "response-bom",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "hex": "7b2261223ac3287d",
+      "id": "invalid-utf8",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "body-overflow",
+      "repeat": 8193,
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "trailing-data",
+      "raw": "{\"access_token\":\"hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}{}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "nested-token",
+      "raw": "{\"access_token\":{\"token\":\"synthetic-only\"},\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    },
+    {
+      "context": {
+        "audience": "urn:healthmd:account-config:synthetic:v1",
+        "callback": "https://callbacks.account-sync.example/apple-ios/return",
+        "client_id": "synthetic-apple-ios",
+        "environment": "synthetic",
+        "installation_id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA",
+        "issuer": "https://account-auth.synthetic.example",
+        "scope": "account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write"
+      },
+      "id": "surrogate-token",
+      "raw": "{\"access_token\":\"\\ud800hmd_nac_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"account_id\":\"synthetic-account-a\",\"audience\":\"urn:healthmd:account-config:synthetic:v1\",\"client_id\":\"synthetic-apple-ios\",\"environment\":\"synthetic\",\"expires_in\":300,\"installation_id\":\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIA\",\"issuer\":\"https://account-auth.synthetic.example\",\"refresh_token\":\"hmd_nrf_RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRA\",\"scope\":\"account:sessions:read account:sessions:revoke:self config:profiles:read config:profiles:write\",\"session_generation\":0,\"session_id\":\"SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSA\",\"token_type\":\"Bearer\"}",
+      "valid": false
+    }
+  ],
+  "schema": "healthmd.account_auth.native_client_source_vectors",
+  "schema_version": 1,
+  "status": "proposed_disabled_source_not_os_or_authority_proof",
+  "synthetic_only": true
+}

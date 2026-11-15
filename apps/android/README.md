@@ -317,6 +317,12 @@ repository root:
 make test-android
 ```
 
+App JVM tests depend on `:healthmd-core:checkHealthMdCoreKotlinBindings` and use
+the exact host Rust library produced by binding generation. Gradle pins the
+UniFFI library override to that output and regenerates it when the native file
+is missing. Desktop JNA supplies the JVM bootstrap through `testRuntimeOnly`;
+Android application packaging continues to use the Android JNA AAR.
+
 Focused commands:
 
 ```bash
