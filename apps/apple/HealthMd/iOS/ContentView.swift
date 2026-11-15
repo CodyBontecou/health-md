@@ -919,6 +919,7 @@ struct ContentView: View {
             case .localIPhoneFolder: return "folder.fill"
             case .connectedMac: return "desktopcomputer"
             case .apiEndpoint, .agentDataGateway: return "network"
+            case .googleDrive: return "externaldrive.connected.to.line.below"
             }
         }
         if partialExportNotice != nil { return "exclamationmark.circle.fill" }
@@ -977,6 +978,7 @@ struct ContentView: View {
         case .connectedMac: return String(localized: "Connected Mac")
         case .apiEndpoint: return String(localized: "API Endpoint")
         case .agentDataGateway: return String(localized: "Agent Data gateway")
+        case .googleDrive: return "Google Drive" // Product name, as on the other target labels.
         }
     }
 
