@@ -83,24 +83,36 @@ enum HealthMdRenderInputAdapter {
         let batches: [Data]
     }
 
-    /// Provider-free v7 and v8 use identical native presentation grammar except these schema
+    /// Provider-free v7, v8 and v10 use identical native presentation grammar except these schema
     /// metadata fields. Preserve every other byte; never replace arbitrary payload text.
     static func historicalNativeContent(_ content: String, format: ExportFormat, profile: String) throws -> String {
         guard profile == "apple_health_data_v7" else { return content }
         switch format {
         case .json:
             guard let root = try JSONSerialization.jsonObject(with: Data(content.utf8)) as? [String: Any],
-                  root["providers"] == nil,
-                  root["schema_version"] as? Int == 8,
+                  root["providers"] == nil, root["schema_profile"] == nil,
+                  !containsNativeDetailSamples(root),
+                  let sourceVersion = root["schema_version"] as? Int, [8, 10].contains(sourceVersion),
                   root["schema"] as? String == HealthMdExportSchema.identifier
                     || root["schema"] as? String == "healthmd.rollup_summary" else {
                 throw AdapterError.invalidPresentation
             }
             var lines = content.components(separatedBy: "\n")
+            let versionLines = lines.filter { $0 == "  \"schema_version\" : \(sourceVersion)," || $0 == "  \"schema_version\" : \(sourceVersion)" }
+            guard versionLines.count == 1 else { throw AdapterError.invalidPresentation }
+            if root["schema"] as? String == "healthmd.rollup_summary" {
+                guard root["source_schema"] as? String == HealthMdExportSchema.identifier,
+                      root["source_schema_version"] as? Int == sourceVersion,
+                      root["rollup_rules_version"] as? Int == 8 else {
+                    throw AdapterError.invalidPresentation
+                }
+            }
             for key in ["schema_version", "source_schema_version", "rollup_rules_version"] {
-                let old = "  \"\(key)\" : 8,"
-                let last = "  \"\(key)\" : 8"
-                lines = lines.map { $0 == old ? "  \"\(key)\" : 7," : ($0 == last ? "  \"\(key)\" : 7" : $0) }
+                for version in (key == "rollup_rules_version" ? [8] : [8, 10]) {
+                    let old = "  \"\(key)\" : \(version),"
+                    let last = "  \"\(key)\" : \(version)"
+                    lines = lines.map { $0 == old ? "  \"\(key)\" : 7," : ($0 == last ? "  \"\(key)\" : 7" : $0) }
+                }
             }
             return lines.joined(separator: "\n")
         case .csv:
@@ -115,7 +127,8 @@ enum HealthMdRenderInputAdapter {
             // this version, and the simple-operation gate excludes source archives/providers.
             let rows = try parseCSV(content)
             guard rows.count > 2, rows[2].count == 6,
-                  rows[2][1] == "Metadata", rows[2][2] == "schema_version", rows[2][3] == "8" else {
+                  rows[2][1] == "Metadata", rows[2][2] == "schema_version", ["8", "10"].contains(rows[2][3]),
+                  !rows.contains(where: { $0.count > 2 && ($0[1].hasPrefix("WHOOP") || $0[2] == "schema_profile") }) else {
                 throw AdapterError.invalidPresentation
             }
             var lines = content.components(separatedBy: "\n")
@@ -132,19 +145,34 @@ enum HealthMdRenderInputAdapter {
                 if format == .markdown { return content }
                 throw AdapterError.invalidPresentation
             }
-            let front = String(content[..<end.lowerBound]).components(separatedBy: "\n").map { line in
-                ["schema_version: 8", "source_schema_version: 8", "rollup_rules_version: 8"].contains(line)
-                    ? String(line.dropLast()) + "7" : line
-            }.joined(separator: "\n")
+            let metadata = String(content[..<end.lowerBound]).components(separatedBy: "\n")
+            let schemas = metadata.filter { $0.hasPrefix("schema:") }
+            let versions = metadata.filter { $0.hasPrefix("schema_version:") }
+            guard schemas.count == 1, ["schema: healthmd.health_data", "schema: healthmd.rollup_summary"].contains(schemas[0]),
+                  versions.count == 1, ["schema_version: 8", "schema_version: 10"].contains(versions[0]),
+                  !metadata.contains(where: { $0.hasPrefix("schema_profile:") || $0.hasPrefix("whoop_") || $0.hasPrefix("providers:") }) else {
+                throw AdapterError.invalidPresentation
+            }
+            let replacements = ["schema_version: 8": "schema_version: 7", "schema_version: 10": "schema_version: 7",
+                "source_schema_version: 8": "source_schema_version: 7", "source_schema_version: 10": "source_schema_version: 7",
+                "rollup_rules_version: 8": "rollup_rules_version: 7"]
+            let front = metadata.map { replacements[$0] ?? $0 }.joined(separator: "\n")
             var body = String(content[end.lowerBound...])
             if front.contains("schema: healthmd.rollup_summary\n") {
                 body = body.components(separatedBy: "\n").map {
-                    $0 == "- **Rule source:** `_healthmd_data_dictionary.json` schema v8"
+                    ["- **Rule source:** `_healthmd_data_dictionary.json` schema v8", "- **Rule source:** `_healthmd_data_dictionary.json` schema v10"].contains($0)
                         ? "- **Rule source:** `_healthmd_data_dictionary.json` schema v7" : $0
                 }.joined(separator: "\n")
             }
             return front + body
         }
+    }
+
+    private static func containsNativeDetailSamples(_ value: Any) -> Bool {
+        if let object = value as? [String: Any] {
+            return object["detailSamples"] != nil || object.values.contains(where: containsNativeDetailSamples)
+        }
+        return (value as? [Any])?.contains(where: containsNativeDetailSamples) ?? false
     }
 
     private static let maxBatchBytes = 2 * 1024 * 1024
@@ -816,6 +844,10 @@ enum HealthMdRenderInputAdapter {
                 "csv_rows": NSNull(),
                 "json_root": NSNull(),
             ]
+        }
+        if profile == "apple_health_data_v7",
+           data.providers?.isEmpty == false || data.compatibilityDetailProfile != nil {
+            throw AdapterError.invalidPresentation
         }
         let requested = Set(options.formats)
         if let captureContext, captureContext.sleepDayAttribution == .morningEnds {

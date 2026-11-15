@@ -56,8 +56,8 @@ enum HealthRollupPeriod: String, CaseIterable, Codable, Equatable {
 
 enum HealthRollupExportSchema {
     static let identifier = "healthmd.rollup_summary"
-    static let currentVersion = 9
-    static let sourceDailyVersion = 8
+    static let currentVersion = 10
+    static let sourceDailyVersion = 10
     static let rulesVersion = 8
 }
 

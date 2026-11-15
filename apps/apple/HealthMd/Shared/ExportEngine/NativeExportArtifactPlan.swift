@@ -343,6 +343,7 @@ nonisolated struct NativeExportArtifactPlan: Equatable, Sendable {
         switch profile {
         case .appleHealthDataV7: "apple_health_data_v7"
         case .appleHealthDataV8: "apple_health_data_v8"
+        case .appleHealthDataV10: "apple_health_data_v10"
         case .androidFrozenV4: "android_frozen_v4"
         case .androidAnalyticalV5: "android_analytical_v5"
         case .appleHealthDataV11: "apple_health_data_v11"

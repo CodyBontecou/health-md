@@ -82,19 +82,11 @@ struct SchedulingMenuLabel: View {
             HStack(spacing: Spacing.s2) {
                 (valueIsResolved ? Text(value) : Text(LocalizedStringKey(value)))
                     .font(monospaced ? Typography.monoEmphasis() : Typography.bodyEmphasis())
-                    .foregroundStyle(Color.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(Color.textSecondary)
-                    .accessibilityHidden(true)
             }
         }
-        .padding(Spacing.s2)
-        .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44, alignment: .leading)
-        .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.sm))
-        .overlay(RoundedRectangle(cornerRadius: GeistRadius.sm).strokeBorder(Color.borderSubtle, lineWidth: 1))
-        .contentShape(Rectangle())
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .multilineTextAlignment(.leading)
     }
 }
 
@@ -121,7 +113,6 @@ struct SchedulingValueMenu<Value: Hashable>: View {
         ) {
             SchedulingMenuLabel(title: title, value: value, monospaced: monospaced, valueIsResolved: valueIsResolved)
         }
-        .buttonStyle(.plain)
         .accessibilityLabel(LocalizedStringKey(title))
         .accessibilityValue(valueIsResolved ? Text(value) : Text(LocalizedStringKey(value)))
     }

@@ -1,0 +1,33 @@
+{
+  "description": "Synthetic review-only request transport. UUIDs and dates are fixtures, not credentials or readings.",
+  "version": 1,
+  "synthetic_clock_for_claim_example": "2026-04-03T12:00:00.000Z",
+  "owner_queue_body": {
+    "draftId": "11111111-1111-4111-8111-111111111111",
+    "deviceId": "22222222-2222-4222-8222-222222222222"
+  },
+  "device_claim_example": {
+    "version": 1,
+    "request": {
+      "id": "33333333-3333-4333-8333-333333333333",
+      "source": "ios",
+      "spec": {
+        "source": "ios",
+        "dates": ["2026-04-01", "2026-04-02"],
+        "scope": "metric_ids",
+        "metricIds": ["sleep_total", "steps"],
+        "detail": "summary"
+      },
+      "state": "claimed",
+      "expiresAt": "2026-04-03T12:15:00.000Z",
+      "uploadMode": "supplemental_only",
+      "uploadEnabled": false,
+      "launchable": false
+    }
+  },
+  "device_empty": { "version": 1, "request": null },
+  "invalid_owner_queue_bodies": [
+    { "draftId": "2026-04-01", "deviceId": "22222222-2222-4222-8222-222222222222" },
+    { "draftId": "11111111-1111-4111-8111-111111111111", "deviceId": "android" }
+  ]
+}

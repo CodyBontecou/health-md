@@ -2395,6 +2395,11 @@ mod tests {
         "/tests/fixtures/android-raw-v1-minimal-snapshot.json"
     ));
 
+    const APPLE_API_V2_V8: &str = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/apple-api-export-v2-provider-sidecar-v8.json"
+    ));
+
     #[test]
     fn packaged_cross_platform_fixtures_match_reviewed_producer_bytes() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../..");
@@ -2595,22 +2600,50 @@ mod tests {
 
     #[tokio::test]
     async fn production_api_v2_fixture_retains_provider_sidecars_as_lossless_records() {
-        let (_temporary, store) = store_with_artifact(
-            grant(
-                json!({"type": "all_available"}),
-                json!(["common", "lossless"]),
-                false,
-            ),
-            "api.json",
-            APPLE_API_V2,
-        );
-        let catalog = store
-            .query_page(&context(), query(json!({"type": "catalog"})))
-            .await
-            .unwrap();
-        assert!(catalog["items"].as_array().unwrap().iter().any(|item| {
-            item["source_id"] == "provider:whoop" && item["detail_level"] == "lossless"
-        }));
+        for fixture in [APPLE_API_V2, APPLE_API_V2_V8] {
+            let (_temporary, store) = store_with_artifact(
+                grant(
+                    json!({"type": "all_available"}),
+                    json!(["common", "lossless"]),
+                    false,
+                ),
+                "api.json",
+                fixture,
+            );
+            let catalog = store
+                .query_page(&context(), query(json!({"type": "catalog"})))
+                .await
+                .unwrap();
+            assert!(catalog["items"].as_array().unwrap().iter().any(|item| {
+                item["source_id"] == "provider:whoop" && item["detail_level"] == "lossless"
+            }));
+            let records = store
+                .query_page(
+                    &context(),
+                    query(json!({
+                        "type": "records",
+                        "metrics": {"type": "all_available"},
+                        "sources": {"type": "all_available"},
+                        "dates": {"type": "all_available"},
+                        "times": {"type": "all_available"},
+                        "detail_level": "common"
+                    })),
+                )
+                .await
+                .unwrap();
+            let producer: Value = serde_json::from_str(fixture).unwrap();
+            let cycle = producer
+                .pointer("/records/0/providers/whoop/cycles/0")
+                .unwrap();
+            assert!(
+                records["items"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|item| { item["value"] == *cycle }),
+                "Provider cycles must retain exact fields, including v2 step_count"
+            );
+        }
     }
 
     #[tokio::test]

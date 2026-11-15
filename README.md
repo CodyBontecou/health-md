@@ -32,6 +32,7 @@ A skill supplies agent instructions; it does not install the `healthmd` binaries
 | [`apps/cli`](apps/cli) | Portable `healthmd` CLI | Cargo / Rust |
 | [`apps/practice`](apps/practice) | Isolated synthetic clinician portal and future clinical boundary | Node.js / Cloudflare Workers |
 | [`apps/wake`](apps/wake) | Notification-only Direct CLI wake doorbell | TypeScript / Cloudflare Workers |
+| [`apps/cloud`](apps/cloud) | Opt-in receiver/dashboard: synthetic preview, unbacked owner-operated VM pilot with separate public write-only API and owner-only account ingress, and an independently authenticated read-only MCP endpoint | TypeScript / Cloudflare Workers, D1, R2 |
 | [`apps/website`](apps/website) | Product website and documentation | Node.js / Astro |
 | [`packages/contracts`](packages/contracts) | Cross-platform schemas and compatibility fixtures | Language-neutral |
 | [`packages/healthmd-core-rust`](packages/healthmd-core-rust) | Shared export core, UniFFI binding tooling, and direct protocol | Cargo / Rust |
@@ -40,7 +41,7 @@ The [Health.md Obsidian plugin](https://github.com/CodyBontecou/health-md-visual
 
 ## Development
 
-Each product keeps its native build system and lockfiles. The root `Makefile` provides convenience commands without replacing component tooling.
+Each product keeps its native build system and lockfiles. The root `Makefile` provides convenience commands without replacing component tooling. `make` shows help; `make test COMPONENT=<owner>` selects one component. Use [focused test commands and escalation rules](docs/testing-strategy.md) during iteration; `make test-all` is an explicit broad smoke sweep, not release qualification. Apple `make test` runs macOS only; simulator/device QA requires explicit authorization for the current task.
 
 ```bash
 make test-contracts
@@ -52,6 +53,7 @@ make test-android
 make test-cli
 make test-practice
 make test-wake
+make test-cloud
 make test-website
 ```
 
@@ -59,7 +61,7 @@ make test-website
 
 Additional Gradle options can be supplied with `ANDROID_TEST_ARGS='--max-workers=2 --init-script scripts/ci-gradle.init.gradle --info'`. These arguments are evaluated from `apps/android`.
 
-See each component's README and `AGENTS.md` for platform-specific setup and release instructions.
+See each component's README and `AGENTS.md` for platform-specific setup and release instructions. Cloud prototype production gates are recorded in [`ADR-0007`](docs/architecture/adr-0007-healthmd-cloud.md); current app releases still send to user-selected destinations, not to a Health.md-operated cloud by default.
 
 For a read-only Markdown inventory, run `python3 scripts/audit-markdown.py`. JSON/CSV reports go to ignored `.pi/markdown-audit/` and include ownership categories, inferred backlinks, identical files, and missing local links. These are investigation signals, not deletion recommendations. The scanner's tests run with `python3 -m unittest discover -s scripts/tests -p 'test_audit_markdown.py'`.
 
@@ -83,4 +85,4 @@ Apple v8, Android frozen v4, and Android analytical v5 remain explicit historica
 
 ## License
 
-Licensing is documented in [`LICENSES.md`](LICENSES.md). Apple, Android, CLI, Practice, wake, contracts, and shared-core Rust source are AGPL-3.0-only; the website is MIT-licensed.
+Licensing is documented in [`LICENSES.md`](LICENSES.md). Apple, Android, CLI, Practice, wake, cloud, contracts, and shared-core Rust source are AGPL-3.0-only; the website is MIT-licensed.

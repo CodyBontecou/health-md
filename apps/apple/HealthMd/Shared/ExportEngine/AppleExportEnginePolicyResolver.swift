@@ -6,8 +6,8 @@ import HealthMdCoreRust
 /// Release builds never inspect a runtime value. Internal builds may use an injected value, the
 /// profile-scoped UserDefaults key, or the profile-scoped environment key, in that order.
 nonisolated struct AppleExportEnginePolicyResolver: Sendable {
-    static let userDefaultsKey = "HealthMd.exportEngine.apple_health_data_v8"
-    static let environmentKey = "HEALTHMD_EXPORT_ENGINE_APPLE_HEALTH_DATA_V8"
+    static let userDefaultsKey = "HealthMd.exportEngine.apple_health_data_v10"
+    static let environmentKey = "HEALTHMD_EXPORT_ENGINE_APPLE_HEALTH_DATA_V10"
 
     private let internalRuntimeOverride: String?
 
@@ -40,10 +40,9 @@ nonisolated struct AppleExportEnginePolicyResolver: Sendable {
 #endif
     }
 
-    /// Reads the Apple-v8 authority request without requiring model-layer callers to import the
-    /// generated UniFFI module.
+    /// Reads the current Apple authority request without importing generated bindings at call sites.
     func requestedAppleModeForNewOperation() -> ExportEngineMode {
-        requestedModeForNewOperation(profile: .appleHealthDataV8)
+        requestedModeForNewOperation(profile: .appleHealthDataV10)
     }
 
     /// Reads the profile-scoped authority request exactly once without opening the packaged core.
@@ -52,7 +51,7 @@ nonisolated struct AppleExportEnginePolicyResolver: Sendable {
     func requestedModeForNewOperation(
         profile: CoreMetricRegistryProfile
     ) -> ExportEngineMode {
-        guard profile == .appleHealthDataV8 else { return .legacy }
+        guard profile == .appleHealthDataV10 else { return .legacy }
         return internalRuntimeOverride.map(ExportEngineMode.init(persistedValue:))
             ?? Self.compileTimeDefault
     }
@@ -84,8 +83,8 @@ nonisolated struct AppleExportEnginePolicyResolver: Sendable {
         coreExecutor: any AppleLooseDailyCoreExecuting = SystemAppleLooseDailyCoreExecutor()
     ) async -> AppleExportEnginePin? {
         await pinForProfile(calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
-            profile: .appleHealthDataV8,
-            requestedMode: frozenRequestedMode ?? requestedModeForNewOperation(profile: .appleHealthDataV8),
+            profile: .appleHealthDataV10,
+            requestedMode: frozenRequestedMode ?? requestedModeForNewOperation(profile: .appleHealthDataV10),
             coreExecutor: coreExecutor)
     }
 
@@ -111,7 +110,7 @@ nonisolated struct AppleExportEnginePolicyResolver: Sendable {
     ) async -> AppleExportEnginePin? {
         // Legacy authority persists as nil without loading the packaged core. Capture the request
         // once so a mutable internal override can never split one operation's authority decision.
-        guard profile == .appleHealthDataV8 || profile == .appleHealthDataV11 else { return nil }
+        guard profile == .appleHealthDataV10 || profile == .appleHealthDataV11 else { return nil }
         let expectedProfileID = profile == .appleHealthDataV11
             ? AppleExportEnginePin.wakeDateProfileID : AppleExportEnginePin.profileID
         guard requestedMode != .legacy,
@@ -139,7 +138,8 @@ nonisolated struct AppleExportEnginePolicyResolver: Sendable {
     }
 
     /// Resolves a durable operation. Missing pins are legacy journals. A pin never inherits a new
-    /// process-wide override, and an incompatible non-legacy pin fails closed to legacy.
+    /// process-wide override. This is an eligibility check only: durable planners must reject an
+    /// incompatible present pin, never use this result to re-render it with the current schema.
     func modeForPersistedOperation(
         pin: AppleExportEnginePin?,
         profile: CoreMetricRegistryProfile,

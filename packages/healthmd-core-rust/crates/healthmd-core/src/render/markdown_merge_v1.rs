@@ -22,7 +22,9 @@ pub fn merge_profile_markdown(
 ) -> Result<String, RenderError> {
     validate(existing, generated)?;
     Ok(match profile {
-        SemanticProfile::AppleHealthDataV7 | SemanticProfile::AppleHealthDataV8 => {
+        SemanticProfile::AppleHealthDataV7
+        | SemanticProfile::AppleHealthDataV8
+        | SemanticProfile::AppleHealthDataV10 => {
             apple_merge(existing, generated, preserve_preamble)
         }
         SemanticProfile::AndroidFrozenV4 | SemanticProfile::AndroidAnalyticalV5 => {

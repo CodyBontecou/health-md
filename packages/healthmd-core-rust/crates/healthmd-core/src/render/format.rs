@@ -50,10 +50,14 @@ pub(crate) fn render_frontmatter(
             )
             .map_err(|_| RenderError::SerializationFailed)?;
         } else {
-            output.push_str(if config.profile == SemanticProfile::AppleHealthDataV7 {
-                "schema: healthmd.health_data\nschema_version: 7\n"
-            } else {
-                "schema: healthmd.health_data\nschema_version: 8\n"
+            output.push_str(match config.profile {
+                SemanticProfile::AppleHealthDataV7 => {
+                    "schema: healthmd.health_data\nschema_version: 7\n"
+                }
+                SemanticProfile::AppleHealthDataV10 => {
+                    "schema: healthmd.health_data\nschema_version: 10\n"
+                }
+                _ => "schema: healthmd.health_data\nschema_version: 8\n",
             });
         }
         output.push_str("time_context:\n  calendar_timezone: ");
@@ -548,10 +552,10 @@ pub(crate) fn render_csv(
                 day.owner_date.as_str(),
                 "Metadata",
                 "schema_version",
-                if profile == SemanticProfile::AppleHealthDataV7 {
-                    "7"
-                } else {
-                    "8"
+                match profile {
+                    SemanticProfile::AppleHealthDataV7 => "7",
+                    SemanticProfile::AppleHealthDataV10 => "10",
+                    _ => "8",
                 },
                 "",
                 "",
@@ -711,6 +715,7 @@ pub(crate) fn public_json_entries(
     match profile {
         SemanticProfile::AppleHealthDataV7
         | SemanticProfile::AppleHealthDataV8
+        | SemanticProfile::AppleHealthDataV10
         | SemanticProfile::AppleHealthDataV11 => {
             let wake_date = profile == SemanticProfile::AppleHealthDataV11;
             entries.push((

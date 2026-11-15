@@ -1,9 +1,13 @@
 """Bounded copy/source checks; native XCTest owns actual Foundation/value behavior."""
-from copy import deepcopy
 import importlib.util
 from pathlib import Path
 import re
 import unittest
+
+try:  # Package-qualified unittest and standalone discovery have different import roots.
+    from .localization_fixtures import mutation_inputs
+except ImportError:
+    from localization_fixtures import mutation_inputs
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("reviewed_editor_localizations", ROOT / "scripts/validate-metric-selection-localizations.py")
@@ -22,7 +26,7 @@ class FrontmatterLocalizationTests(unittest.TestCase):
         cls.catalog, cls.manifest, cls.sources = validator.load_inputs(MANIFEST)
 
     def inputs(self):
-        return deepcopy(self.catalog), deepcopy(self.manifest), dict(self.sources)
+        return mutation_inputs(self.catalog, self.manifest, self.sources)
 
     def test_production_slice_and_source_handoffs(self):
         self.assertEqual(validator.validate(self.catalog, self.manifest, self.sources), [])

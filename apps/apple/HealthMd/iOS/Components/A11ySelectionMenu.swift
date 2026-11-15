@@ -16,7 +16,7 @@ struct A11ySelectionMenu<Value: Hashable, Label: View>: View {
 
     var body: some View {
         Button { isPresented = true } label: { label() }
-            .buttonStyle(.plain)
+            .buttonStyle(SecondaryButtonStyle())
             .popover(isPresented: $isPresented) {
                 // Ideal size is only a window preference. The native popover
                 // constrains this scroll to its actual remaining screen space.

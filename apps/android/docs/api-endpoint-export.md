@@ -1,6 +1,6 @@
 # API Endpoint Export
 
-Health.md can send compatibility exports or a Raw API Snapshot directly to an endpoint configured by the user. This is an explicit alternative to Device Folder export; Health.md does not proxy or retain completed requests.
+Health.md can send compatibility exports or a Raw API Snapshot directly to an endpoint configured by the user. This is an explicit alternative to Device Folder export. The configured receiver controls retention: the optional Health.md Cloud pilot deliberately retains compatibility exports sent to it, while other destinations have their own policies.
 
 ## Configure
 
@@ -10,6 +10,8 @@ Health.md can send compatibility exports or a Raw API Snapshot directly to an en
 4. Optionally enter a token or full `Bearer …` / `Basic …` Authorization value.
 5. Optionally add raw request headers, one `Name: value` per line—for example `X-API-Key`, `X-Client-ID`, or an `Authorization` value using a custom scheme.
 6. Choose **Compatibility Export** or **Raw API Snapshot**, then choose dates and metrics. Both products can be previewed before export. A raw preview performs the full provider-native read into private no-backup storage, retains only bounded preview text in memory, and deletes the temporary artifact without uploading it.
+
+For the **single-owner, unbacked Health.md Cloud pilot** only, the optional compatibility-export destination is `https://api.healthmd.app/api/v1/exports` with a separate write-only `hmd_ing_…` token from the owner's account dashboard. The earlier tailnet-only `:18788` writer remains available for existing saved destinations; the app does not silently migrate endpoints or tokens. Do not send **Raw API Snapshot** NDJSON to this URL: it is not ingested. The public pilot retains accepted compatibility-export revisions without an off-host backup, so VM/disk/key loss can permanently destroy them. Configure this URL only after the public receiver is confirmed live; do not put the token in the URL.
 
 The URL is stored in private app preferences. Authorization and custom header values are stored separately with Android EncryptedSharedPreferences backed by Android Keystore. Export settings and encrypted secrets are excluded from Android backup/device transfer, UI labels, export history, logs, and WorkManager input. Because URL query parameters are part of the settings URL, put API keys and other secrets in encrypted request headers instead. Saved header values are not displayed again; entering new custom headers replaces the complete saved custom-header set.
 

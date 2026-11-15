@@ -16,9 +16,11 @@ pub mod semantic;
 pub mod sleep;
 
 /// Version of the coarse Rust/UniFFI API contract.
-pub const CORE_API_VERSION: u32 = 4;
+pub const CORE_API_VERSION: u32 = 5;
 /// Core API value embedded in immutable semantic-result v1 bytes.
 pub const SEMANTIC_RESULT_CORE_API_VERSION: u32 = 3;
+/// Core API identity embedded in immutable sleep semantic-result v2 bytes.
+pub const SLEEP_RESULT_CORE_API_VERSION: u32 = 4;
 /// Version of the semantic native-to-core input contract.
 pub const SEMANTIC_INPUT_VERSION: u32 = 1;
 /// Version of the internal normalized canonical result model.
@@ -358,7 +360,7 @@ mod tests {
                 crate_version: "0.1.0-alpha.7".to_owned(),
                 core_source_revision: "development".to_owned(),
                 registry_sha256: REGISTRY_SHA256.to_owned(),
-                core_api_version: 4,
+                core_api_version: 5,
                 semantic_input_version: 1,
                 canonical_model_version: 1,
                 registry_version: 1,

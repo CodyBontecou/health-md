@@ -705,11 +705,16 @@ struct ExportOrchestrator {
                    let externalIntegrations {
                     var providerCalendar = Calendar(identifier: .gregorian)
                     providerCalendar.timeZone = sourceTimeZone
+                    let whoopResources = frozenOperationSettings.metricSelection.enabledWHOOPResources
+                        .requested(for: date, calendar: providerCalendar)
                     externalRecords = await externalIntegrations.fetchDailyRecords(
                         for: date,
-                        calendar: providerCalendar
+                        calendar: providerCalendar,
+                        whoopResources: whoopResources
+                    ).compactMap { $0.selectingWHOOPResources(whoopResources) }
+                    healthData.providers = HealthProviderSections.normalized(
+                        from: externalRecords, whoopResources: whoopResources
                     )
-                    healthData.providers = HealthProviderSections.normalized(from: externalRecords)
                 } else {
                     externalRecords = []
                 }
@@ -1092,8 +1097,10 @@ struct ExportOrchestrator {
                 if isSelected, !isSummaryOnly, record.hasAnyData, let externalIntegrations {
                     var providerCalendar = Calendar(identifier: .gregorian)
                     providerCalendar.timeZone = sourceTimeZone
-                    providerRecords = await externalIntegrations.fetchDailyRecords(for: date, calendar: providerCalendar)
-                    record.providers = HealthProviderSections.normalized(from: providerRecords)
+                    let whoopResources = frozenSettings.metricSelection.enabledWHOOPResources
+                    providerRecords = await externalIntegrations.fetchDailyRecords(for: date, calendar: providerCalendar,
+                        whoopResources: whoopResources)
+                    record.providers = HealthProviderSections.normalized(from: providerRecords, whoopResources: whoopResources)
                     providerSidecars.append(contentsOf: try vaultManager.materializeExternalDailyRecords(providerRecords,
                         healthSubfolder: effectiveSettingsSnapshot.healthSubfolder ?? ""))
                 }
@@ -1647,11 +1654,16 @@ struct ExportOrchestrator {
                    externalIntegrations.connectedProviderCount > 0 {
                     var providerCalendar = Calendar(identifier: .gregorian)
                     providerCalendar.timeZone = frozenOperationSettings.exportTimeZoneOverride ?? .current
+                    let whoopResources = frozenOperationSettings.metricSelection.enabledWHOOPResources
+                        .requested(for: date, calendar: providerCalendar)
                     externalRecords = await externalIntegrations.fetchDailyRecords(
                         for: date,
-                        calendar: providerCalendar
+                        calendar: providerCalendar,
+                        whoopResources: whoopResources
+                    ).compactMap { $0.selectingWHOOPResources(whoopResources) }
+                    healthData.providers = HealthProviderSections.normalized(
+                        from: externalRecords, whoopResources: whoopResources
                     )
-                    healthData.providers = HealthProviderSections.normalized(from: externalRecords)
                 } else {
                     externalRecords = []
                 }
@@ -1819,9 +1831,15 @@ struct ExportOrchestrator {
                        externalIntegrations.connectedProviderCount > 0 {
                         let providerRecords = await externalIntegrations.fetchDailyRecords(
                             for: originalDate,
-                            calendar: archiveCalendar
+                            calendar: archiveCalendar,
+                            whoopResources: frozenOperationSettings.metricSelection.enabledWHOOPResources
+                                .requested(for: originalDate, calendar: archiveCalendar)
                         )
-                        healthData.providers = HealthProviderSections.normalized(from: providerRecords)
+                        healthData.providers = HealthProviderSections.normalized(
+                            from: providerRecords,
+                            whoopResources: frozenOperationSettings.metricSelection.enabledWHOOPResources
+                                .requested(for: originalDate, calendar: archiveCalendar)
+                        )
                     }
                     let prepared = autoreleasepool {
                         healthData.preparedExportAssumingSelectionApplied(

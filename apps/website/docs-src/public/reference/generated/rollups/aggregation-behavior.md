@@ -1,6 +1,6 @@
 # Health.md roll-up aggregation behavior matrix
 
-Generated deterministically from production `HealthMetricDataDictionary.entries(using:)` at schema v8.
+Generated deterministically from production `HealthMetricDataDictionary.entries(using:)` at schema v10.
 The range evidence is fixed synthetic UTC data, contains no PHI, and is rendered by the production roll-up generator and exporters.
 
 - Dictionary entries: 232

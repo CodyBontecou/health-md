@@ -19,6 +19,7 @@ The package is licensed under the [GNU Affero General Public License v3.0 only](
 | [`semantic-input/v1`](semantic-input/v1/contract.md) | Internal post-capture semantic envelope, strict schemas, and synthetic cross-language differential corpus |
 | [`render-input/v1`](render-input/v1/contract.md) | Internal profile rendering, artifact-plan, path, merge, API batching, and bounded lossless-stream contract |
 | [`shared-setup/v2`](shared-setup/v2/contract.md) | Public bounded Apple/Android portable named-profile setup bundle with registry-backed alias union, exact v2 platform extensions, non-operative destination/schedule intent, and language-neutral Add/Replace/Undo transaction semantics; version 2 is the one and only profile version |
+| [`cloud-repair/v1`](cloud-repair/v1/contract.md) | **Staged, not enabled or manifest-registered:** static no-scope app link, encrypted repair draft, review-only approved-device dispatch and synthetic vectors; no upload authorization or verified receipt |
 | [`agent-data/v1`](agent-data/v1/contract.md) | Public read-only grant, query, and response contracts plus phone-to-gateway ingestion manifest and health-free receipt contracts, shared by local and future hosted agent data stores |
 
 ## Scoped direct notes (staged)
@@ -56,7 +57,10 @@ continue full-lookback exports.
 
 | Path | Purpose |
 |---|---|
-| [`proposals/provider-sections-v1`](proposals/provider-sections-v1/contract.md) | Canonical typed, namespaced WHOOP provider section for Apple `healthmd.health_data` v8; the historical proposal path is retained for stable links |
+| [`apple-export/v10`](apple-export/v10/contract.md) | Current Apple daily v10 profile, unchanged primary metric registry, consumer and durable-pin migration |
+| [`provider-sections/v2`](provider-sections/v2/contract.md) | Typed WHOOP v2 physiological-cycle steps, distinct from civil-day primary steps |
+| [`rollup-summary/v10`](rollup-summary/v10/contract.md) | Range summaries sourced from daily v10, with unchanged rules v8 |
+| [`proposals/provider-sections-v1`](proposals/provider-sections-v1/contract.md) | Frozen historical typed WHOOP v1 section for Apple daily v8; path/fixtures remain unchanged |
 | [`proposals/unified-health-data-v9`](proposals/unified-health-data-v9/contract.md) | Proposed unified Apple/Android daily contract with exact typed metrics, provenance, capture completeness, platform sections, mapping ledger, schema, and synthetic fixtures; no production writer is approved yet |
 
 Run the package checks from the repository root:
@@ -90,7 +94,7 @@ The manifest distinguishes three states:
 
 `healthmd.render_input` v1 is a separate internal boundary from one completed semantic result to exact profile artifacts. Its fixtures include reviewed Rust plans plus independently frozen bytes from the pre-cutover Swift and Kotlin renderers. It does not grant Rust access to destinations, HTTP, HealthKit, Health Connect, ZIP containers, or credentials.
 
-The current Apple daily export contract is version 8. Android's compatibility exporter remains frozen at version 4, while Android's additive local analytical profile is version 5. They are deliberately separate shipped inventory entries: moving them into one package without reconciling their semantics would hide real version and unit differences. Apple v8 adds the reviewed `providers.whoop` section and provider-prefixed Markdown, Bases/frontmatter, CSV, and data-dictionary projections. Android v4/v5 contracts remain unchanged.
+The current Apple daily source contract is version 10, with WHOOP provider v2 for new captures. Historical v8/WHOOP-v1 signatures and fixtures remain frozen; v10 primary metric definitions are inherited through an independently versioned extension without mutating registry-v1. Release compatible cloud/plugin/connected-app readers before enabling v10 writers against them. Source qualification is not deployment or live-account evidence. Android's compatibility exporter remains frozen at version 4, while Android's additive local analytical profile is version 5. They are deliberately separate shipped inventory entries: moving them into one package without reconciling their semantics would hide real version and unit differences. Apple v8 adds the reviewed `providers.whoop` section and provider-prefixed Markdown, Bases/frontmatter, CSV, and data-dictionary projections. Android v4/v5 contracts remain unchanged.
 
 `healthmd.shared_setup` v2 is a separate pre-canonical public configuration contract candidate, deferred pending physical-device interoperability and accessibility QA. It is the one and only version of the contract family: the pre-canonical version 1 was removed by deliberate owner decision on 2026-09-05 with no in-the-wild consumers, and version 1 input fails closed as unsupported. The v2 contract carries only explicitly allowlisted portable preferences, exact registry semantic metric IDs, typed native extensions, and disabled schedule/API intent. It never carries health data, credentials, folder grants, purchases, or runtime state and does not bump any health export schema or direct protocol. Drive-capable native adapters retain the frozen legacy profile keys while transacting against the authoritative local envelope, with rollback/Undo covering both representations and their absence. Revision-2 native field audits explicitly prohibit the new Drive destination references; the original audits and all public v2/scenario fixtures remain frozen. Imported Drive profiles carry inert `cloud` intent only and stay blocked pending separately qualified local cloud rebinding.
 

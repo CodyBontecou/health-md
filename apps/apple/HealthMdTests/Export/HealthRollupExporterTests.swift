@@ -43,7 +43,7 @@ final class HealthRollupExporterTests: XCTestCase {
         XCTAssertEqual(try metric("workout_avg_heart_rate", in: summary).rule, "weighted_average")
     }
 
-    func testRangeV9KeepsRequestedBoundsWhenEndpointsFail() throws {
+    func testRangeV10KeepsRequestedBoundsWhenEndpointsFail() throws {
         let settings = HealthRollupTestSettings.make()
         settings.generateRangeSummary = true
         settings.exportFormats = [.json, .csv]
@@ -70,12 +70,12 @@ final class HealthRollupExporterTests: XCTestCase {
         XCTAssertEqual(summary.daysExpected, 6)
         XCTAssertEqual(summary.daysCounted, 3)
         XCTAssertEqual(summary.coveragePercent, 50, accuracy: 0.001)
-        XCTAssertTrue(summary.toRollupJSON().contains("\"schema_version\" : 9"))
+        XCTAssertTrue(summary.toRollupJSON().contains("\"schema_version\" : 10"))
         XCTAssertTrue(summary.toRollupJSON().contains("\"calendar_timezone\" : \"UTC\""))
         XCTAssertTrue(summary.toRollupMarkdown().contains("calendar_timezone: UTC"))
         XCTAssertTrue(summary.toRollupObsidianBases().contains("calendar_timezone: UTC"))
         XCTAssertTrue(summary.toRollupCSV().hasPrefix("Schema,Schema Version,Source Schema,Source Schema Version,Rollup Rules Version,Calendar Timezone"))
-        XCTAssertTrue(summary.toRollupCSV().contains("healthmd.rollup_summary,9,healthmd.health_data,8,8,UTC,range,"))
+        XCTAssertTrue(summary.toRollupCSV().contains("healthmd.rollup_summary,10,healthmd.health_data,10,8,UTC,range,"))
     }
 
     func testRangeRequestSupportsAllTimeBeyondFourHundredDays() throws {
@@ -131,12 +131,12 @@ final class HealthRollupExporterTests: XCTestCase {
         XCTAssertEqual(request.calendarTimeZoneIdentifier, "America/Los_Angeles")
     }
 
-    func testWHOOPRemainsInDailyV8ButIsExcludedFromRangeV9() throws {
+    func testWHOOPRemainsInDailyV10ButIsExcludedFromRangeV10() throws {
         let settings = HealthRollupTestSettings.make()
         settings.generateRangeSummary = true
         let day = ExportFixtures.whoopDay
         let daily = day.export(format: .json, settings: settings)
-        XCTAssertTrue(daily.contains("\"schema_version\" : 8"))
+        XCTAssertTrue(daily.contains("\"schema_version\" : 10"))
         XCTAssertTrue(daily.contains("\"whoop\""))
 
         let request = try HealthRollupRangeRequest(
@@ -182,7 +182,7 @@ final class HealthRollupExporterTests: XCTestCase {
         XCTAssertEqual(summary.periodID, "2026-W28")
         XCTAssertEqual(payload["start_date"] as? String, "2026-07-06")
         XCTAssertEqual(payload["end_date"] as? String, "2026-07-12")
-        XCTAssertNil(payload["calendar_timezone"], "Historical v8 JSON bytes must not gain v9 fields")
+        XCTAssertNil(payload["calendar_timezone"], "Legacy calendar presentation must not gain range-only fields")
         XCTAssertTrue(summary.toRollupMarkdown().contains("start_date: 2026-07-06"))
         XCTAssertFalse(summary.toRollupMarkdown().contains("calendar_timezone:"))
         XCTAssertTrue(summary.toRollupObsidianBases().contains("end_date: 2026-07-12"))

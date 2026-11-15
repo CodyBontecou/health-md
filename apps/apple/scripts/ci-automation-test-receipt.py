@@ -33,7 +33,7 @@ PLATFORM_CASES = {
         "testActualFakeHealthKitCaptureAwaitRechecksPeerCapabilityAndUncertainAuthority",
         "testColdUnavailablePhoneAuthorityBlocksActualHandlerButPreservesOrdinaryFilesAndFirstRunContext",
         "testProtectedStatusCannotTransmitEvenWithProvenAdmission",
-        "testRealShortcutProviderRetainsSevenActionsAndRegistersBothContextIntents",
+        "testRealShortcutProviderRetainsExistingTilesAndExposesRequestContextIntents",
     ),
     "macOS": (
         "testMacFailedMappingAndJobPersistenceNeverAcknowledgeOrDispatch",

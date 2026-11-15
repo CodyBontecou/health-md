@@ -8,6 +8,9 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -58,6 +61,7 @@ class MainActivity : ComponentActivity() {
     private var handledClinicSyncIntent = false
     private var myselfClaimRequestId by mutableStateOf(0L)
     private var startRoute by mutableStateOf<String?>(null)
+    private var cloudRepairLinkNotice by mutableStateOf(false)
     private var scheduledRecoveryPromptRequestId by mutableStateOf(0L)
     internal var googleDriveOperationId by mutableStateOf<String?>(null)
         private set
@@ -140,6 +144,16 @@ class MainActivity : ComponentActivity() {
         observeActiveExports()
         setContent {
             HealthMdTheme {
+                if (cloudRepairLinkNotice) {
+                    AlertDialog(
+                        onDismissRequest = { cloudRepairLinkNotice = false },
+                        title = { Text("Cloud requests are not yet available") },
+                        text = { Text("Opening a Cloud link never starts an export. Device approval and safe supplemental uploads must be available before Cloud requests can be reviewed here.") },
+                        confirmButton = {
+                            TextButton(onClick = { cloudRepairLinkNotice = false }) { Text("OK") }
+                        },
+                    )
+                }
                 ProvideHostNavigationBarInset {
                     ProvideAppFolderName(settingsRepository.exportFolderUri) {
                         HealthMdNavigation(
@@ -207,6 +221,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleLaunchIntent(intent: Intent?, acceptExternalDocument: Boolean) {
+        if (CloudRepairLink.matches(intent)) {
+            cloudRepairLinkNotice = true
+            return
+        }
         // A clinic sync tap runs once; Activity recreation restores the handled flag.
         intent?.getStringExtra(EXTRA_CLINIC_SYNC_WAKE_ID)?.takeIf { !handledClinicSyncIntent }?.let { wakeId ->
             handledClinicSyncIntent = true

@@ -52,6 +52,8 @@ jobs:
           !*.xlsx
           !*.ttf
           !*.woff2
+          /apps/cloud/public/app-icon.png
+          /apps/cloud/public/favicon.png
           PATTERNS
           git -c protocol.version=2 fetch -q --filter=blob:none --depth=1 origin "$SOURCE_REVISION"
           git checkout -q --detach FETCH_HEAD
@@ -85,8 +87,14 @@ jobs:
             apps/cli/target
       - name: Run fresh regression groups concurrently
         run: python3 scripts/ci/run.py
-      - uses: actions/cache/save@v4
+      - name: Admit optional Cargo cache publication within the complete budget
+        id: cargo-cache-budget
         if: ${{ success() && steps.cargo-cache.outputs.cache-hit != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/ci/verify_run.py --cache-publication
+      - uses: actions/cache/save@v4
+        if: ${{ success() && steps.cargo-cache.outputs.cache-hit != 'true' && steps.cargo-cache-budget.outputs.save == 'true' }}
         with:
           key: ${{ steps.cargo-cache.outputs.cache-primary-key }}
           path: |

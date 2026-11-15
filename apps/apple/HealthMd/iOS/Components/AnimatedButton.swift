@@ -111,6 +111,74 @@ struct SecondaryButtonStyle: ButtonStyle {
     }
 }
 
+/// Shared content and disclosure glyph for secondary menu triggers.
+/// The enclosing Button/Menu owns the bordered treatment and press feedback.
+struct SecondaryMenuLabel<Content: View>: View {
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        HStack(spacing: Spacing.s2) {
+            content()
+            Image(systemName: "chevron.down")
+                .accessibilityHidden(true)
+        }
+    }
+}
+
+/// A native, checked picker menu with the same trigger as secondary actions.
+/// Callers retain their option tags and bindings; only presentation is shared.
+struct SecondaryPicker<SelectionValue: Hashable, Options: View>: View {
+    let title: String
+    let selectedTitle: String
+    @Binding var selection: SelectionValue
+    let showsTitle: Bool
+    private let options: Options
+
+    init(
+        _ title: String,
+        selectedTitle: String,
+        selection: Binding<SelectionValue>,
+        showsTitle: Bool = true,
+        @ViewBuilder content: () -> Options
+    ) {
+        self.title = title
+        self.selectedTitle = selectedTitle
+        _selection = selection
+        self.showsTitle = showsTitle
+        options = content()
+    }
+
+    var body: some View {
+        if showsTitle {
+            LabeledContent {
+                menu
+            } label: {
+                Text(LocalizedStringKey(title))
+                    .foregroundStyle(Color.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } else {
+            menu
+        }
+    }
+
+    private var menu: some View {
+        Menu {
+            Picker(LocalizedStringKey(title), selection: $selection) {
+                options
+            }
+            .pickerStyle(.inline)
+        } label: {
+            SecondaryMenuLabel {
+                Text(selectedTitle)
+            }
+        }
+        .buttonStyle(SecondaryButtonStyle())
+        .accessibilityLabel(LocalizedStringKey(title))
+        .accessibilityValue(selectedTitle)
+    }
+}
+
 struct SecondaryButton: View {
     let title: String
     let icon: String?

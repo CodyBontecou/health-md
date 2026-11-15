@@ -18,6 +18,7 @@ struct GlassAppShell: View {
     @Binding var endDate: Date
     @Binding var dateRangePreset: ExportDateRangePreset
     @Binding var isExporting: Bool
+    let showsBottomStatus: Bool
     let exportProgress: Double
     @Binding var exportStatusMessage: String
     @Binding var showFolderPicker: Bool
@@ -570,7 +571,7 @@ struct GlassAppShell: View {
             startDate: $startDate,
             endDate: $endDate,
             dateRangePreset: $dateRangePreset,
-            isExporting: $isExporting,
+            showsBottomStatus: showsBottomStatus,
             exportStatusMessage: $exportStatusMessage,
             showFolderPicker: $showClassicFolderPicker,
             presentFirstExportPreview: .constant(false),

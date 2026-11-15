@@ -10,7 +10,12 @@ import Foundation
 @MainActor
 enum GeneratedAutomationReferenceDocumentation {
     static let relativeGeneratedDirectory = "docs/reference/generated/automation"
-    static let updateOutputDirectoryName = "healthmd-generated-automation-reference-docs-current"
+    static var updateOutputDirectoryName: String {
+        let path = repositoryRoot.resolvingSymlinksInPath().path
+        let identifier = SHA256.hash(data: Data(path.utf8))
+            .map { String(format: "%02x", $0) }.joined().prefix(16)
+        return "healthmd-generated-automation-reference-docs-\(identifier)"
+    }
 
     static let requiredArtifactNames: Set<String> = [
         "api-export-v1.json",
@@ -1039,6 +1044,25 @@ enum GeneratedAutomationReferenceDocumentation {
                 message: "Synthetic export write failed.",
                 underlyingError: "Synthetic fixture filesystem rejection.",
                 occurredAt: createdAt
+            )),
+            .iphoneContextRefreshRequest(IPhoneContextRefreshRequest(
+                jobID: jobID,
+                createdAt: createdAt,
+                dateSelection: .explicitRange,
+                dateRangeStart: dayStart,
+                dateRangeEnd: dayEnd,
+                selection: CanonicalHealthDataSelection(
+                    metricIDs: ["steps"], sourceIDs: ["apple_health"], detailLevel: .summary
+                ),
+                profileID: secondJobID,
+                profileName: "Synthetic context profile"
+            )),
+            .iphoneContextRefreshStatus(IPhoneContextRefreshStatus(
+                jobID: jobID,
+                state: .failed,
+                updatedAt: createdAt,
+                message: "Synthetic encrypted-context selection was rejected.",
+                failureReason: "invalid_context_selection"
             )),
             .iphoneExportRequest(strictRawRequest),
             .iphoneExportAccepted(IPhoneExportAcknowledgement(

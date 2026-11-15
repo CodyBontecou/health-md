@@ -1,0 +1,79 @@
+name: Testing Tools CI
+
+on:
+  pull_request:
+    paths:
+      - 'Makefile'
+      - 'AGENTS.md'
+      - 'docs/testing-strategy.md'
+      - 'scripts/testing-requirements.txt'
+      - 'scripts/tests/test_testing_*.py'
+      - 'scripts/verification*.mjs'
+      - 'scripts/tests/verification-*.test.mjs'
+      - 'scripts/agent-pi.sh'
+      - '.pi/extensions/verification-guard.ts'
+      - '.gitignore'
+      - 'apps/apple/Makefile'
+      - 'apps/apple/scripts/generated-*-docs.sh'
+      - 'apps/apple/scripts/tests/test_testing_performance.py'
+      - 'apps/website/package.json'
+      - 'apps/website/test/build-orchestration.test.mjs'
+      - '.github/actions/component-changes/**'
+      - '.github/workflows/testing-tools-ci.yml'
+      - '.github/workflows/android-ci.yml'
+      - '.github/workflows/apple-ci.yml'
+      - '.github/workflows/apple-nightly.yml'
+      - '.github/workflows/practice-ci.yml'
+      - '.github/workflows/website-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'Makefile'
+      - 'AGENTS.md'
+      - 'docs/testing-strategy.md'
+      - 'scripts/testing-requirements.txt'
+      - 'scripts/tests/test_testing_*.py'
+      - 'scripts/verification*.mjs'
+      - 'scripts/tests/verification-*.test.mjs'
+      - 'scripts/agent-pi.sh'
+      - '.pi/extensions/verification-guard.ts'
+      - '.gitignore'
+      - 'apps/apple/Makefile'
+      - 'apps/apple/scripts/generated-*-docs.sh'
+      - 'apps/apple/scripts/tests/test_testing_performance.py'
+      - 'apps/website/package.json'
+      - 'apps/website/test/build-orchestration.test.mjs'
+      - '.github/actions/component-changes/**'
+      - '.github/workflows/testing-tools-ci.yml'
+      - '.github/workflows/android-ci.yml'
+      - '.github/workflows/apple-ci.yml'
+      - '.github/workflows/apple-nightly.yml'
+      - '.github/workflows/practice-ci.yml'
+      - '.github/workflows/website-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testing-tools-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  orchestration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/testing-requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install host-side test dependencies
+        run: python3 -m pip install -r scripts/testing-requirements.txt
+      - name: Verify routing, build reuse, fail-closed selection, and agent guards
+        run: make test-testing-tools

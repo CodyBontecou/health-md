@@ -1,0 +1,21 @@
+[Unit]
+Description=Health.md dedicated write-only API Endpoint HTTPS Tunnel
+After=network-online.target healthmd-ingest-proxy.service
+Requires=healthmd-ingest-proxy.service
+
+[Service]
+Type=simple
+User=healthmd-api-tunnel
+Group=healthmd-api-tunnel
+WorkingDirectory=/var/lib/healthmd-cloud-ingest-tunnel
+ExecStart=/opt/healthmd-cloud-mcp/bin/cloudflared tunnel --config /etc/healthmd-cloud-ingest-tunnel/config.yml --no-autoupdate --loglevel warn --metrics 127.0.0.1:0 run
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+InaccessiblePaths=/etc/healthmd-cloud-mvp /etc/healthmd-cloud-mcp /etc/healthmd-cloud-account-tunnel /var/lib/healthmd-cloud-mvp /var/lib/healthmd-cloud-mcp
+
+[Install]
+WantedBy=multi-user.target

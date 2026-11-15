@@ -36,10 +36,20 @@ test("WHOOP gallery samples are reproducible, synthetic, and never alter canonic
   assert.deepEqual(generated, days);
   assert.deepEqual(generated.map(withoutWhoop), base);
   assert.equal(JSON.stringify({ base, template }), before, "generation must not mutate inputs");
-  assert.throws(() => withWhoopSamples(base, { ...template.whoop, schema_version: 2 }), /WHOOP daily v1/);
+  assert.throws(() => withWhoopSamples(base, { ...template.whoop, schema_version: 3 }), /WHOOP daily v1\/v2/);
   const moved = withWhoopSamples([{ ...base[0], date: "2027-01-05" }], template.whoop)[0];
   assert.match(moved.providers.whoop.cycles[0].id, /synthetic-20270105$/);
   assert.equal(moved.providers.whoop.fetched_at.slice(0, 10), moved.date);
+});
+
+test("WHOOP v2 samples preserve physiological-cycle steps without altering daily Apple steps", async () => {
+  const current = await json("../../../packages/contracts/provider-sections/v2/fixtures/whoop-complete.providers.json");
+  const base = days.slice(0, 2).map((day) => ({ ...withoutWhoop(day), schema_version: 10 }));
+  const generated = withWhoopSamples(base, current.whoop);
+  assert.deepEqual(generated.map(withoutWhoop), base);
+  assert.ok(generated.every((day) => day.providers.whoop.schema_version === 2));
+  assert.ok(generated.every((day) => day.providers.whoop.cycles[0].step_count === 8234));
+  assert.throws(() => withWhoopSamples(days, current.whoop), /daily v10/);
 });
 
 test("WHOOP demo records preserve IDs, millisecond precision, relationships, missingness, and capture counts", () => {
@@ -117,6 +127,12 @@ test("the actual shipped browser bundle parses and renders all four WHOOP previe
   const sandbox = { window, document, navigator, console };
   vm.runInNewContext(await read("../assets/healthmd-plugin-visualizations.js"), sandbox);
   const api = sandbox.window.HealthMdPluginVisualizations;
+  const current = await json("../../../packages/contracts/provider-sections/v2/fixtures/whoop-complete.providers.json");
+  current.whoop.cycles[0].step_count = 0;
+  const v10 = { ...withoutWhoop(days[0]), schema_version: 10, providers: current };
+  const migrated = api.parseHealthDay(v10);
+  assert.equal(migrated.whoop.cycles[0].step_count, 0);
+  assert.equal(migrated.steps, api.parseHealthDay(withoutWhoop(v10)).steps);
   const parsed = days.map(api.parseHealthDay);
   assert.ok(parsed.every((day) => day.whoop?.source === "typed"));
   for (const [index, day] of parsed.entries()) {
@@ -154,22 +170,23 @@ test("the actual shipped browser bundle parses and renders all four WHOOP previe
   }
 });
 
-test("all WHOOP palette routes, sitemap entries, and translated examples are generated", async () => {
+test("WHOOP share routes retain previews while indexing one canonical URL per visualization", async () => {
   const sitemap = await read("../sitemap.xml");
   for (const id of ids) {
+    const canonical = `https://healthmd.app/visualizations/whoop/${id}/theme-colors/`;
+    assert.equal(sitemap.split(`<loc>${canonical}</loc>`).length - 1, 1);
     for (const category of ["whoop", "all-health-data"]) {
       for (const color of colors) {
         const route = `/visualizations/${category}/${id}/${color}-colors/`;
         const page = await read(`..${route}index.html`);
-        const canonical = `https://healthmd.app/visualizations/whoop/${id}/theme-colors/`;
         assert.ok(page.includes(`rel="canonical" href="${canonical}"`));
-        assert.ok(page.includes(`<meta property="og:url" content="https://healthmd.app${route}">`));
-        const schema = page.match(/<script type="application\/ld\+json" data-viz-schema>(.*?)<\/script>/s);
-        assert.equal(JSON.parse(schema[1]).url, canonical);
+        assert.ok(page.includes(`property="og:url" content="https://healthmd.app${route}"`));
+        const schema = JSON.parse(page.match(/<script type="application\/ld\+json" data-viz-schema>([\s\S]*?)<\/script>/)[1]);
+        assert.equal(schema.url, canonical);
         assert.match(page, /WHOOP connection requirements/);
         assert.ok(page.includes("data-whoop-preview-note>"));
-        const sitemapEntry = `<loc>https://healthmd.app${route}</loc>`;
-        assert.equal(sitemap.includes(sitemapEntry), category === "whoop" && color === "theme");
+        assert.equal(sitemap.includes(`<loc>https://healthmd.app${route}</loc>`),
+          `https://healthmd.app${route}` === canonical);
         assert.ok(page.includes(`https://healthmd.app/assets/visualization-og/${id}/${color}-colors-dark-theme.png`));
       }
     }

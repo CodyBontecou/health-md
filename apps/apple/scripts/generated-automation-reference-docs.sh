@@ -10,14 +10,15 @@ usage() {
 MODE="$1"
 [[ "$MODE" == "update" || "$MODE" == "check" ]] || usage
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT_DIR"
 
 GENERATED_RELATIVE="docs/reference/generated/automation"
 GENERATED_DIR="$ROOT_DIR/$GENERATED_RELATIVE"
 SCHEMA_FIXTURE_DIR="$ROOT_DIR/HealthMdTests/Fixtures/Export"
 UPDATE_MARKER="$ROOT_DIR/HealthMdTests/.update-generated-automation-reference-docs"
-OUTPUT_DIRECTORY_NAME="healthmd-generated-automation-reference-docs-current"
+WORKTREE_IDENTIFIER="$(printf '%s' "$ROOT_DIR" | shasum -a 256 | cut -c 1-16)"
+OUTPUT_DIRECTORY_NAME="healthmd-generated-automation-reference-docs-$WORKTREE_IDENTIFIER"
 SEARCH_ROOTS=("$HOME/Library/Containers" "${TMPDIR:-/tmp}" "/tmp")
 
 case "$GENERATED_DIR" in
@@ -39,7 +40,8 @@ schema_fixture_digest() {
 }
 
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/healthmd-generated-automation-docs.XXXXXX")"
-DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$TMP_ROOT/DerivedData}"
+DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$ROOT_DIR/build/DerivedData/macOS}"
+MACOS_DEST="${MACOS_DEST:-platform=macOS,arch=$(uname -m)}"
 trap 'rm -f "$UPDATE_MARKER"; rm -rf "$TMP_ROOT"' EXIT
 
 run_drift_test() {
@@ -51,7 +53,8 @@ run_drift_test() {
   xcodebuild test \
     -project HealthMd.xcodeproj \
     -scheme HealthMd-Tests-macOS \
-    -destination 'platform=macOS' \
+    -destination "$MACOS_DEST" \
+    -enableCodeCoverage "${MACOS_CODE_COVERAGE:-NO}" \
     -only-testing:HealthMdTests/GeneratedAutomationReferenceDocumentationTests/testGeneratedAutomationReferenceDocumentationHasNoDrift \
     -derivedDataPath "$DERIVED_DATA_PATH" \
     CODE_SIGNING_ALLOWED=NO \

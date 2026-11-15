@@ -43,6 +43,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
         XCTAssertTrue(current.supports(rawProfile: .healthDataProjection))
         XCTAssertTrue(current.supportsCanonicalHealthDataSelection)
         XCTAssertTrue(current.supportsRequestScopedContextAcquisition)
+        XCTAssertTrue(current.supportsIPhoneInitiatedContextRefresh)
         XCTAssertEqual(current.canonicalArchiveSchemaVersions, [HealthKitRecordArchive.currentRecordSchemaVersion])
         XCTAssertEqual(current.canonicalRawResultSchemaVersions, [CanonicalRawResultEnvelope.currentSchemaVersion])
 
@@ -79,6 +80,25 @@ final class CLIRawControlSafetyTests: XCTestCase {
         XCTAssertFalse(legacyCapabilities.supports(rawProfile: .healthDataProjection))
         XCTAssertFalse(legacyCapabilities.supportsCanonicalHealthDataSelection)
         XCTAssertFalse(legacyCapabilities.supportsRequestScopedContextAcquisition)
+        XCTAssertFalse(legacyCapabilities.supportsIPhoneInitiatedContextRefresh)
+
+        let contextRequest = IPhoneContextRefreshRequest(
+            jobID: UUID(),
+            createdAt: date,
+            dateSelection: .explicitRange,
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            selection: CanonicalHealthDataSelection(metricIDs: ["sleep_total"]),
+            profileID: UUID(),
+            profileName: "Sleep"
+        )
+        XCTAssertEqual(
+            try JSONDecoder().decode(
+                IPhoneContextRefreshRequest.self,
+                from: JSONEncoder().encode(contextRequest)
+            ),
+            contextRequest
+        )
     }
 
     #if os(macOS)

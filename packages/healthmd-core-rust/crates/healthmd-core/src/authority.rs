@@ -23,7 +23,10 @@ pub(crate) fn registry_bytes(hash: &str, profile: &str) -> Result<&'static [u8],
     if hash == REGISTRY_SHA256
         && matches!(
             profile,
-            "apple_health_data_v8" | "android_frozen_v4" | "android_analytical_v5"
+            "apple_health_data_v8"
+                | "apple_health_data_v10"
+                | "android_frozen_v4"
+                | "android_analytical_v5"
         )
     {
         Ok(CURRENT_BYTES)
@@ -49,7 +52,8 @@ pub(crate) fn supports_semantic(hash: &str, profile: &str, revision: u32) -> boo
     registry_bytes(hash, profile).is_ok()
         && (revision == 1
             || (revision == 2
-                && ((hash == REGISTRY_SHA256 && profile == "apple_health_data_v8")
+                && ((hash == REGISTRY_SHA256
+                    && matches!(profile, "apple_health_data_v8" | "apple_health_data_v10"))
                     || (matches!(
                         hash,
                         crate::SLEEP_REGISTRY_SHA256 | crate::WORKOUT_RANGE_REGISTRY_SHA256

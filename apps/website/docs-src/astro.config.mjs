@@ -88,6 +88,7 @@ export default defineConfig({
       },
       customCss: ['./src/styles/healthmd.css', './src/styles/agent-first.css'],
       expressiveCode: {
+        shiki: { langAlias: { 'health-viz': 'yaml' } },
         getBlockLocale: ({ file }) => {
           const sourcePath = (file.path ?? '').replaceAll('\\', '/');
           const sourceLocale = docsLocales.find((locale) =>

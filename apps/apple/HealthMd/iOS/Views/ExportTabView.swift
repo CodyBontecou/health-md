@@ -12,6 +12,7 @@ private struct ExportSizeEstimateConfiguration: Equatable {
     let target: ExportTargetSelection
     let formats: Set<ExportFormat>
     let metricIDs: Set<String>
+    let whoopResources: Set<WHOOPResourceName>
     let formatCustomization: FormatCustomizationSnapshot
     let includesLosslessRecords: Bool
     let includesIndividualEntries: Bool
@@ -38,7 +39,7 @@ struct ExportTabView: View {
     @Binding var startDate: Date
     @Binding var endDate: Date
     @Binding var dateRangePreset: ExportDateRangePreset
-    @Binding var isExporting: Bool
+    let showsBottomStatus: Bool
     @Binding var exportStatusMessage: String
     @Binding var showFolderPicker: Bool
     @Binding var presentFirstExportPreview: Bool
@@ -103,7 +104,7 @@ struct ExportTabView: View {
         NavigationStack {
             ScrollViewReader { proxy in
             GeometryReader { viewport in
-            SchedulingExportScroll(showsFooter: !isExporting) {
+            SchedulingExportScroll(showsFooter: !showsBottomStatus) {
                 VStack(spacing: Spacing.md) {
                     heroHeader(availableWidth: viewport.size.width)
                     #if DEBUG
@@ -128,11 +129,6 @@ struct ExportTabView: View {
                     .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
             }
             .toolbar(.hidden, for: .navigationBar)
-            .onChange(of: exportStatusMessage) { oldValue, newValue in
-                if !newValue.isEmpty && newValue != oldValue {
-                    UIAccessibility.post(notification: .announcement, argument: newValue)
-                }
-            }
             #if DEBUG
             .onAppear {
                 guard MarketingCapture.pendingAdvancedSubscreen == .exportPreview else { return }
@@ -710,17 +706,8 @@ struct ExportTabView: View {
         }
     }
 
-    private func applyResolvedDateRange(
-        for preset: ExportDateRangePreset,
-        allTimeStartDate: Date? = nil,
-        allTimeEndDate: Date? = nil
-    ) {
+    private func applyResolvedDateRange(for preset: ExportDateRangePreset) {
         let range = preset.resolvedRange(
-            currentStartDate: startDate,
-            currentEndDate: endDate,
-            allTimeStartDate: allTimeStartDate,
-            allTimeEndDate: allTimeEndDate
-        ) ?? ExportDateRangePreset.today.resolvedRange(
             currentStartDate: startDate,
             currentEndDate: endDate
         )
@@ -862,8 +849,9 @@ struct ExportTabView: View {
     private func dataDetailPicker(
         presets: [AppleExportDetailPreset]
     ) -> some View {
-        Picker(
+        SecondaryPicker(
             "Data Detail",
+            selectedTitle: AppleExportDetailPreset(policy: advancedSettings.detailPolicy).localizedTitle,
             selection: Binding(
                 get: { AppleExportDetailPreset(policy: advancedSettings.detailPolicy) },
                 set: { advancedSettings.detailPolicy = advancedSettings.detailPolicy.replacingBase(with: $0.policy) }
@@ -873,9 +861,6 @@ struct ExportTabView: View {
                 Text(preset.localizedTitle).tag(preset)
             }
         }
-        .labelsHidden()
-        .pickerStyle(.menu)
-        .tint(Color.accent)
     }
 
     // MARK: - Export Formats
@@ -1244,7 +1229,7 @@ struct ExportTabView: View {
                 onExport: handleExportButtonTapped
             )
         }
-        .animation(reduceMotion ? nil : AnimationTimings.standard, value: isExporting)
+        .animation(reduceMotion ? nil : AnimationTimings.standard, value: showsBottomStatus)
     }
 
     private var exportDateCount: Int {
@@ -1272,6 +1257,7 @@ struct ExportTabView: View {
             target: exportTargetSelection,
             formats: advancedSettings.exportFormats,
             metricIDs: advancedSettings.metricSelection.enabledMetrics,
+            whoopResources: advancedSettings.metricSelection.enabledWHOOPResources,
             formatCustomization: FormatCustomizationSnapshot.from(
                 advancedSettings.formatCustomization
             ),
@@ -2062,10 +2048,10 @@ struct APIExportSettingsSheet: View {
                 }
             }
         }
-        .overlay(alignment: .top) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             ConfigurationProtectionToast(configurationProtection: configurationProtection)
                 .padding(.horizontal, Spacing.s4)
-                .padding(.top, Spacing.s2)
+                .padding(.bottom, Spacing.s2)
         }
         .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
             if requestID != nil {

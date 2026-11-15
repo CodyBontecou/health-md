@@ -178,7 +178,8 @@ struct ExternalProviderAPIClient: Sendable {
     /// without guessing a distant sentinel date.
     func discoverEarliestAvailableDate(
         provider: ExternalIntegrationProvider,
-        token: ExternalIntegrationToken
+        token: ExternalIntegrationToken,
+        whoopResources: Set<WHOOPResourceName> = Set(WHOOPResourceName.allCases)
     ) async throws -> Date? {
         switch provider {
         case .whoop:
@@ -190,7 +191,7 @@ struct ExternalProviderAPIClient: Sendable {
             ]
             var earliest: Date?
             let deadline = whoopHistoryClock().advanced(by: whoopHistoryDuration)
-            for collection in collections where token.grants(collection.requiredScope) {
+            for collection in collections where token.grants(collection.requiredScope) && whoopResources.contains(collection.resource) {
                 if let candidate = try await discoverEarliestWHOOPDate(
                     collection: collection,
                     token: token,
@@ -282,7 +283,7 @@ struct ExternalProviderAPIClient: Sendable {
         ].filter { resources.contains($0.resource) }
 
         var payloads: [ExternalProviderPayload] = []
-        for collection in collections {
+        for collection in collections where resources.contains(collection.resource) {
             guard token.grants(collection.requiredScope) else {
                 payloads.append(Self.missingScopePayload(
                     name: collection.name,

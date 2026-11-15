@@ -117,6 +117,8 @@ nonisolated struct HealthMdAgentQueryStoreReadiness: Sendable, Equatable {
     let ownerDateCount: Int
     let firstOwnerDate: String?
     let lastOwnerDate: String?
+    let encryptedByteCount: Int64
+    let averageEncryptedBytesPerOwnerDate: Int64?
 }
 
 nonisolated protocol HealthMdAgentQueryReadinessProviding: Sendable {
@@ -559,7 +561,9 @@ final class HealthMdAgentAPIService {
                     "revision": readiness.revision,
                     "owner_date_count": readiness.ownerDateCount,
                     "first_owner_date": readiness.firstOwnerDate ?? NSNull(),
-                    "last_owner_date": readiness.lastOwnerDate ?? NSNull()
+                    "last_owner_date": readiness.lastOwnerDate ?? NSNull(),
+                    "encrypted_byte_count": readiness.encryptedByteCount,
+                    "average_encrypted_bytes_per_owner_date": readiness.averageEncryptedBytesPerOwnerDate ?? NSNull()
                 ]
                 checks.append([
                     "code": "encrypted_query_store",
@@ -631,10 +635,22 @@ final class HealthMdAgentAPIService {
             "schema": "healthmd.local_readiness",
             "schema_version": 1,
             "status": hasBlockingFailure ? "action_required" : "ready",
+            "product_readiness": productReadiness(),
+            "os_qualification": osQualification(),
+            "history_authorization": [
+                "state": "unknown",
+                "source": "iphone",
+                "limited_history_detection_supported": true,
+                "minimum_source_os": 27,
+                "message": "The Mac cache cannot infer current iPhone HealthKit authorization. All-available acquisition means currently readable data, not certified complete history. Fresh requests carry scoped assessment evidence when supported; omitted boundaries, limited access, unavailable APIs and incomplete assessments never prove unrestricted access."
+            ],
             "query_store": queryStore,
             "iphone": [
                 "connected": connected,
                 "name": (syncService.connectedPeerName as Any?) ?? NSNull(),
+                "app_version": (syncService.remoteCapabilities?.appVersion as Any?) ?? NSNull(),
+                "build_number": (syncService.remoteCapabilities?.buildNumber as Any?) ?? NSNull(),
+                "protocol_version": (syncService.remoteCapabilities?.protocolVersion as Any?) ?? NSNull(),
                 "supports_request_scoped_context_acquisition": compatiblePeer,
                 "can_trigger_fresh_acquisition": canRefresh
             ],
@@ -708,6 +724,31 @@ final class HealthMdAgentAPIService {
         }
     }
 
+    private func productReadiness() -> [String: Any] {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+        return [
+            "component": "bundled_mac_mcp",
+            "app_version": (version as Any?) ?? NSNull(),
+            "helper_version": (version as Any?) ?? NSNull(),
+            "build_number": (build as Any?) ?? NSNull(),
+            "release_channel": "app_store",
+            "support_status": "production_component",
+            "versioned_with_mac_app": true,
+            "standalone_cli_required": false
+        ]
+    }
+
+    private func osQualification() -> [String: Any] {
+        [
+            "platform": "macos",
+            "running_os": ProcessInfo.processInfo.operatingSystemVersionString,
+            "macos_27_status": "pending_rc_and_public_build_physical_qualification",
+            "certified_for_macos_27": false,
+            "evidence_contract": "apps/apple/docs/qa/macos-qualification.md"
+        ]
+    }
+
     private func capabilities() -> [String: Any] {
         [
             "schema": "healthmd.local_capabilities",
@@ -719,6 +760,13 @@ final class HealthMdAgentAPIService {
             "request_scoped": true,
             "all_available_metrics": true,
             "all_available_history": true,
+            "all_available_history_semantics": "all_readable_user_authorized_history",
+            "full_history_claim_requires_os_27_boundary_check": false,
+            "unqualified_full_history_claim_supported": false,
+            "history_assessment_contract": "healthmd.history_assessment/1",
+            "history_authorization_contract": "healthmd.history_authorization/1",
+            "product_readiness": productReadiness(),
+            "os_qualification": osQualification(),
             "lossless_detail": true,
             "complete_cursor_traversal": true,
             "metric_catalog": "healthmd.metric_catalog/1",

@@ -35,7 +35,7 @@ class ManifestValidationTests(unittest.TestCase):
     def test_product_capability_metadata_can_change_without_rehashing(self):
         self.product["capabilities"][0]["summary"] += " Updated evidence description."
         result = self.check()
-        self.assertEqual(result[3], 2)
+        self.assertEqual(result[3], len(self.manifest["inventories"]))
         self.assertEqual(result[5], len(self.product["capabilities"]))
 
     def test_invalid_product_capabilities_are_still_rejected(self):

@@ -13,6 +13,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+import re
 import subprocess
 import tempfile
 import unittest
@@ -27,12 +28,19 @@ RUNNER = """import Foundation
 import XCTest
 
 let suite = XCTestSuite(forTestCaseClass: ProductCapabilityManifestTests.self)
-suite.run()
-guard let run = suite.testRun, run.executionCount == 1 else {
-    fputs("Expected exactly one real ProductCapabilityManifestTests case\\n", stderr)
+let expectedCount = suite.testCaseCount
+guard expectedCount > 0, suite.tests.contains(where: {
+    $0.name.contains("testAppleAccountsForEveryProductCapability")
+}) else {
+    fputs("Expected the real inventory case in ProductCapabilityManifestTests\\n", stderr)
     exit(2)
 }
-print("MANIFEST_XCTEST executed=\\(run.executionCount) failures=\\(run.totalFailureCount)")
+suite.run()
+guard let run = suite.testRun, run.executionCount == expectedCount else {
+    fputs("ProductCapabilityManifestTests did not execute every discovered case\\n", stderr)
+    exit(2)
+}
+print("MANIFEST_XCTEST executed=\\(run.executionCount) expected=\\(expectedCount) failures=\\(run.totalFailureCount)")
 exit(run.hasSucceeded ? 0 : 1)
 """
 
@@ -93,7 +101,12 @@ class ProductCapabilityManifestRegressionTests(unittest.TestCase):
         result = self.run_inventory(label, inventory)
         output = result.stdout + result.stderr
         self.assertEqual(result.returncode, 0 if failures == 0 else 1, output)
-        self.assertIn(f"MANIFEST_XCTEST executed=1 failures={failures}", output)
+        counts = re.search(r"MANIFEST_XCTEST executed=(\d+) expected=(\d+) failures=(\d+)", output)
+        self.assertIsNotNone(counts, output)
+        executed, expected, actual_failures = map(int, counts.groups())
+        self.assertGreater(expected, 0, output)
+        self.assertEqual(executed, expected, output)
+        self.assertEqual(actual_failures, failures, output)
         if failures:
             self.assertIn("XCTAssert", output)
 

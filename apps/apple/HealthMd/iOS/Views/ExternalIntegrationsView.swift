@@ -269,7 +269,7 @@ struct ExternalIntegrationsView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .padding(Spacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -278,6 +278,7 @@ struct ExternalIntegrationsView: View {
             Text("Provider")
                 .font(.headline)
                 .foregroundStyle(Color.textPrimary)
+                .accessibilityAddTraits(.isHeader)
 
             ForEach(ConnectedAppsFeature.enabledProviders) { provider in
                 SectionCard {

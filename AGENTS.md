@@ -7,6 +7,7 @@
 - `apps/cli`: standalone Rust CLI and client crates.
 - `apps/practice`: separately governed clinician portal and future clinical service boundary.
 - `apps/wake`: notification-only Direct CLI wake Worker and isolated D1 service; never a health-data path.
+- `apps/cloud`: isolated opt-in health-data receiver and dashboard, with an upload-disabled synthetic preview, an unbacked single-user VM pilot, and a separately authenticated read-only MCP endpoint; read its `AGENTS.md` and ADR-0007 before changing or deploying.
 - `apps/website`: website and generated product documentation.
 - `packages/contracts`: language-neutral schemas and interoperability fixtures.
 - `packages/healthmd-core-rust`: shared Rust core, UniFFI tooling, and direct-protocol crate.
@@ -26,6 +27,7 @@ Resolve unfamiliar filenames with `git ls-files` in the active worktree; compone
 - During iteration, run the smallest relevant behavior tests and cheap type/lint checks in the owning component. At completion of a coherent change, run its affected-module regressions once. Default to checks that run without a simulator, emulator, physical device, or Argent.
 - Reuse passing results only while relevant source, dependencies, fixtures, toolchain, features, and configuration remain unchanged. Re-run after relevant edits; diagnose an unrelated baseline failure with its smallest failing command rather than repeating whole suites.
 - Full OS/flavor matrices, coverage collection, MSRV, binding/package qualification, and release smoke belong to CI/qualification or changes that affect those surfaces. Public-contract, security/authority, persistence/recovery, FFI, and uncertain-impact changes still require every affected producer/consumer check.
+- Before checks, declare a task-scoped plan using the [portable runner or Pi guard](docs/testing-strategy.md#agent-plan-guard-and-receipt-workflow), and finish with a receipt including unrun surfaces.
 - Select checks using the [test selection guide](docs/testing-strategy.md) and record commands, configuration, results, and relevant unrun surfaces. Root `make test` runs the portable CI regression suite without a simulator. Native component sweeps such as `make test-apple` remain explicit diagnostics, not the default local feedback loop or complete release qualification.
 - Before merging native changes, the integration owner compiles affected apps through `make verify-native`; inspect selection with `make plan-native`. Agent handoffs may mark native compilation pending for this combined build, with focused checks and remaining risks recorded. Read [native integration](docs/testing-strategy.md#native-integration) for selection, queueing and receipts. Batch coherent edits; route heavy native builds through this queue across worktrees.
 - Match verification to risk: startup/lifecycle changes need targeted startup/lifecycle checks; authorization, persistence/recovery, public contracts and FFI need their owning boundary regressions. Add the cheapest reliable reproduction when fixing a bug. Report unresolved failures and unrun runtime checks explicitly.
@@ -98,6 +100,7 @@ requirements. Product contracts and release signing/packaging rules still apply.
 - Keep `apps/cli` and `packages/healthmd-core-rust` as independent Cargo workspaces with independent lockfiles and target directories.
 - Keep `apps/practice` isolated from the static website and existing non-PHI Workers; its lockfile, build, tests, deployment configuration, and clinical data boundary remain component-scoped.
 - Keep `apps/wake` notification-only, with its own lockfile, D1 migrations, secrets, CI, and deployment configuration; no health payload or request contents may enter the Worker.
+- Keep `apps/cloud` isolated from Practice, website, wake, and non-PHI Workers; it has its own lockfile, D1, private R2, secrets, and CI. The separately authorized unbacked single-user VM pilot is not a general production release; follow ADR-0007's security, privacy, deletion, and operations boundaries before any broader rollout.
 - Contract changes must trigger every affected component. Shared-core changes must trigger the core, Apple, Android, CLI, and website consumer gates.
 - Avoid introducing a repository-wide build framework unless it provides concrete value across Swift, Kotlin, Rust, and Node.js.
 

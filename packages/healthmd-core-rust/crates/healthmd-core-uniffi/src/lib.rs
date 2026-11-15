@@ -181,6 +181,8 @@ pub enum CoreMetricRegistryProfile {
     AppleHealthDataV11,
     /// Android wake-date daily v6, selected explicitly from registry v2.
     AndroidSleepV6,
+    /// Apple v10, with provider-native WHOOP v2 supplementation.
+    AppleHealthDataV10,
 }
 
 /// One ordered native category.
@@ -1049,6 +1051,9 @@ const fn semantic_profile(
         CoreMetricRegistryProfile::AppleHealthDataV8 => {
             healthmd_core::semantic::SemanticProfile::AppleHealthDataV8
         }
+        CoreMetricRegistryProfile::AppleHealthDataV10 => {
+            healthmd_core::semantic::SemanticProfile::AppleHealthDataV10
+        }
         CoreMetricRegistryProfile::AndroidFrozenV4 => {
             healthmd_core::semantic::SemanticProfile::AndroidFrozenV4
         }
@@ -1074,6 +1079,9 @@ const fn core_profile(
         healthmd_core::semantic::SemanticProfile::AppleHealthDataV8 => {
             CoreMetricRegistryProfile::AppleHealthDataV8
         }
+        healthmd_core::semantic::SemanticProfile::AppleHealthDataV10 => {
+            CoreMetricRegistryProfile::AppleHealthDataV10
+        }
         healthmd_core::semantic::SemanticProfile::AndroidFrozenV4 => {
             CoreMetricRegistryProfile::AndroidFrozenV4
         }
@@ -1094,6 +1102,7 @@ impl From<CoreMetricRegistryProfile> for healthmd_core::registry::MetricRegistry
         match value {
             CoreMetricRegistryProfile::AppleHealthDataV7 => Self::AppleHealthDataV7,
             CoreMetricRegistryProfile::AppleHealthDataV8 => Self::AppleHealthDataV8,
+            CoreMetricRegistryProfile::AppleHealthDataV10 => Self::AppleHealthDataV10,
             CoreMetricRegistryProfile::AndroidFrozenV4 => Self::AndroidFrozenV4,
             CoreMetricRegistryProfile::AndroidAnalyticalV5 => Self::AndroidAnalyticalV5,
             CoreMetricRegistryProfile::AppleHealthDataV11 => Self::AppleHealthDataV11,
@@ -1700,7 +1709,7 @@ mod tests {
 
         assert!(!info.core_source_revision.is_empty());
         assert_eq!(info.registry_sha256, healthmd_core::REGISTRY_SHA256);
-        assert_eq!(info.core_api_version, 4);
+        assert_eq!(info.core_api_version, 5);
         assert_eq!(info.semantic_input_version, 1);
         assert_eq!(info.canonical_model_version, 1);
         assert_eq!(info.registry_version, 1);

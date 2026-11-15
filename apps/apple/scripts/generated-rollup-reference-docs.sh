@@ -13,11 +13,8 @@ case "$MODE" in
     ;;
 esac
 
-OWNS_DERIVED_DATA_PATH=0
-if [[ -z "${DERIVED_DATA_PATH:-}" ]]; then
-  DERIVED_DATA_PATH="$(mktemp -d "${TMPDIR:-/tmp}/healthmd-generated-rollup-reference-docs.XXXXXX")"
-  OWNS_DERIVED_DATA_PATH=1
-fi
+DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$ROOT_DIR/build/DerivedData/macOS}"
+MACOS_DEST="${MACOS_DEST:-platform=macOS,arch=$(uname -m)}"
 OUTPUT_DIRECTORY_NAME="healthmd-generated-rollup-reference-docs-current"
 REFERENCE_DIRECTORY="docs/reference/generated/rollups"
 UPDATE_MARKER="HealthMdTests/.update-generated-rollup-reference-docs"
@@ -25,9 +22,6 @@ SEARCH_ROOTS=("$HOME/Library/Containers" "${TMPDIR:-/tmp}" "/tmp")
 
 cleanup() {
   rm -f "$UPDATE_MARKER"
-  if [[ "$OWNS_DERIVED_DATA_PATH" == "1" ]]; then
-    rm -rf "$DERIVED_DATA_PATH"
-  fi
 }
 trap cleanup EXIT
 
@@ -40,7 +34,8 @@ run_drift_gate() {
   xcodebuild test \
     -project HealthMd.xcodeproj \
     -scheme HealthMd-Tests-macOS \
-    -destination 'platform=macOS' \
+    -destination "$MACOS_DEST" \
+    -enableCodeCoverage "${MACOS_CODE_COVERAGE:-NO}" \
     -only-testing:HealthMdTests/GeneratedRollupReferenceDocsTests/testGeneratedRollupReferenceDocsMatchProductionOutput \
     -derivedDataPath "$DERIVED_DATA_PATH" \
     -testLanguage en \

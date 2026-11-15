@@ -1,0 +1,2 @@
+# Host-side parsed CI configuration regressions; no product dependencies.
+PyYAML==6.0.3

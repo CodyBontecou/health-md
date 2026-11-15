@@ -25,9 +25,27 @@ components remain isolated. Cached compilation never supplies a passed test resu
 Explicit cache saving occurs before the final timing gate; no cache post-action runs
 later. Hosted completion timestamps, not local runtime alone, establish success.
 
+## Cloud and verification tooling
+
+Cloud host auth, persistence and security regressions run in the existing portable
+Wake group through `scripts/ci/cloud.sh`, with isolated Cloud dependencies and
+resources. Both type checks, the full synthetic host suite, fail-closed production
+configuration and dependency audit remain blocking within the same 90-second lane
+and 120-second workflow budget. No seventh job or native matrix is added.
+`Testing Tools CI / orchestration` checks the portable workflow adapters and agent
+verification guard. These checks do not authorize deployment or device acceptance.
+
 ## Android SDK setup
 
 Every Android workflow explicitly passes `packages: platform-tools` to the pinned `setup-android` action. Its default, `tools platform-tools`, requests the removed legacy `tools` package and fails before Gradle runs. The action still installs command-line tools and accepts SDK licenses; each job installs its NDK, build tools, and emulator images separately as needed. `apps/android/scripts/tests/test_android_workflow_action_pins.py` guards this override as well as action pins.
+
+## Testing-tool feedback
+
+[`testing-tools-ci.yml`](testing-tools-ci.yml) runs host-side command-routing, documentation build reuse, CI selection/final-gate, and website build orchestration regressions without compiling native apps or starting devices. Run `make test-testing-tools` locally after installing `scripts/testing-requirements.txt`; this is not a substitute for product or release gates. See the root [test selection guide](../../docs/testing-strategy.md) for iteration and qualification tiers.
+
+Native compilation and generated native-document qualification follow the explicit
+integration workflow in the root test-selection guide. The retired native CI matrix
+is not restored by these host-side checks.
 
 ## Android release trigger
 
@@ -181,6 +199,19 @@ The live Worker remains an independently deployed, notification-only service wit
 APNs secrets. Deployment is not coupled to CLI artifact publication and must use committed, pushed
 `origin/main` source under `apps/wake`; see its component README and AGENTS file. No workflow in this
 repository routes health data through the Worker.
+
+## Opt-in cloud prototype CI (no deployment)
+
+`.github/workflows/cloud-ci.yml` is manual-only (`workflow_dispatch`). It retains
+locked checks, isolated Wrangler D1/R2 authentication/ingestion smoke, VM bundling,
+combined/split Worker package dry runs and dependency audit as explicit diagnostics.
+It does not deploy or receive production credentials. Cloud's full synthetic host
+regressions and fail-closed policy remain mandatory in `CI / CI`; the old
+`Cloud CI / Cloud CI` context must be removed from required branch protections in
+the coordinated rollout, rather than restored as a second PR gate. No real health
+data enters either check. No general production release is approved; see
+[`apps/cloud/README.md`](../../apps/cloud/README.md) and
+[ADR-0007](../../docs/architecture/adr-0007-healthmd-cloud.md).
 
 ## Release steps
 

@@ -1,0 +1,21 @@
+[Unit]
+Description=Health.md owner-only account HTTPS Tunnel (no shared MCP/writer credential)
+After=network-online.target healthmd-account-proxy.service
+Requires=healthmd-account-proxy.service
+
+[Service]
+Type=simple
+User=healthmd-account-tunnel
+Group=healthmd-account-tunnel
+WorkingDirectory=/var/lib/healthmd-cloud-account-tunnel
+ExecStart=/opt/healthmd-cloud-mcp/bin/cloudflared tunnel --config /etc/healthmd-cloud-account-tunnel/config.yml --no-autoupdate --loglevel warn --metrics 127.0.0.1:0 run
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+InaccessiblePaths=/etc/healthmd-cloud-mvp /etc/healthmd-cloud-mcp /var/lib/healthmd-cloud-mvp /var/lib/healthmd-cloud-mcp
+
+[Install]
+WantedBy=multi-user.target
