@@ -118,3 +118,18 @@ startup failures, lost data, broken export/protocol bytes, unauthorized access a
 recovery. If changed lifecycle, permissions, navigation or native runtime behavior
 needs device verification, report the remaining gap and obtain the existing
 explicit QA opt-in. Compilation and portable tests cannot certify those behaviors.
+
+## Optional agent guard and receipts
+
+The portable runner can enforce a task-scoped plan and record source/toolchain fingerprints
+without replacing the portable CI suite or native build queue. In a non-Pi harness, use
+`node scripts/verification.mjs plan --session <id> --task '<task>' --tier focused --input <owner-path> --toolchain <toolchain> --configuration '<configuration>'`,
+then `run --session <id> --command '<owning check>'` and `report --session <id>`.
+Include affected sources, dependencies, fixtures and consumers in the plan; report unrun
+surfaces. Reuse requires matching inputs and toolchains. A cached build is not a receipt.
+
+For Pi, `scripts/agent-pi.sh` explicitly loads the tracked
+`.pi/extensions/verification-guard.ts`. The guard requires a human-confirmed one-shot
+approval for device/Argent workflows; the portable runner has no self-authorization bypass.
+This tooling is optional. It does not restore retired component CI matrices or change
+`make test`, `make plan-native`, or `make verify-native` routing.

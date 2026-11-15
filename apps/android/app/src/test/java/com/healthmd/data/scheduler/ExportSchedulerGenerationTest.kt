@@ -674,6 +674,77 @@ class ExportSchedulerGenerationTest {
     }
 
     @Test
+    fun enablingNightReceiverAcceptsNewGenerationAndFollowingOccurrenceAcceptsNewAccount() = runTest {
+        val current = settings(ExportTarget.API_ENDPOINT)
+        var authority = com.healthmd.domain.model.HealthProviderCaptureAuthority(selectedProviderId = "whoop",
+            providerIds = listOf("whoop"), connectionIds = mapOf("whoop" to "00000000-0000-4000-8000-000000000301"))
+        var acceptances = 0
+        val source = object : com.healthmd.domain.repository.HealthRepository by mockk(relaxed = true),
+            com.healthmd.domain.repository.RestorableHealthRepository {
+            override suspend fun captureProviderAuthority(): com.healthmd.domain.model.HealthProviderCaptureAuthority {
+                acceptances++
+                return authority.validatedCopy()
+            }
+            override suspend fun restoreProviderAuthority(authority: com.healthmd.domain.model.HealthProviderCaptureAuthority): com.healthmd.domain.repository.HealthRepository =
+                error("Schedule admission must not read health")
+        }
+        val credentials = mockk<APIExportCredentialStore>()
+        coEvery { credentials.receiverCoverageKey(any()) } returns ByteArray(32) { 1 }
+        stateStore.markGenerationMigrationComplete()
+        val scheduler = scheduler(workManager(), { current }, generations = listOf("unbound-night", "receiver-night"),
+            providerRepository = source)
+        scheduler.reconcile()
+        val old = requireNotNull(stateStore.load())
+        assertThat(old.settingsSnapshot?.providerCaptureAuthority).isNull()
+        assertThat(acceptances).isEqualTo(0)
+        try {
+            ReceiverCoverageRuntime.save(context, "legacy",
+                com.healthmd.data.receivercoverage.ReceiverCoverageConfiguration("https://example.test/coverage", "synthetic-night", 0),
+                current.apiEndpointUrl, credentials)
+            scheduler.reconcile()
+            val first = requireNotNull(stateStore.load())
+            val saved = requireNotNull(first.settingsSnapshot)
+            assertThat(first.generation).isNotEqualTo(old.generation)
+            assertThat(saved.version).isEqualTo(AndroidExportSettingsSnapshot.RECEIVER_PROVIDER_AUTHORITY_VERSION)
+            assertThat(saved.providerCaptureAuthority).isEqualTo(authority)
+            assertThat(acceptances).isEqualTo(1)
+            authority = authority.copy(connectionIds = mapOf("whoop" to "00000000-0000-4000-8000-000000000302"))
+            scheduler.reconcile()
+            assertThat(stateStore.load()).isEqualTo(first)
+            assertThat(acceptances).isEqualTo(1)
+            assertThat(scheduler.handleOccurrenceDelivery(first, expedited = true)).isEqualTo(ScheduledExportDeliveryResult.ADMITTED)
+            assertThat(stateStore.loadAdmission()?.occurrence?.settingsSnapshot?.providerCaptureAuthority).isEqualTo(saved.providerCaptureAuthority)
+            assertThat(stateStore.load()?.settingsSnapshot?.providerCaptureAuthority).isEqualTo(authority)
+            assertThat(acceptances).isEqualTo(2)
+            assertThat(old.settingsSnapshot?.providerCaptureAuthority).isNull()
+        } finally {
+            ReceiverCoverageRuntime.save(context, "legacy", null, current.apiEndpointUrl, credentials)
+        }
+    }
+
+    @Test
+    fun rawApiScheduleIgnoresInapplicableSavedReceiverConfiguration() = runTest {
+        val current = settings(ExportTarget.API_ENDPOINT).copy(exportMode = com.healthmd.rawexport.ExportMode.RAW_SNAPSHOT)
+        val credentials = mockk<APIExportCredentialStore>()
+        coEvery { credentials.receiverCoverageKey(any()) } returns ByteArray(32) { 1 }
+        stateStore.markGenerationMigrationComplete()
+        try {
+            ReceiverCoverageRuntime.save(context, "legacy",
+                com.healthmd.data.receivercoverage.ReceiverCoverageConfiguration("https://example.test/coverage", "synthetic-raw-inapplicable", 0),
+                current.apiEndpointUrl, credentials)
+            val scheduler = scheduler(workManager(), { current }, generations = listOf("raw-unbound"))
+            scheduler.reconcile()
+            val first = requireNotNull(stateStore.load())
+            assertThat(first.settingsSnapshot?.exportMode).isEqualTo(com.healthmd.rawexport.ExportMode.RAW_SNAPSHOT)
+            assertThat(first.settingsSnapshot?.providerCaptureAuthority).isNull()
+            scheduler.reconcile()
+            assertThat(stateStore.load()).isEqualTo(first)
+        } finally {
+            ReceiverCoverageRuntime.save(context, "legacy", null, current.apiEndpointUrl, credentials)
+        }
+    }
+
+    @Test
     fun morningOccurrencePersistsProviderAuthorityAndReconcileDoesNotReacceptAccounts() = runTest {
         val library = System.getenv("HEALTHMD_HOST_CORE_LIBRARY")
         org.junit.Assume.assumeTrue(!library.isNullOrBlank())

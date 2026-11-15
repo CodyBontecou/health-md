@@ -576,6 +576,8 @@ struct SchedulingExportActions: View {
     let exportIdentifier: String
     let previewHint: String
     let exportHint: String
+    /// Preview is checking the readable range; the button waits instead of stacking checks.
+    var isPreviewBusy: Bool = false
     let onPreview: () -> Void
     let onExport: () -> Void
 
@@ -583,7 +585,10 @@ struct SchedulingExportActions: View {
         SchedulingAdaptiveStack {
             Button(action: onPreview) {
                 actionLabel("Preview", icon: "eye", primary: false)
+                    .opacity(isPreviewBusy ? 0 : 1)
+                    .overlay { if isPreviewBusy { ProgressView() } }
             }
+            .disabled(isPreviewBusy)
             .accessibilityIdentifier(previewIdentifier)
             .accessibilityLabel("Preview Export")
             .accessibilityHint(Text(LocalizedStringKey(previewHint)))

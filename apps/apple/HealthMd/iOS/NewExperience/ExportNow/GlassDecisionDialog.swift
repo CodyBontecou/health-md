@@ -14,6 +14,7 @@ struct GlassDecisionDialog: View {
 
     let title: String
     let message: String
+    var messageAccessibilityIdentifier: String? = nil
     let actions: [Action]
 
     @Environment(\.glassPalette) private var palette
@@ -29,6 +30,7 @@ struct GlassDecisionDialog: View {
                     .foregroundStyle(palette.text)
                     .accessibilityAddTraits(.isHeader)
                 Text(message)
+                    .accessibilityIdentifier(messageAccessibilityIdentifier ?? "")
                     .font(.system(size: 15))
                     .lineSpacing(3)
                     .foregroundStyle(palette.sec)

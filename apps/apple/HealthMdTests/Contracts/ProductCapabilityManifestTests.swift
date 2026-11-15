@@ -33,6 +33,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
             [
                 "account.clinic-sync-requests",
                 "export.watch-origin-manual-api",
+                "export.scheduled-receiver-coverage",
                 "core.shared-rust-profile-engine",
                 "setup.share-portable-configuration", "destination.google-drive",
             ]
@@ -162,6 +163,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "apple.wrist-temperature",
         "apple.hearing-and-symptoms",
         "apple.typed-whoop-provider-section",
+        "authorization.history-window-detection",
         "automation.api-recovery-authority",
         "automation.include-today",
         "automation.run-overlap-policy",
@@ -185,7 +187,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         sharedCapabilities
             .union(appleCapabilities)
             .union(androidCapabilities)
-            .union(["export.watch-origin-manual-api", "source.private-platform-database", "apple.ads-purchase-attribution", "core.shared-rust-profile-engine", "setup.share-portable-configuration", "destination.google-drive", "account.clinic-sync-requests"])
+            .union(["export.watch-origin-manual-api", "source.private-platform-database", "apple.ads-purchase-attribution", "core.shared-rust-profile-engine", "setup.share-portable-configuration", "destination.google-drive", "account.clinic-sync-requests", "export.scheduled-receiver-coverage"])
     }
 
     private enum ManifestError: Error {

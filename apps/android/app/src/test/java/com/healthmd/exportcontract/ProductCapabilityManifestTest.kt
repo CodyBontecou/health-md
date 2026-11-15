@@ -41,6 +41,7 @@ class ProductCapabilityManifestTest {
         assertEquals(
             setOf(
                 "account.clinic-sync-requests",
+                "export.scheduled-receiver-coverage",
                 "core.shared-rust-profile-engine",
                 "destination.google-drive",
                 "automation.api-recovery-authority",
@@ -200,6 +201,7 @@ class ProductCapabilityManifestTest {
             "apple.wrist-temperature",
             "apple.hearing-and-symptoms",
             "apple.typed-whoop-provider-section",
+        "authorization.history-window-detection",
         )
 
         val androidCapabilities = setOf(
@@ -216,6 +218,7 @@ class ProductCapabilityManifestTest {
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
             "support.native-review-introduction",
             "account.clinic-sync-requests",
+            "export.scheduled-receiver-coverage",
             "source.private-platform-database",
             "apple.ads-purchase-attribution",
             "automation.api-recovery-authority",

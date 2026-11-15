@@ -88,7 +88,7 @@ data class AndroidExportSettingsSnapshot(
     val ianaTimeZone: String,
     /** Snapshot-v2 capture authority; missing v1/draft authority is never synthesized on decode. */
     val sleepCaptureContext: AndroidCaptureContext? = null,
-    /** Private snapshot-v3 account authority. Absent historical snapshots never acquire it. */
+    /** Private account authority. Absent historical snapshots never acquire it. */
     val providerCaptureAuthority: HealthProviderCaptureAuthority? = null,
     /**
      * Per-group detail overrides of [includeGranularData] (wire IDs). Null whenever there is no
@@ -151,7 +151,8 @@ data class AndroidExportSettingsSnapshot(
             executionSleepCaptureContext = frozen.sleepCaptureContext,
             executionSleepCaptureAuthorityIsFrozen = true,
             executionProviderCaptureAuthority = frozen.providerCaptureAuthority,
-            executionProviderCaptureAuthorityIsFrozen = frozen.sleepCaptureContext?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS,
+            executionProviderCaptureAuthorityIsFrozen = frozen.providerCaptureAuthority != null ||
+                frozen.sleepCaptureContext?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS,
         )
     }
 
@@ -160,6 +161,8 @@ data class AndroidExportSettingsSnapshot(
         const val CURRENT_VERSION: Int = 1
         const val CAPTURE_AUTHORITY_VERSION: Int = 2
         const val PROVIDER_AUTHORITY_VERSION: Int = 3
+        // v3 retains its Morning-only meaning; v4 belongs to the private receiver wrapper.
+        const val RECEIVER_PROVIDER_AUTHORITY_VERSION: Int = 5
 
         /** Captures and size-validates every non-secret output setting before provider reads begin. */
         fun capture(
@@ -176,6 +179,8 @@ data class AndroidExportSettingsSnapshot(
             val operationProfile = settings.expectedScheduledExportProfile(captureContext)
             val snapshot = AndroidExportSettingsSnapshot(
                 version = when {
+                    settings.executionProviderCaptureAuthority != null &&
+                        captureContext?.sleepDayAttribution == SleepDayAttribution.NIGHT_BEGINS -> RECEIVER_PROVIDER_AUTHORITY_VERSION
                     settings.executionProviderCaptureAuthority != null -> PROVIDER_AUTHORITY_VERSION
                     captureContext != null -> CAPTURE_AUTHORITY_VERSION
                     else -> CURRENT_VERSION
@@ -444,19 +449,37 @@ object AndroidExportSettingsSnapshotCodec {
         }
     }
 
+    /** Local pending work only. Portable/profile decoding stays closed to the private wrapper. */
+    fun decodeScheduled(raw: String): AndroidExportSettingsSnapshot {
+        val output = com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.outputSettings(raw)
+        val snapshot = decode(output)
+        if (output != raw && (snapshot.scheduledExportTarget != ExportTarget.API_ENDPOINT || snapshot.exportMode != ExportMode.COMPATIBILITY)) {
+            throw AndroidExportSettingsSnapshotException(AndroidExportSettingsSnapshotError.INVALID_STRUCTURE)
+        }
+        return snapshot
+    }
+    fun decodeScheduledOrNull(raw: String?): AndroidExportSettingsSnapshot? =
+        try { raw?.let(::decodeScheduled) } catch (_: Exception) { null }
+
     fun decode(raw: String): AndroidExportSettingsSnapshot = decodeOrNull(raw)
         ?: throw AndroidExportSettingsSnapshotException(
             AndroidExportSettingsSnapshotError.INVALID_CANONICAL_JSON,
         )
 
     fun isStructurallyValid(snapshot: AndroidExportSettingsSnapshot): Boolean = runCatching {
-        if (snapshot.version == AndroidExportSettingsSnapshot.PROVIDER_AUTHORITY_VERSION) {
+        if (snapshot.version in setOf(AndroidExportSettingsSnapshot.PROVIDER_AUTHORITY_VERSION,
+                AndroidExportSettingsSnapshot.RECEIVER_PROVIDER_AUTHORITY_VERSION)) {
             snapshot.providerCaptureAuthority?.validatedCopy() ?: return false
-            if (snapshot.sleepCaptureContext?.sleepDayAttribution != SleepDayAttribution.MORNING_ENDS) return false
+            val attribution = if (snapshot.version == AndroidExportSettingsSnapshot.PROVIDER_AUTHORITY_VERSION)
+                SleepDayAttribution.MORNING_ENDS else SleepDayAttribution.NIGHT_BEGINS
+            if (snapshot.sleepCaptureContext?.sleepDayAttribution != attribution) return false
+            if (snapshot.version == AndroidExportSettingsSnapshot.RECEIVER_PROVIDER_AUTHORITY_VERSION &&
+                (snapshot.exportMode != ExportMode.COMPATIBILITY || snapshot.scheduledExportTarget != ExportTarget.API_ENDPOINT)) return false
         } else if (snapshot.providerCaptureAuthority != null) return false
         when (snapshot.version) {
             AndroidExportSettingsSnapshot.CURRENT_VERSION -> if (snapshot.sleepCaptureContext != null) return false
-            AndroidExportSettingsSnapshot.CAPTURE_AUTHORITY_VERSION, AndroidExportSettingsSnapshot.PROVIDER_AUTHORITY_VERSION -> {
+            AndroidExportSettingsSnapshot.CAPTURE_AUTHORITY_VERSION, AndroidExportSettingsSnapshot.PROVIDER_AUTHORITY_VERSION,
+            AndroidExportSettingsSnapshot.RECEIVER_PROVIDER_AUTHORITY_VERSION -> {
                 val context = snapshot.sleepCaptureContext ?: return false
                 if (context.zoneId.id != snapshot.ianaTimeZone) return false
                 if (context.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS) {
