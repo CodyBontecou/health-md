@@ -51,6 +51,14 @@ data class ScheduledProfilePendingExport(
     /** Private original authority, captured before any permission check or health read. */
     val apiAuthorityJson: String? = null,
     val apiJournalRequired: Boolean = false,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val receiverCoverageJson: String? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val receiverPlanId: String? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val receiverDestinationBinding: String? = null,
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val receiverDestinationFingerprint: String? = null,
     /** Local Drive binding frozen with residual work; never part of portable setup. */
     val destinationId: String? = null,
     /** Accepted Morning refresh scope; legacy residuals retain their completed-day-only behavior. */

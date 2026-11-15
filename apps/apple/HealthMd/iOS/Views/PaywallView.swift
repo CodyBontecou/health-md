@@ -12,6 +12,8 @@ struct PaywallView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var showClinicAccess = false
+    /// Apple's in-app sheet, so App Store retention messages and offers can appear on cancel.
+    @State private var showManageSubscriptions = false
 
     private let context: PaywallContext
     private let allowsDismissal: Bool
@@ -86,6 +88,11 @@ struct PaywallView: View {
         .task { await purchaseManager.loadProductsIfNeeded() }
         .onChange(of: purchaseManager.isUnlocked) { _, unlocked in
             if unlocked && !isManagingPurchase { dismiss() }
+        }
+        .manageSubscriptionsSheet(isPresented: $showManageSubscriptions)
+        .onChange(of: showManageSubscriptions) { _, presented in
+            // A cancel, resubscribe or accepted retention offer changes the entitlement.
+            if !presented { Task { await purchaseManager.refreshStatus() } }
         }
         .sheet(isPresented: $showClinicAccess) {
             NavigationStack {
@@ -258,10 +265,10 @@ struct PaywallView: View {
                 .disabled(isBusy)
                 .accessibilityIdentifier(AccessibilityID.Paywall.restoreButton)
                 .accessibilityLabel("Restore previous purchase")
-                Link(
-                    String(localized: "Manage subscriptions"),
-                    destination: URL(string: "https://apps.apple.com/account/subscriptions")!
-                )
+                Button(String(localized: "Manage subscriptions")) {
+                    showManageSubscriptions = true
+                }
+                .buttonStyle(.plain)
                 .glassFont(.caption)
                 .foregroundStyle(glassPalette.accent)
                 .frame(minHeight: GlassMetrics.touchTarget)

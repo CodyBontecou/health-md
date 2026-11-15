@@ -82,6 +82,10 @@ data class PendingScheduledExportRequest(
     val apiOperationId: String? = null,
     /** Once prepared/attempted, missing immutable bytes must never trigger recapture. */
     val apiJournalRequired: Boolean = false,
+    /** Original receiver v2 plan survives fresh-capture detachment from prepared API bodies. */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER)
+    val receiverPlanId: String? = null,
     /** Durable exact-artifact journal for a scheduled device-folder commit. */
     val folderOperationId: String? = null,
     /** Durable private Drive journal. Credentials and remote authority are excluded. */

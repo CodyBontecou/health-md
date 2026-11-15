@@ -25,6 +25,40 @@ Plain tokens are sent as `Bearer <token>`. Values beginning with `Bearer ` or `B
 
 For the **single-owner, unbacked Health.md Cloud pilot** only, the optional destination is `https://api.healthmd.app/api/v1/exports` with a separate write-only `hmd_ing_…` token from the owner's account dashboard. This is a public HTTPS upload route, not the dashboard (`account.healthmd.app`), the read-only MCP (`mcp.healthmd.app`), or the earlier tailnet-only `:18788` address (which remains available for saved destinations). It accepts compatibility JSON v1/v2 and retains accepted revisions without an off-host backup; the VM or encryption key could be lost permanently. The app does not default or silently migrate existing API targets to this pilot. Enter the endpoint only when the public ingest service is confirmed live, and never put the token in the URL.
 
+## Receiver-aware scheduling
+
+Source integration is implemented for personal compatibility API schedules; native
+application compilation and device/backend acceptance remain pending. Existing
+schedules resend the full lookback unless explicitly enabled.
+
+In the API schedule editor (profile or legacy schedule), open **Receiver-aware
+scheduling** and enable **Skip retained completed days**. Enter the receiver owner's
+explicit HTTPS preflight URL, a non-secret scope for this platform/account/output
+profile, and a correction window of 0–30 calendar days. The preflight and upload
+must share an HTTPS origin; queries, fragments, embedded credentials and redirects
+are rejected. Configure upload authentication normally; the preflight reuses that
+same effective authorization. Managed clinic credentials are unsupported.
+
+The receiver must implement the [receiver coverage contract](../../../../packages/contracts/proposals/receiver-coverage-v1/contract.md).
+Coverage can skip retained completed days; the correction window resends recent
+candidate days even when retained. Choosing 0 disables that correction refresh.
+Late source updates outside the window will not be resent automatically. Use full
+lookback or manual re-export when older corrections matter. Today Refresh remains
+independent and is never skipped by completed-day coverage.
+
+A schedule saves its exact selected dates, capture calendar and destination before
+capture/upload. Retries use that plan without another preflight and acknowledge
+only completed dates. Valid empty selection completes only that occurrence without
+capturing or uploading health data. Cancellation keeps exact pending work; an
+interrupted preflight recovers its saved conservative full-window fallback.
+Changing or disabling this setting affects new occurrences only. Pending work
+keeps its original settings and destination; changing credentials does not reroute
+it. Choose a new receiver scope after changing output settings, the export
+engine (an app update can change it), the provider account or the time zone. Until
+you do, new scheduled runs skip the receiver check and send the full lookback
+window, so exports continue but are not narrowed. Discard obsolete
+pending recovery explicitly before replacing its authority.
+
 ## Historical v7 payload illustration (abridged)
 
 This illustration is not the current v8 fixture; use the generated automation examples for current ingestion.

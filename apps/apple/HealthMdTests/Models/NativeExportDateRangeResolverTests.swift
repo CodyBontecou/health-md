@@ -15,7 +15,7 @@ final class NativeExportDateRangeResolverTests: XCTestCase {
         let heartType = try XCTUnwrap(HKObjectType.quantityType(forIdentifier: .heartRate))
         store.earliestSampleDates[stepType.identifier] = earliestDate
         store.earliestSampleDates[heartType.identifier] = .distantPast
-        store.authorizedHistoryBoundaries[heartType.identifier] = referenceDate
+        store.historyOutcome = .boundaries([heartType.identifier: referenceDate])
         store.errorsForEarliestSampleDates[heartType.identifier] = HealthKitFixtures.genericQueryError
         let request = makeRequest(timeZone: TimeZone(secondsFromGMT: -8 * 3_600)!)
 
@@ -26,24 +26,16 @@ final class NativeExportDateRangeResolverTests: XCTestCase {
         XCTAssertEqual(range.startDate, calendar.startOfDay(for: earliestDate))
         XCTAssertEqual(range.endDate, calendar.startOfDay(for: referenceDate))
         XCTAssertEqual(store.queriedEarliestSampleTypeIdentifiers, [stepType.identifier])
-        XCTAssertTrue(store.historyAuthorizationReadTypes.isEmpty, "Range discovery does not own a boundary assessment")
+        XCTAssertTrue(store.historyRequestedIdentifiers.isEmpty, "Range discovery does not own a boundary assessment")
     }
 
     func testLimitedUnknownAndUnavailableHistoryPreserveReadableRange() async throws {
-        for state in [HealthHistoryAuthorizationState.limitedHistory, .unknown, .apiUnavailable] {
+        for outcome in [HealthHistoryQueryOutcome.boundaries([:]), .failure, .unavailable,
+                        .boundaries([HKQuantityTypeIdentifier.stepCount.rawValue: referenceDate])] {
             let store = FakeHealthStore()
             let stepType = try XCTUnwrap(HKObjectType.quantityType(forIdentifier: .stepCount))
             store.earliestSampleDates[stepType.identifier] = earliestDate
-            switch state {
-            case .limitedHistory:
-                store.authorizedHistoryBoundaries[stepType.identifier] = referenceDate
-            case .unknown:
-                store.errorForAuthorizedHistoryBoundaries = HealthKitFixtures.genericQueryError
-            case .apiUnavailable:
-                store.historyAuthorizationBoundariesSupported = false
-            case .fullHistory:
-                XCTFail("Not an uncertainty fixture")
-            }
+            store.historyOutcome = outcome
 
             let range = try await resolve(makeRequest(), store: store)
             var calendar = Calendar(identifier: .gregorian)
@@ -51,17 +43,6 @@ final class NativeExportDateRangeResolverTests: XCTestCase {
             XCTAssertEqual(range.startDate, calendar.startOfDay(for: earliestDate))
             XCTAssertEqual(range.endDate, calendar.startOfDay(for: referenceDate))
         }
-    }
-
-    func testUnassessedAuthorizationDoesNotBecomeAFullHistoryClaim() throws {
-        let discovery = makeDiscovery(unassessedMetricIDs: ["medication_dose_events"])
-        XCTAssertTrue(discovery.isComplete)
-        XCTAssertFalse(discovery.supportsUnqualifiedFullHistoryClaim)
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = timeZone
-        let range = try Resolver.allTimeRange(from: discovery, referenceDate: referenceDate, calendar: calendar)
-        XCTAssertEqual(range.startDate, calendar.startOfDay(for: earliestDate))
-        XCTAssertFalse(discovery.supportsUnqualifiedFullHistoryClaim)
     }
 
     func testPartialEarliestDiscoveryCannotExportTheSuccessfulSiblingRange() async throws {
@@ -72,24 +53,48 @@ final class NativeExportDateRangeResolverTests: XCTestCase {
         store.errorsForEarliestSampleDates[heartType.identifier] = HealthKitFixtures.genericQueryError
 
         do {
-            _ = try await resolve(makeRequest(metricIDs: ["steps", "heart_rate"]), store: store)
+            _ = try await resolve(makeRequest(metricIDs: ["steps", "heart_rate_avg"]), store: store)
             XCTFail("A best-effort earliest date must not qualify All Time")
         } catch {
             XCTAssertEqual(error as? Resolver.ResolutionError, .incompleteDiscovery)
         }
     }
 
-    func testUnknownSelectedMetricRejectsOtherwiseCompleteDiscovery() async throws {
+    func testMetricWithoutQueryableHistoryDoesNotBlockTheOtherMetricsRange() async throws {
+        // Clinical records, attachments and types this build or OS lacks have
+        // no earliest-date query. They export for the range the rest establish.
         let store = FakeHealthStore()
         let stepType = try XCTUnwrap(HKObjectType.quantityType(forIdentifier: .stepCount))
         store.earliestSampleDates[stepType.identifier] = earliestDate
 
+        let range = try await resolve(makeRequest(metricIDs: ["steps", "future_metric"]), store: store)
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        XCTAssertEqual(range.startDate, calendar.startOfDay(for: earliestDate))
+        XCTAssertEqual(range.endDate, calendar.startOfDay(for: referenceDate))
+    }
+
+    func testOnlyMetricsWithoutQueryableHistoryReportNoReadableData() async {
         do {
-            _ = try await resolve(makeRequest(metricIDs: ["steps", "future_metric"]), store: store)
-            XCTFail("Every selected metric must be discoverable")
+            _ = try await resolve(makeRequest(metricIDs: ["future_metric"]), store: FakeHealthStore())
+            XCTFail("No queryable history is not a resolved All Time range")
         } catch {
-            XCTAssertEqual(error as? Resolver.ResolutionError, .incompleteDiscovery)
+            XCTAssertEqual(error as? Resolver.ResolutionError, .noHealthData)
         }
+    }
+
+    func testAppSurfacesBuildEqualRequestsWhateverDatesAllTimeStored() {
+        let zone = "America/Los_Angeles"
+        let fresh = Resolver.Request(preset: .allTime, startDate: referenceDate, endDate: referenceDate,
+                                     enabledMetricIDs: ["steps"], timeZoneIdentifier: zone)
+        let restored = Resolver.Request(preset: .allTime, startDate: earliestDate, endDate: referenceDate,
+                                        enabledMetricIDs: ["steps"], timeZoneIdentifier: zone)
+        XCTAssertEqual(fresh, restored, "All Time discovery doesn't depend on stored dates")
+        XCTAssertEqual(fresh.timeZone, TimeZone(identifier: zone))
+        let custom = Resolver.Request(preset: .custom, startDate: earliestDate, endDate: referenceDate,
+                                      enabledMetricIDs: ["steps"], timeZoneIdentifier: zone)
+        XCTAssertEqual(custom.selection.startDate, earliestDate, "Explicit ranges keep their dates")
     }
 
     func testEmptyReadableStoreDoesNotFallBackToTodayAsAllTime() async {
@@ -103,15 +108,15 @@ final class NativeExportDateRangeResolverTests: XCTestCase {
 
     func testIncompleteAndFutureDatedDiscoveriesRejectAllTime() {
         assertRejected(makeDiscovery(failedTypeIdentifiers: ["synthetic.type"]), as: .incompleteDiscovery)
-        assertRejected(makeDiscovery(unresolvedMetricIDs: ["future_metric"]), as: .incompleteDiscovery)
+        assertRejected(makeDiscovery(failedTypeIdentifiers: ["synthetic.type"], unresolvedMetricIDs: ["future_metric"]),
+                       as: .incompleteDiscovery)
         assertRejected(makeDiscovery(earliestDate: referenceDate.addingTimeInterval(86_400)), as: .incompleteDiscovery)
     }
 
     func testExplicitRangesRemainUnchangedWithoutHistoryOrDiscoveryChecks() async throws {
         for preset in [ExportDateRangePreset.today, .yesterday, .custom] {
             let store = FakeHealthStore()
-            store.historyAuthorizationBoundariesSupported = false
-            store.errorForAuthorizedHistoryBoundaries = HealthKitFixtures.genericQueryError
+            store.historyOutcome = .unavailable
             let request = makeRequest(preset: preset)
 
             let range = try await resolve(request, store: store)
@@ -121,14 +126,14 @@ final class NativeExportDateRangeResolverTests: XCTestCase {
                 endDate: request.selection.endDate
             ))
             XCTAssertTrue(store.queriedEarliestSampleTypeIdentifiers.isEmpty)
-            XCTAssertTrue(store.historyAuthorizationReadTypes.isEmpty)
+            XCTAssertTrue(store.historyRequestedIdentifiers.isEmpty)
         }
     }
 
     func testMetricPresetDateAndTimeZoneChangesWhileDiscoveringRejectStaleResult() async throws {
         let original = makeRequest()
         let changedRequests = [
-            makeRequest(metricIDs: ["heart_rate"]),
+            makeRequest(metricIDs: ["heart_rate_avg"]),
             makeRequest(preset: .custom),
             Resolver.Request(
                 selection: ExportDateRangeSelection(
@@ -178,7 +183,7 @@ final class NativeExportDateRangeResolverTests: XCTestCase {
             enabledMetricIDs: request.enabledMetricIDs,
             timeZone: request.timeZone
         )
-        store.authorizedHistoryBoundaries[stepType.identifier] = referenceDate
+        store.historyOutcome = .boundaries([stepType.identifier: referenceDate])
         store.earliestSampleDates[stepType.identifier] = referenceDate
         let refreshed = try await Resolver.resolve(restored, using: manager, currentRequest: { restored },
                                                    referenceDate: referenceDate)
@@ -238,20 +243,14 @@ final class NativeExportDateRangeResolverTests: XCTestCase {
     private func makeDiscovery(
         earliestDate: Date? = nil,
         failedTypeIdentifiers: [String] = [],
-        unresolvedMetricIDs: [String] = [],
-        unassessedMetricIDs: [String] = []
+        unresolvedMetricIDs: [String] = []
     ) -> HealthKitEarliestDataDiscovery {
         HealthKitEarliestDataDiscovery(
             earliestDate: earliestDate ?? self.earliestDate,
             queriedTypeIdentifiers: ["synthetic.type"],
             snapshotOnlyTypeIdentifiers: [],
             failedTypeIdentifiers: failedTypeIdentifiers,
-            unresolvedMetricIDs: unresolvedMetricIDs,
-            historyAuthorization: HealthHistoryAuthorizationAssessment(
-                state: .fullHistory,
-                unassessedMetricIDs: unassessedMetricIDs,
-                message: "Synthetic history assessment"
-            )
+            unresolvedMetricIDs: unresolvedMetricIDs
         )
     }
 

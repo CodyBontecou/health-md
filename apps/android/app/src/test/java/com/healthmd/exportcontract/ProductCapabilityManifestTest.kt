@@ -223,6 +223,7 @@ class ProductCapabilityManifestTest {
             "support.native-review-introduction",
             "cloud.opt-in-export-receiver",
             "cloud.read-only-mcp",
+            "export.scheduled-receiver-coverage",
             "automation.api-recovery-authority",
             "automation.include-today",
             "automation.run-overlap-policy",

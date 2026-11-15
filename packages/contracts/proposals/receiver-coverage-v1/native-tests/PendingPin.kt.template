@@ -1,0 +1,4 @@
+package com.healthmd.domain.exportengine
+enum class ExportEngineMode {legacy,shadow,rust}
+data class ExportEnginePin(val engine:ExportEngineMode=ExportEngineMode.shadow,val id:String="original")
+object ExportEnginePinCodec {fun isStructurallyValid(pin:ExportEnginePin)=true}

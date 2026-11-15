@@ -113,6 +113,7 @@ internal fun PaywallCarousel(
     isRestoring: Boolean,
     errorMessage: String?,
     debugControls: (@Composable () -> Unit)?,
+    manageSubscriptionsUrl: String = com.healthmd.domain.billing.PlaySubscriptionLinks.SUBSCRIPTION_CENTER,
 ) {
     val colors = LocalGeistColors.current
     val uriHandler = LocalUriHandler.current
@@ -181,7 +182,7 @@ internal fun PaywallCarousel(
                                 enabled = !isLoading,
                                 onSelect = { selectedPlan = it },
                                 onRetry = onRetry,
-                                onManageSubscriptions = { uriHandler.openUri("https://play.google.com/store/account/subscriptions") },
+                                onManageSubscriptions = { uriHandler.openUri(manageSubscriptionsUrl) },
                                 debugControls = debugControls,
                             )
                         }

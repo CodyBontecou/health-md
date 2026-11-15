@@ -152,12 +152,12 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "apple.typed-whoop-provider-section",
         "export.whoop-resource-selection",
         "export.whoop-physiological-cycle-steps",
+        "authorization.history-window-detection",
         "automation.api-recovery-authority",
         "automation.include-today",
         "automation.run-overlap-policy",
         "direct.cli_agent_push_wake",
         "export.range-summary",
-        "authorization.history-window-detection",
         "support.local-reporting-fallback",
     ]
 
@@ -176,6 +176,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "account.clinic-sync-requests",
         "cloud.opt-in-export-receiver",
         "cloud.read-only-mcp",
+        "export.scheduled-receiver-coverage",
         "setup.share-portable-configuration",
         "core.shared-rust-profile-engine",
         "destination.google-drive",

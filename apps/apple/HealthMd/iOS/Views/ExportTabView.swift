@@ -51,10 +51,11 @@ struct ExportTabView: View {
     let onExportTapped: () -> Void
     let historyProfileStore: ExportProfileStore?
     let executionHistoryAssessment: HealthHistoryAssessment?
-    let executionHistoryScope: HealthHistoryScope?
     let isAssessingHistory: Bool
-    let isDiscoveringExportRange: Bool
-    @Binding var isPreparingExport: Bool
+    /// All Time is still finding its readable range; the history check hasn't begun.
+    var isDiscoveringExportRange: Bool = false
+    /// The scope the execution assessment was captured for (resolved All Time dates).
+    var executionHistoryScope: HealthHistoryScope? = nil
     let onContinueWithoutHistoryVerification: () -> Void
     let onCancelHistoryVerification: () -> Void
 
@@ -75,12 +76,10 @@ struct ExportTabView: View {
     @State private var showPreview = false
     @State private var showRollupHelp = false
     @State private var showFormatHelp = false
-    @State private var allTimeResolutionError: String?
     @State private var showAPIEndpointSettings = false
     @State private var showAgentDataGatewaySettings = false
     @State private var previewSizeEstimate: ExportPreviewSizeEstimate?
     @State private var previewSizeEstimateConfiguration: ExportSizeEstimateConfiguration?
-    @State private var isResolvingAllTimeRange = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -149,8 +148,23 @@ struct ExportTabView: View {
         }
         // SwiftUI owns the logical waiter; the parent-owned worker retains the
         // physical provider slot through cancellation until the provider returns.
+        .alert("Preview range unavailable", isPresented: Binding(
+            get: { previewRangeError != nil }, set: { if !$0 { previewRangeError = nil } }
+        )) { Button("OK", role: .cancel) { previewRangeError = nil } } message: {
+            Text(previewRangeError ?? "")
+        }
+        .onDisappear {
+            previewActionRevision = UUID()
+            isResolvingPreviewRange = false
+        }
+        .modifier(AllTimeDisplayRangeResolution(
+            request: dateRangePreset == .allTime ? previewRangeRequest : nil,
+            healthKitManager: healthKitManager,
+            resolved: $allTimeDisplayRange))
         .task(id: historyPreviewRequest) { await refreshHistoryAssessment() }
         .onChange(of: dateRangePreset) { _, _ in invalidateHistoryPreview() }
+        .onChange(of: startDate) { _, _ in invalidateHistoryPreview() }
+        .onChange(of: endDate) { _, _ in invalidateHistoryPreview() }
         .onReceive(advancedSettings.objectWillChange) { _ in invalidateHistoryPreview() }
         .onReceive(healthKitManager.objectWillChange) { _ in invalidateHistoryPreview() }
         .onReceive(historyProfileStore?.$activeProfileID.eraseToAnyPublisher() ?? Just<UUID?>(nil).eraseToAnyPublisher()) { id in
@@ -163,12 +177,6 @@ struct ExportTabView: View {
             historyCoordinator.invalidate()
             historyPreviewWorker.cancelLogicalWaiter()
         }
-        .geistDialog(
-            isPresented: isPresentingAllTimeResolutionError,
-            title: Text("All Time Unavailable"),
-            message: Text(allTimeResolutionError ?? ""),
-            actions: [.action("Done", role: .secondary)]
-        )
         .geistDialog(
             isPresented: $showHealthPermissionsGuide,
             title: Text("Adjust Health Permissions"),
@@ -194,7 +202,7 @@ struct ExportTabView: View {
                             _ = try? await healthKitManager.requestAuthorization()
                             if healthKitManager.isAuthorized {
                                 await Task.yield()
-                                showPreview = true
+                                handlePreviewTapped()
                             }
                         }
                     }
@@ -237,7 +245,10 @@ struct ExportTabView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showPreview, onDismiss: { onFirstExportPreviewDismissed?() }) {
+        .sheet(isPresented: $showPreview, onDismiss: {
+            presentedPreviewRange = nil
+            onFirstExportPreviewDismissed?()
+        }) {
             ExportPreviewView(
                 startDate: previewDateRange.startDate,
                 endDate: previewDateRange.endDate,
@@ -540,6 +551,9 @@ struct ExportTabView: View {
     }
 
     private func invalidateHistoryPreview() {
+        // An in-flight Preview range check is not revoked here: it is checked
+        // against the live range request when it returns, so unrelated
+        // settings or authorization updates don't silently drop it.
         historyCoordinator.invalidate()
         historyPreviewWorker.cancelLogicalWaiter()
         historyRefreshID = UUID()
@@ -562,19 +576,19 @@ struct ExportTabView: View {
     }
 
     @ViewBuilder private var historyWarningSection: some View {
-        if isDiscoveringExportRange {
-            sectionCard(title: "Checking readable date range") {
-                HealthHistoryRangeDiscoveryContent(cancel: onCancelHistoryVerification)
-            }
-        }
         if isAssessingHistory {
             sectionCard(title: "Checking history access") {
-                HealthHistoryPendingContent(continueUnverified: onContinueWithoutHistoryVerification,
-                                            cancel: onCancelHistoryVerification)
+                if isDiscoveringExportRange {
+                    HealthHistoryRangeDiscoveryContent(cancel: onCancelHistoryVerification)
+                } else {
+                    HealthHistoryPendingContent(continueUnverified: onContinueWithoutHistoryVerification,
+                                                cancel: onCancelHistoryVerification)
+                }
             }
         }
         if let assessment = HealthHistoryAssessment.displayed(preview: historyAssessment,
-            execution: executionHistoryAssessment, scope: historyScope, executionScope: executionHistoryScope), assessment.needsWarning {
+            execution: executionHistoryAssessment, scope: historyScope,
+            executionScope: executionHistoryScope), assessment.needsWarning {
             sectionCard(title: assessment.warningTitle) {
                 HealthHistoryDisclosureContent(assessment: assessment,
                     isExecution: assessment.id == executionHistoryAssessment?.id,
@@ -653,69 +667,43 @@ struct ExportTabView: View {
         }
     }
 
+    @State private var previewActionRevision = UUID()
+    @State private var previewRangeError: String?
+    @State private var isResolvingPreviewRange = false
+    /// The range the open Preview sheet was admitted for; set only when it opens.
+    @State private var presentedPreviewRange: ExportDateRange?
+    /// Display-only All Time range for counts, estimates and the path preview.
+    @State private var allTimeDisplayRange: NativeExportDateRangeResolver.ResolvedRange?
+
     private var previewDateRange: (startDate: Date, endDate: Date) {
-        (startDate, endDate)
+        let range = presentedPreviewRange ?? displayRange
+        return (range.startDate, range.endDate)
+    }
+
+    /// The dates the tab describes: the resolved All Time range when known,
+    /// otherwise the stored selection. Never used to admit an export.
+    private var displayRange: ExportDateRange {
+        if dateRangePreset == .allTime, let range = allTimeDisplayRange.range(for: previewRangeRequest) {
+            return range
+        }
+        return ExportDateRange(startDate: min(startDate, endDate), endDate: max(startDate, endDate))
+    }
+
+    private var previewRangeRequest: NativeExportDateRangeResolver.Request {
+        .init(preset: dateRangePreset, startDate: startDate, endDate: endDate, settings: advancedSettings)
     }
 
     private func selectDateRangePreset(_ preset: ExportDateRangePreset) {
         dateRangePreset = preset
-        allTimeResolutionError = nil
 
         switch preset {
         case .custom:
             return
         case .allTime:
-            resolveAllTimeRange()
+            return // The action owner resolves fresh selected-metric coverage.
         case .today, .yesterday:
             applyResolvedDateRange(for: preset)
         }
-    }
-
-    private var nativeExportDateRangeRequest: NativeExportDateRangeResolver.Request {
-        NativeExportDateRangeResolver.Request(
-            selection: ExportDateRangeSelection(
-                preset: dateRangePreset,
-                startDate: startDate,
-                endDate: endDate
-            ),
-            enabledMetricIDs: advancedSettings.metricSelection.enabledMetrics,
-            timeZone: advancedSettings.exportTimeZoneOverride ?? .current
-        )
-    }
-
-    private func resolveAllTimeRange() {
-        guard !isResolvingAllTimeRange else { return }
-        isResolvingAllTimeRange = true
-        let request = nativeExportDateRangeRequest
-        Task { @MainActor in
-            defer { isResolvingAllTimeRange = false }
-            do {
-                let range = try await NativeExportDateRangeResolver.resolve(
-                    request,
-                    using: healthKitManager,
-                    currentRequest: { nativeExportDateRangeRequest }
-                )
-                // A preview finishing late must not rewrite the originating
-                // selection of an interactive export already being prepared.
-                guard !isPreparingExport else { return }
-                _ = configurationProtection.performConfigurationChange {
-                    startDate = range.startDate
-                    endDate = range.endDate
-                }
-            } catch is CancellationError {
-                return
-            } catch {
-                guard dateRangePreset == .allTime, !isPreparingExport else { return }
-                allTimeResolutionError = error.localizedDescription
-            }
-        }
-    }
-
-    private var isPresentingAllTimeResolutionError: Binding<Bool> {
-        Binding(
-            get: { allTimeResolutionError != nil },
-            set: { if !$0 { allTimeResolutionError = nil } }
-        )
     }
 
     private func applyResolvedDateRange(for preset: ExportDateRangePreset) {
@@ -1236,6 +1224,7 @@ struct ExportTabView: View {
                 exportHint: canExport
                     ? "Exports the selected health data"
                     : "Opens the setup step required before exporting",
+                isPreviewBusy: isResolvingPreviewRange,
                 onPreview: handlePreviewTapped,
                 onExport: handleExportButtonTapped
             )
@@ -1245,8 +1234,8 @@ struct ExportTabView: View {
 
     private var exportDateCount: Int {
         let calendar = Calendar.current
-        let start = calendar.startOfDay(for: min(startDate, endDate))
-        let end = calendar.startOfDay(for: max(startDate, endDate))
+        let start = calendar.startOfDay(for: displayRange.startDate)
+        let end = calendar.startOfDay(for: displayRange.endDate)
         return max((calendar.dateComponents([.day], from: start, to: end).day ?? 0) + 1, 1)
     }
 
@@ -1254,8 +1243,8 @@ struct ExportTabView: View {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = advancedSettings.exportTimeZoneOverride ?? .current
         return ExportOrchestrator.dateRange(
-            from: min(startDate, endDate),
-            to: max(startDate, endDate),
+            from: displayRange.startDate,
+            to: displayRange.endDate,
             calendar: calendar
         )
     }
@@ -1263,8 +1252,8 @@ struct ExportTabView: View {
     private var exportSizeEstimateConfiguration: ExportSizeEstimateConfiguration {
         let calendar = Calendar.current
         return ExportSizeEstimateConfiguration(
-            startDate: calendar.startOfDay(for: min(startDate, endDate)),
-            endDate: calendar.startOfDay(for: max(startDate, endDate)),
+            startDate: calendar.startOfDay(for: displayRange.startDate),
+            endDate: calendar.startOfDay(for: displayRange.endDate),
             target: exportTargetSelection,
             formats: advancedSettings.exportFormats,
             metricIDs: advancedSettings.metricSelection.enabledMetrics,
@@ -1335,12 +1324,6 @@ struct ExportTabView: View {
 
     // MARK: - Large Export Confirmation
 
-    /// Guards only the interactive Export tab button. The scale verdict runs
-    /// before the `canExport` routing: a tap that first routes through the
-    /// Health-authorization flow re-enters the export after access is granted,
-    /// so a multi-thousand-day range must be confirmed up front or that path
-    /// could start it unconfirmed. Scheduled, shortcut, CLI, preview, and
-    /// programmatic export paths never pass through this handler.
     private func handleExportButtonTapped() {
         onExportTapped()
     }
@@ -1357,7 +1340,31 @@ struct ExportTabView: View {
             }
             showPreviewRequirementsPrompt = true
         } else {
-            showPreview = true
+            // One range check per Preview tap; repeated taps don't stack discoveries.
+            guard !isResolvingPreviewRange else { return }
+            let revision = UUID()
+            previewActionRevision = revision
+            previewRangeError = nil
+            let request = previewRangeRequest
+            isResolvingPreviewRange = request.selection.preset == .allTime
+            Task { @MainActor in
+                defer { if previewActionRevision == revision { isResolvingPreviewRange = false } }
+                do {
+                    let range = try await NativeExportDateRangeResolver.resolve(request,
+                        using: healthKitManager, currentRequest: { previewRangeRequest })
+                    guard previewActionRevision == revision, request == previewRangeRequest else { return }
+                    if request.selection.preset == .allTime {
+                        allTimeDisplayRange = .init(request: request, range: range)
+                    }
+                    presentedPreviewRange = range
+                    showPreview = true
+                } catch is CancellationError {
+                    return
+                } catch {
+                    guard previewActionRevision == revision, request == previewRangeRequest else { return }
+                    previewRangeError = error.localizedDescription
+                }
+            }
         }
     }
 
@@ -1683,14 +1690,14 @@ struct ExportTabView: View {
 
     private func formattedExportPath(rootName: String) -> String {
         if advancedSettings.dailyNotesOnlyModeEnabled {
-            let dateRange = previewDateRange
+            let dateRange = displayRange
             if Calendar.current.isDate(dateRange.startDate, inSameDayAs: dateRange.endDate) {
                 return "\(rootName)/\(advancedSettings.dailyNoteInjection.previewPath(for: dateRange.startDate))"
             }
             return "\(rootName)/\(advancedSettings.dailyNoteInjection.folderPath)/… (daily notes only)"
         }
 
-        let dateRange = previewDateRange
+        let dateRange = displayRange
         let startDate = dateRange.startDate
         let endDate = dateRange.endDate
         let subfolder = vaultManager.healthSubfolder

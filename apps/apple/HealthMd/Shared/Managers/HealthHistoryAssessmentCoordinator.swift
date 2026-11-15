@@ -145,11 +145,10 @@ struct HealthHistoryExportRequest: Equatable {
 
     var dateRangeRequest: NativeExportDateRangeResolver.Request {
         let origin = originatingSelection
-        return NativeExportDateRangeResolver.Request(
-            selection: ExportDateRangeSelection(preset: origin.preset,
-                startDate: origin.scope.startDate, endDate: origin.scope.endDate),
+        return NativeExportDateRangeResolver.Request(preset: origin.preset,
+            startDate: origin.scope.startDate, endDate: origin.scope.endDate,
             enabledMetricIDs: origin.scope.metricIDs,
-            timeZone: TimeZone(identifier: origin.scope.timeZoneIdentifier) ?? TimeZone(secondsFromGMT: 0)!)
+            timeZoneIdentifier: origin.scope.timeZoneIdentifier)
     }
 
     var scaleVerdict: ExportScaleGuard.Verdict {
@@ -189,7 +188,7 @@ struct HealthHistoryExportRequest: Equatable {
         return Self(id: id, originatingSelection: origin,
             selection: HealthHistoryExecutionSelection(scope: scope,
                 settings: origin.settings, target: origin.target, preset: origin.preset,
-                localDestinationURL: origin.localDestinationURL))
+                localDestinationURL: origin.localDestinationURL, sleepDayAttribution: origin.sleepDayAttribution))
     }
 }
 

@@ -17,6 +17,92 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 class ScheduledExportPendingRequestsTest {
+    @Test
+    fun malformedReceiverRowIsQuarantinedWithoutBreakingOtherWork() {
+        val quarantined = com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.QUARANTINED_PLAN_ID
+        val broken = LocalDate.parse("2026-03-07")
+        val legacy = LocalDate.parse("2026-03-08")
+        // A receiver wrapper missing its required fields, next to an ordinary legacy row.
+        val settings = ExportSettings(scheduledExportTarget = ExportTarget.API_ENDPOINT, scheduleLookbackDays = 1,
+            pendingScheduledExportRequests = listOf(
+                com.healthmd.domain.model.PendingScheduledExportRequest(date = broken, exportTarget = ExportTarget.API_ENDPOINT,
+                    destinationFingerprint = "original", apiAuthorityJson = "original-authority",
+                    settingsSnapshotJson = "{\"schema\":\"${com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot.SCHEMA}\",\"version\":4}"),
+                // Both rows carry the same original API authority, so only quarantine separates them.
+                com.healthmd.domain.model.PendingScheduledExportRequest(date = legacy, exportTarget = ExportTarget.API_ENDPOINT,
+                    destinationFingerprint = "original", apiAuthorityJson = "original-authority"),
+            ))
+        val pending = ScheduledExportPendingRequests.pendingRequests(settings)
+        assertThat(pending.map { it.date to it.receiverPlanId }).containsExactly(broken to quarantined, legacy to null).inOrder()
+        // The quarantined row never joins a new admission; the unrelated legacy row still does.
+        val dates = ScheduledExportPendingRequests.scheduledRunDates(settings, listOf(legacy.plusDays(1)),
+            destinationFingerprint = "original", apiAuthorityJson = "original-authority", receiverPlanId = "new-occurrence")
+        assertThat(dates).contains(legacy)
+        assertThat(dates).doesNotContain(broken)
+        // Its bytes are retained for explicit recovery and it stays quarantined after a rewrite.
+        val rewritten = ScheduledExportPendingRequests.applyAttemptResult(settings, dates, emptyList(),
+            target = ExportTarget.API_ENDPOINT, destinationFingerprint = "original", receiverPlanId = "new-occurrence")
+        val kept = ScheduledExportPendingRequests.pendingRequests(rewritten).single { it.date == broken }
+        assertThat(kept.receiverPlanId).isEqualTo(quarantined)
+        assertThat(kept.settingsSnapshotJson).isEqualTo(settings.pendingScheduledExportRequests.first().settingsSnapshotJson)
+    }
+
+    @Test
+    fun newerTodayAdmissionRetriesEvenWhenEveryRequestedDateHasAnOlderReceiverOwner() {
+        val today = LocalDate.parse("2026-03-10")
+        val original = ScheduledExportPendingRequests.applyCancellationResult(
+            ExportSettings(scheduledExportTarget = ExportTarget.API_ENDPOINT, scheduleLookbackDays = 1,
+                scheduleDateWindow = ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY),
+            listOf(today.minusDays(1), today), listOf(today.minusDays(1), today),
+            target = ExportTarget.API_ENDPOINT, destinationFingerprint = "original", receiverPlanId = "A")
+        val dates = ScheduledExportPendingRequests.scheduledRunDates(original, listOf(today),
+            destinationFingerprint = "original", receiverPlanId = "B")
+        assertThat(dates).isEmpty()
+        assertThat(ScheduledExportPendingRequests.receiverAdmissionAction(original, dates, true, today, "original", "B"))
+            .isEqualTo(ScheduledExportPendingRequests.ReceiverAdmissionAction.RETRY)
+        assertThat(ScheduledExportPendingRequests.receiverAdmissionAction(original, dates, false, today, "original", "B"))
+            .isEqualTo(ScheduledExportPendingRequests.ReceiverAdmissionAction.COMPLETE)
+        assertThat(original.pendingScheduledExportRequests.map { it.receiverPlanId }).containsExactly("A", "A")
+    }
+
+    @Test
+    fun receiverFreshCaptureResidualDoesNotJoinOrEraseNewOccurrence() {
+        val oldDate = LocalDate.parse("2026-03-08")
+        val newDate = LocalDate.parse("2026-03-09")
+        for (window in listOf(ScheduleDateWindow.PAST_COMPLETE_DAYS,
+            ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY)) {
+            val original = ScheduledExportPendingRequests.applyCancellationResult(
+                ExportSettings(scheduledExportTarget = ExportTarget.API_ENDPOINT,
+                    scheduleLookbackDays = 1, scheduleDateWindow = window),
+                listOf(oldDate), listOf(oldDate), target = ExportTarget.API_ENDPOINT,
+                destinationFingerprint = "original", receiverPlanId = "old-occurrence")
+            assertThat(original.pendingScheduledExportRequests.single().apiOperationId).isNull()
+            val dates = ScheduledExportPendingRequests.scheduledRunDates(original, listOf(newDate.plusDays(1)),
+                destinationFingerprint = "original", receiverPlanId = "new-occurrence")
+            assertThat(dates).contains(newDate)
+            assertThat(dates).doesNotContain(oldDate)
+            if (window == ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY)
+                assertThat(dates).contains(newDate.plusDays(1))
+            val after = ScheduledExportPendingRequests.applyAttemptResult(original, dates, emptyList(),
+                target = ExportTarget.API_ENDPOINT, destinationFingerprint = "original", receiverPlanId = "new-occurrence")
+            assertThat(after.pendingScheduledExportRequests.single().receiverPlanId).isEqualTo("old-occurrence")
+        }
+    }
+
+    @org.junit.Test
+    fun receiverPlanSurvivesPartialAcknowledgementAndFreshCaptureDetachment() {
+        val date = java.time.LocalDate.parse("2026-03-06")
+        val settings = com.healthmd.domain.model.ExportSettings(scheduledExportTarget = com.healthmd.domain.model.ExportTarget.API_ENDPOINT)
+        val accepted = ScheduledExportPendingRequests.applyCancellationResult(settings, listOf(date), listOf(date),
+            target = com.healthmd.domain.model.ExportTarget.API_ENDPOINT, destinationFingerprint = "original", receiverPlanId = "original-plan")
+        val fresh = ScheduledExportPendingRequests.applyAttemptResult(accepted, listOf(date),
+            listOf(com.healthmd.domain.model.FailedDateDetail(date, com.healthmd.domain.model.ExportFailureReason.UNKNOWN)),
+            target = com.healthmd.domain.model.ExportTarget.API_ENDPOINT, destinationFingerprint = "original",
+            apiOperationIds = mapOf(date to "prepared-body"), freshCaptureRetryDates = setOf(date), receiverPlanId = "new-plan")
+        org.junit.Assert.assertEquals("original-plan", fresh.pendingScheduledExportRequests.single().receiverPlanId)
+        org.junit.Assert.assertNull(fresh.pendingScheduledExportRequests.single().apiOperationId)
+    }
+
 
     @Test
     fun preparedFenceRequiresExactPendingAuthorityAndCannotReviveDiscardedDates() {

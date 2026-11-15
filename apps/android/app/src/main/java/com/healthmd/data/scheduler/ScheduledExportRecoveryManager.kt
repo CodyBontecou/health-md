@@ -145,7 +145,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
     private fun apiRecoveryGroups(requests: List<PendingScheduledExportRequest>): Map<String, List<PendingScheduledExportRequest>> =
         requests.filter { it.exportTarget == ExportTarget.API_ENDPOINT }
             .groupBy { PendingRecoveryOperation(it.exportTarget, it.destinationFingerprint, it.enginePin,
-                it.settingsSnapshotJson, it.apiOperationId, it.folderOperationId, it.apiAuthorityJson, it.apiJournalRequired,
+                it.settingsSnapshotJson, it.apiOperationId, it.receiverPlanId, it.folderOperationId, it.apiAuthorityJson, it.apiJournalRequired,
                 it.driveOperationId) }
             .mapNotNull { (operation, grouped) ->
                 val dates = grouped.map { it.date }.filter { !it.isAfter(LocalDate.now().minusDays(1)) }.distinct().sorted()
@@ -259,6 +259,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
                         enginePin = request.enginePin,
                         settingsSnapshotJson = request.settingsSnapshotJson,
                         apiOperationId = request.apiOperationId,
+                        receiverPlanId = request.receiverPlanId,
                         folderOperationId = request.folderOperationId,
                         apiAuthorityJson = request.apiAuthorityJson,
                         apiJournalRequired = request.apiJournalRequired,
@@ -273,12 +274,12 @@ class ScheduledExportRecoveryManager @Inject constructor(
 
             for ((operation, requests) in pendingByTarget) {
                 val target = operation.target
-                val targetDates = requests.map { it.date }.distinct().sorted()
+                var targetDates = requests.map { it.date }.distinct().sorted()
                 val resumesStoredAPI = target == ExportTarget.API_ENDPOINT &&
                     operation.apiOperationId != null && operation.apiJournalRequired
                 val destinationFingerprint = operation.destinationFingerprint
                 val enginePin = operation.enginePin
-                val settingsSnapshotJson = operation.settingsSnapshotJson
+                val settingsSnapshotJson = operation.settingsSnapshotJson?.let(com.healthmd.data.receivercoverage.ReceiverCoverageSnapshot::outputSettings)
                 val durableApiOperationId = if (target == ExportTarget.API_ENDPOINT) {
                     operation.apiOperationId ?: deterministicRecoveryOperationId(
                         targetDates = requests.map { it.date }.distinct().sorted(),
@@ -313,6 +314,29 @@ class ScheduledExportRecoveryManager @Inject constructor(
                     executionEnginePin = enginePin,
                     executionEngineAuthorityIsFrozen = true,
                 )
+                val receiverRuntime = apiCredentialStore?.let { ReceiverCoverageRuntime(applicationContext, it, entitlementRepository) }
+                var receiverLease: ReceiverCoverageRuntime.Lease? = null
+                if (operation.receiverPlanId != null) {
+                    try {
+                        val runtime = requireNotNull(receiverRuntime)
+                        val planId = operation.receiverPlanId
+                        val config = requireNotNull(runtime.configurationForOccurrence(planId, "legacy", eligible = false, requireExisting = true))
+                        val snapshot = requireNotNull(settingsSnapshotJson)
+                        val zone = com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decode(snapshot).ianaTimeZone
+                        receiverLease = runtime.resolve(planId, "legacy:$planId", config, targetSettings.apiEndpointUrl,
+                            snapshot, zone, emptyList(), false, java.time.Instant.now(), restoreOnly = true, authorized = { true })
+                        val unresolved = receiverLease.plan.residual.map(LocalDate::parse).toSet()
+                        targetDates = targetDates.filter { it in unresolved }
+                        if (targetDates.isEmpty()) {
+                            latestSettings = settingsRepository.updateExportSettingsAtomically { current ->
+                                ScheduledExportPendingRequests.applyAttemptResult(current, requests.map { it.date }, emptyList(),
+                                    target = target, destinationFingerprint = destinationFingerprint)
+                            }
+                            continue
+                        }
+                    } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                    catch (_: Exception) { continue } // Preserve unreadable/mismatched original work without capture.
+                }
                 if (target == ExportTarget.API_ENDPOINT) {
                     val operationId = requireNotNull(durableApiOperationId)
                     targetSettings = targetSettings.copy(
@@ -424,7 +448,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
                         ExportTarget.API_ENDPOINT -> apiEndpointExportRunner?.exportDates(
                             dates = targetDates,
                             settings = targetSettings,
-                            expectedDestinationFingerprint = destinationFingerprint,
+                            expectedDestinationFingerprint = receiverLease?.fingerprint ?: destinationFingerprint,
                             durableOperationId = durableApiOperationId,
                             durableSettingsSnapshotJson = settingsSnapshotJson,
                         ) ?: ExportResult(
@@ -504,6 +528,13 @@ class ScheduledExportRecoveryManager @Inject constructor(
                     )
                 )
 
+                if (receiverLease != null) {
+                    val remaining = targetResult.failedDateDetails.map { it.date }.toSet() + targetResult.remainingDates +
+                        targetResult.retryOperationIds.keys + targetResult.freshCaptureRetryDates
+                    val completed = if (targetResult.isFullSuccess || remaining.isNotEmpty()) targetDates.filterNot { it in remaining } else emptyList()
+                    try { requireNotNull(receiverRuntime).acknowledge(receiverLease, completed) }
+                    catch (_: Exception) { continue }
+                }
                 // Merge only this attempt's pending-date result into the latest settings so a
                 // concurrent endpoint/schedule edit is never overwritten by the recovery snapshot.
                 val retryDetails = if (targetSettings.exportMode == ExportMode.RAW_SNAPSHOT && !targetResult.isFullSuccess) {
@@ -853,6 +884,7 @@ private data class PendingRecoveryOperation(
     val enginePin: ExportEnginePin?,
     val settingsSnapshotJson: String?,
     val apiOperationId: String?,
+    val receiverPlanId: String?,
     val folderOperationId: String?,
     val apiAuthorityJson: String?,
     val apiJournalRequired: Boolean,
