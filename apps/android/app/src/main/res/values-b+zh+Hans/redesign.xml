@@ -16,10 +16,8 @@
     <string name="archive_row_last_export">上次导出：%1$s</string>
     <string name="archive_action_backfill">补导</string>
     <string name="archive_empty_title">你的归档从这里开始</string>
-    <string name="archive_empty_body">每导出一天，日历上就会填满一格。导出一次即可开始。</string>
     <string name="automations_subtitle">已保存的导出，可定时运行、从自动化应用启动，或通过 healthmd CLI 运行。</string>
     <string name="automations_profiles_title">导出配置文件</string>
-    <string name="automations_profiles_body">创建、编辑并切换已保存的导出配置。</string>
     <string name="automation_sentence_daily">每天 %1$s 导出到%2$s。</string>
     <string name="automation_sentence_weekly">每周%1$s %2$s 导出到%3$s。</string>
     <string name="automation_sentence_monthly">每月 %1$s 导出到%2$s。</string>
@@ -29,10 +27,6 @@
     <string name="settings_section_destinations">目标位置</string>
     <string name="settings_section_data">数据</string>
     <string name="settings_section_app">应用</string>
-    <string name="settings_destination_folder_title">导出文件夹</string>
-    <string name="settings_destination_folder_subtitle">在“立即导出”中选择 Health.md 写入的文件夹。</string>
-    <string name="settings_destination_api_title">API 端点和 Agent Data 网关</string>
-    <string name="settings_destination_api_subtitle">在“自动化”中设置上传到你的服务器或数据接收网关。</string>
     <string name="automation_detail_destination">目标位置</string>
     <string name="automation_detail_formats">格式</string>
     <string name="automation_detail_metrics">指标</string>
@@ -41,16 +35,11 @@
     <string name="automation_detail_profile_id">配置文件 ID</string>
     <string name="automation_detail_copy">复制</string>
     <string name="automation_detail_copied">已复制</string>
-    <string name="automation_detail_edit_profile">编辑配置文件</string>
     <string name="automation_detail_edit_schedule">编辑计划</string>
-    <string name="automation_detail_make_active">设为当前</string>
-    <string name="automation_detail_active">当前配置文件</string>
     <string name="automation_detail_select">选择一个自动化以查看详情。</string>
     <string name="automation_detail_details">详情</string>
     <string name="automation_detail_details_named">%1$s 的详情</string>
     <string name="automation_detail_not_found">此自动化已不存在。</string>
-    <string name="folder_destination_current">当前文件夹</string>
-    <string name="folder_destination_none">未选择文件夹</string>
     <string name="folder_destination_choose">选择文件夹</string>
     <string name="folder_destination_change">更改文件夹</string>
     <string name="folder_destination_body">Health.md 会直接写入你通过 Android 文件夹选择器选定的文件夹，包括同步的应用文件夹。无需账户。</string>
@@ -61,9 +50,7 @@
     <string name="moment_keep_open">完成前请保持 Health.md 打开。</string>
     <string name="moment_heart_description">随着日期写入而逐渐填满的水晶心</string>
     <string name="archive_automations_manage">管理</string>
-    <string name="archive_automations_card_body">“全部”在每个到期的自动化都覆盖某天时，才将其计为完整。</string>
     <string name="archive_action_reexport">重新导出</string>
-    <string name="day_page_open">打开当天的文件</string>
     <string name="day_page_share">分享文件</string>
     <string name="day_page_empty">按当前设置，这一天不会写入任何内容。</string>
     <string name="day_page_range_only">原始快照会为整个时间段写入一个文件，因此没有单独的日文件。</string>
@@ -119,7 +106,6 @@
     <string name="composer_when_night">每天夜里 %1$s</string>
     <string name="composer_when_weekly">每%1$s %2$s</string>
     <string name="composer_when_monthly">每月 %1$s</string>
-    <string name="composer_when_custom">按自定义计划 %1$s</string>
     <string name="composer_range_yesterday">昨天</string>
     <string name="composer_note_update">更新我的每日笔记</string>
     <string name="composer_note_leave">不改动每日笔记</string>
@@ -131,9 +117,7 @@
     <string name="composer_preview_title">最近一天的文件</string>
     <string name="composer_preview_note">根据 Health Connect 中最近的完整一天生成。不会写入任何内容。</string>
     <string name="composer_fields">此笔记中的字段</string>
-    <string name="composer_all_metrics">全部指标</string>
     <string name="composer_all_settings">全部设置</string>
-    <string name="composer_all_settings_sub">输出 · 格式 · 条目 · 目标位置</string>
     <string name="composer_label_when">时间</string>
     <string name="composer_label_range">天数</string>
     <string name="composer_label_note">每日笔记</string>
@@ -157,16 +141,8 @@
     <string name="widget_archive_preview_month_detail">天（10月）</string>
     <string name="widget_archive_preview_gaps">2 处缺口</string>
     <string name="moment_see_in_archive">在存档中查看</string>
-    <string name="export_now_more_options">更多选项</string>
-    <string name="automations_profiles_summary">当前：%1$s · %2$s · %3$s</string>
     <plurals name="moment_done_days">
         <item quantity="other">已写入 %1$d 天</item>
-    </plurals>
-    <plurals name="automations_profiles_count">
-        <item quantity="other">%1$d 个配置</item>
-    </plurals>
-    <plurals name="automations_profiles_scheduled">
-        <item quantity="other">%1$d 个已排程</item>
     </plurals>
     <string name="archive_status_updating">更新中</string>
     <string name="archive_status_not_due">未到期</string>
@@ -178,29 +154,15 @@
     <string name="automations_new">新建自动化</string>
     <string name="automations_next">下次 · %1$s</string>
     <string name="automations_paused">已暂停</string>
-    <string name="automations_on_demand">按需</string>
     <string name="automations_run_now">立即运行</string>
-    <string name="automations_run_now_named">立即运行 %1$s</string>
     <string name="automations_edit">编辑</string>
-    <string name="automations_edit_named">编辑 %1$s</string>
     <string name="automations_switch_named">%1$s 自动化</string>
     <string name="automations_schedule_settings_title">计划设置</string>
-    <string name="automations_schedule_settings_subtitle">应用级计划、计划导出目标位置、权限和历史记录</string>
     <string name="date_option_last_7_days">7 天</string>
     <string name="export_dates_heading">日期</string>
     <string name="date_from_label">从</string>
     <string name="date_to_label">至</string>
     <string name="export_will_write">将写入</string>
-    <string name="export_will_write_with_daily_notes">%1$s + 每日笔记</string>
-    <plurals name="export_will_write_files">
-        <item quantity="other">约 %1$d 个 %2$s 文件</item>
-    </plurals>
-    <plurals name="export_cta_files">
-        <item quantity="other">导出 %1$d 个文件</item>
-    </plurals>
-    <plurals name="export_cta_send_days">
-        <item quantity="other">发送 %1$d 天</item>
-    </plurals>
     <string name="settings_plan_free">免费版</string>
     <string name="settings_plan_full_access">完整访问</string>
     <string name="settings_plan_manage">%1$s · 恢复或管理</string>
@@ -325,7 +287,6 @@
     <string name="schedule_custom">自定义</string>
     <string name="schedule_day">日期</string>
     <string name="schedule_every">每隔</string>
-    <string name="schedule_unit">单位</string>
     <string name="schedule_starting">开始于</string>
     <string name="schedule_preferred_time">首选时间</string>
     <string name="schedule_look_back">回溯</string>

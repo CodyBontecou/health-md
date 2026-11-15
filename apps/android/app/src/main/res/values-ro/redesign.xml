@@ -16,10 +16,8 @@
     <string name="archive_row_last_export">Ultimul export %1$s</string>
     <string name="archive_action_backfill">Recuperați</string>
     <string name="archive_empty_title">Arhiva dvs. începe aici</string>
-    <string name="archive_empty_body">Fiecare zi exportată umple un pătrat din calendar. Exportați o dată pentru a începe.</string>
     <string name="automations_subtitle">Exporturi salvate pe care le puteți programa, porni din aplicații de automatizare sau rula cu CLI-ul healthmd.</string>
     <string name="automations_profiles_title">Profiluri de export</string>
-    <string name="automations_profiles_body">Creați, editați și comutați între configurațiile de export salvate.</string>
     <string name="automation_sentence_daily">În fiecare zi la %1$s, exportați în %2$s.</string>
     <string name="automation_sentence_weekly">În fiecare săptămână, %1$s la %2$s, exportați în %3$s.</string>
     <string name="automation_sentence_monthly">În fiecare lună la %1$s, exportați în %2$s.</string>
@@ -29,10 +27,6 @@
     <string name="settings_section_destinations">Destinații</string>
     <string name="settings_section_data">Date</string>
     <string name="settings_section_app">Aplicație</string>
-    <string name="settings_destination_folder_title">Dosar de export</string>
-    <string name="settings_destination_folder_subtitle">Alegeți în Exportați acum dosarul în care scrie Health.md.</string>
-    <string name="settings_destination_api_title">Endpoint API și gateway Agent Data</string>
-    <string name="settings_destination_api_subtitle">Configurați în Automatizări încărcările pe serverul dvs. sau într-un gateway de ingestie.</string>
     <string name="automation_detail_destination">Destinație</string>
     <string name="automation_detail_formats">Formate</string>
     <string name="automation_detail_metrics">Valori</string>
@@ -41,16 +35,11 @@
     <string name="automation_detail_profile_id">ID profil</string>
     <string name="automation_detail_copy">Copiați</string>
     <string name="automation_detail_copied">Copiat</string>
-    <string name="automation_detail_edit_profile">Editați profilul</string>
     <string name="automation_detail_edit_schedule">Editați programul</string>
-    <string name="automation_detail_make_active">Activați</string>
-    <string name="automation_detail_active">Profil activ</string>
     <string name="automation_detail_select">Selectați o automatizare pentru a vedea detaliile.</string>
     <string name="automation_detail_details">Detalii</string>
     <string name="automation_detail_details_named">Detalii pentru %1$s</string>
     <string name="automation_detail_not_found">Această automatizare nu mai există.</string>
-    <string name="folder_destination_current">Dosarul curent</string>
-    <string name="folder_destination_none">Niciun dosar selectat</string>
     <string name="folder_destination_choose">Alegeți dosarul</string>
     <string name="folder_destination_change">Schimbați dosarul</string>
     <string name="folder_destination_body">Health.md scrie direct în dosarul ales cu selectorul de dosare Android, inclusiv în dosarele sincronizate ale aplicațiilor. Nu este nevoie de cont.</string>
@@ -61,9 +50,7 @@
     <string name="moment_keep_open">Ține Health.md deschis până se termină.</string>
     <string name="moment_heart_description">O inimă de cristal care se umple pe măsură ce zilele sunt scrise</string>
     <string name="archive_automations_manage">Gestionează</string>
-    <string name="archive_automations_card_body">„Toate” consideră o zi completă când fiecare automatizare programată a acoperit-o.</string>
     <string name="archive_action_reexport">Exportă din nou</string>
-    <string name="day_page_open">Deschide fișierul zilei</string>
     <string name="day_page_share">Partajează fișierul</string>
     <string name="day_page_empty">Cu setările actuale nu s-ar scrie nimic pentru această dată.</string>
     <string name="day_page_range_only">Instantaneele brute scriu un singur fișier pentru tot intervalul, deci nu există fișier pe zi.</string>
@@ -125,7 +112,6 @@
     <string name="composer_when_night">În fiecare noapte la %1$s</string>
     <string name="composer_when_weekly">În fiecare %1$s la %2$s</string>
     <string name="composer_when_monthly">În fiecare lună la %1$s</string>
-    <string name="composer_when_custom">După un program personalizat la %1$s</string>
     <string name="composer_range_yesterday">ieri</string>
     <string name="composer_note_update">actualizează nota zilnică</string>
     <string name="composer_note_leave">lasă notele zilnice neschimbate</string>
@@ -137,9 +123,7 @@
     <string name="composer_preview_title">Fișierul ultimei zile</string>
     <string name="composer_preview_note">Generat din cea mai recentă zi completă din Health Connect. Nu se scrie nimic.</string>
     <string name="composer_fields">Câmpuri în această notă</string>
-    <string name="composer_all_metrics">Toate măsurătorile</string>
     <string name="composer_all_settings">Toate setările</string>
-    <string name="composer_all_settings_sub">Ieșire · format · intrări · destinație</string>
     <string name="composer_label_when">Când</string>
     <string name="composer_label_range">Zile</string>
     <string name="composer_label_note">Nota zilnică</string>
@@ -167,22 +151,10 @@
     <string name="widget_archive_preview_month_detail">zile în octombrie</string>
     <string name="widget_archive_preview_gaps">2 goluri</string>
     <string name="moment_see_in_archive">Vezi în arhivă</string>
-    <string name="export_now_more_options">Mai multe opțiuni</string>
-    <string name="automations_profiles_summary">Activ: %1$s · %2$s · %3$s</string>
     <plurals name="moment_done_days">
         <item quantity="one">%1$d zi scrisă</item>
         <item quantity="few">%1$d zile scrise</item>
         <item quantity="other">%1$d de zile scrise</item>
-    </plurals>
-    <plurals name="automations_profiles_count">
-        <item quantity="one">%1$d profil</item>
-        <item quantity="few">%1$d profiluri</item>
-        <item quantity="other">%1$d de profiluri</item>
-    </plurals>
-    <plurals name="automations_profiles_scheduled">
-        <item quantity="one">%1$d programat</item>
-        <item quantity="few">%1$d programate</item>
-        <item quantity="other">%1$d programate</item>
     </plurals>
     <string name="archive_status_updating">Se actualizează</string>
     <string name="archive_status_not_due">Nu este programat</string>
@@ -194,35 +166,15 @@
     <string name="automations_new">Automatizare nouă</string>
     <string name="automations_next">Următoarea · %1$s</string>
     <string name="automations_paused">Întreruptă</string>
-    <string name="automations_on_demand">La cerere</string>
     <string name="automations_run_now">Rulați acum</string>
-    <string name="automations_run_now_named">Rulați %1$s acum</string>
     <string name="automations_edit">Editați</string>
-    <string name="automations_edit_named">Editați %1$s</string>
     <string name="automations_switch_named">Automatizarea %1$s</string>
     <string name="automations_schedule_settings_title">Setări program</string>
-    <string name="automations_schedule_settings_subtitle">Program la nivelul aplicației, destinația exportului programat, permisiuni și istoric</string>
     <string name="date_option_last_7_days">7 zile</string>
     <string name="export_dates_heading">Date</string>
     <string name="date_from_label">De la</string>
     <string name="date_to_label">Până la</string>
     <string name="export_will_write">Se va scrie</string>
-    <string name="export_will_write_with_daily_notes">%1$s + note zilnice</string>
-    <plurals name="export_will_write_files">
-        <item quantity="one">Aprox. %1$d fișier %2$s</item>
-        <item quantity="few">Aprox. %1$d fișiere %2$s</item>
-        <item quantity="other">Aprox. %1$d de fișiere %2$s</item>
-    </plurals>
-    <plurals name="export_cta_files">
-        <item quantity="one">Exportați %1$d fișier</item>
-        <item quantity="few">Exportați %1$d fișiere</item>
-        <item quantity="other">Exportați %1$d de fișiere</item>
-    </plurals>
-    <plurals name="export_cta_send_days">
-        <item quantity="one">Trimiteți %1$d zi</item>
-        <item quantity="few">Trimiteți %1$d zile</item>
-        <item quantity="other">Trimiteți %1$d de zile</item>
-    </plurals>
     <string name="settings_plan_free">Plan gratuit</string>
     <string name="settings_plan_full_access">Acces complet</string>
     <string name="settings_plan_manage">%1$s · restaurați sau gestionați</string>
@@ -373,7 +325,6 @@
     <string name="schedule_custom">Personalizat</string>
     <string name="schedule_day">Zi</string>
     <string name="schedule_every">La fiecare</string>
-    <string name="schedule_unit">Unitate</string>
     <string name="schedule_starting">Începând cu</string>
     <string name="schedule_preferred_time">Ora preferată</string>
     <string name="schedule_look_back">Zile anterioare</string>
