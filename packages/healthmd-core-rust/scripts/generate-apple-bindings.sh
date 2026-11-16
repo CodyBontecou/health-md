@@ -35,6 +35,19 @@ if ! awk '
     exit 1
 fi
 
+# Non-login shells (CI runners, Xcode build phases) often lack rustup's default
+# install directory on PATH; fall back to it rather than failing.
+if ! command -v rustup >/dev/null 2>&1; then
+    rustup_bin="${CARGO_HOME:-$HOME/.cargo}/bin"
+    if [ -x "$rustup_bin/rustup" ]; then
+        PATH="$rustup_bin:$PATH"
+        export PATH
+    else
+        echo "error: rustup not found on PATH or in $rustup_bin; install Rust with rustup" >&2
+        exit 127
+    fi
+fi
+
 toolchain=$(awk -F'"' '/^[[:space:]]*channel[[:space:]]*=/ { print $2; exit }' "$workspace_root/rust-toolchain.toml")
 if [ -z "$toolchain" ]; then
     echo "error: unable to read pinned Rust toolchain" >&2
