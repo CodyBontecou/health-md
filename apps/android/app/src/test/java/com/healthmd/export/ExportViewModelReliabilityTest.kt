@@ -3,6 +3,7 @@ package com.healthmd.export
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.data.storage.FileExportManager
+import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportSource
@@ -64,7 +65,7 @@ class ExportViewModelReliabilityTest {
         assertThat(history.failureReason).isNull()
 
         assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(0)
-        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(0)
+        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(FreemiumPolicy.FREE_EXPORT_LIMIT)
         assertThat(dependencies.settingsRepository.successfulExportCount).isEqualTo(1)
     }
 
@@ -98,7 +99,7 @@ class ExportViewModelReliabilityTest {
         assertThat(history.failedDateDetails).hasSize(79)
 
         assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(0)
-        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(0)
+        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(FreemiumPolicy.FREE_EXPORT_LIMIT)
         assertThat(dependencies.settingsRepository.successfulExportCount).isEqualTo(0)
     }
 
@@ -129,7 +130,7 @@ class ExportViewModelReliabilityTest {
         assertThat(history.failedDateDetails).hasSize(2)
 
         assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(0)
-        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(0)
+        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(FreemiumPolicy.FREE_EXPORT_LIMIT)
         assertThat(dependencies.settingsRepository.successfulExportCount).isEqualTo(0)
     }
 
@@ -164,7 +165,7 @@ class ExportViewModelReliabilityTest {
         assertThat(history.totalCount).isEqualTo(3)
 
         assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(0)
-        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(0)
+        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(FreemiumPolicy.FREE_EXPORT_LIMIT)
         assertThat(dependencies.settingsRepository.successfulExportCount).isEqualTo(0)
     }
 
