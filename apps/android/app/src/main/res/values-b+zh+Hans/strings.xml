@@ -20,6 +20,11 @@
     <string name="export_subtitle">配置并导出您的健康数据</string>
     <string name="status_connected">已连接</string>
     <string name="status_disconnected">已断开</string>
+    <string name="health_access_missing_badge">无访问权限：%1$s</string>
+    <string name="health_access_missing_title">部分所选数据无法读取</string>
+    <string name="health_access_missing_message">Health Connect 尚未授予 Health.md 访问%1$s的权限，因此这些指标不会出现在导出中。请授予权限，然后重新导出。</string>
+    <string name="health_access_missing_button">授予权限</string>
+    <string name="health_access_category_separator">"、"</string>
     <string name="status_vault_default">文件库</string>
     <string name="hc_required_title">需要 Health Connect</string>
     <string name="hc_required_message">从 Play Store 安装 Health Connect 以读取您的健康数据。</string>

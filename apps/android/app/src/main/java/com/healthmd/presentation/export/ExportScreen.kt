@@ -116,6 +116,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.healthmd.data.health.HealthCategoryPermissions
 import com.healthmd.data.health.HealthConnectFeatureAvailability
 import com.healthmd.data.health.HealthConnectIntentLauncher
 import com.healthmd.data.health.HealthConnectLaunchResult
@@ -125,6 +126,7 @@ import com.healthmd.data.health.grantedAllRequestedHealthPermissions
 import com.healthmd.data.health.grantedAnyRequestedHealthPermission
 import com.healthmd.data.health.tryLaunchHealthConnectPermissions
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.HealthAccessCategory
 import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.AgentDataArtifactOutcome
 import com.healthmd.domain.model.ExportFailureReason
@@ -771,25 +773,44 @@ fun ExportScreen(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             val healthConnected = uiState.hasPermissions
+            // "Connected" means every selected category is readable, not merely any permission.
+            val missingAccess = uiState.missingAccessCategories
+            val accessIncomplete = healthConnected && missingAccess.isNotEmpty()
+            val healthBadgeColor = when {
+                accessIncomplete -> AppColors.warning
+                healthConnected -> AppColors.success
+                else -> AppColors.textMuted
+            }
             GeistBadge(
-                borderColor = if (healthConnected) AppColors.successBorder else AppColors.borderDefault,
+                borderColor = when {
+                    accessIncomplete -> AppColors.warningBorder
+                    healthConnected -> AppColors.successBorder
+                    else -> AppColors.borderDefault
+                },
             ) {
                 Box(
                     modifier = Modifier
                         .size(8.dp)
                         .clip(CircleShape)
-                        .background(if (healthConnected) AppColors.success else AppColors.textMuted),
+                        .background(healthBadgeColor),
                 )
                 Spacer(modifier = Modifier.width(Spacing.xs))
                 Icon(
                     Icons.Filled.Favorite,
                     contentDescription = null,
-                    tint = if (healthConnected) AppColors.success else AppColors.textMuted,
+                    tint = healthBadgeColor,
                     modifier = Modifier.size(16.dp),
                 )
                 Spacer(modifier = Modifier.width(Spacing.xs))
                 Text(
-                    if (healthConnected) stringResource(R.string.status_connected) else stringResource(R.string.status_disconnected),
+                    when {
+                        accessIncomplete -> stringResource(
+                            R.string.health_access_missing_badge,
+                            healthAccessCategoryList(missingAccess),
+                        )
+                        healthConnected -> stringResource(R.string.status_connected)
+                        else -> stringResource(R.string.status_disconnected)
+                    },
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Medium,
                     color = if (healthConnected) AppColors.textPrimary else AppColors.textMuted,
@@ -876,6 +897,33 @@ fun ExportScreen(
                     onClick = {
                         launchHealthPermissionRequest(
                             healthDataPermissionsToRequest,
+                            emptySet(),
+                        )
+                    },
+                )
+            }
+        } else if (uiState.missingAccessCategories.isNotEmpty()) {
+            val missingAccess = uiState.missingAccessCategories
+            GeistCard {
+                Text(
+                    stringResource(R.string.health_access_missing_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = AppColors.textPrimary,
+                )
+                Spacer(modifier = Modifier.height(Spacing.xs))
+                Text(
+                    stringResource(R.string.health_access_missing_message, healthAccessCategoryList(missingAccess)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AppColors.textSecondary,
+                )
+                Spacer(modifier = Modifier.height(Spacing.sm))
+                SecondaryButton(
+                    text = stringResource(R.string.health_access_missing_button),
+                    onClick = {
+                        launchHealthPermissionRequest(
+                            missingAccess.flatMapTo(LinkedHashSet()) {
+                                HealthCategoryPermissions.requestable(it, permissionPlan)
+                            },
                             emptySet(),
                         )
                     },
@@ -3117,4 +3165,23 @@ private fun AnnotatedString.withHangingIndents(column: TextUnit): AnnotatedStrin
         if (lineEnd == source.length) break
         lineStart = lineEnd + 1
     }
+}
+
+@Composable
+private fun healthAccessCategoryList(categories: Set<HealthAccessCategory>): String {
+    val separator = stringResource(R.string.health_access_category_separator)
+    return categories.map { stringResource(it.labelRes()) }.joinToString(separator)
+}
+
+private fun HealthAccessCategory.labelRes(): Int = when (this) {
+    HealthAccessCategory.SLEEP -> R.string.metric_category_sleep
+    HealthAccessCategory.ACTIVITY -> R.string.metric_category_activity
+    HealthAccessCategory.HEART -> R.string.metric_category_heart
+    HealthAccessCategory.VITALS -> R.string.metric_category_vitals
+    HealthAccessCategory.BODY -> R.string.metric_category_body
+    HealthAccessCategory.NUTRITION -> R.string.metric_category_nutrition
+    HealthAccessCategory.MOBILITY -> R.string.metric_category_mobility
+    HealthAccessCategory.REPRODUCTIVE_HEALTH -> R.string.metric_category_reproductive
+    HealthAccessCategory.MINDFULNESS -> R.string.metric_category_mindfulness
+    HealthAccessCategory.WORKOUTS -> R.string.metric_category_workouts
 }

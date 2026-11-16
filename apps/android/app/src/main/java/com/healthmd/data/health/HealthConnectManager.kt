@@ -98,6 +98,16 @@ class HealthConnectManager(
     }
 
     /**
+     * Export categories this provider can grant but for which no read permission is granted.
+     * [hasAllPermissions] is true when any permission is granted, so this names what it misses.
+     */
+    suspend fun blockedReadCategories(): Set<com.healthmd.domain.model.HealthAccessCategory> {
+        if (TestMode.isActive) return emptySet()
+        val granted = healthConnectClient.permissionController.getGrantedPermissions()
+        return HealthCategoryPermissions.blocked(granted, permissionPlan())
+    }
+
+    /**
      * Returns true when this Health Connect provider supports explicit background read access.
      */
     fun isBackgroundReadFeatureAvailable(): Boolean =

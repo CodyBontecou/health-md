@@ -22,6 +22,11 @@
     <string name="export_subtitle">আপনার সুস্থতার ডেটা কনফিগার ও রপ্তানি করুন</string>
     <string name="status_connected">সংযুক্ত</string>
     <string name="status_disconnected">সংযোগ বিচ্ছিন্ন</string>
+    <string name="health_access_missing_badge">অ্যাক্সেস নেই: %1$s</string>
+    <string name="health_access_missing_title">নির্বাচিত কিছু ডেটা পড়া যাচ্ছে না</string>
+    <string name="health_access_missing_message">Health Connect Health.md-কে %1$s-এ অ্যাক্সেস দেয়নি, তাই সেই মেট্রিকগুলো আপনার এক্সপোর্টে থাকবে না। অ্যাক্সেস দিন, তারপর আবার এক্সপোর্ট করুন।</string>
+    <string name="health_access_missing_button">অ্যাক্সেস দিন</string>
+    <string name="health_access_category_separator">", "</string>
     <string name="status_vault_default">ভল্ট</string>
     <!-- Health Connect states -->
     <string name="hc_required_title">Health Connect প্রয়োজন</string>

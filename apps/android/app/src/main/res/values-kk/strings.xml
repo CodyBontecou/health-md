@@ -20,6 +20,11 @@
     <string name="export_subtitle">Денсаулық деректерін баптап, экспорттаңыз</string>
     <string name="status_connected">Қосылған</string>
     <string name="status_disconnected">Ажыратылған</string>
+    <string name="health_access_missing_badge">Қолжетімділік жоқ: %1$s</string>
+    <string name="health_access_missing_title">Таңдалған кейбір деректерді оқу мүмкін емес</string>
+    <string name="health_access_missing_message">Health Connect Health.md қолданбасына %1$s деректеріне рұқсат бермеген, сондықтан бұл көрсеткіштер экспортта болмайды. Рұқсат беріп, қайта экспорттаңыз.</string>
+    <string name="health_access_missing_button">Рұқсат беру</string>
+    <string name="health_access_category_separator">", "</string>
     <string name="status_vault_default">Қойма</string>
     <string name="hc_required_title">Health Connect қажет</string>
     <string name="hc_required_message">Денсаулық деректеріңізді оқу үшін Health Connect қолданбасын Play Store дүкенінен орнатыңыз.</string>

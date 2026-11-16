@@ -12,6 +12,11 @@
     <string name="export_subtitle">إعداد وتصدير بياناتك الصحية</string>
     <string name="status_connected">متصل</string>
     <string name="status_disconnected">غير متصل</string>
+    <string name="health_access_missing_badge">لا وصول: %1$s</string>
+    <string name="health_access_missing_title">تعذّرت قراءة بعض البيانات المحددة</string>
+    <string name="health_access_missing_message">لم يمنح Health Connect تطبيق Health.md حق الوصول إلى %1$s، لذا ستغيب هذه المقاييس عن التصدير. امنح الوصول، ثم صدّر مرة أخرى.</string>
+    <string name="health_access_missing_button">منح الوصول</string>
+    <string name="health_access_category_separator">"، "</string>
     <string name="status_vault_default">الخزنة</string>
 
     <!-- Health Connect states -->
