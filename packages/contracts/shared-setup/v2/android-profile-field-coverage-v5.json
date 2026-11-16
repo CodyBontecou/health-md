@@ -1394,6 +1394,14 @@
     },
     {
       "source_type": "PendingScheduledExportRequest",
+      "serialized_field": "receiverPlanId",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "The receiver-coverage plan reference belongs to pending/retry runtime work, which Shared Setup explicitly forbids."
+    },
+    {
+      "source_type": "PendingScheduledExportRequest",
       "serialized_field": "settingsSnapshotJson",
       "coverage_kind": "descriptor",
       "disposition": "prohibited",
@@ -1687,6 +1695,38 @@
       "disposition": "prohibited",
       "contract_path": null,
       "evidence": "This value is nested frozen pending/retry state and must never enter a Shared Setup artifact."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "receiverCoverageJson",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Frozen receiver-coverage admission state for interrupted profile work is private pending-state authority and must never enter a Shared Setup artifact."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "receiverDestinationBinding",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Frozen receiver-coverage admission state for interrupted profile work is private pending-state authority and must never enter a Shared Setup artifact."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "receiverDestinationFingerprint",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Frozen receiver-coverage admission state for interrupted profile work is private pending-state authority and must never enter a Shared Setup artifact."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "receiverPlanId",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Frozen receiver-coverage admission state for interrupted profile work is private pending-state authority and must never enter a Shared Setup artifact."
     },
     {
       "source_type": "ScheduledProfilePendingExport",

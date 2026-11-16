@@ -46,6 +46,9 @@ interface HealthDataProvider {
 
     suspend fun isAvailable(): Boolean
     suspend fun hasPermissions(): Boolean
+
+    /** Selected-category access gaps; providers that grant access as a whole report none. */
+    suspend fun blockedReadCategories(): Set<com.healthmd.domain.model.HealthAccessCategory> = emptySet()
     suspend fun hasHistoricalReadPermission(): Boolean
     suspend fun hasBackgroundReadPermission(): Boolean
     suspend fun getEarliestDataDate(): LocalDate?

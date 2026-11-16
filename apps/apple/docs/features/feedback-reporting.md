@@ -23,13 +23,17 @@ are neither displayed nor logged. No health data is attached automatically.
 
 ## Parity and compatibility
 
-Android already catches `ActivityNotFoundException` and shows a no-app toast in
-`presentation/common/FeedbackHelper.kt`, but has no independent local fallback.
-There is no Health Connect blocker; this Apple-scoped repair stages the local
-fallback for the next Android support-settings update. The inventory records
-`support.local-reporting-fallback` as `planned`, with Apple available and that
-concrete Android target. No Android runtime behavior changes here; its inventory
-test is updated to account for the staged capability.
+Android offers the same local fallback. `presentation/common/FeedbackHelper.kt`
+returns a `FeedbackFallback` when `ActivityNotFoundException` shows no app can
+take the email, GitHub or Discord handoff, and the support screen opens
+`FeedbackFallbackDialog`: a route-specific title, the explanation, editable
+report text and **Copy report**, which writes to the system clipboard. The
+report matches Apple's template (version and OS line, three prompts, the
+private-details reminder) plus the destination; it has no device model,
+identifiers or health data. A launched handoff shows no success UI. Android has
+no in-app mail composer, so there is no mail-completion state. The inventory
+records `support.local-reporting-fallback` as `shared`, available on both
+platforms; `FeedbackHelperFallbackTest` injects the failing launcher.
 
 Version impact: internal UI/error handling only. No export schema, platform
 profile, direct protocol, shared-core ABI, settings migration, or stored data

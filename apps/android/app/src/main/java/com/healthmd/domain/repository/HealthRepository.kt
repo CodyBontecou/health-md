@@ -49,6 +49,9 @@ interface HealthRepository {
 
     suspend fun isAvailable(): Boolean
     suspend fun hasPermissions(): Boolean
+
+    /** Export categories the active provider can grant but has no read access to. */
+    suspend fun blockedReadCategories(): Set<com.healthmd.domain.model.HealthAccessCategory> = emptySet()
     suspend fun hasHistoricalReadPermission(): Boolean
     suspend fun hasBackgroundReadPermission(): Boolean
     suspend fun getEarliestDataDate(): LocalDate?

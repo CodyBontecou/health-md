@@ -239,6 +239,10 @@ class HealthRepositoryImpl private constructor(
     override suspend fun hasPermissions(): Boolean =
         if (shouldUseAllConnected()) connectedProviders().isNotEmpty() else activeProvider().hasPermissions()
 
+    // "All connected sources" merges providers, so a gap in one is not a missing category.
+    override suspend fun blockedReadCategories(): Set<com.healthmd.domain.model.HealthAccessCategory> =
+        if (shouldUseAllConnected()) emptySet() else activeProvider().blockedReadCategories()
+
     override suspend fun hasHistoricalReadPermission(): Boolean =
         if (shouldUseAllConnected()) connectedProviders().all { it.hasHistoricalReadPermission() } else activeProvider().hasHistoricalReadPermission()
 

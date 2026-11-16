@@ -102,6 +102,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
     }
 
     private static let sharedCapabilities: Set<String> = [
+        "support.local-reporting-fallback",
         "account.clinic-sponsored-access",
         "export.coverage-calendar",
         "account.myself_lifetime_claim",
@@ -149,7 +150,6 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "automation.run-overlap-policy",
         "direct.cli_agent_push_wake",
         "export.range-summary",
-        "support.local-reporting-fallback",
     ]
 
     private static let androidCapabilities: Set<String> = [

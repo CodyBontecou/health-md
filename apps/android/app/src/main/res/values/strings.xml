@@ -38,6 +38,11 @@
     <string name="export_subtitle">Configure and export your wellness data</string>
     <string name="status_connected">Connected</string>
     <string name="status_disconnected">Disconnected</string>
+    <string name="health_access_missing_badge">No access: %1$s</string>
+    <string name="health_access_missing_title">Some selected data can’t be read</string>
+    <string name="health_access_missing_message">Health Connect hasn’t given Health.md access to %1$s, so those metrics will be missing from your export. Grant access, then export again.</string>
+    <string name="health_access_missing_button">Grant access</string>
+    <string name="health_access_category_separator">", "</string>
     <string name="status_vault_default">Vault</string>
 
     <!-- Health Connect states -->
@@ -286,7 +291,21 @@
     <string name="feedback_github_subtitle">Opens a pre-filled issue template</string>
     <string name="feedback_discord_title">Join our Discord</string>
     <string name="feedback_discord_subtitle">Chat with the Health.md community</string>
-    <string name="feedback_no_app_available">No app available to open this link</string>
+    <string name="feedback_fallback_title_email">Couldn’t open email</string>
+    <string name="feedback_fallback_title_github">Couldn’t open GitHub</string>
+    <string name="feedback_fallback_title_discord">Couldn’t open Discord</string>
+    <string name="feedback_fallback_message">No app on this device could open it, so nothing was sent. Edit the report, then copy it to send later or from another device. Avoid including private health data.</string>
+    <string name="feedback_fallback_report_label">Report text</string>
+    <string name="feedback_fallback_copy">Copy report</string>
+    <string name="feedback_fallback_copied">Report copied</string>
+    <string name="feedback_fallback_version_line">Health.md %1$s · Android %2$s</string>
+    <string name="feedback_fallback_problem">Problem:</string>
+    <string name="feedback_fallback_expected">What I expected:</string>
+    <string name="feedback_fallback_steps">Steps to reproduce:</string>
+    <string name="feedback_fallback_private_reminder">(Remove any private folder or server details before sharing.)</string>
+    <string name="feedback_fallback_destination_email">To: %1$s</string>
+    <string name="feedback_fallback_destination_github">GitHub: %1$s</string>
+    <string name="feedback_fallback_destination_discord">Discord: %1$s</string>
     <string name="reset_to_defaults">Reset to Defaults</string>
 
     <!-- Advanced settings screen -->
@@ -1695,7 +1714,7 @@
     <string name="myself_claim_store_unavailable">Google Play could not retrieve your purchase. Check your connection and Google Play account, then try again.</string>
     <string name="myself_claim_verification_failed">Your purchase could not be verified. Check your connection and try again. If it continues, contact support; no access has been claimed.</string>
     <string name="myself_claim_browser_unavailable">The claim browser could not open. Enable a browser, then verify your purchase again to continue.</string>
-    <string name="google_drive_destination_label" translatable="false">Google Drive</string>
+    <string name="google_drive_destination_label">Google Drive</string>
     <string name="google_drive_title">Upload to Google Drive</string>
     <string name="google_drive_description">Choose a writable Drive folder for direct device-to-Google exports.</string>
     <string name="google_drive_connect">Connect Google Drive</string>

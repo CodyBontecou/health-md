@@ -217,13 +217,13 @@ struct ExportSettingsCard: View {
                 }
 
                 VStack(alignment: .leading, spacing: Spacing.s4) {
-                    DatePicker("Start Date", selection: $startDate, in: ...endDate, displayedComponents: .date)
+                    DatePicker("Start Date", selection: CustomDateRangeEditing.startBinding(start: $startDate, end: $endDate), in: ...Date(), displayedComponents: .date)
                         .datePickerStyle(.graphical)
                         .tint(.accent)
                         .geistInsetCard(cornerRadius: GeistRadius.md, padding: Spacing.s4)
                         .accessibilityHint("Select the start date for your export range")
 
-                    DatePicker("End Date", selection: $endDate, in: startDate...Date(), displayedComponents: .date)
+                    DatePicker("End Date", selection: CustomDateRangeEditing.endBinding(start: $startDate, end: $endDate), in: ...Date(), displayedComponents: .date)
                         .datePickerStyle(.graphical)
                         .tint(.accent)
                         .geistInsetCard(cornerRadius: GeistRadius.md, padding: Spacing.s4)
