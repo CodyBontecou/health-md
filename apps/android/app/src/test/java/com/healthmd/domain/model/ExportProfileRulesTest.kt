@@ -123,33 +123,4 @@ class ExportProfileRulesTest {
 
         assertNull(ExportProfileRules.decodeSnapshot(profile("b", "Broken").copy(settingsSnapshotJson = "not json")))
     }
-    @Test
-    fun `repairDuplicateDefaults is a fixed point that leaves one Default and never touches user profiles`() {
-        val defaultA = profile("a", "Default").copy(isMigrationDefault = true, createdAtEpochMillis = 2)
-        val defaultB = profile("b", "Default").copy(isMigrationDefault = true, createdAtEpochMillis = 1)
-        val userNamedDefault = profile("u", "Daily note")
-        val input = listOf(defaultA, defaultB, userNamedDefault)
-
-        val first = ExportProfileRules.repairDuplicateDefaults(input, activeProfileId = null, pinnedProfileIds = emptySet())
-        // Oldest wins when nothing is active or pinned; the identical copy is removed.
-        assertEquals(listOf("b", "u"), first.profiles.map { it.id })
-        assertEquals(listOf("a"), first.removedIds)
-        assertEquals(userNamedDefault, first.profiles.last())
-
-        val second = ExportProfileRules.repairDuplicateDefaults(first.profiles, first.activeProfileId, emptySet())
-        assertFalse(second.changed)
-        assertEquals(first.profiles, second.profiles)
-    }
-
-    @Test
-    fun `repairDuplicateDefaults moves the active pointer off a removed duplicate`() {
-        val keep = profile("keep", "Default").copy(isMigrationDefault = true)
-        val dupe = profile("dupe", "Daily note").copy(isMigrationDefault = true)
-
-        val repair = ExportProfileRules.repairDuplicateDefaults(listOf(keep, dupe), "keep", setOf("keep"))
-
-        assertEquals(listOf("keep"), repair.profiles.map { it.id })
-        assertEquals("keep", repair.activeProfileId)
-        assertTrue(repair.changed)
-    }
 }

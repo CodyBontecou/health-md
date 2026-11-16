@@ -635,58 +635,6 @@ class ExportProfileRepository @Inject constructor(
         return migrated
     }
 
-    /**
-     * Idempotent startup repair for duplicate Default profiles (issue #329), applied in one
-     * DataStore edit together with the schedule entries and Shared Setup gates it consults:
-     *
-     * - byte-identical records that repeat one id are collapsed to a single record (that state
-     *   otherwise marks the whole inventory opaque, which disables automation and editing);
-     * - extra migration Defaults are removed or demoted by [ExportProfileRules.repairDuplicateDefaults],
-     *   never dropping a profile that is active, scheduled, gated, or configured differently.
-     *
-     * Corrupt or genuinely ambiguous stored state is left untouched. Returns true when it wrote.
-     */
-    suspend fun repairDuplicateDefaultsIfNeeded(): Boolean {
-        var repaired = false
-        dataStore.edit { prefs ->
-            val stored = ExportProfilePersistence.decode(prefs)
-            if (stored.corruptRoot) return@edit
-            val collapsed = ExportProfilePersistence.collapseIdenticalDuplicates(stored)
-            val decoded = collapsed ?: stored
-            if (decoded.opaque) return@edit
-            val pinned = scheduledProfileIds(prefs, decoded.profiles) +
-                prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
-            val previousActive = ExportProfilePersistence.activeId(prefs)
-            val repair = ExportProfileRules.repairDuplicateDefaults(decoded.profiles, previousActive, pinned)
-            if (collapsed == null && !repair.changed) return@edit
-            ExportProfilePersistence.writeNative(prefs, decoded, repair.profiles)
-            repair.activeProfileId
-                ?.takeIf { id -> repair.profiles.any { it.id == id } }
-                ?.let { prefs[ExportProfilePersistence.activeKey] = it }
-            Timber.w(
-                "Repaired export profiles: collapsedRecords=%d removedDefaults=%d demotedDefaults=%d",
-                stored.records.size - decoded.records.size,
-                repair.removedIds.size,
-                repair.demotedIds.size,
-            )
-            repaired = true
-        }
-        return repaired
-    }
-
-    /** Profile ids with a schedule entry; an unreadable entry list conservatively pins every profile. */
-    private fun scheduledProfileIds(prefs: Preferences, profiles: List<ExportProfile>): Set<String> {
-        val raw = prefs[SharedSetupV2ProfilePersistence.scheduledProfileEntriesKey] ?: return emptySet()
-        return runCatching {
-            (kotlinx.serialization.json.Json.parseToJsonElement(raw) as kotlinx.serialization.json.JsonArray)
-                .mapNotNull { entry ->
-                    ((entry as? kotlinx.serialization.json.JsonObject)?.get("profileId")
-                        as? kotlinx.serialization.json.JsonPrimitive)?.content
-                }
-                .toSet()
-        }.getOrElse { profiles.map { it.id }.toSet() }
-    }
-
     private fun removeBlockedId(prefs: androidx.datastore.preferences.core.MutablePreferences, id: String) {
         val remaining = prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty() - id
         if (remaining.isEmpty()) {

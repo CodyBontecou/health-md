@@ -77,10 +77,6 @@ class ExportProfileCoordinator @Inject constructor(
 
     private suspend fun bootstrapAndApply(): Boolean = mutex.withLock {
         val current = settingsRepository.getExportSettings()
-        // Heal installs left with duplicate Default profiles (issue #329) before deciding whether
-        // a Default must be synthesized and before applying the active profile.
-        runCatching { profileRepository.repairDuplicateDefaultsIfNeeded() }
-            .onFailure { Timber.e(it, "Duplicate Default profile repair failed") }
         if (profileRepository.getProfiles().isEmpty() && profileRepository.hasOpaqueProfiles()) {
             if (current.scheduleEnabled) settingsRepository.updateExportSettings(current.copy(scheduleEnabled = false))
             return@withLock false
