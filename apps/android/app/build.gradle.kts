@@ -64,8 +64,8 @@ android {
         applicationId = "com.healthmd.android"
         minSdk = 28
         targetSdk = 36
-        versionCode = 48
-        versionName = "3.5.2"
+        versionCode = 49
+        versionName = "3.5.3"
 
         // Explicit opt-in; absent or malformed values keep claim entry points disabled.
         buildConfigField("boolean", "MYSELF_CLAIM_ENABLED", "false")
