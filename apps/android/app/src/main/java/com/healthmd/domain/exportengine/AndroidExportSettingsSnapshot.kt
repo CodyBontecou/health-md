@@ -429,6 +429,22 @@ object AndroidExportSettingsSnapshotCodec {
         return canonical
     }
 
+    /**
+     * True when [stored] is [canonical] as an older build wrote it: the same values, minus fields
+     * that build didn't have yet (#329). Decoding filled each missing field with its default, so
+     * nothing the snapshot froze changes. Any other difference (a changed value, an extra or
+     * reordered key, a different type) still fails closed. 3.5.0 profiles lack metricSelection.nativeDetailMetricIds,
+     * which made every scheduled run of an upgraded profile fail and pause its automation.
+     */
+    internal fun isOlderEncodingOf(stored: JsonElement, canonical: JsonElement): Boolean = when {
+        stored is JsonObject && canonical is JsonObject ->
+            stored.keys.toList() == canonical.keys.filter { it in stored } &&
+                stored.all { (key, value) -> canonical[key]?.let { isOlderEncodingOf(value, it) } == true }
+        stored is JsonArray && canonical is JsonArray ->
+            stored.size == canonical.size && stored.indices.all { isOlderEncodingOf(stored[it], canonical[it]) }
+        else -> stored == canonical
+    }
+
     /** Returns null for missing, corrupt, non-canonical, oversized, or inconsistent metadata. */
     fun decodeOrNull(raw: String?): AndroidExportSettingsSnapshot? {
         if (
@@ -442,7 +458,12 @@ object AndroidExportSettingsSnapshotCodec {
                 json.parseToJsonElement(raw).jsonObject,
             ).immutableDeepCopy()
             if (!isStructurallyValid(decoded)) return null
-            if (encodeCanonical(decoded) != raw) return null
+            val canonical = encodeCanonical(decoded)
+            if (canonical != raw) {
+                // Byte-exact apart from fields an older build didn't write: compact, same key order.
+                val stored = json.parseToJsonElement(raw)
+                if (stored.toString() != raw || !isOlderEncodingOf(stored, json.parseToJsonElement(canonical))) return null
+            }
             decoded
         } catch (_: Exception) {
             null

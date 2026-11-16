@@ -313,6 +313,10 @@ fun ExportProfileEditorDialog(
 
         if (rawSnapshot) {
             ProfileSection(stringResource(R.string.m3_profiles_editor_output)) {
+                ExportTypeChoice(
+                    selected = draft.settings.exportMode,
+                    onSelect = { value -> updateSettings { it.copy(exportMode = value) } },
+                )
                 RawSnapshotConfiguration(
                     settings = draft.settings,
                     onFormatChanged = { value -> updateSettings { it.copy(rawSnapshot = it.rawSnapshot.copy(format = value)) } },
@@ -327,6 +331,10 @@ fun ExportProfileEditorDialog(
             }
         } else {
             ProfileSection(stringResource(R.string.m3_profiles_editor_output)) {
+                ExportTypeChoice(
+                    selected = draft.settings.exportMode,
+                    onSelect = { value -> updateSettings { it.copy(exportMode = value) } },
+                )
                 Text(stringResource(R.string.automation_detail_formats), style = GeistType.label14, color = colors.secondary)
                 FormatChoice(
                     selected = draft.settings.exportFormats,

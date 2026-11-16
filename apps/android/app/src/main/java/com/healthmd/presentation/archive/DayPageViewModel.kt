@@ -159,7 +159,7 @@ class DayPageViewModel @Inject constructor(
                 isLoaded = true,
                 lanes = pages,
                 selected = lead,
-                currentSettingsName = sources.activeProfileName,
+                currentSettingsName = ArchiveCoverage.currentSettingsName(sources.activeProfileName, pages.map { it.row.day.profile }),
             )
         }
     }

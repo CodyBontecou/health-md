@@ -291,7 +291,21 @@
     <string name="feedback_github_subtitle">Opens a pre-filled issue template</string>
     <string name="feedback_discord_title">Join our Discord</string>
     <string name="feedback_discord_subtitle">Chat with the Health.md community</string>
-    <string name="feedback_no_app_available">No app available to open this link</string>
+    <string name="feedback_fallback_title_email">Couldn’t open email</string>
+    <string name="feedback_fallback_title_github">Couldn’t open GitHub</string>
+    <string name="feedback_fallback_title_discord">Couldn’t open Discord</string>
+    <string name="feedback_fallback_message">No app on this device could open it, so nothing was sent. Edit the report, then copy it to send later or from another device. Avoid including private health data.</string>
+    <string name="feedback_fallback_report_label">Report text</string>
+    <string name="feedback_fallback_copy">Copy report</string>
+    <string name="feedback_fallback_copied">Report copied</string>
+    <string name="feedback_fallback_version_line">Health.md %1$s · Android %2$s</string>
+    <string name="feedback_fallback_problem">Problem:</string>
+    <string name="feedback_fallback_expected">What I expected:</string>
+    <string name="feedback_fallback_steps">Steps to reproduce:</string>
+    <string name="feedback_fallback_private_reminder">(Remove any private folder or server details before sharing.)</string>
+    <string name="feedback_fallback_destination_email">To: %1$s</string>
+    <string name="feedback_fallback_destination_github">GitHub: %1$s</string>
+    <string name="feedback_fallback_destination_discord">Discord: %1$s</string>
     <string name="reset_to_defaults">Reset to Defaults</string>
 
     <!-- Advanced settings screen -->

@@ -43,6 +43,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.healthmd.R
 import com.healthmd.rawexport.ExportMode
+import com.healthmd.presentation.export.ExportTypeChoice
 import com.healthmd.presentation.export.RawSnapshotConfiguration
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.model.APIExportEndpoint
@@ -50,6 +51,7 @@ import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
+import com.healthmd.domain.model.RawSnapshotSettings
 import com.healthmd.domain.model.FolderOrganization
 import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.WriteMode
@@ -365,9 +367,14 @@ private data class FormatsDraft(
     }
 }
 
-/** Formats & detail (iOS `GlassFormatsScreen`), without the packaging options Android lacks. */
+/**
+ * Formats & detail (iOS `GlassFormatsScreen`), without the packaging options Android lacks.
+ *
+ * The page leads with the export type: Export now has no options of its own, so this is where an
+ * automation chooses a raw Health Connect snapshot (JSON or NDJSON) over compatibility files.
+ */
 @Composable
-private fun ProfileFormatsPage(
+internal fun ProfileFormatsPage(
     key: String,
     stored: ExportSettings,
     onSave: ((ExportProfileEditorDraft) -> ExportProfileEditorDraft) -> Unit,
@@ -375,29 +382,60 @@ private fun ProfileFormatsPage(
     sleepDayAttribution: SleepDayAttribution,
     onSleepDayAttributionChanged: (SleepDayAttribution) -> Unit,
 ) {
-    if (stored.exportMode == ExportMode.RAW_SNAPSHOT) {
-        val raw = rememberProfileAutosave("$key/raw", stored.rawSnapshot) { value ->
-            onSave { it.copy(settings = it.settings.copy(rawSnapshot = value)) }
-        }
-        SubScreen(title = stringResource(R.string.formats_page_title), onBack = onBack) {
-            PageColumn {
-                RawSnapshotConfiguration(
-                    settings = stored.copy(rawSnapshot = raw.value),
-                    onFormatChanged = { raw.value = raw.value.copy(format = it) },
-                    onScopeChanged = { raw.value = raw.value.copy(scope = it) },
-                    onIncludeExerciseRoutesChanged = { raw.value = raw.value.copy(includeExerciseRoutes = it) },
-                )
-            }
-        }
-        return
+    val mode = rememberProfileAutosave("$key/mode", stored.exportMode) { value ->
+        onSave { it.copy(settings = it.settings.copy(exportMode = value)) }
     }
-    val colors = LocalGeistColors.current
-    val protection = LocalConfigurationProtection.current
-    val state = rememberProfileAutosave(
+    val typeChoice: @Composable () -> Unit = {
+        ExportTypeChoice(selected = mode.value, onSelect = { mode.value = it })
+    }
+    // Both drafts live here so switching the type back and forth keeps each one's edits.
+    val raw = rememberProfileAutosave("$key/raw", stored.rawSnapshot) { value ->
+        onSave { it.copy(settings = it.settings.copy(rawSnapshot = value)) }
+    }
+    val formats = rememberProfileAutosave(
         key = key,
         initial = FormatsDraft.of(stored),
         isValid = { it.formats.isNotEmpty() },
     ) { value -> onSave { it.copy(settings = value.applyTo(it.settings)) } }
+    val current = stored.copy(exportMode = mode.value)
+    if (current.exportMode == ExportMode.RAW_SNAPSHOT) {
+        RawSnapshotFormatsPage(current, raw, onBack, typeChoice)
+    } else {
+        CompatibilityFormatsPage(current, formats, onBack, sleepDayAttribution, onSleepDayAttributionChanged, typeChoice)
+    }
+}
+
+@Composable
+private fun RawSnapshotFormatsPage(
+    stored: ExportSettings,
+    raw: ProfileAutosave<RawSnapshotSettings>,
+    onBack: () -> Unit,
+    typeChoice: @Composable () -> Unit,
+) {
+    SubScreen(title = stringResource(R.string.formats_page_title), onBack = onBack) {
+        PageColumn {
+            typeChoice()
+            RawSnapshotConfiguration(
+                settings = stored.copy(rawSnapshot = raw.value),
+                onFormatChanged = { raw.value = raw.value.copy(format = it) },
+                onScopeChanged = { raw.value = raw.value.copy(scope = it) },
+                onIncludeExerciseRoutesChanged = { raw.value = raw.value.copy(includeExerciseRoutes = it) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun CompatibilityFormatsPage(
+    stored: ExportSettings,
+    state: ProfileAutosave<FormatsDraft>,
+    onBack: () -> Unit,
+    sleepDayAttribution: SleepDayAttribution,
+    onSleepDayAttributionChanged: (SleepDayAttribution) -> Unit,
+    typeChoice: @Composable () -> Unit,
+) {
+    val colors = LocalGeistColors.current
+    val protection = LocalConfigurationProtection.current
     val draft = state.value
     // The detail section reads the page's own choices, over the stored settings.
     val settings = draft.applyTo(stored)
@@ -410,6 +448,7 @@ private fun ProfileFormatsPage(
     )
     SubScreen(title = stringResource(R.string.formats_page_title), onBack = back) {
         PageColumn {
+            typeChoice()
             SettingsGroupHeading(stringResource(R.string.formats_page_title))
             val formats = ExportFormat.entries
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
