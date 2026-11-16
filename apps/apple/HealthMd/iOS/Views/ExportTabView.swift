@@ -643,8 +643,10 @@ struct ExportTabView: View {
                         SchedulingLabeledControl(title: "Start Date", value: Text(startDate, style: .date)) {
                             DatePicker(
                                 "Start Date",
-                                selection: configurationProtection.protecting($startDate),
-                                in: ...endDate,
+                                selection: configurationProtection.protecting(
+                                    CustomDateRangeEditing.startBinding(start: $startDate, end: $endDate)
+                                ),
+                                in: ...Date(),
                                 displayedComponents: .date
                             )
                             .tint(Color.accent)
@@ -657,8 +659,10 @@ struct ExportTabView: View {
                         SchedulingLabeledControl(title: "End Date", value: Text(endDate, style: .date)) {
                             DatePicker(
                                 "End Date",
-                                selection: configurationProtection.protecting($endDate),
-                                in: startDate...Date(),
+                                selection: configurationProtection.protecting(
+                                    CustomDateRangeEditing.endBinding(start: $startDate, end: $endDate)
+                                ),
+                                in: ...Date(),
                                 displayedComponents: .date
                             )
                             .tint(Color.accent)
