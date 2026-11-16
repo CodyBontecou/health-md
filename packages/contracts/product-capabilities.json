@@ -654,6 +654,37 @@
       ]
     },
     {
+      "id": "export.scheduled-receiver-coverage",
+      "name": "Receiver-aware scheduled API date selection",
+      "classification": "planned",
+      "summary": "Personal compatibility API schedules have explicit native opt-in, authenticated bounded preflight, atomic v2 frozen plans and exact retry residuals on Apple and Android. Full lookback remains the default. Source integration awaits queued application compilation and device/backend acceptance before released availability.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "planned",
+          "target": "Issue #170: qualify implemented profile/legacy scheduler, persistence and opt-in settings integration through the shared native compilation queue, then explicit device/backend acceptance; no released availability claim."
+        },
+        "android": {
+          "state": "planned",
+          "target": "Issue #170: qualify implemented profile/legacy scheduler, persistence and opt-in settings integration through the shared native compilation queue, then explicit device/backend acceptance; no released availability claim."
+        }
+      },
+      "evidence": [
+        "packages/contracts/proposals/receiver-coverage-v1/contract.md",
+        "apps/apple/HealthMd/Shared/ReceiverCoverage/ReceiverCoveragePreflight.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/receivercoverage/ReceiverCoveragePreflight.kt",
+        "packages/contracts/proposals/receiver-coverage-v1/test_native_boundary.py",
+        "apps/apple/HealthMd/Shared/ReceiverCoverage/ReceiverCoverageHTTPClient.swift",
+        "apps/apple/HealthMd/Shared/ReceiverCoverage/ReceiverCoverageResponse.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/receivercoverage/ReceiverCoverageHTTPClient.kt",
+        "apps/android/app/src/main/java/com/healthmd/data/receivercoverage/ReceiverCoverageResponse.kt",
+        "packages/contracts/proposals/receiver-coverage-v1/test_native_transport.py",
+        "apps/apple/HealthMd/Shared/Managers/ReceiverCoverageRuntime.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/scheduler/ReceiverCoverageRuntime.kt",
+        "packages/contracts/proposals/receiver-coverage-v1/test_native_pending_store.py"
+      ]
+    },
+    {
       "id": "export.coverage-calendar",
       "name": "Archive coverage calendar",
       "classification": "shared",

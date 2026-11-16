@@ -317,6 +317,7 @@ struct ProfileScheduleEditorSheet: View {
                     Text("Cadence")
                 }
 
+                if profile.target == .apiEndpoint { ReceiverCoverageSettingsButton(profile: profile) }
                 Section {
                     SchedulingNumberControl(
                         title: "Lookback window", value: $draft.lookbackDays,

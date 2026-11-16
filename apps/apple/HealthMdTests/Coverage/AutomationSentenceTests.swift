@@ -1,5 +1,6 @@
 #if os(iOS)
 import XCTest
+import SwiftUI
 @testable import HealthMd
 
 final class AutomationSentenceTests: XCTestCase {
@@ -23,6 +24,20 @@ final class AutomationSentenceTests: XCTestCase {
     func testUnknownTokenStaysVisible() {
         let segments = AutomationSentence.segments(template: "{bogus} {when}", values: values)
         XCTAssertEqual(segments, [.text("{bogus}"), .text(" "), .token(.when, "Daily")])
+    }
+
+    /// A long endpoint URL has no spaces to wrap at; it must wrap inside the offered width
+    /// rather than widen the sentence (which pushed whole automation screens off-screen).
+    func testLongURLTokenStaysWithinOfferedWidth() {
+        let sentence = AutomationSentence(
+            values: [.where: "https://api.healthmd.app/api/v1/exports/with/a/long/path"],
+            template: "send to {where}."
+        )
+        let width: CGFloat = 220
+        let host = UIHostingController(rootView: AutomationSentenceView(sentence: sentence))
+        let fitted = host.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
+        XCTAssertLessThanOrEqual(fitted.width, width)
+        XCTAssertGreaterThan(fitted.height, 0)
     }
 
     func testWordsKeepTrailingSpaces() {
