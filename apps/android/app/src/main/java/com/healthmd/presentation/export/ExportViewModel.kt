@@ -93,6 +93,8 @@ data class ExportUiState(
     val healthConnectAvailable: Boolean = false,
     val healthConnectNeedsSetup: Boolean = false,
     val hasPermissions: Boolean = false,
+    /** Categories the provider can grant but has no read access to, whether or not selected. */
+    val blockedReadCategories: Set<HealthAccessCategory> = emptySet(),
     val hasHistoricalReadPermission: Boolean = false,
     val healthConnectActionError: HealthConnectActionError? = null,
     val firstHealthPermissionGrantDate: LocalDate? = null,
@@ -124,6 +126,14 @@ data class ExportUiState(
 
     val historyPermissionNeeded: Boolean
         get() = requiresHistoricalReadPermission && !hasHistoricalReadPermission
+
+    /** Selected categories this export cannot read, though some Health Connect access exists. */
+    val missingAccessCategories: Set<HealthAccessCategory>
+        get() = if (!hasPermissions) {
+            emptySet()
+        } else {
+            settings.dataTypes.accessCategories().filterTo(LinkedHashSet()) { it in blockedReadCategories }
+        }
 
     val selectedTarget: ExportTarget
         get() = settings.exportTarget
@@ -1043,6 +1053,13 @@ class ExportViewModel @Inject constructor(
                 settingsRepository.recordHealthPermissionGrantDateIfAbsent(LocalDate.now())
             }
 
+            // A failed category check falls back to the any-permission status rather than an error.
+            val blockedCategories = if (hasPerms) {
+                runCatchingCancellable { healthRepository.blockedReadCategories() }.getOrDefault(emptySet())
+            } else {
+                emptySet()
+            }
+
             val historicalResult = runCatchingCancellable {
                 healthRepository.hasHistoricalReadPermission()
             }
@@ -1059,6 +1076,7 @@ class ExportViewModel @Inject constructor(
                     healthConnectAvailable = true,
                     healthConnectNeedsSetup = false,
                     hasPermissions = hasPerms,
+                    blockedReadCategories = blockedCategories,
                     hasHistoricalReadPermission = hasHistoricalPerms,
                     healthConnectActionError = if (historicalResult.isFailure) {
                         HealthConnectActionError.ACCESS_CHECK_FAILED

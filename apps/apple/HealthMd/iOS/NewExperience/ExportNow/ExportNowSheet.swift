@@ -213,8 +213,9 @@ struct ExportNowSheet: View {
             )
             if range == .custom {
                 VStack(spacing: 0) {
-                    DatePicker(String(localized: "From"), selection: customDate($startDate), in: ...endDate, displayedComponents: .date)
-                    DatePicker(String(localized: "To"), selection: customDate($endDate), in: startDate...Date(), displayedComponents: .date)
+                    // Each endpoint reaches any past day; moving one past the other carries it (#168).
+                    DatePicker(String(localized: "From"), selection: customDate(CustomDateRangeEditing.startBinding(start: $startDate, end: $endDate)), in: ...Date(), displayedComponents: .date)
+                    DatePicker(String(localized: "To"), selection: customDate(CustomDateRangeEditing.endBinding(start: $startDate, end: $endDate)), in: ...Date(), displayedComponents: .date)
                 }
                 .padding(.horizontal, GlassMetrics.panelPadding)
                 .padding(.vertical, 6)

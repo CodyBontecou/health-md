@@ -50,7 +50,6 @@ class ProductCapabilityManifestTest {
                 "direct.cli_agent_push_wake",
                 "export.range-summary",
                 "setup.share-portable-configuration",
-                "support.local-reporting-fallback",
                 "support.native-review-introduction",
             ),
             idsWithState(states, "planned"),
@@ -134,6 +133,7 @@ class ProductCapabilityManifestTest {
 
     private companion object {
         val sharedCapabilities = setOf(
+            "support.local-reporting-fallback",
         "account.clinic-sponsored-access",
             "purchase.free-export-journey",
             "account.myself_lifetime_claim",
@@ -205,7 +205,6 @@ class ProductCapabilityManifestTest {
             "account.myself_lifetime_claim",
             "core.shared-rust-profile-engine",
             "settings.sleep-attribution",
-            "support.local-reporting-fallback",
         )
     }
 }
