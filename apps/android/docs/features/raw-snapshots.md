@@ -19,9 +19,9 @@ Raw API Snapshot is a separate export product next to the normal compatibility e
 
 ## Where to find it
 
-1. Open **Export**.
-2. Under **Export Target**, select the API endpoint or folder destination.
-3. Choose **Raw API Snapshot** as the export mode, pick JSON or NDJSON, and choose the scope (selected record types, or all authorized supported data).
+1. Open **Automations** and choose the automation (profile) to export with, or create one.
+2. Open its **Formats** page. Under **Export type**, choose **Raw API Snapshot**, pick JSON or NDJSON, and choose the scope (selected record types, or all authorized supported data). The new-automation editor offers the same choice under **Output**.
+3. Set the folder or API endpoint destination on the automation's output page, then run it from **Export now** or on its schedule.
 
 ## Prerequisites
 
@@ -32,7 +32,7 @@ Raw API Snapshot is a separate export product next to the normal compatibility e
 ## Setup
 
 1. Configure a destination: a folder through the Android folder picker, or an HTTPS API endpoint.
-2. Select Raw API Snapshot mode, format, and date range.
+2. Select Raw API Snapshot on the automation's Formats page, pick the format, then choose the date range in Export now.
 3. Preview first — preview performs the full provider-native read into private no-backup storage, shows bounded head/tail text, and deletes the temporary artifact without uploading anything.
 
 ## Example output

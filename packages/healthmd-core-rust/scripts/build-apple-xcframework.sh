@@ -55,6 +55,19 @@ case $(uname -s) in
         ;;
 esac
 
+# Non-login shells (CI runners, Xcode build phases) often lack rustup's default
+# install directory on PATH; fall back to it rather than failing.
+if ! command -v rustup >/dev/null 2>&1; then
+    rustup_bin="${CARGO_HOME:-$HOME/.cargo}/bin"
+    if [ -x "$rustup_bin/rustup" ]; then
+        PATH="$rustup_bin:$PATH"
+        export PATH
+    else
+        echo "error: rustup not found on PATH or in $rustup_bin; install Rust with rustup" >&2
+        exit 127
+    fi
+fi
+
 for command_name in python3 rustup xcodebuild xcrun; do
     if ! command -v "$command_name" >/dev/null 2>&1; then
         echo "error: required command not found: $command_name" >&2

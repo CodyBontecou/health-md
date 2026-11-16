@@ -1,6 +1,7 @@
 package com.healthmd.presentation.export
 
 import androidx.compose.foundation.background
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -82,29 +83,7 @@ fun ExportConfigurationSection(
     onNavigateToAdvancedSettings: () -> Unit,
     onResetSettings: () -> Unit,
 ) {
-    OptionsGroup(
-        title = stringResource(R.string.section_export_type),
-        rows = listOf(
-            { shape ->
-                ChoiceRow(
-                    shape = shape,
-                    title = stringResource(R.string.export_type_compatibility),
-                    description = stringResource(R.string.export_type_compatibility_description),
-                    selected = settings.exportMode == ExportMode.COMPATIBILITY,
-                    onClick = { onExportModeChanged(ExportMode.COMPATIBILITY) },
-                )
-            },
-            { shape ->
-                ChoiceRow(
-                    shape = shape,
-                    title = stringResource(R.string.export_type_raw_snapshot),
-                    description = stringResource(R.string.export_type_raw_snapshot_description),
-                    selected = settings.exportMode == ExportMode.RAW_SNAPSHOT,
-                    onClick = { onExportModeChanged(ExportMode.RAW_SNAPSHOT) },
-                )
-            },
-        ),
-    )
+    ExportTypeChoice(selected = settings.exportMode, onSelect = onExportModeChanged)
 
     if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
         RawSnapshotConfiguration(
@@ -281,6 +260,65 @@ fun ExportConfigurationSection(
     )
 }
 
+/**
+ * Every export type and raw snapshot format the export surfaces offer. Choices are built from the
+ * enums, so a type or format cannot silently drop out of the UI (issue #328: the Export now
+ * redesign removed the only control that reached Raw snapshot, and with it NDJSON).
+ */
+internal object ExportChoiceCatalog {
+    val exportTypes: List<ExportMode> = ExportMode.entries
+    val rawFormats: List<RawExportFormat> = RawExportFormat.entries
+
+    @StringRes
+    fun titleRes(mode: ExportMode): Int = when (mode) {
+        ExportMode.COMPATIBILITY -> R.string.export_type_compatibility
+        ExportMode.RAW_SNAPSHOT -> R.string.export_type_raw_snapshot
+    }
+
+    @StringRes
+    fun descriptionRes(mode: ExportMode): Int = when (mode) {
+        ExportMode.COMPATIBILITY -> R.string.export_type_compatibility_description
+        ExportMode.RAW_SNAPSHOT -> R.string.export_type_raw_snapshot_description
+    }
+
+    @StringRes
+    fun titleRes(format: RawExportFormat): Int = when (format) {
+        RawExportFormat.JSON -> R.string.raw_snapshot_format_json
+        RawExportFormat.NDJSON -> R.string.raw_snapshot_format_ndjson
+    }
+
+    @StringRes
+    fun descriptionRes(format: RawExportFormat): Int = when (format) {
+        RawExportFormat.JSON -> R.string.raw_snapshot_format_json_description
+        RawExportFormat.NDJSON -> R.string.raw_snapshot_format_ndjson_description
+    }
+}
+
+/**
+ * Compatibility files or a raw Health Connect snapshot (JSON/NDJSON). Shared by every surface
+ * that decides how an export writes, so neither type can drop out of one of them.
+ */
+@Composable
+internal fun ExportTypeChoice(
+    selected: ExportMode,
+    onSelect: (ExportMode) -> Unit,
+) {
+    OptionsGroup(
+        title = stringResource(R.string.section_export_type),
+        rows = ExportChoiceCatalog.exportTypes.map { mode ->
+            @Composable { shape: Shape ->
+                ChoiceRow(
+                    shape = shape,
+                    title = stringResource(ExportChoiceCatalog.titleRes(mode)),
+                    description = stringResource(ExportChoiceCatalog.descriptionRes(mode)),
+                    selected = selected == mode,
+                    onClick = { onSelect(mode) },
+                )
+            }
+        },
+    )
+}
+
 @Composable
 internal fun RawSnapshotConfiguration(
     settings: ExportSettings,
@@ -301,26 +339,18 @@ internal fun RawSnapshotConfiguration(
     )
     OptionsGroup(
         title = stringResource(R.string.raw_snapshot_format_title),
-        rows = listOf(
-            { shape ->
+        rows = ExportChoiceCatalog.rawFormats.map { format ->
+            @Composable { shape: Shape ->
                 ChoiceRow(
                     shape = shape,
-                    title = stringResource(R.string.raw_snapshot_format_json),
-                    description = stringResource(R.string.raw_snapshot_format_json_description),
-                    selected = settings.rawSnapshot.format == RawExportFormat.JSON,
-                    onClick = { onFormatChanged(RawExportFormat.JSON) },
+                    title = stringResource(ExportChoiceCatalog.titleRes(format)),
+                    description = stringResource(ExportChoiceCatalog.descriptionRes(format)),
+                    selected = settings.rawSnapshot.format == format,
+                    onClick = { onFormatChanged(format) },
                 )
-            },
-            { shape ->
-                ChoiceRow(
-                    shape = shape,
-                    title = stringResource(R.string.raw_snapshot_format_ndjson),
-                    description = stringResource(R.string.raw_snapshot_format_ndjson_description),
-                    selected = settings.rawSnapshot.format == RawExportFormat.NDJSON,
-                    onClick = { onFormatChanged(RawExportFormat.NDJSON) },
-                )
-            },
-            { shape ->
+            }
+        } + listOf(
+            @Composable { shape: Shape ->
                 ContentRow(shape) {
                     HelperText(stringResource(R.string.raw_snapshot_one_artifact_note))
                 }
