@@ -273,4 +273,15 @@ class ArchiveCoverageTest {
         assertEquals(0, clean.stats.gapCount)
         assertNull(clean.stats.earliestGap)
     }
+
+    @Test
+    fun `the unnamed lane borrows the active profile name only when no lane already shows it`() {
+        val default = ArchiveProfile("Default")
+        val unnamed = ArchiveProfile(null)
+        // #329: an upgraded 3.5.0 install that ran the global schedule and the Default profile's.
+        assertEquals(null, ArchiveCoverage.currentSettingsName("Default", listOf(unnamed, default)))
+        assertEquals("Default", ArchiveCoverage.currentSettingsName("Default", listOf(unnamed)))
+        assertEquals("Work", ArchiveCoverage.currentSettingsName("Work", listOf(unnamed, default)))
+        assertEquals(null, ArchiveCoverage.currentSettingsName(null, listOf(unnamed)))
+    }
 }

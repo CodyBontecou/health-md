@@ -313,7 +313,7 @@ class ArchiveViewModel @Inject constructor(
             month = month,
             selectedDay = rows,
             canShowNextMonth = current.month.isBefore(YearMonth.from(day)),
-            currentSettingsName = sources.activeProfileName,
+            currentSettingsName = ArchiveCoverage.currentSettingsName(sources.activeProfileName, profiles),
             showsMonth = showsMonth,
             week = week,
             canShowPreviousWeek = entries.isNotEmpty(),
