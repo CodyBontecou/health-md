@@ -55,7 +55,30 @@ struct CrystalFacets: View {
     }
 }
 
-/// MomentGlass: covers the app while an interactive export runs, then says what it wrote.
+/// Where a finished export went, shown inside the done card in place of a separate toast.
+struct ExportMomentDestination: Equatable {
+    /// The destination's name, such as "Local iPhone Folder".
+    let name: String
+    let systemImage: String
+    /// The written file the card opens, when the run produced a local file.
+    var fileName: String?
+
+    init(target: ExportTargetSelection?, fallbackName: String?, fileName: String?) {
+        let target = target ?? (fileName == nil ? nil : .localIPhoneFolder)
+        name = target?.title ?? fallbackName ?? ExportTargetSelection.localIPhoneFolder.title
+        switch target {
+        case .connectedMac: systemImage = "laptopcomputer"
+        case .apiEndpoint: systemImage = "network"
+        case .googleDrive: systemImage = "icloud"
+        case .agentDataGateway: systemImage = "server.rack"
+        case .localIPhoneFolder, nil: systemImage = fileName == nil ? "folder" : "doc.text"
+        }
+        self.fileName = fileName
+    }
+}
+
+/// MomentGlass: covers the app while an interactive export runs, then says what it wrote
+/// and where, with the file and folder actions the completion toast used to carry.
 struct ExportMomentView: View {
     enum Phase: Equatable {
         case running(ExportMomentProgress)
@@ -65,6 +88,10 @@ struct ExportMomentView: View {
     let phase: Phase
     let onCancel: () -> Void
     let onSeeArchive: () -> Void
+    var destination: ExportMomentDestination?
+    var onViewFile: (() -> Void)?
+    var onBrowseFolder: (() -> Void)?
+    var onDismiss: (() -> Void)?
 
     @Environment(\.glassPalette) private var palette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -82,6 +109,11 @@ struct ExportMomentView: View {
         VStack(spacing: 0) {
             CrystalFacets(filled: filled)
                 .frame(maxWidth: 270, maxHeight: 220)
+                .contentShape(Rectangle())
+                // Done: tapping the heart plays the facets again.
+                .onTapGesture { if isDone { replayFacets() } }
+                .accessibilityAddTraits(isDone ? .isButton : [])
+                .accessibilityHint(isDone ? String(localized: "Plays the crystal animation again") : "")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.top, 60)
                 .padding(.horizontal, 20)
@@ -100,13 +132,36 @@ struct ExportMomentView: View {
         .accessibilityIdentifier("glass.exportMoment")
     }
 
+    private var isDone: Bool {
+        if case .done = phase { return true }
+        return false
+    }
+
     private var card: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline) {
                 Text(headline)
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(palette.text)
+                    .modifier(DoneStatusIdentifier(isDone: isDone))
                 Spacer(minLength: 8)
+                if isDone, let onDismiss {
+                    Button(action: onDismiss) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(palette.muted)
+                            .frame(width: 30, height: 30)
+                            .background(Circle().fill(palette.surface2))
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.vertical, -10)
+                    .padding(.trailing, -8)
+                    .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 6 }
+                    .accessibilityLabel(String(localized: "Dismiss export status"))
+                    .accessibilityIdentifier("glass.exportMoment.dismiss")
+                }
                 if case .running(let progress) = phase {
                     Text(verbatim: "\(progress.completed) / \(progress.total)")
                         .font(.system(size: 15, design: .monospaced))
@@ -141,22 +196,25 @@ struct ExportMomentView: View {
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("glass.exportMoment.cancel")
             case .done:
+                if let destination { destinationRow(destination) }
                 HStack(spacing: 8) {
                     Button(String(localized: "See in archive"), action: onSeeArchive)
                         .buttonStyle(GlassPrimaryButtonStyle())
                         .accessibilityIdentifier("glass.exportMoment.archive")
-                    Button(action: replayFacets) {
-                        Text(String(localized: "Replay"))
-                            .font(.system(size: 15))
-                            .foregroundStyle(palette.text)
-                            .padding(.horizontal, 20)
-                            .frame(minHeight: 50)
-                            .background(Capsule().fill(palette.surface2))
-                            .overlay(Capsule().strokeBorder(palette.edge, lineWidth: 1))
-                            .contentShape(Capsule())
+                    if let onBrowseFolder {
+                        Button(action: onBrowseFolder) {
+                            Image(systemName: "folder")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundStyle(palette.text)
+                                .frame(width: GlassMetrics.primaryButtonHeight, height: GlassMetrics.primaryButtonHeight)
+                                .background(Circle().fill(palette.surface2))
+                                .overlay(Circle().strokeBorder(palette.edge, lineWidth: 1))
+                                .contentShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(String(localized: "Browse Export Folder"))
+                        .accessibilityIdentifier("export.browse-folder")
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityHint(String(localized: "Plays the crystal animation again"))
                 }
             }
         }
@@ -164,6 +222,60 @@ struct ExportMomentView: View {
         .padding(.top, 22)
         .padding(.bottom, 16)
         .glassSurface(cornerRadius: 32)
+    }
+
+    /// The written file and its destination. Tapping opens the file when there is one.
+    @ViewBuilder private func destinationRow(_ destination: ExportMomentDestination) -> some View {
+        let content = HStack(spacing: 12) {
+            Image(systemName: destination.systemImage)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(palette.accent)
+                .frame(width: 34, height: 34)
+                .background(Circle().fill(palette.accent.opacity(0.14)))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                if let fileName = destination.fileName {
+                    Text(verbatim: fileName)
+                        .font(.system(size: 14, weight: .medium, design: .monospaced))
+                        .foregroundStyle(palette.text)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Text(destination.name)
+                        .font(.system(size: 12.5))
+                        .foregroundStyle(palette.muted)
+                        .lineLimit(1)
+                } else {
+                    Text(String(localized: "Sent to \(destination.name)"))
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(palette.text)
+                        .lineLimit(2)
+                }
+            }
+            Spacer(minLength: 4)
+            if onViewFile != nil, destination.fileName != nil {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(palette.muted)
+                    .accessibilityHidden(true)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(palette.surface2))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(palette.edge, lineWidth: 1))
+
+        if let onViewFile, let fileName = destination.fileName {
+            Button(action: onViewFile) {
+                content.contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(String(localized: "View Exported File"))
+            .accessibilityValue(Text(verbatim: "\(fileName), \(destination.name)"))
+            .accessibilityIdentifier("export.preview-file")
+        } else {
+            content.accessibilityElement(children: .combine)
+        }
     }
 
     private var barFraction: CGFloat {
@@ -204,6 +316,22 @@ struct ExportMomentView: View {
                 guard !Task.isCancelled else { return }
                 withAnimation(.easeInOut(duration: 0.3)) { filled = step }
             }
+        }
+    }
+}
+
+/// The done headline carries the identifier the completion toast had, since the card
+/// now owns the success status while it shows.
+private struct DoneStatusIdentifier: ViewModifier {
+    let isDone: Bool
+
+    func body(content: Content) -> some View {
+        if isDone {
+            content
+                .accessibilityIdentifier(AccessibilityID.Status.exportStatusBadge)
+                .accessibilityValue(String(localized: "Success"))
+        } else {
+            content
         }
     }
 }
