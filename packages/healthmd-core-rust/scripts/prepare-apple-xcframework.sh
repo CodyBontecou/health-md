@@ -7,19 +7,6 @@ package_root="$repo_root/apps/apple/Packages/HealthMdCoreRust"
 xcframework=${1:-"$package_root/Artifacts/HealthmdCore.xcframework"}
 stamp="$(dirname -- "$xcframework")/.healthmd-core-source.sha256"
 
-# Non-login shells (CI runners, Xcode, agents) often lack rustup's PATH entry even though
-# rustup is installed in its default location. Child scripts inherit the exported PATH.
-if ! command -v rustup >/dev/null 2>&1; then
-    rustup_bin="${CARGO_HOME:-$HOME/.cargo}/bin"
-    if [ -x "$rustup_bin/rustup" ]; then
-        PATH="$rustup_bin:$PATH"
-        export PATH
-    else
-        echo "error: rustup not found on PATH or in $rustup_bin; install rustup" >&2
-        exit 127
-    fi
-fi
-
 "$workspace_root/scripts/generate-apple-bindings.sh" --check
 
 source_digest=$("$workspace_root/scripts/apple-source-digest.sh")
