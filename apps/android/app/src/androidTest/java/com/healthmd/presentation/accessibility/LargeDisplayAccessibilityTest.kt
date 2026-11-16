@@ -217,7 +217,12 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
                         subfolder = "health",
                         apiEndpoint = null,
                         metricCount = HealthPack.metricCount(packs),
+                        driveAvailable = false,
+                        driveDestination = null,
+                        driveConnecting = false,
+                        driveError = null,
                         onSelectDestination = {},
+                        onConnectDrive = {},
                         onPickFolder = {
                             actions += "folder"
                             folderName = "A long selected folder name for accessible exports"
