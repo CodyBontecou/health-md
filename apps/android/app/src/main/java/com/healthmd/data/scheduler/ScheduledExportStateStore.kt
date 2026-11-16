@@ -218,55 +218,36 @@ class ScheduledExportStateStore @Inject constructor(
         commitPreferences { putBoolean(KEY_GENERATION_MIGRATION_COMPLETE, true) }
     }
 
+    /**
+     * Returns the exact settings-snapshot JSON referenced by queued WorkManager input. Only the
+     * current and admitted occurrences are ever enqueued, so only those slots are searched.
+     */
+    internal fun settingsSnapshotJson(sha256: String): String? = synchronized(lock) {
+        listOf("", ADMISSION_PREFIX)
+            .mapNotNull { prefix -> safeString(prefix + KEY_SETTINGS_SNAPSHOT_JSON) }
+            .firstOrNull { scheduledExportSha256Hex(it) == sha256 }
+    }
+
+    // Decode straight from preferences. Routing this through androidx.work.Data subjected durable
+    // state to WorkManager's 10 KiB transport limit and silently dropped large snapshots.
     private fun loadOccurrenceLocked(prefix: String = ""): ScheduledExportOccurrence? = runCatching {
-        val data = androidx.work.Data.Builder()
-            .putString(ScheduledExportOccurrence.KEY_SIGNATURE, safeString(prefix + KEY_SIGNATURE))
-            .putLong(
-                ScheduledExportOccurrence.KEY_TRIGGER_AT_MILLIS,
-                safeLong(prefix + KEY_TRIGGER_AT_MILLIS, -1L),
-            )
-            .putString(
-                ScheduledExportOccurrence.KEY_INTENDED_LOCAL_DATE,
-                safeString(prefix + KEY_INTENDED_LOCAL_DATE),
-            )
-            .putInt(
-                ScheduledExportOccurrence.KEY_CADENCE_VALUE,
-                safeInt(prefix + KEY_CADENCE_VALUE, -1),
-            )
-            .putString(
-                ScheduledExportOccurrence.KEY_CADENCE_UNIT,
-                safeString(prefix + KEY_CADENCE_UNIT),
-            )
-            .putInt(ScheduledExportOccurrence.KEY_HOUR, safeInt(prefix + KEY_HOUR, -1))
-            .putInt(ScheduledExportOccurrence.KEY_MINUTE, safeInt(prefix + KEY_MINUTE, -1))
-            .putInt(
-                ScheduledExportOccurrence.KEY_LOOKBACK_DAYS,
-                safeInt(prefix + KEY_LOOKBACK_DAYS, -1),
-            )
-            .putString(
-                ScheduledExportOccurrence.KEY_DATE_WINDOW,
-                safeString(prefix + KEY_DATE_WINDOW),
-            )
-            .putString(ScheduledExportOccurrence.KEY_TARGET, safeString(prefix + KEY_TARGET))
-            .putString(
-                ScheduledExportOccurrence.KEY_DESTINATION_FINGERPRINT,
-                safeString(prefix + KEY_DESTINATION_FINGERPRINT),
-            )
-            .putString(ScheduledExportOccurrence.KEY_ZONE_ID, safeString(prefix + KEY_ZONE_ID))
-            .putString(
-                ScheduledExportOccurrence.KEY_GENERATION,
-                safeString(prefix + KEY_GENERATION),
-            )
-            .putString(
-                ScheduledExportOccurrence.KEY_ENGINE_PIN_JSON,
-                safeString(prefix + KEY_ENGINE_PIN_JSON),
-            )
-            .putString(
-                ScheduledExportOccurrence.KEY_SETTINGS_SNAPSHOT_JSON,
-                safeString(prefix + KEY_SETTINGS_SNAPSHOT_JSON),
-            )
-            .build()
-        ScheduledExportOccurrence.fromWorkData(data)
+        ScheduledExportOccurrence.fromValues(
+            signature = safeString(prefix + KEY_SIGNATURE),
+            triggerAtMillis = safeLong(prefix + KEY_TRIGGER_AT_MILLIS, -1L),
+            intendedLocalDate = safeString(prefix + KEY_INTENDED_LOCAL_DATE),
+            cadenceValue = safeInt(prefix + KEY_CADENCE_VALUE, -1),
+            cadenceUnit = safeString(prefix + KEY_CADENCE_UNIT),
+            hour = safeInt(prefix + KEY_HOUR, -1),
+            minute = safeInt(prefix + KEY_MINUTE, -1),
+            lookbackDays = safeInt(prefix + KEY_LOOKBACK_DAYS, -1),
+            dateWindow = safeString(prefix + KEY_DATE_WINDOW),
+            target = safeString(prefix + KEY_TARGET),
+            destinationFingerprint = safeString(prefix + KEY_DESTINATION_FINGERPRINT),
+            zoneId = safeString(prefix + KEY_ZONE_ID),
+            generation = safeString(prefix + KEY_GENERATION),
+            enginePinJson = safeString(prefix + KEY_ENGINE_PIN_JSON),
+            settingsSnapshotJson = safeString(prefix + KEY_SETTINGS_SNAPSHOT_JSON),
+        )
     }.getOrNull()
 
     private fun loadAdmissionLocked(): ScheduledExportAdmission? = runCatching {

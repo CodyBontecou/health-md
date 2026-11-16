@@ -99,7 +99,7 @@ class ExportWorker @AssistedInject constructor(
         val identity = mapOf(DiagnosticField.OPERATION_ID to DiagnosticValue.Text(id.toString()), DiagnosticField.TRIGGER to DiagnosticValue.Text("background_task"))
         Diagnostics.record(DiagnosticEventID.ATTEMPT_STARTED, identity)
         return try {
-            val result = if (ScheduledExportOccurrence.fromWorkData(inputData) != null) {
+            val result = if (capturedOccurrence() != null) {
                 withScheduledExportForeground(getForegroundInfo()) { doWorkManaged() }
             } else {
                 doWorkManaged()
@@ -115,7 +115,7 @@ class ExportWorker @AssistedInject constructor(
     private suspend fun doWorkManaged(): Result {
         var admissionCompleted = false
         var admissionCompletionFailed = false
-        val occurrence = ScheduledExportOccurrence.fromWorkData(inputData)
+        val occurrence = capturedOccurrence()
         val operationId = ScheduledExportAdmission.operationIdFrom(inputData)
         val result = runCoordinator.mutex.withLock {
             if (
@@ -183,9 +183,20 @@ class ExportWorker @AssistedInject constructor(
         return ForegroundInfo(notificationID, notification, foregroundServiceType)
     }
 
+    /** Resolves a snapshot reference only against the durable scheduler state. */
+    private fun capturedOccurrence(): ScheduledExportOccurrence? =
+        ScheduledExportOccurrence.fromWorkData(inputData, stateStore::settingsSnapshotJson)
+
     private suspend fun doWorkExclusive(): Result {
-        val capturedOccurrence = ScheduledExportOccurrence.fromWorkData(inputData)
+        val capturedOccurrence = capturedOccurrence()
         if (capturedOccurrence == null) {
+            val snapshotReference = ScheduledExportOccurrence.settingsSnapshotReference(inputData)
+            if (snapshotReference != null && stateStore.settingsSnapshotJson(snapshotReference) == null) {
+                // Neither the current nor the admitted occurrence holds this snapshot, so this
+                // request cannot match admission: it belongs to a superseded occurrence.
+                Timber.w("Skipped stale scheduled export generation=unknown active=unknown reason=snapshot_retired")
+                return Result.success()
+            }
             if (
                 inputData.getString(INPUT_SCHEDULE_SIGNATURE) != null ||
                 inputData.getString(INPUT_SCHEDULE_GENERATION) != null ||

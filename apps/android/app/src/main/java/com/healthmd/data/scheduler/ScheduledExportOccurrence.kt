@@ -16,6 +16,11 @@ import java.security.MessageDigest
 import java.time.LocalDate
 import java.time.ZoneId
 
+internal fun scheduledExportSha256Hex(value: String): String =
+    MessageDigest.getInstance("SHA-256")
+        .digest(value.toByteArray(StandardCharsets.UTF_8))
+        .joinToString("") { byte -> (byte.toInt() and 0xff).toString(16).padStart(2, '0') }
+
 internal class ScheduledExportWorkDataTooLargeException(
     cause: IllegalStateException,
 ) : IllegalArgumentException(
@@ -71,6 +76,11 @@ data class ScheduledExportConfiguration(
         settingsSnapshot?.let(AndroidExportSettingsSnapshotCodec::encodeCanonical)
     }
 
+    /** Content address of [canonicalSettingsSnapshotJson]; the only snapshot form WorkManager carries. */
+    internal val settingsSnapshotSha256: String? by lazy {
+        canonicalSettingsSnapshotJson?.let(::scheduledExportSha256Hex)
+    }
+
     val signature: String by lazy {
         val legacyFields = listOf(
             cadenceValue,
@@ -86,12 +96,7 @@ data class ScheduledExportConfiguration(
         // An absent snapshot appends nothing, preserving both the exact pre-M6 signature and the
         // already-durable pin-only signature introduced earlier in M6.
         val durableMetadata = listOfNotNull(canonicalEnginePinJson, canonicalSettingsSnapshotJson)
-        val value = (legacyFields + durableMetadata).joinToString("|")
-        MessageDigest.getInstance("SHA-256")
-            .digest(value.toByteArray(StandardCharsets.UTF_8))
-            .joinToString("") { byte ->
-                (byte.toInt() and 0xff).toString(16).padStart(2, '0')
-            }
+        scheduledExportSha256Hex((legacyFields + durableMetadata).joinToString("|"))
     }
 
     companion object {
@@ -182,8 +187,11 @@ data class ScheduledExportOccurrence(
             builder.putString(ScheduledExportAdmission.KEY_OPERATION_ID, it)
         }
         configuration.canonicalEnginePinJson?.let { builder.putString(KEY_ENGINE_PIN_JSON, it) }
-        configuration.canonicalSettingsSnapshotJson?.let {
-            builder.putString(KEY_SETTINGS_SNAPSHOT_JSON, it)
+        // WorkManager rejects Data over 10 KiB, and a snapshot with custom templates or fields can
+        // exceed that. Carry only its content address; ScheduledExportStateStore durably holds the
+        // exact JSON for the current occurrence and the admission, the only occurrences enqueued.
+        configuration.settingsSnapshotSha256?.let {
+            builder.putString(KEY_SETTINGS_SNAPSHOT_SHA256, it)
         }
         return try {
             builder.build()
@@ -232,9 +240,45 @@ data class ScheduledExportOccurrence(
         const val KEY_ZONE_ID = "schedule_zone_id"
         const val KEY_GENERATION = "schedule_generation"
         const val KEY_ENGINE_PIN_JSON = "export_engine_pin_json"
+        /** Legacy inline form; still decoded for requests enqueued by earlier app versions. */
         const val KEY_SETTINGS_SNAPSHOT_JSON = "android_export_settings_snapshot_json"
+        const val KEY_SETTINGS_SNAPSHOT_SHA256 = "android_export_settings_snapshot_sha256"
 
-        fun fromWorkData(data: Data): ScheduledExportOccurrence? = fromValues(
+        /**
+         * Decodes WorkManager input. A snapshot reference resolves only through
+         * [resolveSettingsSnapshot] and only to JSON with the exact referenced digest; an
+         * unresolvable reference fails closed.
+         */
+        fun fromWorkData(
+            data: Data,
+            resolveSettingsSnapshot: (sha256: String) -> String? = { null },
+        ): ScheduledExportOccurrence? {
+            val inlineSnapshotJson = data.getString(KEY_SETTINGS_SNAPSHOT_JSON)
+            val snapshotSha256 = data.getString(KEY_SETTINGS_SNAPSHOT_SHA256)
+            val settingsSnapshotJson = when {
+                inlineSnapshotJson != null -> {
+                    if (snapshotSha256 != null &&
+                        scheduledExportSha256Hex(inlineSnapshotJson) != snapshotSha256
+                    ) return null
+                    inlineSnapshotJson
+                }
+                snapshotSha256 != null -> resolveSettingsSnapshot(snapshotSha256)
+                    ?.takeIf { scheduledExportSha256Hex(it) == snapshotSha256 }
+                    ?: return null
+                else -> null
+            }
+            return fromWorkDataValues(data, settingsSnapshotJson)
+        }
+
+        /** The snapshot digest a request references instead of carrying the snapshot inline. */
+        fun settingsSnapshotReference(data: Data): String? =
+            data.getString(KEY_SETTINGS_SNAPSHOT_SHA256)
+                ?.takeIf { data.getString(KEY_SETTINGS_SNAPSHOT_JSON) == null }
+
+        private fun fromWorkDataValues(
+            data: Data,
+            settingsSnapshotJson: String?,
+        ): ScheduledExportOccurrence? = fromValues(
             signature = data.getString(KEY_SIGNATURE),
             triggerAtMillis = data.getLong(KEY_TRIGGER_AT_MILLIS, -1L),
             intendedLocalDate = data.getString(KEY_INTENDED_LOCAL_DATE),
@@ -249,7 +293,7 @@ data class ScheduledExportOccurrence(
             zoneId = data.getString(KEY_ZONE_ID),
             generation = data.getString(KEY_GENERATION),
             enginePinJson = data.getString(KEY_ENGINE_PIN_JSON),
-            settingsSnapshotJson = data.getString(KEY_SETTINGS_SNAPSHOT_JSON),
+            settingsSnapshotJson = settingsSnapshotJson,
         )
 
         fun fromIntent(intent: Intent): ScheduledExportOccurrence? = fromValues(
@@ -273,9 +317,11 @@ data class ScheduledExportOccurrence(
         fun hasDurableEnginePin(data: Data): Boolean = data.getString(KEY_ENGINE_PIN_JSON) != null
 
         fun hasDurableSettingsSnapshot(data: Data): Boolean =
-            data.getString(KEY_SETTINGS_SNAPSHOT_JSON) != null
+            data.getString(KEY_SETTINGS_SNAPSHOT_JSON) != null ||
+                data.getString(KEY_SETTINGS_SNAPSHOT_SHA256) != null
 
-        private fun fromValues(
+        /** Decodes durable app-private state, which has no WorkManager size limit. */
+        internal fun fromValues(
             signature: String?,
             triggerAtMillis: Long,
             intendedLocalDate: String?,
