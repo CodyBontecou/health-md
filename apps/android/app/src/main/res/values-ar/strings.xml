@@ -1011,7 +1011,6 @@
     <string name="history_retry_permissions_required">امنح أذونات Health Connect قبل إعادة المحاولة.</string>
     <string name="history_retry_raw_failed">فشلت إعادة محاولة اللقطة الخام. راجع سجل التصدير للتفاصيل.</string>
     <string name="history_warning_details_unavailable">تفاصيل التحذير غير متاحة.</string>
-    <string name="history_warning_profile_rebind_required">أكّد وجهة هذا الملف الشخصي لاستئناف عمليات التصدير المجدولة.</string>
     <string name="schedule_decrease_hour">تقليل الساعة</string>
     <string name="schedule_decrease_lookback_days">تقليل عدد الأيام السابقة</string>
     <string name="schedule_decrease_minute">تقليل الدقيقة</string>

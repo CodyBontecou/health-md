@@ -954,7 +954,6 @@
     <string name="history_retry_permissions_required">Erteilen Sie Health Connect-Berechtigungen, bevor Sie es erneut versuchen.</string>
     <string name="history_retry_raw_failed">Der Wiederholungsversuch des Rohdaten-Snapshots ist fehlgeschlagen. Weitere Informationen finden Sie im Exportverlauf.</string>
     <string name="history_warning_details_unavailable">Warnungsdetails sind nicht verfügbar.</string>
-    <string name="history_warning_profile_rebind_required">Bestätige das Ziel dieses Profils, um geplante Exporte fortzusetzen.</string>
     <string name="schedule_decrease_hour">Stunde verringern</string>
     <string name="schedule_decrease_lookback_days">Anzahl der Rückblickstage verringern</string>
     <string name="schedule_decrease_minute">Minute verringern</string>

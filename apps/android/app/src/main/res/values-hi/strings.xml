@@ -928,7 +928,6 @@
     <string name="history_retry_permissions_required">पुनः प्रयास करने से पहले Health Connect अनुमतियाँ दें।</string>
     <string name="history_retry_raw_failed">रॉ स्नैपशॉट पुनः प्रयास विफल हुआ। विवरण के लिए निर्यात इतिहास देखें।</string>
     <string name="history_warning_details_unavailable">चेतावनी विवरण उपलब्ध नहीं हैं।</string>
-    <string name="history_warning_profile_rebind_required">निर्धारित एक्सपोर्ट फिर से शुरू करने के लिए इस प्रोफ़ाइल के गंतव्य की पुष्टि करें।</string>
     <string name="schedule_decrease_hour">घंटा घटाएँ</string>
     <string name="schedule_decrease_lookback_days">पिछली अवधि के दिन घटाएँ</string>
     <string name="schedule_decrease_minute">मिनट घटाएँ</string>

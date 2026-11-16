@@ -1240,7 +1240,6 @@
     <string name="history_retry_permissions_required">Grant Health Connect permissions before retrying.</string>
     <string name="history_retry_raw_failed">Raw snapshot retry failed. Review export history for details.</string>
     <string name="history_warning_details_unavailable">Warning details are unavailable.</string>
-    <string name="history_warning_profile_rebind_required">Confirm the destination for this profile to resume scheduled exports.</string>
     <string name="schedule_decrease_hour">Decrease hour</string>
     <string name="schedule_decrease_lookback_days">Decrease lookback days</string>
     <string name="schedule_decrease_minute">Decrease minute</string>

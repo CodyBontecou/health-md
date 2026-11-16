@@ -987,7 +987,6 @@
     <string name="history_retry_permissions_required">Перед повторной попыткой предоставьте разрешения Health Connect.</string>
     <string name="history_retry_raw_failed">Не удалось повторить необработанный снимок. Подробности доступны в истории экспорта.</string>
     <string name="history_warning_details_unavailable">Подробности предупреждения недоступны.</string>
-    <string name="history_warning_profile_rebind_required">Подтвердите место назначения этого профиля, чтобы возобновить запланированный экспорт.</string>
     <string name="schedule_decrease_hour">Уменьшить значение часа</string>
     <string name="schedule_decrease_lookback_days">Уменьшить число прошлых дней</string>
     <string name="schedule_decrease_minute">Уменьшить значение минуты</string>

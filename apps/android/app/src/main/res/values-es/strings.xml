@@ -968,7 +968,6 @@
     <string name="history_retry_permissions_required">Conceda permisos a Health Connect antes de volver a intentarlo.</string>
     <string name="history_retry_raw_failed">Error al reintentar la instantánea bruta. Revise el historial de exportaciones para obtener más detalles.</string>
     <string name="history_warning_details_unavailable">Los detalles de la advertencia no están disponibles.</string>
-    <string name="history_warning_profile_rebind_required">Confirma el destino de este perfil para reanudar las exportaciones programadas.</string>
     <string name="schedule_decrease_hour">Disminuir hora</string>
     <string name="schedule_decrease_lookback_days">Reducir los días de retrospectiva</string>
     <string name="schedule_decrease_minute">Disminuir minuto</string>

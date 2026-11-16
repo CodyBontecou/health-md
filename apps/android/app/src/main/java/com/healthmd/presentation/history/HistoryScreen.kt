@@ -72,7 +72,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
-import com.healthmd.data.scheduler.ScheduledProfileExportWorker
 import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
@@ -902,8 +901,6 @@ private fun localizedTargetLabel(entry: ExportHistoryEntry): String? {
 private fun localizedWarningSummary(entry: ExportHistoryEntry): String? = when {
     entry.failureReason == ExportFailureReason.RAW_CANCELLED ->
         stringResource(R.string.export_diagnostics_title_cancelled)
-    entry.warningSummary == ScheduledProfileExportWorker.PROFILE_REBIND_REQUIRED ->
-        stringResource(R.string.history_warning_profile_rebind_required)
     entry.failedDateDetails.isNotEmpty() -> pluralStringResource(
         R.plurals.history_warning_failed_dates,
         entry.failedDateDetails.size,

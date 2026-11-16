@@ -928,7 +928,6 @@
     <string name="history_retry_permissions_required">পুনরায় চেষ্টা করার আগে Health Connect অনুমতি দিন।</string>
     <string name="history_retry_raw_failed">কাঁচা স্ন্যাপশটের পুনরায় চেষ্টা ব্যর্থ হয়েছে। বিস্তারিত জানতে রপ্তানি ইতিহাস দেখুন।</string>
     <string name="history_warning_details_unavailable">সতর্কতার বিবরণ অনুপলব্ধ।</string>
-    <string name="history_warning_profile_rebind_required">নির্ধারিত এক্সপোর্ট আবার চালু করতে এই প্রোফাইলের গন্তব্য নিশ্চিত করুন।</string>
     <string name="schedule_decrease_hour">ঘণ্টা কমান</string>
     <string name="schedule_decrease_lookback_days">লুকব্যাক দিন কমান</string>
     <string name="schedule_decrease_minute">মিনিট কমান</string>

@@ -954,7 +954,6 @@
     <string name="history_retry_permissions_required">Verleen Health Connect-machtigingen voordat je het opnieuw probeert.</string>
     <string name="history_retry_raw_failed">Nieuwe poging voor de ruwe snapshot mislukt. Bekijk de exportgeschiedenis voor meer informatie.</string>
     <string name="history_warning_details_unavailable">Waarschuwingsdetails zijn niet beschikbaar.</string>
-    <string name="history_warning_profile_rebind_required">Bevestig de bestemming van dit profiel om geplande exports te hervatten.</string>
     <string name="schedule_decrease_hour">Uur verlagen</string>
     <string name="schedule_decrease_lookback_days">Verlaag het aantal terugkijkdagen</string>
     <string name="schedule_decrease_minute">Minuut verlagen</string>

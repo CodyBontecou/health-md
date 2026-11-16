@@ -180,26 +180,6 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             true
         }
         if (blocked) {
-            // Never fail silently: the History tab and a notification tell the user why the
-            // schedule stopped and that the profile's destination must be confirmed again.
-            Timber.w("Profile occurrence blocked: destination rebind required profileId=%s", profileId)
-            ScheduledProfileOccurrenceMath.dueOccurrence(entry, System.currentTimeMillis())?.let { due ->
-                recordHistory(
-                    profile = storedProfile,
-                    dates = due.exportDates,
-                    result = ExportResult(
-                        successCount = 0,
-                        totalCount = due.exportDates.size,
-                        failedDateDetails = due.exportDates.map {
-                            FailedDateDetail(it, ExportFailureReason.UNKNOWN, PROFILE_REBIND_REQUIRED)
-                        },
-                    ),
-                    failureReason = ExportFailureReason.UNKNOWN,
-                    warning = PROFILE_REBIND_REQUIRED,
-                    operationId = operationId(profileId, due),
-                )
-            }
-            showFailureNotification(storedProfile.name)
             entryStore.updateForGeneration(profileId, entry.recoveryGeneration) { it.copy(isEnabled = false) }
             return Result.failure(
                 workDataOf(OUTPUT_PROFILE_ERROR to PROFILE_REBIND_REQUIRED),
