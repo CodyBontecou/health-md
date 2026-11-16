@@ -894,6 +894,7 @@
     <string name="history_retry_permissions_required">Қайталап көрмес бұрын Health Connect рұқсаттарын беріңіз.</string>
     <string name="history_retry_raw_failed">Өңделмеген снапшотты қайталау сәтсіз аяқталды. Мәліметтерді экспорт тарихынан қараңыз.</string>
     <string name="history_warning_details_unavailable">Ескерту мәліметтері қолжетімсіз.</string>
+    <string name="history_warning_profile_rebind_required">Жоспарланған экспорттарды жалғастыру үшін осы профильдің бағытын растаңыз.</string>
     <string name="schedule_decrease_hour">Сағатты азайту</string>
     <string name="schedule_decrease_lookback_days">Өткен күндер санын азайту</string>
     <string name="schedule_decrease_minute">Минутты азайту</string>

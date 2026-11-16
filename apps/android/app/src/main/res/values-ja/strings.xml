@@ -880,6 +880,7 @@
     <string name="history_retry_permissions_required">再試行する前に Health Connect の権限を付与してください。</string>
     <string name="history_retry_raw_failed">Raw スナップショットの再試行に失敗しました。詳細はエクスポート履歴で確認してください。</string>
     <string name="history_warning_details_unavailable">警告の詳細を確認できません。</string>
+    <string name="history_warning_profile_rebind_required">スケジュールされたエクスポートを再開するには、このプロファイルの保存先を確認してください。</string>
     <string name="schedule_decrease_hour">時を減らす</string>
     <string name="schedule_decrease_lookback_days">振り返り日数を減らす</string>
     <string name="schedule_decrease_minute">分を減らす</string>

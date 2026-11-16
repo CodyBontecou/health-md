@@ -968,6 +968,7 @@
     <string name="history_retry_permissions_required">Conceda permissões do Health Connect antes de tentar novamente.</string>
     <string name="history_retry_raw_failed">Falha na nova tentativa de Raw Snapshot. Revise o histórico de exportação para obter detalhes.</string>
     <string name="history_warning_details_unavailable">Os detalhes do aviso não estão disponíveis.</string>
+    <string name="history_warning_profile_rebind_required">Confirme o destino deste perfil para retomar as exportações agendadas.</string>
     <string name="schedule_decrease_hour">Diminuir hora</string>
     <string name="schedule_decrease_lookback_days">Diminuir período retroativo</string>
     <string name="schedule_decrease_minute">Diminuir minuto</string>

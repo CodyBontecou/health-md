@@ -60,6 +60,31 @@ internal object ExportProfilePersistence {
         }.getOrElse { Decoded(corruptRoot = true) }
     }
 
+    /**
+     * Repairs an inventory whose only opacity is byte-for-byte repeated records with the same id
+     * (issue #329): keeps the first copy of each. Returns null when nothing needs collapsing or
+     * when any other record is undecodable or a same-id record differs, because neither can be
+     * resolved without risking a user's settings.
+     */
+    fun collapseIdenticalDuplicates(decoded: Decoded): Decoded? {
+        if (decoded.corruptRoot || !decoded.opaque) return null
+        val byId = mutableMapOf<String, ExportProfile>()
+        val records = mutableListOf<JsonElement>()
+        decoded.records.forEach { record ->
+            val profile = runCatching { strictJson.decodeFromJsonElement(ExportProfile.serializer(), record) }
+                .getOrNull() ?: return null
+            val first = byId[profile.id]
+            when {
+                first == null -> {
+                    byId[profile.id] = profile
+                    records += record
+                }
+                first != profile -> return null
+            }
+        }
+        return Decoded(profiles = byId.values.toList(), records = records)
+    }
+
     /** Transactions cannot prove preservation of future fields or undecodable records. */
     fun requireTransactionProfiles(prefs: Preferences): List<ExportProfile> {
         val decoded = decode(prefs)

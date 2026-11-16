@@ -968,6 +968,7 @@
     <string name="history_retry_permissions_required">Acordați permisiuni Health Connect înainte de a reîncerca.</string>
     <string name="history_retry_raw_failed">Reîncercarea Raw Snapshot nu a reușit. Consultați istoricul exporturilor pentru detalii.</string>
     <string name="history_warning_details_unavailable">Detaliile de avertizare nu sunt disponibile.</string>
+    <string name="history_warning_profile_rebind_required">Confirmă destinația acestui profil pentru a relua exporturile programate.</string>
     <string name="schedule_decrease_hour">Reduceți ora</string>
     <string name="schedule_decrease_lookback_days">Reduceți zilele retrospective</string>
     <string name="schedule_decrease_minute">Reduceți minutul</string>

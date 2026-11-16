@@ -928,6 +928,7 @@
     <string name="history_retry_permissions_required">ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ Health Connect ਇਜਾਜ਼ਤਾਂ ਦਿਓ।</string>
     <string name="history_retry_raw_failed">ਰਾਅ ਸਨੈਪਸ਼ਾਟ ਦੀ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਅਸਫਲ ਰਹੀ। ਵੇਰਵਿਆਂ ਲਈ ਨਿਰਯਾਤ ਇਤਿਹਾਸ ਵੇਖੋ।</string>
     <string name="history_warning_details_unavailable">ਚੇਤਾਵਨੀ ਵੇਰਵੇ ਉਪਲਬਧ ਨਹੀਂ ਹਨ।</string>
+    <string name="history_warning_profile_rebind_required">ਨਿਯਤ ਐਕਸਪੋਰਟ ਮੁੜ ਸ਼ੁਰੂ ਕਰਨ ਲਈ ਇਸ ਪ੍ਰੋਫਾਈਲ ਦੀ ਮੰਜ਼ਿਲ ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ।</string>
     <string name="schedule_decrease_hour">ਘੰਟਾ ਘਟਾਓ</string>
     <string name="schedule_decrease_lookback_days">ਲੁੱਕਬੈਕ ਦਿਨ ਘਟਾਓ</string>
     <string name="schedule_decrease_minute">ਮਿੰਟ ਘਟਾਓ</string>

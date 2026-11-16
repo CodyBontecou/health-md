@@ -137,6 +137,71 @@ object ExportProfileRules {
         )
     }
 
+    /** Outcome of [repairDuplicateDefaults]; [changed] is false when the list is already valid. */
+    data class DefaultRepair(
+        val profiles: List<ExportProfile>,
+        val activeProfileId: String?,
+        val removedIds: List<String>,
+        val demotedIds: List<String>,
+    ) {
+        val changed: Boolean get() = removedIds.isNotEmpty() || demotedIds.isNotEmpty()
+    }
+
+    /**
+     * Startup repair for installs that ended up with more than one migration Default profile
+     * (issue #329). Only profiles carrying [ExportProfile.isMigrationDefault] are candidates, so
+     * a profile the user created and named is never touched.
+     *
+     * [pinnedProfileIds] are profiles other state refers to (schedule entries, Shared Setup
+     * gates); they are never removed. Exactly one candidate stays the Default: the active one,
+     * else a pinned one, else the oldest. Every other candidate is either removed — only when it
+     * carries no settings or destination the survivor lacks, is not active, and is not pinned — or
+     * demoted to an ordinary profile (marker cleared, name made unique) so nothing the user
+     * configured is lost. The result is a fixed point: repairing a repaired list changes nothing.
+     */
+    fun repairDuplicateDefaults(
+        profiles: List<ExportProfile>,
+        activeProfileId: String?,
+        pinnedProfileIds: Set<String>,
+    ): DefaultRepair {
+        val candidates = profiles.filter { it.isMigrationDefault }
+        if (candidates.size < 2) return DefaultRepair(profiles, activeProfileId, emptyList(), emptyList())
+
+        val survivor = candidates.firstOrNull { it.id == activeProfileId }
+            ?: candidates.firstOrNull { it.id in pinnedProfileIds }
+            ?: candidates.minBy { it.createdAtEpochMillis }
+        val removed = candidates.filter { candidate ->
+            candidate.id != survivor.id &&
+                candidate.id !in pinnedProfileIds &&
+                candidate.id != activeProfileId &&
+                sameConfiguration(candidate, survivor)
+        }.map { it.id }.toSet()
+
+        val repaired = profiles.filter { it.id !in removed }.toMutableList()
+        val demoted = mutableListOf<String>()
+        repaired.indices.forEach { index ->
+            val profile = repaired[index]
+            if (!profile.isMigrationDefault || profile.id == survivor.id) return@forEach
+            val others = repaired.filterIndexed { other, _ -> other != index }
+            repaired[index] = profile.copy(
+                name = uniquifyName(profile.name, others),
+                isMigrationDefault = false,
+            )
+            demoted += profile.id
+        }
+        val active = if (activeProfileId != null && activeProfileId in removed) survivor.id else activeProfileId
+        return DefaultRepair(repaired, active, removed.toList(), demoted)
+    }
+
+    /** Output- and destination-affecting fields only; identity, name, and timestamps are ignored. */
+    private fun sameConfiguration(a: ExportProfile, b: ExportProfile): Boolean =
+        a.settingsSnapshotJson == b.settingsSnapshotJson &&
+            a.target == b.target &&
+            a.apiEndpointUrl == b.apiEndpointUrl &&
+            a.agentDataGatewayUrl == b.agentDataGatewayUrl &&
+            a.folderUri == b.folderUri &&
+            a.destinationId == b.destinationId
+
     /** Deleting the last remaining profile is forbidden cross-platform. */
     fun canDelete(profiles: List<ExportProfile>): Boolean = profiles.size > 1
 

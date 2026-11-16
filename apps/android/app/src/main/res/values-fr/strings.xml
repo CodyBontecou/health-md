@@ -968,6 +968,7 @@
     <string name="history_retry_permissions_required">Accordez les autorisations Health Connect avant de réessayer.</string>
     <string name="history_retry_raw_failed">La nouvelle tentative d\'instantané brut a échoué. Consultez l’historique des exportations pour plus de détails.</string>
     <string name="history_warning_details_unavailable">Les détails de l\'avertissement ne sont pas disponibles.</string>
+    <string name="history_warning_profile_rebind_required">Confirmez la destination de ce profil pour reprendre les exportations planifiées.</string>
     <string name="schedule_decrease_hour">Diminuer l\'heure</string>
     <string name="schedule_decrease_lookback_days">Réduire le nombre de jours rétrospectifs</string>
     <string name="schedule_decrease_minute">Diminuer la minute</string>

@@ -878,6 +878,7 @@
     <string name="history_retry_permissions_required">重试前请授予 Health Connect 权限。</string>
     <string name="history_retry_raw_failed">原始快照重试失败。请查看导出历史记录了解详情。</string>
     <string name="history_warning_details_unavailable">无法获取警告详情。</string>
+    <string name="history_warning_profile_rebind_required">请确认此配置文件的目标位置以恢复定时导出。</string>
     <string name="schedule_decrease_hour">减少小时</string>
     <string name="schedule_decrease_lookback_days">减少回溯天数</string>
     <string name="schedule_decrease_minute">减少分钟</string>
