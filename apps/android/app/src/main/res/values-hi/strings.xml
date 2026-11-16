@@ -262,7 +262,21 @@
     <string name="feedback_github_subtitle">एक पूर्व-भरे गए समस्या टेम्पलेट को खोलता है</string>
     <string name="feedback_discord_title">हमारे Discord से जुड़ें</string>
     <string name="feedback_discord_subtitle">Health.md समुदाय के साथ चैट करें</string>
-    <string name="feedback_no_app_available">इस लिंक को खोलने के लिए कोई ऐप उपलब्ध नहीं है</string>
+    <string name="feedback_fallback_title_email">ईमेल नहीं खोला जा सका</string>
+    <string name="feedback_fallback_title_github">GitHub नहीं खोला जा सका</string>
+    <string name="feedback_fallback_title_discord">Discord नहीं खोला जा सका</string>
+    <string name="feedback_fallback_message">इस डिवाइस पर कोई भी ऐप इसे नहीं खोल सका, इसलिए कुछ भी नहीं भेजा गया। रिपोर्ट संपादित करें, फिर बाद में या किसी दूसरे डिवाइस से भेजने के लिए इसे कॉपी करें। निजी स्वास्थ्य डेटा शामिल करने से बचें।</string>
+    <string name="feedback_fallback_report_label">रिपोर्ट का टेक्स्ट</string>
+    <string name="feedback_fallback_copy">रिपोर्ट कॉपी करें</string>
+    <string name="feedback_fallback_copied">रिपोर्ट कॉपी हो गई</string>
+    <string name="feedback_fallback_version_line">Health.md %1$s · Android %2$s</string>
+    <string name="feedback_fallback_problem">समस्या:</string>
+    <string name="feedback_fallback_expected">मुझे क्या अपेक्षा थी:</string>
+    <string name="feedback_fallback_steps">दोहराने के चरण:</string>
+    <string name="feedback_fallback_private_reminder">(शेयर करने से पहले कोई भी निजी फ़ोल्डर या सर्वर विवरण हटा दें।)</string>
+    <string name="feedback_fallback_destination_email">प्रति: %1$s</string>
+    <string name="feedback_fallback_destination_github">GitHub: %1$s</string>
+    <string name="feedback_fallback_destination_discord">Discord: %1$s</string>
     <string name="reset_to_defaults">डिफ़ॉल्ट पर रीसेट करें</string>
     <!-- Advanced settings screen -->
     <string name="advanced_settings_title">निर्यात सेटिंग्स</string>
