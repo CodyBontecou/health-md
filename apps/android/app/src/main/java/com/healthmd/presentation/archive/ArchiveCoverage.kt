@@ -102,6 +102,15 @@ object ArchiveCoverage {
     const val MAXIMUM_ISSUE_DOTS = 3
 
     /** Profiles in the order they were most recently exported. */
+    /**
+     * The name the unnamed lane (exports from current settings, e.g. the global schedule) borrows:
+     * the active profile's, unless a named lane already shows it. Otherwise upgraded installs that
+     * ran both 3.5.0 schedules showed two "Default" lanes for one profile (#329), and the label
+     * falls back to "Current settings".
+     */
+    fun currentSettingsName(activeProfileName: String?, lanes: Collection<ArchiveProfile>): String? =
+        activeProfileName?.takeIf { name -> lanes.none { it.name == name } }
+
     fun profiles(entries: List<ExportHistoryEntry>): List<ArchiveProfile> =
         entries.sortedByDescending { it.timestamp }
             .map { ArchiveProfile(it.profileName) }
