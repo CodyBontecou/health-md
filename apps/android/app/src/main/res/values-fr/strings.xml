@@ -12,6 +12,11 @@
     <string name="export_subtitle">Configurez et exportez vos données de bien-être</string>
     <string name="status_connected">Connecté</string>
     <string name="status_disconnected">Déconnecté</string>
+    <string name="health_access_missing_badge">Aucun accès : %1$s</string>
+    <string name="health_access_missing_title">Certaines données sélectionnées sont illisibles</string>
+    <string name="health_access_missing_message">Health Connect n’a pas donné à Health.md l’accès à %1$s : ces mesures manqueront dans votre export. Accordez l’accès, puis exportez de nouveau.</string>
+    <string name="health_access_missing_button">Accorder l’accès</string>
+    <string name="health_access_category_separator">", "</string>
     <string name="status_vault_default">Coffre</string>
 
     <!-- Health Connect states -->

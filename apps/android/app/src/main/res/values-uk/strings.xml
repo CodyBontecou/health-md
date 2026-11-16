@@ -12,6 +12,11 @@
     <string name="export_subtitle">Налаштуйте й експортуйте дані про самопочуття</string>
     <string name="status_connected">Підключено</string>
     <string name="status_disconnected">Відключено</string>
+    <string name="health_access_missing_badge">Немає доступу: %1$s</string>
+    <string name="health_access_missing_title">Деякі вибрані дані неможливо прочитати</string>
+    <string name="health_access_missing_message">Health Connect не надав Health.md доступ до категорій: %1$s, тому ці показники не потраплять в експорт. Надайте доступ і повторіть експорт.</string>
+    <string name="health_access_missing_button">Надати доступ</string>
+    <string name="health_access_category_separator">", "</string>
     <string name="status_vault_default">Сховище</string>
 
     <!-- Health Connect states -->

@@ -12,6 +12,11 @@
     <string name="export_subtitle">Konfigurieren und exportieren Sie Ihre Gesundheitsdaten</string>
     <string name="status_connected">Verbunden</string>
     <string name="status_disconnected">Getrennt</string>
+    <string name="health_access_missing_badge">Kein Zugriff: %1$s</string>
+    <string name="health_access_missing_title">Einige ausgewählte Daten können nicht gelesen werden</string>
+    <string name="health_access_missing_message">Health Connect hat Health.md keinen Zugriff auf %1$s gewährt, daher fehlen diese Messwerte in Ihrem Export. Gewähren Sie den Zugriff und exportieren Sie erneut.</string>
+    <string name="health_access_missing_button">Zugriff gewähren</string>
+    <string name="health_access_category_separator">", "</string>
     <string name="status_vault_default">Vault</string>
 
     <!-- Health Connect states -->

@@ -12,6 +12,11 @@
     <string name="export_subtitle">Configurați și exportați datele despre starea dvs. de bine</string>
     <string name="status_connected">Conectat</string>
     <string name="status_disconnected">Deconectat</string>
+    <string name="health_access_missing_badge">Fără acces: %1$s</string>
+    <string name="health_access_missing_title">Unele date selectate nu pot fi citite</string>
+    <string name="health_access_missing_message">Health Connect nu a acordat Health.md acces la %1$s, așa că acele valori vor lipsi din export. Acordați accesul, apoi exportați din nou.</string>
+    <string name="health_access_missing_button">Acordați accesul</string>
+    <string name="health_access_category_separator">", "</string>
     <string name="status_vault_default">Seif</string>
 
     <!-- Health Connect states -->

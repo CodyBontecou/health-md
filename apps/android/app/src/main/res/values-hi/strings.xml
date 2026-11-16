@@ -22,6 +22,11 @@
     <string name="export_subtitle">अपने वेलनेस डेटा को कॉन्फ़िगर और निर्यात करें</string>
     <string name="status_connected">जुड़ा हुआ</string>
     <string name="status_disconnected">डिस्कनेक्ट किया गया</string>
+    <string name="health_access_missing_badge">पहुँच नहीं: %1$s</string>
+    <string name="health_access_missing_title">कुछ चुना गया डेटा पढ़ा नहीं जा सकता</string>
+    <string name="health_access_missing_message">Health Connect ने Health.md को %1$s तक पहुँच नहीं दी है, इसलिए वे मेट्रिक्स आपके निर्यात में नहीं होंगे। पहुँच दें, फिर दोबारा निर्यात करें।</string>
+    <string name="health_access_missing_button">पहुँच दें</string>
+    <string name="health_access_category_separator">", "</string>
     <string name="status_vault_default">वॉल्ट</string>
     <!-- Health Connect states -->
     <string name="hc_required_title">Health Connect आवश्यक है</string>

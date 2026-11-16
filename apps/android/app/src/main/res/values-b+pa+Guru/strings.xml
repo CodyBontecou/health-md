@@ -22,6 +22,11 @@
     <string name="export_subtitle">ਆਪਣਾ ਵੈਲਨੈੱਸ ਡਾਟਾ ਕਨਫਿਗਰ ਕਰੋ ਅਤੇ ਨਿਰਯਾਤ ਕਰੋ</string>
     <string name="status_connected">ਜੁੜਿਆ ਹੋਇਆ</string>
     <string name="status_disconnected">ਡਿਸਕਨੈਕਟ</string>
+    <string name="health_access_missing_badge">ਪਹੁੰਚ ਨਹੀਂ: %1$s</string>
+    <string name="health_access_missing_title">ਕੁਝ ਚੁਣਿਆ ਡਾਟਾ ਪੜ੍ਹਿਆ ਨਹੀਂ ਜਾ ਸਕਦਾ</string>
+    <string name="health_access_missing_message">Health Connect ਨੇ Health.md ਨੂੰ %1$s ਤੱਕ ਪਹੁੰਚ ਨਹੀਂ ਦਿੱਤੀ, ਇਸ ਲਈ ਉਹ ਮੈਟ੍ਰਿਕਸ ਤੁਹਾਡੇ ਨਿਰਯਾਤ ਵਿੱਚ ਨਹੀਂ ਹੋਣਗੇ। ਪਹੁੰਚ ਦਿਓ, ਫਿਰ ਦੁਬਾਰਾ ਨਿਰਯਾਤ ਕਰੋ।</string>
+    <string name="health_access_missing_button">ਪਹੁੰਚ ਦਿਓ</string>
+    <string name="health_access_category_separator">", "</string>
     <string name="status_vault_default">ਵੌਲਟ</string>
     <!-- Health Connect states -->
     <string name="hc_required_title">Health Connect ਲਾਜ਼ਮੀ ਹੈ</string>

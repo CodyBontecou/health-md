@@ -12,6 +12,11 @@
     <string name="export_subtitle">Configureer en exporteer je wellnessgegevens</string>
     <string name="status_connected">Verbonden</string>
     <string name="status_disconnected">Verbroken</string>
+    <string name="health_access_missing_badge">Geen toegang: %1$s</string>
+    <string name="health_access_missing_title">Sommige geselecteerde gegevens kunnen niet worden gelezen</string>
+    <string name="health_access_missing_message">Health Connect heeft Health.md geen toegang gegeven tot %1$s, dus die metingen ontbreken in je export. Geef toegang en exporteer opnieuw.</string>
+    <string name="health_access_missing_button">Toegang geven</string>
+    <string name="health_access_category_separator">", "</string>
     <string name="status_vault_default">Vault</string>
 
     <!-- Health Connect states -->

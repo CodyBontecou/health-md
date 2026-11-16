@@ -20,6 +20,11 @@
     <string name="export_subtitle">ウェルネスデータを設定してエクスポート</string>
     <string name="status_connected">接続済み</string>
     <string name="status_disconnected">未接続</string>
+    <string name="health_access_missing_badge">アクセスなし: %1$s</string>
+    <string name="health_access_missing_title">選択した一部のデータを読み取れません</string>
+    <string name="health_access_missing_message">Health Connect が Health.md に%1$sへのアクセスを許可していないため、これらの指標はエクスポートに含まれません。アクセスを許可してから、もう一度エクスポートしてください。</string>
+    <string name="health_access_missing_button">アクセスを許可</string>
+    <string name="health_access_category_separator">"、"</string>
     <string name="status_vault_default">Vault</string>
     <string name="hc_required_title">Health Connectが必要です</string>
     <string name="hc_required_message">Play StoreからHealth Connectをインストールして、健康データを読み込めるようにしてください。</string>

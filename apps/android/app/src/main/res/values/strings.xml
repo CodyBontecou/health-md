@@ -38,6 +38,11 @@
     <string name="export_subtitle">Configure and export your wellness data</string>
     <string name="status_connected">Connected</string>
     <string name="status_disconnected">Disconnected</string>
+    <string name="health_access_missing_badge">No access: %1$s</string>
+    <string name="health_access_missing_title">Some selected data can’t be read</string>
+    <string name="health_access_missing_message">Health Connect hasn’t given Health.md access to %1$s, so those metrics will be missing from your export. Grant access, then export again.</string>
+    <string name="health_access_missing_button">Grant access</string>
+    <string name="health_access_category_separator">", "</string>
     <string name="status_vault_default">Vault</string>
 
     <!-- Health Connect states -->
