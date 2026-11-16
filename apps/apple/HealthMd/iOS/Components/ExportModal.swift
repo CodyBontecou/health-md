@@ -142,8 +142,8 @@ struct ExportModal: View {
                                         .tracking(2)
 
                                     DatePicker(
-                                        selection: $startDate,
-                                        in: ...endDate,
+                                        selection: CustomDateRangeEditing.startBinding(start: $startDate, end: $endDate),
+                                        in: ...Date(),
                                         displayedComponents: .date
                                     ) {
                                         Text("Start Date")
@@ -172,8 +172,8 @@ struct ExportModal: View {
                                         .tracking(2)
 
                                     DatePicker(
-                                        selection: $endDate,
-                                        in: startDate...Date(),
+                                        selection: CustomDateRangeEditing.endBinding(start: $startDate, end: $endDate),
+                                        in: ...Date(),
                                         displayedComponents: .date
                                     ) {
                                         Text("End Date")
