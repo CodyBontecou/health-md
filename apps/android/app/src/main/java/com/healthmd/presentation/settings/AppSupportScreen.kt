@@ -42,6 +42,7 @@ import com.healthmd.distribution.DistributionWearSettingsCard
 import com.healthmd.domain.distribution.DistributionChannel
 import com.healthmd.presentation.common.AppSwitch
 import com.healthmd.presentation.common.ConfigurationProtectionTestTags
+import com.healthmd.presentation.common.FeedbackFallback
 import com.healthmd.presentation.common.FeedbackHelper
 import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.theme.GeistRadii
@@ -78,6 +79,11 @@ fun AppSupportScreen(
     val protectionRequester = remember { BringIntoViewRequester() }
     var confirmingClear by remember { mutableStateOf(false) }
     var confirmingReplay by remember { mutableStateOf(false) }
+    var feedbackFallback by remember { mutableStateOf<FeedbackFallback?>(null) }
+
+    feedbackFallback?.let { fallback ->
+        FeedbackFallbackDialog(fallback = fallback, onDismiss = { feedbackFallback = null })
+    }
 
     LaunchedEffect(protectionSettingsRequestId) {
         val requestId = protectionSettingsRequestId ?: return@LaunchedEffect
@@ -191,7 +197,7 @@ fun AppSupportScreen(
                         shape = shape,
                         title = stringResource(R.string.feedback_discord_title),
                         icon = Icons.Outlined.Groups,
-                        onClick = { FeedbackHelper.openDiscordCommunity(context) },
+                        onClick = { feedbackFallback = FeedbackHelper.openDiscordCommunity(context) },
                         external = true,
                     )
                 },
@@ -200,7 +206,7 @@ fun AppSupportScreen(
                         shape = shape,
                         title = stringResource(R.string.feedback_send_title),
                         icon = Icons.Outlined.Email,
-                        onClick = { FeedbackHelper.sendFeedbackEmail(context) },
+                        onClick = { feedbackFallback = FeedbackHelper.sendFeedbackEmail(context) },
                         external = true,
                     )
                 },
@@ -210,7 +216,7 @@ fun AppSupportScreen(
                         title = stringResource(R.string.app_support_report_bug),
                         icon = Icons.Outlined.BugReport,
                         trailing = "GitHub",
-                        onClick = { FeedbackHelper.openGitHubIssue(context) },
+                        onClick = { feedbackFallback = FeedbackHelper.openGitHubIssue(context) },
                         external = true,
                     )
                 },
