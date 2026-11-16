@@ -31,6 +31,7 @@ struct ContentView: View {
     @State private var presentFirstAutomationCreator = false
     @State private var isExporting = false
     @State private var isShowingExportMoment = false
+    @State private var isShowingExportResult = false
     @State private var isTestExportWaitingForCompletion = false
     @State private var isRequestingHealthAuthorization = false
     @State private var isAssessingHistory = false
@@ -182,7 +183,8 @@ struct ContentView: View {
                     historyCheckAwaitsDecision: historyCheckAwaitsDecision,
                     onContinueWithoutHistoryVerification: historyContinuationAction,
                     onCancelHistoryVerification: historyCancellationAction,
-                    isShowingExportMoment: $isShowingExportMoment
+                    isShowingExportMoment: $isShowingExportMoment,
+                    isShowingExportResult: $isShowingExportResult
                 )
                 .tint(Color.accent)
                 .task { ensureProfileCoordinator() }
@@ -197,6 +199,11 @@ struct ContentView: View {
                 }
                 .onAppear {
                     if directCLIService.pendingPairingLink != nil { selectedTab = .sync }
+                }
+                .onChange(of: isShowingExportResult) { wasShowing, isShowing in
+                    // Leaving the done card closes the export it reported; the
+                    // held-back toast must not appear afterwards with the same news.
+                    if wasShowing, !isShowing, !isExporting { dismissStatus() }
                 }
                 .onChange(of: directCLIService.pendingPairingLink) { _, pairingLink in
                     if pairingLink != nil { selectedTab = .sync }
@@ -223,7 +230,9 @@ struct ContentView: View {
 
                 // Per-file writers publish intermediate status while a batch is still running.
                 // Keep the completion toast hidden until the whole export operation finishes.
+                // MomentGlass's done card carries the file, folder, and destination itself.
                 if !isExporting,
+                   !isShowingExportResult,
                    partialExportNotice == nil,
                    let status = vaultManager.lastExportStatus {
                     // Success cannot be derived from the status copy: the local

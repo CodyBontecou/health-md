@@ -42,6 +42,9 @@ struct GlassAppShell: View {
     /// True while MomentGlass owns running progress or a finished export, so the
     /// parent does not draw another activity panel over it.
     @Binding var isShowingExportMoment: Bool
+    /// True while MomentGlass shows a finished export. Its card carries the file and
+    /// folder actions, so the parent holds back its completion toast meanwhile.
+    @Binding var isShowingExportResult: Bool
 
     @EnvironmentObject private var healthKitManager: HealthKitManager
     @EnvironmentObject private var syncService: SyncService
@@ -361,6 +364,9 @@ struct GlassAppShell: View {
         .onChange(of: isExporting || momentDone != nil, initial: true) { _, isVisible in
             isShowingExportMoment = isVisible
         }
+        .onChange(of: momentDone != nil, initial: true) { _, isVisible in
+            isShowingExportResult = isVisible
+        }
         .onChange(of: presentFirstAutomationCreator) { _, requested in consumeFirstAutomationRequest(requested) }
         .onChange(of: classicExportRequest) { _, _ in onExport() }
         .onChange(of: gapBackfillRouter.pendingRequest, initial: true) { _, _ in consumeGapBackfillRequest() }
@@ -405,10 +411,26 @@ struct GlassAppShell: View {
                 onSeeArchive: {
                     momentDone = nil
                     tab.wrappedValue = .archive
-                }
+                },
+                destination: momentDestination(for: done),
+                onViewFile: vaultManager.lastExportPresentationTarget.map { target in
+                    { onPreviewExport(target) }
+                },
+                onBrowseFolder: showInFilesAction(for: done),
+                onDismiss: { momentDone = nil }
             )
             .transition(.opacity)
         }
+    }
+
+    /// The destination line in the done card: the written file for a local run.
+    private func momentDestination(for entry: ExportHistoryEntry) -> ExportMomentDestination {
+        let isLocal = entry.exportTarget == nil || entry.exportTarget == .localIPhoneFolder
+        return ExportMomentDestination(
+            target: entry.exportTarget,
+            fallbackName: entry.targetLabel,
+            fileName: isLocal ? vaultManager.lastExportPresentationTarget?.fileURL.lastPathComponent : nil
+        )
     }
 
     /// Opens the export folder for a local run; other destinations have no folder to show.
