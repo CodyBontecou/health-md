@@ -1,5 +1,7 @@
-v3.5.5 — Scheduled export fixes
+v3.5.6 — Stability fixes
 • Fixes a crash after updating or restarting your phone when a scheduled export uses a long custom template.
+• Run now no longer crashes and waits for the automation switch to finish.
+• Large exports no longer freeze the app or run out of memory.
+• JSON exports no longer crash on an invalid value.
+• Fixes a crash when closing a schedule picker.
 • Scheduled exports work again for automations set up before 3.5.2. If one shows Paused, switch it back on.
-• The Archive no longer shows two "Default" lanes; the app-wide schedule now appears as "Current settings".
-• Raw API Snapshot (NDJSON) is available as an export format again.
