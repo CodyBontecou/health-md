@@ -1695,4 +1695,5 @@
     <string name="frontmatter_key_conflict_toast">Frontmatter कुंजी टकराव। Frontmatter फ़ील्ड देखें।</string>
     <string name="frontmatter_key_conflict_inline">एक अनोखा, गैर-आरक्षित फ़ील्ड नाम चुनें।</string>
     <string name="frontmatter_key_conflict_message">Frontmatter कुंजी टकराव। Frontmatter फ़ील्ड में हर सक्षम फ़ील्ड को एक अनोखा, गैर-आरक्षित नाम दें। आपका डेली नोट नहीं बदला गया।</string>
+    <string name="automation_run_now_switch_failed">इस ऑटोमेशन पर स्विच नहीं हो सका, इसलिए यह नहीं चला। इसे खोलें और फिर से कोशिश करें।</string>
 </resources>

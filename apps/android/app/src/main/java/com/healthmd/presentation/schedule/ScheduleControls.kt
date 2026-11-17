@@ -1,5 +1,6 @@
 package com.healthmd.presentation.schedule
 
+import com.healthmd.presentation.common.clearFocusSafely
 import android.text.format.DateFormat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -241,7 +242,7 @@ private fun FrequencyValueField(
         },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus(); keyboard?.hide() }),
+        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocusSafely(); keyboard?.hide() }),
         textStyle = style,
         cursorBrush = SolidColor(colors.brandPrimary),
         decorationBox = { innerField ->
@@ -288,7 +289,7 @@ private fun <T> ScheduleDropdown(
                 .onSizeChanged { anchorWidth = it.width }
                 .scheduleFieldOutline(colors, focused = expanded)
                 .clickable(role = Role.Button) {
-                    focusManager.clearFocus()
+                    focusManager.clearFocusSafely()
                     keyboard?.hide()
                     expanded = true
                 }

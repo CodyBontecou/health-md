@@ -323,6 +323,28 @@ class ExportProfilesViewModel @Inject constructor(
         }
     }
 
+    private var runNowActivation: kotlinx.coroutines.Job? = null
+
+    /**
+     * Run now: switches to [profileId] and calls [onReady] only once it owns live settings, so
+     * Export now never opens on the previous automation's settings mid-switch. A repeat tap while
+     * a switch is in flight is ignored; a switch that fails closed or throws calls [onFailed].
+     */
+    fun activateForRun(profileId: String, onReady: () -> Unit, onFailed: () -> Unit) {
+        if (runNowActivation?.isActive == true) return
+        runNowActivation = viewModelScope.launch {
+            val activated = try {
+                profileCoordinator.activate(profileId)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Timber.e(error, "Could not activate profile for Run now")
+                false
+            }
+            if (activated) onReady() else onFailed()
+        }
+    }
+
     fun openDetail(profileId: String?) {
         _uiState.update { it.copy(detailProfileId = profileId) }
     }

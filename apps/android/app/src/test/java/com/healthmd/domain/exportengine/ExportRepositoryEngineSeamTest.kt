@@ -17,6 +17,8 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import java.io.ByteArrayOutputStream
+import java.io.OutputStream
 import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
@@ -26,10 +28,13 @@ class ExportRepositoryEngineSeamTest {
     fun legacySelectionKeepsExistingExporterAndCommitPathUnchanged() = runTest {
         val manager = manager()
         var writtenContent: String? = null
+        // Legacy JSON is streamed into the destination; the bytes are the historical String's.
         every {
-            manager.writeFile(any(), any(), any(), any(), any(), any())
+            manager.writeStreamedFile(any(), any(), any(), any(), any(), any())
         } answers {
-            writtenContent = arg(4)
+            val output = ByteArrayOutputStream()
+            lastArg<(OutputStream) -> Unit>().invoke(output)
+            writtenContent = output.toByteArray().toString(Charsets.UTF_8)
             true
         }
         val repository = repository(
@@ -47,15 +52,16 @@ class ExportRepositoryEngineSeamTest {
             JsonExporter().export(day, settings.formatCustomization, settings.includeGranularData),
         )
         verify(exactly = 1) {
-            manager.writeFile(
+            manager.writeStreamedFile(
                 folderUri,
                 "health",
                 "2026-03-15",
                 "json",
-                any(),
                 FileExportManager.WriteMode.OVERWRITE,
+                any(),
             )
         }
+        verify(exactly = 0) { manager.writeFile(any(), any(), any(), any(), any(), any()) }
         verify(exactly = 0) {
             manager.writeFileAtRelativePath(any(), any(), any(), any())
         }
@@ -88,6 +94,7 @@ class ExportRepositoryEngineSeamTest {
         assertThat(committed).containsExactly("native-authority")
         assertThat(events).containsExactly("native-plan", "rust-plan", "write").inOrder()
         verify(exactly = 0) { manager.writeFile(any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { manager.writeStreamedFile(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -122,6 +129,7 @@ class ExportRepositoryEngineSeamTest {
         assertThat(success).isTrue()
         assertThat(committed).containsExactly("rust-authority")
         verify(exactly = 0) { manager.writeFile(any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { manager.writeStreamedFile(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -139,6 +147,7 @@ class ExportRepositoryEngineSeamTest {
 
         assertThat(success).isFalse()
         verify(exactly = 0) { manager.writeFile(any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { manager.writeStreamedFile(any(), any(), any(), any(), any(), any()) }
         verify(exactly = 0) {
             manager.writeFileAtRelativePath(any(), any(), any(), any())
         }
@@ -183,12 +192,13 @@ class ExportRepositoryEngineSeamTest {
         assertThat(nativeCalls).isEqualTo(0)
         assertThat(rustCalls).isEqualTo(1)
         verify(exactly = 0) { manager.writeFile(any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { manager.writeStreamedFile(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
     fun unsupportedAppendOperationUsesOnlyWholeLegacyPath() = runTest {
         val manager = manager()
-        every { manager.writeFile(any(), any(), any(), any(), any(), any()) } returns true
+        every { manager.writeStreamedFile(any(), any(), any(), any(), any(), any()) } returns true
         var nativeCalls = 0
         var rustCalls = 0
         val planner = AndroidDailyAggregateExportPlanner(
@@ -212,7 +222,7 @@ class ExportRepositoryEngineSeamTest {
         assertThat(nativeCalls).isEqualTo(0)
         assertThat(rustCalls).isEqualTo(0)
         verify(exactly = 1) {
-            manager.writeFile(any(), any(), any(), any(), any(), FileExportManager.WriteMode.APPEND)
+            manager.writeStreamedFile(any(), any(), any(), any(), FileExportManager.WriteMode.APPEND, any())
         }
         verify(exactly = 0) {
             manager.writeFileAtRelativePath(any(), any(), any(), any())
@@ -246,6 +256,7 @@ class ExportRepositoryEngineSeamTest {
         assertThat(preview.files.single().byteCount).isEqualTo("same-rust-preview".encodeToByteArray().size)
         verify(exactly = 0) { manager.writeFileAtRelativePath(any(), any(), any(), any()) }
         verify(exactly = 0) { manager.writeFile(any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { manager.writeStreamedFile(any(), any(), any(), any(), any(), any()) }
 
         assertThat(repository.exportHealthData(day, settings)).isTrue()
         assertThat(committed).containsExactly(preview.files.single().content)

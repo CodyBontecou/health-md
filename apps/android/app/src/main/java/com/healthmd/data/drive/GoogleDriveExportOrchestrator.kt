@@ -24,6 +24,8 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
@@ -179,16 +181,19 @@ class GoogleDriveExportOrchestrator @Inject constructor(
                 freshCaptureRetryDates = normalized.toSet())
         }
         val bundle = try {
-            bundleFactory.daily(
-                operationId = operationId,
-                profileId = profileId,
-                source = source,
-                data = captured,
-                settings = operationSettings.copy(exportTarget = ExportTarget.GOOGLE_DRIVE),
-                settingsSnapshotJson = frozenSettingsSnapshotJson,
-                requestedDates = normalized,
-                captureFailures = failures,
-            )
+            // Rendering every selected format for the whole range is heavy; keep it off the caller's (main) thread.
+            withContext(Dispatchers.Default) {
+                bundleFactory.daily(
+                    operationId = operationId,
+                    profileId = profileId,
+                    source = source,
+                    data = captured,
+                    settings = operationSettings.copy(exportTarget = ExportTarget.GOOGLE_DRIVE),
+                    settingsSnapshotJson = frozenSettingsSnapshotJson,
+                    requestedDates = normalized,
+                    captureFailures = failures,
+                )
+            }
         } catch (_: Exception) {
             return ExportResult(
                 0,

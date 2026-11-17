@@ -34,6 +34,7 @@ import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.exportengine.ExportEnginePinPlanner
 import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.ExportTarget
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.healthmd.domain.model.SleepAttributionUnavailableException
@@ -159,6 +160,8 @@ class APIEndpointExportRunner private constructor(
     private val maxEncodedBytes: ULong,
     private val nonLegacyUploadAttempts: Int,
     private val operationStore: APIExportOperationStore?,
+    /** Envelope rendering/encoding runs here, never on the caller's (often main) thread. */
+    private val renderDispatcher: CoroutineDispatcher,
 ) {
     /** Source-compatible constructor for focused tests and non-Dagger callers. */
     constructor(
@@ -167,6 +170,7 @@ class APIEndpointExportRunner private constructor(
         @Suppress("UNUSED_PARAMETER") jsonExporter: JsonExporter,
         uploader: APIExportUploader,
         credentialStore: APIExportCredentialStore,
+        renderDispatcher: CoroutineDispatcher = Dispatchers.Default,
     ) : this(
         captureSource = HealthRepositoryAPIExportCaptureSource(healthRepository),
         envelopeBuilder = envelopeBuilder,
@@ -184,6 +188,7 @@ class APIEndpointExportRunner private constructor(
         maxEncodedBytes = FrozenAPIExportRequest.DEFAULT_MAX_API_BATCH_BYTES,
         nonLegacyUploadAttempts = DEFAULT_NON_LEGACY_UPLOAD_ATTEMPTS,
         operationStore = null,
+        renderDispatcher = renderDispatcher,
     )
 
     private var nativeDetailService: RawSnapshotService? = null
@@ -216,6 +221,7 @@ class APIEndpointExportRunner private constructor(
         maxEncodedBytes = FrozenAPIExportRequest.DEFAULT_MAX_API_BATCH_BYTES,
         nonLegacyUploadAttempts = DEFAULT_NON_LEGACY_UPLOAD_ATTEMPTS,
         operationStore = operationStore,
+        renderDispatcher = Dispatchers.Default,
     ) {
         nativeDetailService = rawSnapshotService
     }
@@ -256,6 +262,7 @@ class APIEndpointExportRunner private constructor(
         maxEncodedBytes = maxEncodedBytes,
         nonLegacyUploadAttempts = nonLegacyUploadAttempts,
         operationStore = operationStore,
+        renderDispatcher = Dispatchers.Default,
     )
 
     suspend fun exportDates(
@@ -689,7 +696,11 @@ class APIEndpointExportRunner private constructor(
         )
     }
 
-    private suspend fun prepare(request: FrozenAPIExportRequest): PreparedAPIPlan? {
+    /** Envelope rendering/encoding is CPU- and allocation-heavy; never run it on the caller's (main) thread. */
+    private suspend fun prepare(request: FrozenAPIExportRequest): PreparedAPIPlan? =
+        withContext(renderDispatcher) { prepareOffMain(request) }
+
+    private suspend fun prepareOffMain(request: FrozenAPIExportRequest): PreparedAPIPlan? {
         if (request.mode == ExportEngineMode.legacy) {
             val payload = try {
                 envelopeBuilder.build(

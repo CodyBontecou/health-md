@@ -1958,4 +1958,5 @@
     <string name="frontmatter_key_conflict_toast">تعارض في مفاتيح Frontmatter. راجع «حقول Frontmatter».</string>
     <string name="frontmatter_key_conflict_inline">اختر اسم حقل فريدًا وغير محجوز.</string>
     <string name="frontmatter_key_conflict_message">تعارض في مفاتيح Frontmatter. امنح كل حقل مفعّل اسمًا فريدًا وغير محجوز في «حقول Frontmatter». لم تتغيّر ملاحظتك اليومية.</string>
+    <string name="automation_run_now_switch_failed">تعذّر التبديل إلى هذه الأتمتة، لذا لم تُشغَّل. افتحها وحاول مرة أخرى.</string>
 </resources>

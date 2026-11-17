@@ -1,5 +1,6 @@
 package com.healthmd.presentation.settings
 
+import com.healthmd.presentation.common.clearFocusSafely
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -264,7 +265,7 @@ internal fun FrontmatterCustomizationTextField(
             keyboardOptions = KeyboardOptions(imeAction = imeAction),
             keyboardActions = KeyboardActions(
                 onNext = { focusManager.moveFocus(FocusDirection.Next) },
-                onDone = { focusManager.clearFocus(); keyboard?.hide() },
+                onDone = { focusManager.clearFocusSafely(); keyboard?.hide() },
             ),
             decorationBox = { innerField ->
                 Box(

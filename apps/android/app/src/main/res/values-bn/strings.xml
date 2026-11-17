@@ -1695,4 +1695,5 @@
     <string name="frontmatter_key_conflict_toast">Frontmatter কী-দ্বন্দ্ব। Frontmatter ফিল্ড পর্যালোচনা করুন।</string>
     <string name="frontmatter_key_conflict_inline">একটি অনন্য, রিজার্ভ নয় এমন ফিল্ডের নাম বেছে নিন।</string>
     <string name="frontmatter_key_conflict_message">Frontmatter কী-দ্বন্দ্ব। Frontmatter ফিল্ড-এ প্রতিটি সক্রিয় ফিল্ডকে একটি অনন্য, রিজার্ভ নয় এমন নাম দিন। আপনার দৈনিক নোট পরিবর্তন হয়নি।</string>
+    <string name="automation_run_now_switch_failed">এই অটোমেশনে যাওয়া যায়নি, তাই এটি চলেনি। এটি খুলে আবার চেষ্টা করুন।</string>
 </resources>

@@ -56,10 +56,13 @@ import java.util.Base64
 import java.util.Collections
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.coroutineContext
+import kotlinx.serialization.json.JsonElement
 
 class ExportRepositoryImpl(
     private val fileExportManager: FileExportManager,
@@ -80,6 +83,11 @@ class ExportRepositoryImpl(
             ),
             diagnosticSink = diagnosticSink,
         ),
+    /**
+     * Every repository entry point runs here. Callers include `viewModelScope` (main thread):
+     * Health.md rendering and Storage Access Framework I/O must never run on the main thread.
+     */
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ExportRepository {
 
     private val dailyNoteInjector = DailyNoteInjector()
@@ -87,7 +95,19 @@ class ExportRepositoryImpl(
     private val markdownMerger = MarkdownMerger()
     private val stagedScheduledFolderOperations = mutableMapOf<String, StagedScheduledFolderOperation>()
 
-    override suspend fun exportHealthData(data: HealthData, settings: ExportSettings): Boolean {
+    override suspend fun exportHealthData(data: HealthData, settings: ExportSettings): Boolean =
+        withContext(ioDispatcher) {
+            try {
+                exportHealthDataOffMain(data, settings)
+            } catch (error: Exception) {
+                // An ordinary rendering or destination failure fails this day's export; only
+                // cancellation and VM-fatal errors propagate to the caller.
+                rethrowCancellationOrFatal(error)
+                false
+            }
+        }
+
+    private suspend fun exportHealthDataOffMain(data: HealthData, settings: ExportSettings): Boolean {
         if (settings.hasWakeDateNote()) return exportWakeDateNote(data, settings)
         val (frozenData, frozenSettings) = try { freezeNightNoteInput(data, settings) }
         catch (error: Throwable) { rethrowCancellationOrFatal(error); return false }
@@ -114,6 +134,16 @@ class ExportRepositoryImpl(
     }
 
     override suspend fun beginDurableScheduledFolderOperation(
+        operationId: String,
+        dates: List<LocalDate>,
+        settings: ExportSettings,
+        settingsSnapshotJson: String,
+        requireExistingJournal: Boolean,
+    ): DurableScheduledFolderOperationStart = withContext(ioDispatcher) {
+        beginDurableScheduledFolderOperationOffMain(operationId, dates, settings, settingsSnapshotJson, requireExistingJournal)
+    }
+
+    private suspend fun beginDurableScheduledFolderOperationOffMain(
         operationId: String,
         dates: List<LocalDate>,
         settings: ExportSettings,
@@ -152,17 +182,24 @@ class ExportRepositoryImpl(
         dates: List<LocalDate>,
         settings: ExportSettings,
         settingsSnapshotJson: String,
-    ): Boolean {
-        val store = scheduledFolderJournalStore ?: return false
-        val identity = durableIdentity(operationId, dates, settings, settingsSnapshotJson) ?: return false
+    ): Boolean = withContext(ioDispatcher) {
+        val store = scheduledFolderJournalStore ?: return@withContext false
+        val identity = durableIdentity(operationId, dates, settings, settingsSnapshotJson)
+            ?: return@withContext false
         val loaded = store.load(operationId)
-        return loaded is ScheduledFolderJournalLoad.Found &&
+        loaded is ScheduledFolderJournalLoad.Found &&
             loaded.journal.phase == ScheduledFolderJournalPhase.READY &&
             identity.matches(loaded.journal) &&
             loaded.journal.canResume(identity.ownerDates)
     }
 
     override suspend fun stageDurableScheduledFolderDay(
+        operationId: String,
+        data: HealthData,
+        settings: ExportSettings,
+    ): Boolean = withContext(ioDispatcher) { stageDurableScheduledFolderDayOffMain(operationId, data, settings) }
+
+    private suspend fun stageDurableScheduledFolderDayOffMain(
         operationId: String,
         data: HealthData,
         settings: ExportSettings,
@@ -188,6 +225,15 @@ class ExportRepositoryImpl(
     }
 
     override suspend fun finishDurableScheduledFolderOperation(
+        operationId: String,
+        dates: List<LocalDate>,
+        failedDateDetails: List<FailedDateDetail>,
+        wasCancelled: Boolean,
+    ): ExportResult = withContext(ioDispatcher) {
+        finishDurableScheduledFolderOperationOffMain(operationId, dates, failedDateDetails, wasCancelled)
+    }
+
+    private suspend fun finishDurableScheduledFolderOperationOffMain(
         operationId: String,
         dates: List<LocalDate>,
         failedDateDetails: List<FailedDateDetail>,
@@ -247,9 +293,10 @@ class ExportRepositoryImpl(
         return executeDurableJournal(store, journal, dates)
     }
 
-    override suspend fun discardDurableScheduledFolderOperation(operationId: String) {
+    override suspend fun discardDurableScheduledFolderOperation(operationId: String) = withContext(ioDispatcher) {
         stagedScheduledFolderOperations.remove(operationId)
         scheduledFolderJournalStore?.discard(operationId)
+        Unit
     }
 
     private suspend fun startCapturing(
@@ -627,7 +674,10 @@ class ExportRepositoryImpl(
         remainingDates = dates.toSet().takeIf { wasCancelled }.orEmpty(),
     )
 
-    override suspend fun previewHealthData(data: HealthData, settings: ExportSettings): ExportPreviewDay {
+    override suspend fun previewHealthData(data: HealthData, settings: ExportSettings): ExportPreviewDay =
+        withContext(ioDispatcher) { previewHealthDataOffMain(data, settings) }
+
+    private suspend fun previewHealthDataOffMain(data: HealthData, settings: ExportSettings): ExportPreviewDay {
         if (settings.hasWakeDateNote()) return previewWakeDateNote(data, settings)
         val (frozenData, frozenSettings) = try { freezeNightNoteInput(data, settings) }
         catch (error: Throwable) { rethrowCancellationOrFatal(error); return planningFailurePreview(data) }
@@ -792,7 +842,7 @@ class ExportRepositoryImpl(
         settings: ExportSettings,
     ): Boolean {
         val writeMode = settings.writeMode.toFileWriteMode()
-        val aggregateFiles = buildAggregateFiles(data, settings)
+        val aggregateFiles = buildAggregateFiles(data, settings, streamJson = true)
         if (aggregateFiles.isEmpty()) return false
         val sideEffects = buildSideEffects(folderUri, data, settings)
         if (sideEffects.any { it.action == ExportPreviewSideEffectAction.DAILY_NOTE_FAILED }) return false
@@ -804,14 +854,25 @@ class ExportRepositoryImpl(
         }
 
         val aggregateSuccess = aggregateFiles.all { planned ->
-            fileExportManager.writeFile(
-                folderUriString = folderUri,
-                subfolder = planned.subfolder,
-                fileName = planned.fileName,
-                extension = planned.extension,
-                content = planned.content,
-                writeMode = writeMode,
-            )
+            when (val body = planned.body) {
+                is AggregateBody.Text -> fileExportManager.writeFile(
+                    folderUriString = folderUri,
+                    subfolder = planned.subfolder,
+                    fileName = planned.fileName,
+                    extension = planned.extension,
+                    content = body.content,
+                    writeMode = writeMode,
+                )
+                // The tree is fully built (and validated) before any destination write; only
+                // its encoding is streamed, so no multi-megabyte String is ever materialized.
+                is AggregateBody.StreamedJson -> fileExportManager.writeStreamedFile(
+                    folderUriString = folderUri,
+                    subfolder = planned.subfolder,
+                    fileName = planned.fileName,
+                    extension = planned.extension,
+                    writeMode = writeMode,
+                ) { output -> jsonExporter.encodeLegacyTree(body.tree, output) }
+            }
         }
 
         if (!aggregateSuccess) return false
@@ -839,12 +900,12 @@ class ExportRepositoryImpl(
         data: HealthData,
         settings: ExportSettings,
     ): ExportPreviewDay {
-        val files = buildAggregateFiles(data, settings).map { planned ->
+        val files = buildAggregateFiles(data, settings, streamJson = false).map { planned ->
             val previewContent = contentAfterWriteMode(
                 folderUri = folderUri,
                 relativePath = planned.relativePath,
                 extension = planned.extension,
-                newContent = planned.content,
+                newContent = (planned.body as AggregateBody.Text).content,
                 settings = settings,
             )
             ExportPreviewFile(
@@ -1011,7 +1072,11 @@ class ExportRepositoryImpl(
         return null
     }
 
-    private fun buildAggregateFiles(data: HealthData, settings: ExportSettings): List<PlannedAggregateFile> {
+    private fun buildAggregateFiles(
+        data: HealthData,
+        settings: ExportSettings,
+        streamJson: Boolean,
+    ): List<PlannedAggregateFile> {
         val selectedFormats = settings.selectedExportFormats.sortedBy { it.ordinal }
         if (selectedFormats.isEmpty()) return emptyList()
 
@@ -1024,14 +1089,25 @@ class ExportRepositoryImpl(
                 else -> baseName
             }
             val extension = format.fileExtension
-            val content = contentForFormat(format, data, settings)
+            val body = if (streamJson && format == ExportFormat.JSON) {
+                AggregateBody.StreamedJson(
+                    jsonExporter.exportLegacyTree(
+                        data = data,
+                        customization = settings.formatCustomization,
+                        includeGranularData = settings.includeGranularData,
+                        detail = settings.exportDetailSelection(),
+                    ),
+                )
+            } else {
+                AggregateBody.Text(contentForFormat(format, data, settings))
+            }
             PlannedAggregateFile(
                 format = format,
                 subfolder = subfolder,
                 fileName = fileName,
                 extension = extension,
                 relativePath = relativePath(subfolder, "$fileName.$extension"),
-                content = content,
+                body = body,
             )
         }
     }
@@ -1266,8 +1342,15 @@ class ExportRepositoryImpl(
         val fileName: String,
         val extension: String,
         val relativePath: String,
-        val content: String,
+        val body: AggregateBody,
     )
+
+    private sealed interface AggregateBody {
+        data class Text(val content: String) : AggregateBody
+
+        /** Legacy JSON tree encoded straight into the destination by the exporter. */
+        class StreamedJson(val tree: JsonElement) : AggregateBody
+    }
 
     private data class PlannedSideEffect(
         val type: ExportPreviewSideEffectType,

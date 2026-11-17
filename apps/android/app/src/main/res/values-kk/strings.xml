@@ -1662,4 +1662,5 @@
     <string name="frontmatter_key_conflict_toast">Frontmatter кілтінің қайшылығы. «Frontmatter өрістері» бөлімін қараңыз.</string>
     <string name="frontmatter_key_conflict_inline">Бірегей, резервтелмеген өріс атауын таңдаңыз.</string>
     <string name="frontmatter_key_conflict_message">Frontmatter кілтінің қайшылығы. «Frontmatter өрістері» бөлімінде әр қосулы өріске бірегей, резервтелмеген атау беріңіз. Күнделікті жазбаңыз өзгертілмеді.</string>
+    <string name="automation_run_now_switch_failed">Бұл автоматтандыруға ауысу мүмкін болмады, сондықтан ол іске қосылмады. Оны ашып, қайталап көріңіз.</string>
 </resources>

@@ -1721,4 +1721,5 @@
     <string name="frontmatter_key_conflict_toast">Conflict in frontmatter-sleutel. Controleer Frontmatter-velden.</string>
     <string name="frontmatter_key_conflict_inline">Kies een unieke veldnaam die niet gereserveerd is.</string>
     <string name="frontmatter_key_conflict_message">Conflict in frontmatter-sleutel. Geef elk ingeschakeld veld in Frontmatter-velden een unieke naam die niet gereserveerd is. Je dagnotitie is niet gewijzigd.</string>
+    <string name="automation_run_now_switch_failed">Kon niet naar deze automatisering overschakelen, dus deze is niet uitgevoerd. Open hem en probeer het opnieuw.</string>
 </resources>

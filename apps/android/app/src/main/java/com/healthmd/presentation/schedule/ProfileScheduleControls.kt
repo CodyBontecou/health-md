@@ -1,5 +1,6 @@
 package com.healthmd.presentation.schedule
 
+import com.healthmd.presentation.common.clearFocusSafely
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.toggleable
@@ -188,7 +189,7 @@ internal fun <T> ProfileScheduleDropdown(
                     .testTag(tag).onSizeChanged { anchorWidth = it.width }
                     .scheduleFieldOutline(colors, focused = expanded)
                     .clickable(role = Role.Button) {
-                        focusManager.clearFocus(); keyboard?.hide(); expanded = true
+                        focusManager.clearFocusSafely(); keyboard?.hide(); expanded = true
                     }
                     .semantics { contentDescription = label }
                     .padding(start = GeistSpacing.space4, end = GeistSpacing.space3, top = GeistSpacing.space2, bottom = GeistSpacing.space2),
@@ -261,7 +262,7 @@ internal fun ProfileScheduleNumberField(
             textStyle = GeistType.label20Mono.copy(color = colors.primary),
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus(); keyboard?.hide() }),
+            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocusSafely(); keyboard?.hide() }),
             cursorBrush = SolidColor(colors.brandPrimary),
             decorationBox = { inner ->
                 Box(

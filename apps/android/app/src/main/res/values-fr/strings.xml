@@ -1780,4 +1780,5 @@
     <string name="frontmatter_key_conflict_toast">Conflit de clés du frontmatter. Vérifiez Champs du frontmatter.</string>
     <string name="frontmatter_key_conflict_inline">Choisissez un nom de champ unique et non réservé.</string>
     <string name="frontmatter_key_conflict_message">Conflit de clés du frontmatter. Dans Champs du frontmatter, attribuez à chaque champ activé un nom unique et non réservé. Votre note quotidienne n’a pas été modifiée.</string>
+    <string name="automation_run_now_switch_failed">Impossible de passer à cette automatisation, elle n’a donc pas été exécutée. Ouvrez-la et réessayez.</string>
 </resources>
