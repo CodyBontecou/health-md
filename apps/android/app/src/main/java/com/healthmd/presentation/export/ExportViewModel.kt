@@ -546,244 +546,306 @@ class ExportViewModel @Inject constructor(
         dismissJob?.cancel()
         val awakeActivityId = ExportAwakeCoordinator.shared.beginActivity()
         exportJob = viewModelScope.launch {
-            val settings = settingsRepository.getExportSettings()
-            if (rejectConflictingFrontmatter(settings)) return@launch
-            if (!distributionPolicy.fullAccessIncluded &&
-                !entitlementRepository.verifyExportAccess(
-                    settings.exportTarget, settings.apiEndpointUrl.takeIf { settings.exportMode == ExportMode.COMPATIBILITY })) {
-                _uiState.update { it.copy(isPurchased = false) }
-                return@launch
-            }
-            _uiState.update {
-                it.copy(
-                    isExporting = true,
-                    // The moment opens on this run, not the last run's "1 / 1 day".
-                    exportProgress = 0,
-                    exportTotal = (java.time.temporal.ChronoUnit.DAYS.between(it.startDate, it.endDate).toInt() + 1)
-                        .coerceAtLeast(1),
-                    exportProgressDate = null,
-                    lastResult = null,
-                    preview = null,
-                    exportedFolderUri = null,
-                    profileExecutionIssue = null,
-                )
-            }
-
-            val dates = ExportOrchestrator.dateRange(_uiState.value.startDate, _uiState.value.endDate)
-            if (activeProfileRequiresRebind()) {
-                val failedDates = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
-                    listOf(_uiState.value.startDate)
-                } else {
-                    dates
-                }
-                _uiState.update {
-                    it.copy(
-                        isExporting = false,
-                        lastResult = ExportResult(
-                            successCount = 0,
-                            totalCount = failedDates.size,
-                            failedDateDetails = failedDates.map { date ->
-                                FailedDateDetail(date, ExportFailureReason.UNKNOWN)
-                            },
-                            target = settings.exportTarget,
-                            exportMode = settings.exportMode,
-                        ),
-                        profileExecutionIssue =
-                            ExportProfileExecutionIssue.DESTINATION_REBIND_REQUIRED,
-                    )
-                }
-                return@launch
-            }
-
-            val progress: (Int, Int, String) -> Unit = { current, total, dateStr ->
-                _uiState.update {
-                    it.copy(
-                        exportProgress = current,
-                        exportTotal = total,
-                        exportProgressDate = dateStr.toLocalDateOrNull(),
-                    )
-                }
-            }
-            val activeDriveProfile = if (settings.exportTarget == ExportTarget.GOOGLE_DRIVE) {
-                exportProfileRepository.getActiveProfile()?.takeIf { it.target == ExportTarget.GOOGLE_DRIVE }
-            } else null
-            // A bound profile remains authority even if Settings selected another Drive account.
-            // An unbound Drive profile must never inherit the process-global selection.
-            val frozenDriveDestinationId = if (activeDriveProfile != null) {
-                activeDriveProfile.destinationId
-            } else _uiState.value.googleDriveDestinationId
-            val googleDriveOperationId = if (settings.exportTarget == ExportTarget.GOOGLE_DRIVE) {
-                java.util.UUID.randomUUID().toString()
-            } else null
-            val result = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
-                _uiState.update { it.copy(exportProgress = 0, exportTotal = 1, exportProgressDate = _uiState.value.startDate) }
-                // Manual export runs are interactive: Health Connect may show per-session exercise
-                // route consent prompts for third-party sessions during the read.
-                (rawSnapshotExportRunner?.exportRange(
-                    startDate = _uiState.value.startDate,
-                    endDate = _uiState.value.endDate,
-                    settings = settings,
-                    allowInteractiveRouteConsent = true,
-                    googleDriveDestinationId = frozenDriveDestinationId,
-                    googleDriveProfileId = activeDriveProfile?.id,
-                    googleDriveOperationId = googleDriveOperationId,
-                ) ?: ExportResult(
-                    successCount = 0,
-                    totalCount = 1,
-                    failedDateDetails = listOf(FailedDateDetail(_uiState.value.startDate, ExportFailureReason.UNKNOWN, "Raw snapshot service unavailable")),
-                    target = settings.exportTarget,
-                    exportMode = ExportMode.RAW_SNAPSHOT,
-                )).also { _uiState.update { state -> state.copy(exportProgress = 1) } }
-            } else when (settings.exportTarget) {
-                ExportTarget.DEVICE_FOLDER -> withInteractiveRouteConsent {
-                    ExportOrchestrator(healthRepository, exportRepository, rawSnapshotExportRunner)
-                        .exportDates(dates, settings, progress)
-                        .copy(target = ExportTarget.DEVICE_FOLDER)
-                }
-                ExportTarget.API_ENDPOINT -> withInteractiveRouteConsent {
-                    apiEndpointExportRunner?.exportDates(dates, settings, progress)
-                        ?: ExportResult(
-                            successCount = 0,
-                            totalCount = dates.size,
-                            failedDateDetails = dates.map {
-                                FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR, "API export service unavailable")
-                            },
-                            target = ExportTarget.API_ENDPOINT,
-                        )
-                }
-                ExportTarget.GOOGLE_DRIVE -> withInteractiveRouteConsent {
-                    frozenDriveDestinationId?.let { destinationId ->
-                        googleDriveExportOrchestrator.exportDates(
-                            dates = dates, settings = settings, destinationId = destinationId,
-                            profileId = activeDriveProfile?.id,
-                            source = "manual", operationId = requireNotNull(googleDriveOperationId),
-                            onProgress = progress,
-                        )
-                    } ?: ExportResult(0, dates.size,
-                        dates.map { FailedDateDetail(it, ExportFailureReason.NO_FOLDER_SELECTED) },
-                        target = ExportTarget.GOOGLE_DRIVE)
-                }
-                ExportTarget.AGENT_DATA_GATEWAY -> withInteractiveRouteConsent {
-                    agentDataGatewayExportRunner?.exportDates(dates, settings, progress)
-                        ?: ExportResult(
-                            successCount = 0,
-                            totalCount = dates.size,
-                            failedDateDetails = dates.map {
-                                FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR, "Agent Data gateway service unavailable")
-                            },
-                            target = ExportTarget.AGENT_DATA_GATEWAY,
-                        )
-                }
-            }
-
-            // UI and local history consume typed failure reasons, never arbitrary producer text.
-            // The original result remains available above for canonical API envelope/accounting work.
-            val presentationResult = result.withoutProducerDiagnostics()
-
-            // Record in history
-            exportHistoryRepository.insertEntry(
-                ExportHistoryEntry(
-                    timestamp = System.currentTimeMillis(),
-                    source = ExportSource.MANUAL,
-                    dateRangeStart = _uiState.value.startDate,
-                    dateRangeEnd = _uiState.value.endDate,
-                    successCount = presentationResult.successCount,
-                    totalCount = presentationResult.totalCount,
-                    failureReason = presentationResult.primaryFailureReason,
-                    failedDateDetails = presentationResult.failedDateDetails,
-                    target = settings.exportTarget,
-                    targetLabel = when (settings.exportTarget) {
-                        ExportTarget.DEVICE_FOLDER -> _uiState.value.folderName
-                        ExportTarget.API_ENDPOINT -> APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
-                        ExportTarget.GOOGLE_DRIVE -> _uiState.value.googleDriveDestinationLabel
-                        ExportTarget.AGENT_DATA_GATEWAY -> AgentDataGatewayEndpoint.redactedDescription(settings.agentDataGatewayUrl)
-                    },
-                    fileCount = when (settings.exportTarget) {
-                        ExportTarget.DEVICE_FOLDER -> if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
-                            presentationResult.artifactCount
-                        } else {
-                            estimatedFileCount(presentationResult.successCount, settings)
-                        }
-                        ExportTarget.GOOGLE_DRIVE -> presentationResult.artifactCount
-                        ExportTarget.API_ENDPOINT, ExportTarget.AGENT_DATA_GATEWAY -> 0
-                    },
-                    warningSummary = null,
-                    exportMode = presentationResult.exportMode,
-                    driveOperationId = presentationResult.retryDriveOperationIds.values.firstOrNull(),
-                )
-            )
-
-            // Successful manual export actions consume one free-tier use.
-            var postExportMilestone: Int? = null
-            if (ExportAccountingPolicy.shouldConsumeFreeExport(result, _uiState.value.isPurchased)) {
-                settingsRepository.recordFreeExportUse()
-                if (result.isFullSuccess) {
-                    postExportMilestone = FreemiumPolicy.guidanceMilestone(
-                        usedCount = settingsRepository.getFreeExportsUsed(),
-                        isUnlocked = _uiState.value.isPurchased,
-                    )
-                }
-            }
-            if (presentationResult.isFullSuccess && presentationResult.target == ExportTarget.GOOGLE_DRIVE) {
-                presentationResult.retryDriveOperationIds.values.toSet().forEach { operationId ->
-                    googleDriveExportOrchestrator.acknowledgeAfterHistory(operationId)
-                }
-            }
-
-            // Review prompts use their own counter, separate from free-tier quota. A Play
-            // request failure must not consume the attempt; completion is reported by the UI.
-            if (reviewPrompter.isAvailable && ExportAccountingPolicy.shouldCountForReviewPrompt(result)) {
-                settingsRepository.incrementSuccessfulExportCount()
-                val count = settingsRepository.getSuccessfulExportCount()
-                if (
-                    postExportMilestone == null &&
-                    count >= ReviewPromptPolicy.MINIMUM_SUCCESSFUL_EXPORTS &&
-                    reviewRequestState == ReviewRequestState.IDLE
-                ) {
-                    val nowEpochMillis = System.currentTimeMillis()
-                    val lastAttempt = settingsRepository.getLastReviewAttemptEpochMillis(nowEpochMillis)
-                    if (
-                        ReviewPromptPolicy.shouldRequestReview(
-                            successfulExportCount = count,
-                            lastAttemptEpochMillis = lastAttempt,
-                            nowEpochMillis = nowEpochMillis,
-                        )
-                    ) {
-                        reviewRequestState = ReviewRequestState.PENDING
-                        if (_requestReview.tryEmit(Unit)) {
-                            Timber.d("In-app review requested after $count successful exports")
-                        } else {
-                            reviewRequestState = ReviewRequestState.IDLE
-                        }
-                    }
-                }
-            }
-
-            val folderUri = if (settings.exportTarget == ExportTarget.DEVICE_FOLDER) {
-                settingsRepository.getExportFolderUri()
-            } else null
-            _uiState.update {
-                it.copy(
-                    isExporting = false,
-                    lastResult = presentationResult,
-                    postExportMilestone = postExportMilestone,
-                    exportedFolderUri = if (presentationResult.artifactCount > 0) folderUri else null,
-                    profileExecutionIssue = null,
-                )
-            }
-
-            if (result.toDiagnosticsSummary().shouldAutoDismiss) {
-                // Auto-dismiss successful result badges after 5 seconds. Partial and failed
-                // exports stay visible so users can inspect the diagnostics.
-                dismissJob = viewModelScope.launch {
-                    delay(5_000)
-                    _uiState.update { it.copy(lastResult = null, exportedFolderUri = null) }
-                }
+            try {
+                runManualExport()
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                // An escaped exception here used to take the whole app down (#339). Report the
+                // run as failed instead, so the user sees an error and can try again.
+                Timber.e(error, "Manual export failed unexpectedly")
+                finishFailedManualExport()
             }
         }.also { job ->
             job.invokeOnCompletion {
                 ExportAwakeCoordinator.shared.endActivity(awakeActivityId)
             }
+        }
+    }
+
+    /** True once the current manual run has written its History entry. */
+    private var manualRunRecorded = false
+
+    private suspend fun runManualExport() {
+        manualRunRecorded = false
+        val settings = settingsRepository.getExportSettings()
+        if (rejectConflictingFrontmatter(settings)) return
+        if (!distributionPolicy.fullAccessIncluded &&
+            !entitlementRepository.verifyExportAccess(
+                settings.exportTarget, settings.apiEndpointUrl.takeIf { settings.exportMode == ExportMode.COMPATIBILITY })) {
+            _uiState.update { it.copy(isPurchased = false) }
+            return
+        }
+        _uiState.update {
+            it.copy(
+                isExporting = true,
+                // The moment opens on this run, not the last run's "1 / 1 day".
+                exportProgress = 0,
+                exportTotal = (java.time.temporal.ChronoUnit.DAYS.between(it.startDate, it.endDate).toInt() + 1)
+                    .coerceAtLeast(1),
+                exportProgressDate = null,
+                lastResult = null,
+                preview = null,
+                exportedFolderUri = null,
+                profileExecutionIssue = null,
+            )
+        }
+
+        val dates = ExportOrchestrator.dateRange(_uiState.value.startDate, _uiState.value.endDate)
+        if (activeProfileRequiresRebind()) {
+            val failedDates = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                listOf(_uiState.value.startDate)
+            } else {
+                dates
+            }
+            _uiState.update {
+                it.copy(
+                    isExporting = false,
+                    lastResult = ExportResult(
+                        successCount = 0,
+                        totalCount = failedDates.size,
+                        failedDateDetails = failedDates.map { date ->
+                            FailedDateDetail(date, ExportFailureReason.UNKNOWN)
+                        },
+                        target = settings.exportTarget,
+                        exportMode = settings.exportMode,
+                    ),
+                    profileExecutionIssue =
+                        ExportProfileExecutionIssue.DESTINATION_REBIND_REQUIRED,
+                )
+            }
+            return
+        }
+
+        val progress: (Int, Int, String) -> Unit = { current, total, dateStr ->
+            _uiState.update {
+                it.copy(
+                    exportProgress = current,
+                    exportTotal = total,
+                    exportProgressDate = dateStr.toLocalDateOrNull(),
+                )
+            }
+        }
+        val activeDriveProfile = if (settings.exportTarget == ExportTarget.GOOGLE_DRIVE) {
+            exportProfileRepository.getActiveProfile()?.takeIf { it.target == ExportTarget.GOOGLE_DRIVE }
+        } else null
+        // A bound profile remains authority even if Settings selected another Drive account.
+        // An unbound Drive profile must never inherit the process-global selection.
+        val frozenDriveDestinationId = if (activeDriveProfile != null) {
+            activeDriveProfile.destinationId
+        } else _uiState.value.googleDriveDestinationId
+        val googleDriveOperationId = if (settings.exportTarget == ExportTarget.GOOGLE_DRIVE) {
+            java.util.UUID.randomUUID().toString()
+        } else null
+        val result = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+            _uiState.update { it.copy(exportProgress = 0, exportTotal = 1, exportProgressDate = _uiState.value.startDate) }
+            // Manual export runs are interactive: Health Connect may show per-session exercise
+            // route consent prompts for third-party sessions during the read.
+            (rawSnapshotExportRunner?.exportRange(
+                startDate = _uiState.value.startDate,
+                endDate = _uiState.value.endDate,
+                settings = settings,
+                allowInteractiveRouteConsent = true,
+                googleDriveDestinationId = frozenDriveDestinationId,
+                googleDriveProfileId = activeDriveProfile?.id,
+                googleDriveOperationId = googleDriveOperationId,
+            ) ?: ExportResult(
+                successCount = 0,
+                totalCount = 1,
+                failedDateDetails = listOf(FailedDateDetail(_uiState.value.startDate, ExportFailureReason.UNKNOWN, "Raw snapshot service unavailable")),
+                target = settings.exportTarget,
+                exportMode = ExportMode.RAW_SNAPSHOT,
+            )).also { _uiState.update { state -> state.copy(exportProgress = 1) } }
+        } else when (settings.exportTarget) {
+            ExportTarget.DEVICE_FOLDER -> withInteractiveRouteConsent {
+                ExportOrchestrator(healthRepository, exportRepository, rawSnapshotExportRunner)
+                    .exportDates(dates, settings, progress)
+                    .copy(target = ExportTarget.DEVICE_FOLDER)
+            }
+            ExportTarget.API_ENDPOINT -> withInteractiveRouteConsent {
+                apiEndpointExportRunner?.exportDates(dates, settings, progress)
+                    ?: ExportResult(
+                        successCount = 0,
+                        totalCount = dates.size,
+                        failedDateDetails = dates.map {
+                            FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR, "API export service unavailable")
+                        },
+                        target = ExportTarget.API_ENDPOINT,
+                    )
+            }
+            ExportTarget.GOOGLE_DRIVE -> withInteractiveRouteConsent {
+                frozenDriveDestinationId?.let { destinationId ->
+                    googleDriveExportOrchestrator.exportDates(
+                        dates = dates, settings = settings, destinationId = destinationId,
+                        profileId = activeDriveProfile?.id,
+                        source = "manual", operationId = requireNotNull(googleDriveOperationId),
+                        onProgress = progress,
+                    )
+                } ?: ExportResult(0, dates.size,
+                    dates.map { FailedDateDetail(it, ExportFailureReason.NO_FOLDER_SELECTED) },
+                    target = ExportTarget.GOOGLE_DRIVE)
+            }
+            ExportTarget.AGENT_DATA_GATEWAY -> withInteractiveRouteConsent {
+                agentDataGatewayExportRunner?.exportDates(dates, settings, progress)
+                    ?: ExportResult(
+                        successCount = 0,
+                        totalCount = dates.size,
+                        failedDateDetails = dates.map {
+                            FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR, "Agent Data gateway service unavailable")
+                        },
+                        target = ExportTarget.AGENT_DATA_GATEWAY,
+                    )
+            }
+        }
+
+        // UI and local history consume typed failure reasons, never arbitrary producer text.
+        // The original result remains available above for canonical API envelope/accounting work.
+        val presentationResult = result.withoutProducerDiagnostics()
+
+        // Record in history
+        exportHistoryRepository.insertEntry(
+            ExportHistoryEntry(
+                timestamp = System.currentTimeMillis(),
+                source = ExportSource.MANUAL,
+                dateRangeStart = _uiState.value.startDate,
+                dateRangeEnd = _uiState.value.endDate,
+                successCount = presentationResult.successCount,
+                totalCount = presentationResult.totalCount,
+                failureReason = presentationResult.primaryFailureReason,
+                failedDateDetails = presentationResult.failedDateDetails,
+                target = settings.exportTarget,
+                targetLabel = when (settings.exportTarget) {
+                    ExportTarget.DEVICE_FOLDER -> _uiState.value.folderName
+                    ExportTarget.API_ENDPOINT -> APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
+                    ExportTarget.GOOGLE_DRIVE -> _uiState.value.googleDriveDestinationLabel
+                    ExportTarget.AGENT_DATA_GATEWAY -> AgentDataGatewayEndpoint.redactedDescription(settings.agentDataGatewayUrl)
+                },
+                fileCount = when (settings.exportTarget) {
+                    ExportTarget.DEVICE_FOLDER -> if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                        presentationResult.artifactCount
+                    } else {
+                        estimatedFileCount(presentationResult.successCount, settings)
+                    }
+                    ExportTarget.GOOGLE_DRIVE -> presentationResult.artifactCount
+                    ExportTarget.API_ENDPOINT, ExportTarget.AGENT_DATA_GATEWAY -> 0
+                },
+                warningSummary = null,
+                exportMode = presentationResult.exportMode,
+                driveOperationId = presentationResult.retryDriveOperationIds.values.firstOrNull(),
+            )
+        )
+        manualRunRecorded = true
+
+        // Successful manual export actions consume one free-tier use.
+        var postExportMilestone: Int? = null
+        if (ExportAccountingPolicy.shouldConsumeFreeExport(result, _uiState.value.isPurchased)) {
+            settingsRepository.recordFreeExportUse()
+            if (result.isFullSuccess) {
+                postExportMilestone = FreemiumPolicy.guidanceMilestone(
+                    usedCount = settingsRepository.getFreeExportsUsed(),
+                    isUnlocked = _uiState.value.isPurchased,
+                )
+            }
+        }
+        if (presentationResult.isFullSuccess && presentationResult.target == ExportTarget.GOOGLE_DRIVE) {
+            presentationResult.retryDriveOperationIds.values.toSet().forEach { operationId ->
+                googleDriveExportOrchestrator.acknowledgeAfterHistory(operationId)
+            }
+        }
+
+        // Review prompts use their own counter, separate from free-tier quota. A Play
+        // request failure must not consume the attempt; completion is reported by the UI.
+        if (reviewPrompter.isAvailable && ExportAccountingPolicy.shouldCountForReviewPrompt(result)) {
+            settingsRepository.incrementSuccessfulExportCount()
+            val count = settingsRepository.getSuccessfulExportCount()
+            if (
+                postExportMilestone == null &&
+                count >= ReviewPromptPolicy.MINIMUM_SUCCESSFUL_EXPORTS &&
+                reviewRequestState == ReviewRequestState.IDLE
+            ) {
+                val nowEpochMillis = System.currentTimeMillis()
+                val lastAttempt = settingsRepository.getLastReviewAttemptEpochMillis(nowEpochMillis)
+                if (
+                    ReviewPromptPolicy.shouldRequestReview(
+                        successfulExportCount = count,
+                        lastAttemptEpochMillis = lastAttempt,
+                        nowEpochMillis = nowEpochMillis,
+                    )
+                ) {
+                    reviewRequestState = ReviewRequestState.PENDING
+                    if (_requestReview.tryEmit(Unit)) {
+                        Timber.d("In-app review requested after $count successful exports")
+                    } else {
+                        reviewRequestState = ReviewRequestState.IDLE
+                    }
+                }
+            }
+        }
+
+        val folderUri = if (settings.exportTarget == ExportTarget.DEVICE_FOLDER) {
+            settingsRepository.getExportFolderUri()
+        } else null
+        _uiState.update {
+            it.copy(
+                isExporting = false,
+                lastResult = presentationResult,
+                postExportMilestone = postExportMilestone,
+                exportedFolderUri = if (presentationResult.artifactCount > 0) folderUri else null,
+                profileExecutionIssue = null,
+            )
+        }
+
+        if (result.toDiagnosticsSummary().shouldAutoDismiss) {
+            // Auto-dismiss successful result badges after 5 seconds. Partial and failed
+            // exports stay visible so users can inspect the diagnostics.
+            dismissJob = viewModelScope.launch {
+                delay(5_000)
+                _uiState.update { it.copy(lastResult = null, exportedFolderUri = null) }
+            }
+        }
+    }
+
+    /** Ends a manual run that threw: the sheet shows a failed result and History records it. */
+    private suspend fun finishFailedManualExport() {
+        val state = _uiState.value
+        if (manualRunRecorded) {
+            // The run itself finished and is in History; only follow-up bookkeeping failed.
+            _uiState.update { it.copy(isExporting = false) }
+            return
+        }
+        val dates = if (state.settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+            listOf(state.startDate)
+        } else {
+            runCatching { ExportOrchestrator.dateRange(state.startDate, state.endDate) }
+                .getOrNull()?.takeIf { it.isNotEmpty() } ?: listOf(state.startDate)
+        }
+        val failed = ExportResult(
+            successCount = 0,
+            totalCount = dates.size,
+            failedDateDetails = dates.map { FailedDateDetail(it, ExportFailureReason.UNKNOWN) },
+            target = state.settings.exportTarget,
+            exportMode = state.settings.exportMode,
+        )
+        _uiState.update { it.copy(isExporting = false, lastResult = failed, profileExecutionIssue = null) }
+        try {
+            exportHistoryRepository.insertEntry(
+                ExportHistoryEntry(
+                    timestamp = System.currentTimeMillis(),
+                    source = ExportSource.MANUAL,
+                    dateRangeStart = state.startDate,
+                    dateRangeEnd = state.endDate,
+                    successCount = 0,
+                    totalCount = failed.totalCount,
+                    failureReason = failed.primaryFailureReason,
+                    failedDateDetails = failed.failedDateDetails,
+                    target = state.settings.exportTarget,
+                    exportMode = state.settings.exportMode,
+                ),
+            )
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            Timber.e(error, "Could not record failed manual export")
         }
     }
 

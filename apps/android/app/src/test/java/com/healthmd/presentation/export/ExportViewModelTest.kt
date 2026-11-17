@@ -877,6 +877,36 @@ class ExportViewModelTest {
         }
     }
 
+    @Test
+    fun manualExportThatThrowsEndsAsAFailedRunInsteadOfCrashing() = runTest {
+        // #339: an exception escaping the export coroutine used to crash the app. Before this
+        // fix runTest failed here with the uncaught exception.
+        val history = mockk<ExportHistoryRepository>(relaxed = true) {
+            coEvery { insertEntry(any()) } throws IllegalStateException("history store unavailable")
+        }
+        val viewModel = createViewModel(
+            healthRepository = FakeHealthRepository(hasPermissions = true),
+            exportHistoryRepository = history,
+        )
+        advanceUntilIdle()
+        val today = LocalDate.now()
+        viewModel.setDateRange(today, today)
+
+        viewModel.startExport()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertThat(state.isExporting).isFalse()
+        assertThat(state.lastResult?.successCount).isEqualTo(0)
+        assertThat(state.lastResult?.failedDateDetails?.map { it.date }).containsExactly(today)
+
+        // Run again: the guard is released, so a retry starts a new run rather than wedging.
+        viewModel.startExport()
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.isExporting).isFalse()
+        io.mockk.coVerify(exactly = 4) { history.insertEntry(any()) }
+    }
+
     private fun allowedProfileRepository() = mockk<ExportProfileRepository> {
         every { hasOpaqueProfileState } returns kotlinx.coroutines.flow.flowOf(false)
         coEvery { activeSharedSetupV2ExecutionAccess() } returns

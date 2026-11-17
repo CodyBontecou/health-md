@@ -1695,4 +1695,5 @@
     <string name="frontmatter_key_conflict_toast">Frontmatter ਕੁੰਜੀ ਟਕਰਾਅ। Frontmatter ਫ਼ੀਲਡ ਦੇਖੋ।</string>
     <string name="frontmatter_key_conflict_inline">ਇੱਕ ਵਿਲੱਖਣ, ਗੈਰ-ਰਾਖਵਾਂ ਫ਼ੀਲਡ ਨਾਮ ਚੁਣੋ।</string>
     <string name="frontmatter_key_conflict_message">Frontmatter ਕੁੰਜੀ ਟਕਰਾਅ। Frontmatter ਫ਼ੀਲਡ ਵਿੱਚ ਹਰ ਚਾਲੂ ਫ਼ੀਲਡ ਨੂੰ ਇੱਕ ਵਿਲੱਖਣ, ਗੈਰ-ਰਾਖਵਾਂ ਨਾਮ ਦਿਓ। ਤੁਹਾਡਾ ਰੋਜ਼ਾਨਾ ਨੋਟ ਨਹੀਂ ਬਦਲਿਆ ਗਿਆ।</string>
+    <string name="automation_run_now_switch_failed">ਇਸ ਆਟੋਮੇਸ਼ਨ \'ਤੇ ਨਹੀਂ ਜਾ ਸਕੇ, ਇਸ ਲਈ ਇਹ ਨਹੀਂ ਚੱਲੀ। ਇਸਨੂੰ ਖੋਲ੍ਹੋ ਅਤੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
 </resources>

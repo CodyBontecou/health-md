@@ -1845,4 +1845,5 @@
     <string name="frontmatter_key_conflict_toast">Конфлікт ключів frontmatter. Перевірте «Поля Frontmatter».</string>
     <string name="frontmatter_key_conflict_inline">Виберіть унікальну незарезервовану назву поля.</string>
     <string name="frontmatter_key_conflict_message">Конфлікт ключів frontmatter. Дайте кожному ввімкненому полю унікальну незарезервовану назву в розділі «Поля Frontmatter». Вашу щоденну нотатку не змінено.</string>
+    <string name="automation_run_now_switch_failed">Не вдалося перейти до цієї автоматизації, тому її не запущено. Відкрийте її та спробуйте знову.</string>
 </resources>

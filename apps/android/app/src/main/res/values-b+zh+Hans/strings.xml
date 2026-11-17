@@ -1533,4 +1533,5 @@
     <string name="frontmatter_key_conflict_toast">Frontmatter 键冲突。请检查“Frontmatter 字段”。</string>
     <string name="frontmatter_key_conflict_inline">请选择唯一且非保留的字段名称。</string>
     <string name="frontmatter_key_conflict_message">Frontmatter 键冲突。请在“Frontmatter 字段”中为每个已启用的字段设置唯一且非保留的名称。你的每日笔记未被更改。</string>
+    <string name="automation_run_now_switch_failed">无法切换到此自动化，因此未运行。请打开它后重试。</string>
 </resources>

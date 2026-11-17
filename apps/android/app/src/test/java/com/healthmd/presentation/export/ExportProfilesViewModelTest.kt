@@ -44,6 +44,41 @@ class ExportProfilesViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     @Test
+    fun `run now opens export only after the switch commits and ignores repeat taps`() = runTest {
+        val h = harness()
+        val gate = kotlinx.coroutines.CompletableDeferred<Boolean>()
+        coEvery { h.profileCoordinator.activate("p2") } coAnswers { gate.await() }
+        val vm = h.viewModel()
+        val events = mutableListOf<String>()
+
+        vm.activateForRun("p2", onReady = { events += "ready" }, onFailed = { events += "failed" })
+        vm.activateForRun("p2", onReady = { events += "ready" }, onFailed = { events += "failed" })
+        advanceUntilIdle()
+        assertThat(events).isEmpty()
+
+        gate.complete(true)
+        advanceUntilIdle()
+        assertThat(events).containsExactly("ready")
+        io.mockk.coVerify(exactly = 1) { h.profileCoordinator.activate("p2") }
+    }
+
+    @Test
+    fun `run now reports a switch that fails closed or throws instead of opening export`() = runTest {
+        val h = harness()
+        coEvery { h.profileCoordinator.activate("p2") } returns false
+        coEvery { h.profileCoordinator.activate("p3") } throws IllegalStateException("store unavailable")
+        val vm = h.viewModel()
+        val events = mutableListOf<String>()
+
+        vm.activateForRun("p2", onReady = { events += "ready:p2" }, onFailed = { events += "failed:p2" })
+        advanceUntilIdle()
+        vm.activateForRun("p3", onReady = { events += "ready:p3" }, onFailed = { events += "failed:p3" })
+        advanceUntilIdle()
+
+        assertThat(events).containsExactly("failed:p2", "failed:p3").inOrder()
+    }
+
+    @Test
     fun `raw editor output is valid without inactive compatibility formats`() {
         RawExportFormat.entries.forEach { format ->
             val draft = ExportProfileEditorDraft(

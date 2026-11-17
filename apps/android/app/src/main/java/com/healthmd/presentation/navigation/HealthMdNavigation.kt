@@ -142,6 +142,9 @@ fun HealthMdNavigation(
     val navController = rememberNavController()
     val coroutineScope = rememberCoroutineScope()
     val appContext = LocalContext.current
+    val showRunNowFailed: () -> Unit = {
+        android.widget.Toast.makeText(appContext, R.string.automation_run_now_switch_failed, android.widget.Toast.LENGTH_LONG).show()
+    }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     // Export now is a sheet over the screen it opened from; navigation follows that screen.
@@ -469,7 +472,7 @@ fun HealthMdNavigation(
                         }
                     }
                     val runNow: (String) -> Unit = { id ->
-                        runAutomationNow(id, automationsProfiles, protectionEnabled != false, settingsViewModel::showBlockedChangeToast) {
+                        runAutomationNow(id, automationsProfiles, protectionEnabled != false, settingsViewModel::showBlockedChangeToast, showRunNowFailed) {
                             navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true }
                         }
                     }
@@ -678,7 +681,7 @@ fun HealthMdNavigation(
                     onBack = { navController.popBackStack() },
                     onCompose = { id -> navController.navigate(SubRoutes.automationCompose(id)) { launchSingleTop = true } },
                     onRunNow = { id ->
-                        runAutomationNow(id, profiles, protectionEnabled != false, settingsViewModel::showBlockedChangeToast) {
+                        runAutomationNow(id, profiles, protectionEnabled != false, settingsViewModel::showBlockedChangeToast, showRunNowFailed) {
                             navController.navigate(SubRoutes.EXPORT_NOW) { launchSingleTop = true }
                         }
                     },
@@ -1112,17 +1115,21 @@ private fun runAutomationNow(
     profiles: ExportProfilesViewModel,
     configurationLocked: Boolean,
     onBlocked: () -> Unit,
+    onActivationFailed: () -> Unit,
     openExportNow: () -> Unit,
 ) {
     val active = profiles.uiState.value.rows.firstOrNull { it.profile.id == profileId }?.isActive == true
-    if (!active) {
-        if (configurationLocked) {
-            onBlocked()
-            return
-        }
-        profiles.activate(profileId)
+    if (active) {
+        openExportNow()
+        return
     }
-    openExportNow()
+    if (configurationLocked) {
+        onBlocked()
+        return
+    }
+    // Open Export now only after the switch commits (#339): opening it mid-switch let a run read
+    // half-applied settings, and a failed switch would have run the previous automation.
+    profiles.activateForRun(profileId, onReady = openExportNow, onFailed = onActivationFailed)
 }
 
 /** Export now routes shown as a sheet over the current screen. */

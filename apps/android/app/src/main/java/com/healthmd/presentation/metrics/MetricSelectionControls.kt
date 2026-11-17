@@ -1,5 +1,6 @@
 package com.healthmd.presentation.metrics
 
+import com.healthmd.presentation.common.clearFocusSafely
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -97,7 +98,7 @@ internal fun MetricSelectionSearchField(
             shape = RoundedCornerShape(Radii.textField),
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus(); keyboard?.hide() }),
+            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocusSafely(); keyboard?.hide() }),
         )
     }
     // The field may have been disposed by the lazy list. Request focus only after

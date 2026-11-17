@@ -1535,4 +1535,5 @@
     <string name="frontmatter_key_conflict_toast">フロントマターのキーが競合しています。「フロントマターフィールド」を確認してください。</string>
     <string name="frontmatter_key_conflict_inline">一意で予約されていないフィールド名を選んでください。</string>
     <string name="frontmatter_key_conflict_message">フロントマターのキーが競合しています。「フロントマターフィールド」で、有効な各フィールドに一意で予約されていない名前を付けてください。デイリーノートは変更されていません。</string>
+    <string name="automation_run_now_switch_failed">このオートメーションに切り替えられなかったため、実行されませんでした。開いてもう一度お試しください。</string>
 </resources>

@@ -1782,4 +1782,5 @@
     <string name="frontmatter_key_conflict_toast">Frontmatter key conflict. Review Frontmatter Fields.</string>
     <string name="frontmatter_key_conflict_inline">Choose a unique, non-reserved field name.</string>
     <string name="frontmatter_key_conflict_message">Frontmatter key conflict. Give each enabled field a unique, non-reserved name in Frontmatter Fields. Your daily note was not changed.</string>
+    <string name="automation_run_now_switch_failed">Couldn’t switch to this automation, so it didn’t run. Open it and try again.</string>
 </resources>

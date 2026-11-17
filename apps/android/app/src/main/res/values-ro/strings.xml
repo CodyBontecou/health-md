@@ -1780,4 +1780,5 @@
     <string name="frontmatter_key_conflict_toast">Conflict de cheie frontmatter. Verificați Câmpurile frontmatter.</string>
     <string name="frontmatter_key_conflict_inline">Alegeți un nume de câmp unic și nerezervat.</string>
     <string name="frontmatter_key_conflict_message">Conflict de cheie frontmatter. Dați fiecărui câmp activat din Câmpurile frontmatter un nume unic și nerezervat. Nota zilnică nu a fost modificată.</string>
+    <string name="automation_run_now_switch_failed">Nu s-a putut comuta la această automatizare, așa că nu a rulat. Deschide-o și încearcă din nou.</string>
 </resources>
