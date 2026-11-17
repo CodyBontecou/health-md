@@ -1,5 +1,5 @@
-v3.5.4 — Scheduled export fixes
+v3.5.5 — Scheduled export fixes
+• Fixes a crash after updating or restarting your phone when a scheduled export uses a long custom template.
 • Scheduled exports work again for automations set up before 3.5.2. If one shows Paused, switch it back on.
 • The Archive no longer shows two "Default" lanes; the app-wide schedule now appears as "Current settings".
 • Raw API Snapshot (NDJSON) is available as an export format again.
-• Export names any selected data Health Connect won't let Health.md read, such as Sleep, and offers Grant access.

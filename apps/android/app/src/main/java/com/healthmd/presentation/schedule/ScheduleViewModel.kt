@@ -382,7 +382,9 @@ class ScheduleViewModel @Inject constructor(
             }
 
             if (state.isEnabled) {
-                exportScheduler.reconcile()
+                // Settings are already persisted; a reconcile failure must not crash the UI.
+                // refreshSchedulingState and the next app start retry it.
+                runCatching { exportScheduler.reconcile() }
             } else {
                 exportScheduler.cancel()
             }

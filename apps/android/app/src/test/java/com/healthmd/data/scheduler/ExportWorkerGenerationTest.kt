@@ -634,6 +634,11 @@ class ExportWorkerGenerationTest {
         every { stateStore.markAdmissionExecutionCompleted(any(), any(), any()) } returns admissionMatches
         every { stateStore.completeAdmission(any(), any(), any()) } returns admissionMatches
         every { stateStore.pendingArmOccurrence() } returns null
+        // The real store resolves the admitted occurrence's snapshot by its exact digest.
+        val storedSnapshotJson = occurrence.configuration.canonicalSettingsSnapshotJson
+        every { stateStore.settingsSnapshotJson(any()) } answers {
+            storedSnapshotJson?.takeIf { scheduledExportSha256Hex(it) == firstArg<String>() }
+        }
         val factory = object : WorkerFactory() {
             override fun createWorker(
                 appContext: Context,

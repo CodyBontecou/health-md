@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import timber.log.Timber
 
 /** Restores the next one-shot alarm after system events that clear or invalidate alarms. */
 @AndroidEntryPoint
@@ -21,10 +22,16 @@ class BootReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
-                exportScheduler.reconcile(
-                    forceRecalculate = intent.action == Intent.ACTION_TIME_CHANGED ||
-                        intent.action == Intent.ACTION_TIMEZONE_CHANGED,
-                )
+                // A failure must not crash the process (this runs on every boot and app update)
+                // or skip re-arming scheduled profiles below. The next reconcile retries.
+                runCatching {
+                    exportScheduler.reconcile(
+                        forceRecalculate = intent.action == Intent.ACTION_TIME_CHANGED ||
+                            intent.action == Intent.ACTION_TIMEZONE_CHANGED,
+                    )
+                }.onFailure { error ->
+                    Timber.e("Scheduled export reconcile failed after %s: %s", intent.action, error.javaClass.simpleName)
+                }
                 // Phase 6: re-arm every scheduled-profile entry after the same system events.
                 runCatching {
                     profileScheduler.reconcile(

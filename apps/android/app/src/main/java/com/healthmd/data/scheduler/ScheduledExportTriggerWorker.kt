@@ -13,10 +13,22 @@ class ScheduledExportTriggerWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val exportScheduler: ExportScheduler,
+    private val stateStore: ScheduledExportStateStore,
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        val occurrence = ScheduledExportOccurrence.fromWorkData(inputData) ?: return Result.failure()
+        val occurrence = ScheduledExportOccurrence.fromWorkData(
+            inputData,
+            stateStore::settingsSnapshotJson,
+        ) ?: return if (
+            ScheduledExportOccurrence.settingsSnapshotReference(inputData)
+                ?.let { stateStore.settingsSnapshotJson(it) == null } == true
+        ) {
+            // The referenced snapshot left durable state, so a newer occurrence replaced this one.
+            Result.success()
+        } else {
+            Result.failure()
+        }
         return try {
             when (
                 exportScheduler.handleOccurrenceDelivery(

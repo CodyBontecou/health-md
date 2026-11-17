@@ -179,7 +179,7 @@ class ExportSchedulerGenerationTest {
         }
         assertThat(exportRequests).hasSize(1)
         val admitted = requireNotNull(
-            ScheduledExportOccurrence.fromWorkData(exportRequests.single().workSpec.input),
+            ScheduledExportOccurrence.fromWorkData(exportRequests.single().workSpec.input, stateStore::settingsSnapshotJson),
         )
         assertThat(admitted.generation).isEqualTo("generation-migrated")
         assertThat(admitted.triggerAtMillis).isEqualTo(dueAtMillis)
@@ -233,7 +233,7 @@ class ExportSchedulerGenerationTest {
         }
         assertThat(exportRequests).hasSize(1)
         val admitted = requireNotNull(
-            ScheduledExportOccurrence.fromWorkData(exportRequests.single().workSpec.input),
+            ScheduledExportOccurrence.fromWorkData(exportRequests.single().workSpec.input, stateStore::settingsSnapshotJson),
         )
         assertThat(admitted.generation).isEqualTo("generation-migrated")
         assertThat(admitted.triggerAtMillis).isEqualTo(dueAtMillis)
@@ -382,7 +382,7 @@ class ExportSchedulerGenerationTest {
         }
         assertThat(exportRequests).hasSize(1)
         val admitted = requireNotNull(
-            ScheduledExportOccurrence.fromWorkData(exportRequests.single().workSpec.input),
+            ScheduledExportOccurrence.fromWorkData(exportRequests.single().workSpec.input, stateStore::settingsSnapshotJson),
         )
         assertThat(admitted.generation).isEqualTo("generation-output-b")
         assertThat(admitted.triggerAtMillis).isEqualTo(dueAtMillis)
@@ -430,7 +430,7 @@ class ExportSchedulerGenerationTest {
         }
         assertThat(exportRequests).hasSize(1)
         val admitted = requireNotNull(
-            ScheduledExportOccurrence.fromWorkData(exportRequests.single().workSpec.input),
+            ScheduledExportOccurrence.fromWorkData(exportRequests.single().workSpec.input, stateStore::settingsSnapshotJson),
         )
         assertThat(admitted.generation).isEqualTo("generation-output-b")
         assertThat(admitted.triggerAtMillis).isEqualTo(dueAtMillis)
@@ -514,13 +514,15 @@ class ExportSchedulerGenerationTest {
 
         assertThat(handling.await()).isTrue()
         val export = requests.single { ExportScheduler.EXPORT_OCCURRENCE_TAG in it.tags }
-        val admitted = requireNotNull(ScheduledExportOccurrence.fromWorkData(export.workSpec.input))
+        val admitted = requireNotNull(ScheduledExportOccurrence.fromWorkData(export.workSpec.input, stateStore::settingsSnapshotJson))
         assertThat(admitted.settingsSnapshot?.filenameFormat).isEqualTo("material-c-{date}")
         assertThat(admitted.generation).isEqualTo("generation-output-c")
     }
 
     @Test
-    fun oversizedWorkDataIsRejectedBeforeReplacingTheActiveGeneration() = runTest {
+    fun snapshotLargerThanWorkManagerLimitArmsByReferenceAndRoundTrips() = runTest {
+        // Regression for Play crash "Data cannot occupy more than 10240 bytes when serialized":
+        // a large custom template used to crash reconcile on every boot/app update.
         val oldSettings = settings(ExportTarget.DEVICE_FOLDER)
         val oversizedSettings = oldSettings.copy(
             formatCustomization = oldSettings.formatCustomization.copy(
@@ -538,18 +540,23 @@ class ExportSchedulerGenerationTest {
             generations = listOf("generation-oversized"),
         )
 
-        val error = runCatching { scheduler.reconcile() }.exceptionOrNull()
+        scheduler.reconcile()
 
-        assertThat(error).isInstanceOf(ScheduledExportWorkDataTooLargeException::class.java)
-        assertThat(stateStore.load()).isEqualTo(active)
+        val replacement = requireNotNull(stateStore.load())
+        assertThat(replacement.generation).isEqualTo("generation-oversized")
+        assertThat(
+            requireNotNull(replacement.configuration.canonicalSettingsSnapshotJson).length,
+        ).isGreaterThan(10_240)
         assertThat(stateStore.loadTransition()).isNull()
-        assertThat(stateStore.loadAdmission()).isNull()
-        assertThat(requests).isEmpty()
-        verify(exactly = 0) {
-            workManager.cancelAllWorkByTag(
-                ExportScheduler.GENERATION_TAG_PREFIX + "generation-small",
-            )
-        }
+
+        val input = requests.single { ExportScheduler.FALLBACK_TRIGGER_TAG in it.tags }.workSpec.input
+        assertThat(input.getString(ScheduledExportOccurrence.KEY_SETTINGS_SNAPSHOT_JSON)).isNull()
+        assertThat(ScheduledExportOccurrence.settingsSnapshotReference(input))
+            .isEqualTo(replacement.configuration.settingsSnapshotSha256)
+        // An unresolvable reference fails closed; durable state resolves the exact snapshot.
+        assertThat(ScheduledExportOccurrence.fromWorkData(input)).isNull()
+        assertThat(ScheduledExportOccurrence.fromWorkData(input, stateStore::settingsSnapshotJson))
+            .isEqualTo(replacement)
     }
 
     @Test

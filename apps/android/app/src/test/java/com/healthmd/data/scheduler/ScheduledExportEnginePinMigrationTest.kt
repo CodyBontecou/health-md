@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.work.Data
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.exportengine.ExportEngineMode
 import com.healthmd.domain.exportengine.ExportEnginePinCodec
 import com.healthmd.testing.syntheticExportEnginePin
@@ -88,7 +89,10 @@ class ScheduledExportEnginePinMigrationTest {
         val snapshot = AndroidExportSettingsSnapshot.capture(queuedSettings, pin, ZoneId.of("America/Los_Angeles"))
         val queued = occurrence(pin, snapshot)
 
-        val decoded = requireNotNull(ScheduledExportOccurrence.fromWorkData(queued.toWorkData()))
+        val storedJson = queued.configuration.canonicalSettingsSnapshotJson
+        val decoded = requireNotNull(
+            ScheduledExportOccurrence.fromWorkData(queued.toWorkData()) { storedJson },
+        )
         val currentAfterQueue = queuedSettings.copy(
             exportFormats = setOf(ExportFormat.JSON),
             filenameFormat = "changed-{date}",
@@ -139,6 +143,58 @@ class ScheduledExportEnginePinMigrationTest {
 
         assertThat(ScheduledExportOccurrence.hasDurableSettingsSnapshot(corrupt)).isTrue()
         assertThat(ScheduledExportOccurrence.fromWorkData(corrupt)).isNull()
+    }
+
+    @Test
+    fun workDataCarriesSnapshotDigestAndResolvesOnlyExactStoredJson() {
+        val pin = syntheticExportEnginePin(mode = ExportEngineMode.rust)
+        val snapshot = AndroidExportSettingsSnapshot.capture(
+            ExportSettings(filenameFormat = "referenced-{date}"),
+            pin,
+            ZoneId.of("America/Los_Angeles"),
+        )
+        val queued = occurrence(pin, snapshot)
+        val json = requireNotNull(queued.configuration.canonicalSettingsSnapshotJson)
+        val data = queued.toWorkData()
+
+        assertThat(data.getString(ScheduledExportOccurrence.KEY_SETTINGS_SNAPSHOT_JSON)).isNull()
+        assertThat(ScheduledExportOccurrence.settingsSnapshotReference(data))
+            .isEqualTo(scheduledExportSha256Hex(json))
+        assertThat(ScheduledExportOccurrence.hasDurableSettingsSnapshot(data)).isTrue()
+        assertThat(ScheduledExportOccurrence.fromWorkData(data) { json }).isEqualTo(queued)
+        // Missing or substituted state fails closed rather than decoding as snapshot-less.
+        assertThat(ScheduledExportOccurrence.fromWorkData(data)).isNull()
+        val other = requireNotNull(
+            AndroidExportSettingsSnapshotCodec.encodeCanonical(
+                AndroidExportSettingsSnapshot.capture(
+                    ExportSettings(filenameFormat = "other-{date}"),
+                    pin,
+                    ZoneId.of("America/Los_Angeles"),
+                ),
+            ),
+        )
+        assertThat(ScheduledExportOccurrence.fromWorkData(data) { other }).isNull()
+    }
+
+    @Test
+    fun legacyInlineSnapshotWorkDataFromEarlierVersionsStillDecodes() {
+        val pin = syntheticExportEnginePin(mode = ExportEngineMode.rust)
+        val snapshot = AndroidExportSettingsSnapshot.capture(
+            ExportSettings(),
+            pin,
+            ZoneId.of("America/Los_Angeles"),
+        )
+        val queued = occurrence(pin, snapshot)
+        val legacy = Data.Builder().putAll(queued.toWorkData())
+            .putString(ScheduledExportOccurrence.KEY_SETTINGS_SNAPSHOT_SHA256, null)
+            .putString(
+                ScheduledExportOccurrence.KEY_SETTINGS_SNAPSHOT_JSON,
+                queued.configuration.canonicalSettingsSnapshotJson,
+            )
+            .build()
+
+        assertThat(ScheduledExportOccurrence.settingsSnapshotReference(legacy)).isNull()
+        assertThat(ScheduledExportOccurrence.fromWorkData(legacy)).isEqualTo(queued)
     }
 
     @Test
