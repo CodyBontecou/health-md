@@ -118,7 +118,7 @@ class SchedulingManager: ObservableObject {
         comment: "Message shown when a scheduled export cannot run because free quota is exhausted"
     )
     private static let entitlementUnresolvedMessage = String(
-        localized: "Health.md couldn't confirm your access while the iPhone was locked. Unlock your iPhone and open Health.md to finish this export.",
+        localized: "Health.md couldn't confirm your access while this device was locked. Unlock it and open Health.md to finish this export.",
         comment: "Message shown when a scheduled export is deferred because purchase status could not be read in the background"
     )
 

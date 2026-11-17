@@ -66874,61 +66874,61 @@
         }
       }
     },
-    "Health.md couldn't confirm your access while the iPhone was locked. Unlock your iPhone and open Health.md to finish this export." : {
+    "Health.md couldn't confirm your access while this device was locked. Unlock it and open Health.md to finish this export." : {
       "comment" : "Message shown when a scheduled export is deferred because purchase status could not be read in the background",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md konnte deinen Zugriff nicht bestätigen, während das iPhone gesperrt war. Entsperre dein iPhone und öffne Health.md, um diesen Export abzuschließen."
+            "value" : "Health.md konnte deinen Zugriff nicht bestätigen, während dieses Gerät gesperrt war. Entsperre es und öffne Health.md, um diesen Export abzuschließen."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md no pudo confirmar tu acceso mientras el iPhone estaba bloqueado. Desbloquea tu iPhone y abre Health.md para terminar esta exportación."
+            "value" : "Health.md no pudo confirmar tu acceso mientras este dispositivo estaba bloqueado. Desbloquéalo y abre Health.md para terminar esta exportación."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md n’a pas pu confirmer votre accès pendant que l’iPhone était verrouillé. Déverrouillez votre iPhone et ouvrez Health.md pour terminer cette exportation."
+            "value" : "Health.md n’a pas pu confirmer votre accès pendant que cet appareil était verrouillé. Déverrouillez-le et ouvrez Health.md pour terminer cette exportation."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md non è riuscito a confermare il tuo accesso mentre l’iPhone era bloccato. Sblocca l’iPhone e apri Health.md per completare questa esportazione."
+            "value" : "Health.md non è riuscito a confermare il tuo accesso mentre questo dispositivo era bloccato. Sbloccalo e apri Health.md per completare questa esportazione."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iPhoneがロックされていたため、Health.mdはアクセス権を確認できませんでした。iPhoneのロックを解除してHealth.mdを開き、このエクスポートを完了してください。"
+            "value" : "このデバイスがロックされていたため、Health.mdはアクセス権を確認できませんでした。ロックを解除してHealth.mdを開き、このエクスポートを完了してください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iPhone이 잠겨 있어 Health.md에서 이용 권한을 확인하지 못했습니다. iPhone 잠금을 해제하고 Health.md를 열어 이 내보내기를 완료하세요."
+            "value" : "이 기기가 잠겨 있어 Health.md에서 이용 권한을 확인하지 못했습니다. 잠금을 해제하고 Health.md를 열어 이 내보내기를 완료하세요."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Health.md kon je toegang niet bevestigen terwijl de iPhone vergrendeld was. Ontgrendel je iPhone en open Health.md om deze export te voltooien."
+            "value" : "Health.md kon je toegang niet bevestigen terwijl dit apparaat vergrendeld was. Ontgrendel het en open Health.md om deze export te voltooien."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O Health.md não conseguiu confirmar seu acesso enquanto o iPhone estava bloqueado. Desbloqueie o iPhone e abra o Health.md para concluir esta exportação."
+            "value" : "O Health.md não conseguiu confirmar seu acesso enquanto este dispositivo estava bloqueado. Desbloqueie-o e abra o Health.md para concluir esta exportação."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iPhone 锁定时，Health.md 无法确认你的访问权限。请解锁 iPhone 并打开 Health.md 以完成此次导出。"
+            "value" : "此设备锁定时，Health.md 无法确认你的访问权限。请解锁设备并打开 Health.md 以完成此次导出。"
           }
         }
       }

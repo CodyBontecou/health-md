@@ -58,7 +58,7 @@ final class PurchaseManager: ObservableObject {
         source: PurchasePresentationSource? = nil
     ) async {}
     func restore(source: PurchasePresentationSource? = nil) async {}
-    func refreshStatus() async { isUnlocked = true }
+    func refreshStatus(includeHistoricalFallback: Bool = false, allowsServerVerification: Bool = true) async { isUnlocked = true }
     func scheduledExportAccess(jobID: UUID?, now: Date = Date()) async -> ScheduledExportAccessDecision { .allowed }
     func attemptSilentServerVerification() async {}
     static func isLegacyUnlock(originalPurchaseDate: Date) -> Bool { true }
@@ -299,10 +299,14 @@ final class PurchaseManager: ObservableObject {
     private let productLoader: @MainActor ([String]) async throws -> [Product]
     private var productLoadTask: Task<Void, Never>? = nil
     /// Re-reads entitlement state before a scheduled export admission check.
+    /// Production skips the legacy server POSTs to protect the background budget.
     private let statusRefresher: @MainActor (PurchaseManager) async -> Void
     /// Whether a negative entitlement read can be trusted. StoreKit's local
     /// transaction store may be unreadable while the device is locked.
     private let entitlementReadIsReliable: @MainActor () -> Bool
+    /// False in UI-test, IAP-review and static-price modes, whose configured
+    /// purchase state must not be overwritten by a live StoreKit read.
+    private let refreshesBeforeScheduledAdmission: Bool
 
     // MARK: - Init
 
@@ -312,8 +316,9 @@ final class PurchaseManager: ObservableObject {
         self.productLoader = { productIDs in
             try await Product.products(for: productIDs)
         }
-        self.statusRefresher = { await $0.refreshStatus() }
+        self.statusRefresher = { await $0.refreshStatus(allowsServerVerification: false) }
         self.entitlementReadIsReliable = Self.liveEntitlementReadIsReliable
+        self.refreshesBeforeScheduledAdmission = Self.usesLiveStoreKit
         migrateUserDefaultsToKeychain()
 
         #if os(macOS)
@@ -356,8 +361,9 @@ final class PurchaseManager: ObservableObject {
         self.keychain = keychain
         self.defaults = defaults
         self.productLoader = productLoader
-        self.statusRefresher = statusRefresher ?? { await $0.refreshStatus() }
+        self.statusRefresher = statusRefresher ?? { await $0.refreshStatus(allowsServerVerification: false) }
         self.entitlementReadIsReliable = entitlementReadIsReliable
+        self.refreshesBeforeScheduledAdmission = true
         migrateUserDefaultsToKeychain()
     }
 
@@ -414,6 +420,11 @@ final class PurchaseManager: ObservableObject {
     func recordStoreKitEntitlementForTesting(productID: String, expirationDate: Date? = nil) {
         recordUnlockedEntitlement(StoreKitEntitlementCandidate(
             productID: productID, ownershipDescription: "test", source: "test", expirationDate: expirationDate))
+    }
+
+    /// Test-only: record a grandfathered unlock through the production path.
+    func recordLegacyUnlockForTesting() {
+        recordLegacyUnlock()
     }
 
     /// Test-only: directly set legacy state without StoreKit.
@@ -587,9 +598,58 @@ final class PurchaseManager: ObservableObject {
 
     // MARK: - Status Check
 
+    private struct InFlightRefresh {
+        let id: UInt64
+        let task: Task<Void, Never>
+        let includeHistoricalFallback: Bool
+        let allowsServerVerification: Bool
+
+        func covers(includeHistoricalFallback: Bool, allowsServerVerification: Bool) -> Bool {
+            (self.includeHistoricalFallback || !includeHistoricalFallback)
+                && (self.allowsServerVerification || !allowsServerVerification)
+        }
+    }
+
+    private var inFlightRefresh: InFlightRefresh?
+    private var nextRefreshID: UInt64 = 0
+
     /// Re-evaluates unlock status from StoreKit entitlements and AppTransaction.
-    /// Called on init, after purchase, and after restore.
-    func refreshStatus(includeHistoricalFallback: Bool = false) async {
+    /// Called on init, after purchase, after restore, and before background
+    /// export admission.
+    ///
+    /// Refreshes never interleave: the body resets shared state across awaits,
+    /// so a concurrent caller waits for the running refresh and reuses its
+    /// result when that refresh did at least as much work.
+    /// - Parameter allowsServerVerification: `false` skips the legacy receipt
+    ///   POSTs (step 4), for background callers with a limited time budget.
+    func refreshStatus(includeHistoricalFallback: Bool = false, allowsServerVerification: Bool = true) async {
+        while let running = inFlightRefresh {
+            await running.task.value
+            if running.covers(includeHistoricalFallback: includeHistoricalFallback,
+                              allowsServerVerification: allowsServerVerification) {
+                return
+            }
+        }
+        nextRefreshID &+= 1
+        let id = nextRefreshID
+        let task = Task { @MainActor [weak self] () -> Void in
+            guard let self else { return }
+            await self.performRefreshStatus(
+                includeHistoricalFallback: includeHistoricalFallback,
+                allowsServerVerification: allowsServerVerification
+            )
+        }
+        inFlightRefresh = InFlightRefresh(
+            id: id,
+            task: task,
+            includeHistoricalFallback: includeHistoricalFallback,
+            allowsServerVerification: allowsServerVerification
+        )
+        await task.value
+        if inFlightRefresh?.id == id { inFlightRefresh = nil }
+    }
+
+    private func performRefreshStatus(includeHistoricalFallback: Bool, allowsServerVerification: Bool) async {
         defer { isCheckingAccess = false }
         #if os(macOS)
         isUnlocked = true
@@ -618,11 +678,11 @@ final class PurchaseManager: ObservableObject {
                 debugDate = Self.grandfatherCutoffDate.addingTimeInterval(-86_400 * 30)
             }
             if Self.isLegacyUnlock(originalPurchaseDate: debugDate) {
-                isLegacyUser = true
-                isUnlocked = true
+                recordLegacyUnlock()
             } else {
                 isLegacyUser = false
                 isUnlocked = false
+                recordConfirmedNoEntitlement()
             }
             return
         }
@@ -637,10 +697,10 @@ final class PurchaseManager: ObservableObject {
            UserDefaults.standard.bool(forKey: "debugSkipToServerVerification") {
             if await verifyLegacyWithServer() {
                 keychain.writeInt(key: serverVerifiedLegacyKey, value: 1)
-                isLegacyUser = true
-                isUnlocked = true
+                recordLegacyUnlock()
             } else {
                 isUnlocked = false
+                recordConfirmedNoEntitlement()
             }
             return
         }
@@ -676,9 +736,10 @@ final class PurchaseManager: ObservableObject {
         // A fresh sandbox tester on a long-lived QA phone must be able to test
         // subscription-only access while retaining the phone's legacy rights.
         if sandboxPurchaseQAEnabled {
+            // A debug override must never be masked by the background fallback.
             activeEntitlementExpiration = nil
             isUnlocked = false
-            clearLastKnownEntitlementIfReliable()
+            recordConfirmedNoEntitlement()
             return
         }
         #endif
@@ -687,9 +748,7 @@ final class PurchaseManager: ObservableObject {
         //    confirmed this device originally purchased before v1.7.0 and cached the
         //    result in the Keychain. This survives app reinstalls.
         if keychain.readInt(key: serverVerifiedLegacyKey) > 0 {
-            isLegacyUser = true
-            persistLastKnownEntitlement(productID: Self.legacyEntitlementMarker, expiresAt: nil)
-            isUnlocked = true
+            recordLegacyUnlock()
             return
         }
 
@@ -703,9 +762,7 @@ final class PurchaseManager: ObservableObject {
             switch appTxResult {
             case .verified(let appTx):
                 if Self.isLegacyUnlock(originalPurchaseDate: appTx.originalPurchaseDate) {
-                    isLegacyUser = true
-                    persistLastKnownEntitlement(productID: Self.legacyEntitlementMarker, expiresAt: nil)
-                    isUnlocked = true
+                    recordLegacyUnlock()
                     return
                 }
             case .unverified(let appTx, _):
@@ -714,9 +771,7 @@ final class PurchaseManager: ObservableObject {
                 // who can forge AppTransaction responses already has device-level control
                 // and could bypass any client-side check.
                 if Self.isLegacyUnlock(originalPurchaseDate: appTx.originalPurchaseDate) {
-                    isLegacyUser = true
-                    persistLastKnownEntitlement(productID: Self.legacyEntitlementMarker, expiresAt: nil)
-                    isUnlocked = true
+                    recordLegacyUnlock()
                     return
                 }
             }
@@ -731,11 +786,9 @@ final class PurchaseManager: ObservableObject {
         //    deleted and reinstalled after v1.7.0, breaking the local AppTransaction
         //    check (step 3). On success the result is cached in Keychain so the server
         //    is only ever called once per device regardless of future reinstalls.
-        if await verifyLegacyWithServer() {
+        if allowsServerVerification, await verifyLegacyWithServer() {
             keychain.writeInt(key: serverVerifiedLegacyKey, value: 1)
-            isLegacyUser = true
-            persistLastKnownEntitlement(productID: Self.legacyEntitlementMarker, expiresAt: nil)
-            isUnlocked = true
+            recordLegacyUnlock()
             return
         }
 
@@ -743,9 +796,24 @@ final class PurchaseManager: ObservableObject {
     }
 
     /// Final refresh outcome when no access path matched.
+    ///
+    /// A reliable read (device unlocked) is authoritative: access is locked and
+    /// the cached entitlement is replaced with a confirmed "none", so a refund
+    /// is honored. An unreliable read (protected data unavailable, typically a
+    /// locked background launch) cannot prove absence, so a still-valid cached
+    /// entitlement is restored instead of downgrading a paid owner.
     private func concludeNoEntitlement() {
-        isUnlocked = false
-        clearLastKnownEntitlementIfReliable()
+        guard !entitlementReadIsReliable() else {
+            isUnlocked = false
+            recordConfirmedNoEntitlement()
+            return
+        }
+        switch lastKnownAccess() {
+        case .entitlement(let cached) where cached.isValid(at: Date()):
+            restoreLastKnownEntitlement(cached)
+        default:
+            isUnlocked = false
+        }
     }
 
     /// Test-only: apply the "no entitlement found" refresh outcome without StoreKit.
@@ -753,14 +821,58 @@ final class PurchaseManager: ObservableObject {
         concludeNoEntitlement()
     }
 
-    // MARK: - Scheduled Export Admission
+    /// The one way a grandfathered owner is unlocked, so every legacy path
+    /// also records the background fallback.
+    private func recordLegacyUnlock() {
+        isLegacyUser = true
+        persistLastKnownEntitlement(productID: Self.legacyEntitlementMarker, expiresAt: nil)
+        isUnlocked = true
+    }
+
+    private func restoreLastKnownEntitlement(_ cached: LastKnownEntitlement) {
+        if cached.productID == Self.legacyEntitlementMarker {
+            isLegacyUser = true
+        } else {
+            recordUnlockedProductID(cached.productID, ownershipDescription: "lastKnownEntitlement")
+            activeEntitlementExpiration = cached.expiresAt
+        }
+        isUnlocked = true
+    }
+
+    // MARK: - Last-Known Entitlement
 
     /// Marker stored for grandfathered owners, who have no StoreKit product.
     private static let legacyEntitlementMarker = "legacy"
+    /// Stored after a reliable read found no access.
+    private static let confirmedNoEntitlementMarker = "none"
 
     private struct LastKnownEntitlement: Codable {
         let productID: String
         let expiresAt: Date?
+
+        /// Lifetime and legacy access have no expiry; subscriptions keep theirs.
+        func isValid(at now: Date) -> Bool {
+            expiresAt.map { $0 > now } ?? true
+        }
+    }
+
+    private enum LastKnownAccess {
+        /// No reliable read has been recorded on this device yet.
+        case unknown
+        /// The last reliable read found no access.
+        case confirmedNone
+        case entitlement(LastKnownEntitlement)
+    }
+
+    private func lastKnownAccess() -> LastKnownAccess {
+        guard !TestMode.isUITesting,
+              let value = keychain.readString(key: lastKnownEntitlementKey) else { return .unknown }
+        if value == Self.confirmedNoEntitlementMarker { return .confirmedNone }
+        guard let data = value.data(using: .utf8),
+              let entitlement = try? JSONDecoder().decode(LastKnownEntitlement.self, from: data) else {
+            return .unknown
+        }
+        return .entitlement(entitlement)
     }
 
     private func persistLastKnownEntitlement(productID: String, expiresAt: Date?) {
@@ -769,40 +881,37 @@ final class PurchaseManager: ObservableObject {
         keychain.writeString(key: lastKnownEntitlementKey, value: value)
     }
 
-    /// A negative read only revokes the cached entitlement when StoreKit could
-    /// actually be read; a locked-device background read keeps it.
-    private func clearLastKnownEntitlementIfReliable() {
-        guard entitlementReadIsReliable() else { return }
-        keychain.remove(key: lastKnownEntitlementKey)
+    private func recordConfirmedNoEntitlement() {
+        keychain.writeString(key: lastKnownEntitlementKey, value: Self.confirmedNoEntitlementMarker)
     }
 
     /// True when a previously confirmed entitlement is still within its term.
-    /// Lifetime and legacy access have no expiry; subscriptions keep theirs.
     func hasValidLastKnownEntitlement(now: Date = Date()) -> Bool {
-        guard !TestMode.isUITesting else { return false }
-        guard let value = keychain.readString(key: lastKnownEntitlementKey),
-              let data = value.data(using: .utf8),
-              let entitlement = try? JSONDecoder().decode(LastKnownEntitlement.self, from: data) else {
-            return false
-        }
-        return entitlement.expiresAt.map { $0 > now } ?? true
+        guard case .entitlement(let cached) = lastKnownAccess() else { return false }
+        return cached.isValid(at: now)
     }
+
+    // MARK: - Scheduled Export Admission
 
     /// Admission check for scheduled (background) exports. Awaits a fresh
     /// entitlement read first: `isUnlocked` starts `false` and a background
-    /// launch can reach this before the launch refresh has finished. When
-    /// StoreKit still reports no access, a previously confirmed entitlement is
-    /// honored, and an unreliable read is reported as unresolved so the caller
-    /// defers instead of telling a paid owner their free limit was reached.
+    /// launch can reach this before the launch refresh has finished. The
+    /// refresh restores a cached entitlement when StoreKit can't be read.
+    ///
+    /// When nothing grants access, the limit is reported only if absence is
+    /// known: the read was reliable, or the last reliable read on this device
+    /// found no access. Otherwise (no reliable read yet, or a cached
+    /// subscription that may have renewed) the caller defers.
     func scheduledExportAccess(jobID: UUID?, now: Date = Date()) async -> ScheduledExportAccessDecision {
-        if TestMode.isUITesting {
+        guard refreshesBeforeScheduledAdmission else {
             return canExport ? .allowed : .limitReached
         }
         await statusRefresher(self)
-        if isUnlocked, canExport { return .allowed }
-        if hasValidLastKnownEntitlement(now: now) { return .allowed }
-        if jobID.map(canExport(jobID:)) ?? canExport { return .allowed }
-        return entitlementReadIsReliable() ? .limitReached : .entitlementUnresolved
+        let quotaAllows = jobID.map(canExport(jobID:)) ?? canExport
+        if quotaAllows || hasValidLastKnownEntitlement(now: now) { return .allowed }
+        if entitlementReadIsReliable() { return .limitReached }
+        if case .confirmedNone = lastKnownAccess() { return .limitReached }
+        return .entitlementUnresolved
     }
 
     // MARK: - Product Loading
@@ -1058,9 +1167,7 @@ final class PurchaseManager: ObservableObject {
         let isLegacy = await verifyLegacyWithServer()
         if isLegacy {
             keychain.writeInt(key: serverVerifiedLegacyKey, value: 1)
-            isLegacyUser = true
-            persistLastKnownEntitlement(productID: Self.legacyEntitlementMarker, expiresAt: nil)
-            isUnlocked = true
+            recordLegacyUnlock()
         }
 
         // Increment attempt counter after the call completes so transient
