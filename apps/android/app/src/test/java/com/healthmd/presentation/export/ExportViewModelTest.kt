@@ -378,6 +378,8 @@ class ExportViewModelTest {
             jsonExporter = jsonExporter,
             uploader = uploader,
             credentialStore = credentials,
+            // Keep envelope rendering on the virtual-time (Main) scheduler this test drives.
+            renderDispatcher = Dispatchers.Main,
         )
         val viewModel = createViewModel(
             healthRepository = healthRepository,

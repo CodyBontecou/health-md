@@ -8,7 +8,10 @@ import java.security.DigestOutputStream
 import java.security.MessageDigest
 import java.time.Instant
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collect
 import kotlinx.serialization.json.JsonObject
@@ -24,6 +27,8 @@ class RawSnapshotExportOrchestrator(
     private val spoolRoot: File,
     private val clock: () -> Instant = Instant::now,
     private val maxRecordsInMemory: Int = 512,
+    /** Provider reads, canonical spooling/compaction, and storage writes never run on the caller's (often main) thread. */
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     constructor(
         context: Context,
@@ -32,7 +37,10 @@ class RawSnapshotExportOrchestrator(
         clock: () -> Instant = Instant::now,
     ) : this(repository, storage, File(context.noBackupFilesDir, "raw-export"), clock)
 
-    suspend fun export(inputRequest: RawSnapshotRequest): RawExportResult {
+    suspend fun export(inputRequest: RawSnapshotRequest): RawExportResult =
+        withContext(ioDispatcher) { exportOffMain(inputRequest) }
+
+    private suspend fun exportOffMain(inputRequest: RawSnapshotRequest): RawExportResult {
         val exportContext = currentCoroutineContext()
         val checkCancellation = { exportContext.ensureActive() }
         checkCancellation()

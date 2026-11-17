@@ -14,15 +14,26 @@ import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.util.runCatchingCancellable
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class HealthRepositoryImpl private constructor(
     private val providerRegistry: HealthProviderRegistry,
     private val settingsRepository: SettingsRepository,
     private val acceptedProviders: ProviderSelection?,
+    /**
+     * Provider reads and record mapping (for example Health Connect workout/route assembly) are
+     * large and allocation-heavy; callers such as `viewModelScope` run on the main thread.
+     */
+    private val ioDispatcher: CoroutineDispatcher,
 ) : HealthRepository, OperationScopedHealthRepository, RestorableHealthRepository {
 
-    constructor(providerRegistry: HealthProviderRegistry, settingsRepository: SettingsRepository) :
-        this(providerRegistry, settingsRepository, null)
+    constructor(
+        providerRegistry: HealthProviderRegistry,
+        settingsRepository: SettingsRepository,
+        ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    ) : this(providerRegistry, settingsRepository, null, ioDispatcher)
 
     private data class ProviderSelection(val selectedId: String, val connectedIds: List<String>)
 
@@ -33,7 +44,7 @@ class HealthRepositoryImpl private constructor(
             settingsRepository.getConnectedHealthProviderIds().distinct().sorted() else emptyList()
         val acceptedIds = if (selectedId == HealthDataMerger.ALL_CONNECTED_PROVIDER_ID) connectedIds.toSet() else setOf(selectedId)
         val boundRegistry = providerRegistry.forCaptureOperation(acceptedIds)
-        return HealthRepositoryImpl(boundRegistry, settingsRepository, ProviderSelection(selectedId, connectedIds))
+        return HealthRepositoryImpl(boundRegistry, settingsRepository, ProviderSelection(selectedId, connectedIds), ioDispatcher)
     }
 
     override suspend fun captureProviderAuthority(): HealthProviderCaptureAuthority {
@@ -56,7 +67,7 @@ class HealthRepositoryImpl private constructor(
         val registry = providerRegistry.restoringConnections(frozen.connectionIds)
         val connectedIds = if (frozen.selectedProviderId == HealthDataMerger.ALL_CONNECTED_PROVIDER_ID)
             frozen.providerIds else emptyList()
-        return HealthRepositoryImpl(registry, settingsRepository, ProviderSelection(frozen.selectedProviderId, connectedIds))
+        return HealthRepositoryImpl(registry, settingsRepository, ProviderSelection(frozen.selectedProviderId, connectedIds), ioDispatcher)
     }
 
     private suspend fun selectedProviderId(): String =
@@ -152,6 +163,20 @@ class HealthRepositoryImpl private constructor(
         pinnedCalendarDays: Boolean,
         sleepDayAttributionOverride: SleepDayAttributionOverride,
         detail: ExportDetailSelection,
+    ): List<HealthData> = withContext(ioDispatcher) {
+        fetchHealthDataRangeOffMain(
+            dates, dataTypes, includeGranularData, zoneId, pinnedCalendarDays, sleepDayAttributionOverride, detail,
+        )
+    }
+
+    private suspend fun fetchHealthDataRangeOffMain(
+        dates: List<LocalDate>,
+        dataTypes: DataTypeSelection,
+        includeGranularData: Boolean,
+        zoneId: ZoneId,
+        pinnedCalendarDays: Boolean,
+        sleepDayAttributionOverride: SleepDayAttributionOverride,
+        detail: ExportDetailSelection,
     ): List<HealthData> {
         if (dates.isEmpty()) return emptyList()
         val context = resolveCaptureContext(zoneId, sleepDayAttributionOverride)
@@ -218,11 +243,11 @@ class HealthRepositoryImpl private constructor(
         includeGranularData: Boolean,
         zoneId: ZoneId,
         detail: ExportDetailSelection,
-    ) {
-        if (!dataTypes.workouts) return
+    ): Unit = withContext(ioDispatcher) {
+        if (!dataTypes.workouts) return@withContext
         if (!shouldUseAllConnected()) {
             activeProvider().authorizeExerciseRouteConsent(dates, dataTypes, includeGranularData, zoneId, detail)
-            return
+            return@withContext
         }
         val attemptedIds = configuredProviderIds()
         val (providers, _) = providerReadiness(attemptedIds, configuredProviders(attemptedIds))

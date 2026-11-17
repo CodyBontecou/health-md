@@ -467,9 +467,9 @@ class AgentDataGatewayExportRunner private constructor(
     private suspend fun renderDailyJsonArtifacts(
         data: HealthData,
         settings: ExportSettings,
-    ): List<AgentDataPreparedArtifact> {
+    ): List<AgentDataPreparedArtifact> = withContext(Dispatchers.Default) {
         val ownerDate = data.date
-        return when (val selection = dailyAggregatePlanner.plan(data, settings.copy(exportTarget = ExportTarget.DEVICE_FOLDER))) {
+        when (val selection = dailyAggregatePlanner.plan(data, settings.copy(exportTarget = ExportTarget.DEVICE_FOLDER))) {
             LocalDailyAggregatePlanningResult.Legacy -> {
                 require(settings.executionSleepCaptureContext?.sleepDayAttribution != SleepDayAttribution.MORNING_ENDS) {
                     "Gateway successor cannot use historical rendering"

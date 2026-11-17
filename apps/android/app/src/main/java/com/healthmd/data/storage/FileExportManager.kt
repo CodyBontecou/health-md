@@ -4,9 +4,12 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
+import androidx.annotation.WorkerThread
 import com.healthmd.data.export.MarkdownMerger
+import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.io.OutputStream
 
 class FileExportManager(private val context: Context) {
 
@@ -46,6 +49,7 @@ class FileExportManager(private val context: Context) {
      * @param writeMode How to handle existing files
      * @return true if write succeeded
      */
+    @WorkerThread
     fun writeFile(
         folderUriString: String,
         subfolder: String?,
@@ -53,6 +57,81 @@ class FileExportManager(private val context: Context) {
         extension: String,
         content: String,
         writeMode: WriteMode = WriteMode.OVERWRITE,
+    ): Boolean = writeResolvedFile(folderUriString, subfolder, fileName, extension) { existingFileUri, create ->
+        when {
+            existingFileUri != null && writeMode == WriteMode.OVERWRITE -> {
+                writeContent(existingFileUri, content)
+            }
+            existingFileUri != null && writeMode == WriteMode.APPEND -> {
+                val existing = readContent(existingFileUri) ?: ""
+                writeContent(existingFileUri) { stream ->
+                    stream.writeUtf8(existing + "\n")
+                    stream.writeUtf8(content)
+                }
+            }
+            existingFileUri != null && writeMode == WriteMode.UPDATE -> {
+                val existing = readContent(existingFileUri).orEmpty()
+                val merged = if (extension.equals("md", ignoreCase = true)) {
+                    MarkdownMerger().merge(existing, content)
+                } else {
+                    // UPDATE is Markdown-specific. Structured formats are regenerated atomically.
+                    content
+                }
+                writeContent(existingFileUri, merged)
+            }
+            existingFileUri == null -> {
+                val newFileUri = create() ?: return@writeResolvedFile false
+                writeContent(newFileUri, content)
+            }
+            else -> false
+        }
+    }
+
+    /**
+     * [writeFile] for a structured (non-Markdown) document whose new content is produced directly
+     * into the destination stream by [writeBody], so a large export is never materialized as one
+     * String/byte array. The bytes written for each [WriteMode] are exactly those [writeFile]
+     * writes for the same content: OVERWRITE/UPDATE replace the file, APPEND keeps the existing
+     * text followed by a newline. Any exception from [writeBody] reports a failed write.
+     */
+    @WorkerThread
+    fun writeStreamedFile(
+        folderUriString: String,
+        subfolder: String?,
+        fileName: String,
+        extension: String,
+        writeMode: WriteMode = WriteMode.OVERWRITE,
+        writeBody: (OutputStream) -> Unit,
+    ): Boolean {
+        require(!extension.equals("md", ignoreCase = true)) { "Markdown merges need the String writer" }
+        return writeResolvedFile(folderUriString, subfolder, fileName, extension) { existingFileUri, create ->
+            when {
+                existingFileUri != null && writeMode == WriteMode.APPEND -> {
+                    val existing = readContent(existingFileUri) ?: ""
+                    writeContent(existingFileUri) { stream ->
+                        stream.writeUtf8(existing + "\n")
+                        writeBody(stream)
+                    }
+                }
+                existingFileUri != null -> writeContent(existingFileUri, writeBody)
+                else -> {
+                    val newFileUri = create() ?: return@writeResolvedFile false
+                    writeContent(newFileUri, writeBody)
+                }
+            }
+        }
+    }
+
+    /**
+     * Resolves (creating folders as needed) the destination of one non-durable write and hands
+     * [write] the existing document, or a creator for a new one. Every failure reports false.
+     */
+    private inline fun writeResolvedFile(
+        folderUriString: String,
+        subfolder: String?,
+        fileName: String,
+        extension: String,
+        write: (existingFileUri: Uri?, create: () -> Uri?) -> Boolean,
     ): Boolean {
         return try {
             val treeUri = Uri.parse(folderUriString)
@@ -69,41 +148,20 @@ class FileExportManager(private val context: Context) {
 
             // Check if file already exists
             val existingFileUri = findExistingFile(treeUri, targetFolderUri, fullFileName)
-
-            when {
-                existingFileUri != null && writeMode == WriteMode.OVERWRITE -> {
-                    writeContent(existingFileUri, content)
-                }
-                existingFileUri != null && writeMode == WriteMode.APPEND -> {
-                    val existing = readContent(existingFileUri) ?: ""
-                    writeContent(existingFileUri, existing + "\n" + content)
-                }
-                existingFileUri != null && writeMode == WriteMode.UPDATE -> {
-                    val existing = readContent(existingFileUri).orEmpty()
-                    val merged = if (extension.equals("md", ignoreCase = true)) {
-                        MarkdownMerger().merge(existing, content)
-                    } else {
-                        // UPDATE is Markdown-specific. Structured formats are regenerated atomically.
-                        content
-                    }
-                    writeContent(existingFileUri, merged)
-                }
-                existingFileUri == null -> {
-                    val newFileUri = DocumentsContract.createDocument(
-                        context.contentResolver,
-                        targetFolderUri,
-                        mimeType,
-                        fullFileName,
-                    ) ?: return false
-                    writeContent(newFileUri, content)
-                }
-                else -> false
+            write(existingFileUri) {
+                DocumentsContract.createDocument(
+                    context.contentResolver,
+                    targetFolderUri,
+                    mimeType,
+                    fullFileName,
+                )
             }
         } catch (_: Exception) {
             false
         }
     }
 
+    @WorkerThread
     fun writeFileAtRelativePath(
         folderUriString: String,
         relativePath: String,
@@ -125,6 +183,7 @@ class FileExportManager(private val context: Context) {
         )
     }
 
+    @WorkerThread
     fun readFileAtRelativePath(folderUriString: String, relativePath: String): String? {
         return try {
             val treeUri = Uri.parse(folderUriString)
@@ -140,6 +199,7 @@ class FileExportManager(private val context: Context) {
     }
 
     /** The document URI of an existing file under the tree, or null when it or a folder is missing. */
+    @WorkerThread
     fun findDocumentAtRelativePath(folderUriString: String, relativePath: String): Uri? {
         return try {
             val treeUri = Uri.parse(folderUriString)
@@ -153,6 +213,7 @@ class FileExportManager(private val context: Context) {
         }
     }
 
+    @WorkerThread
     fun fileExistsAtRelativePath(folderUriString: String, relativePath: String): Boolean {
         return try {
             val treeUri = Uri.parse(folderUriString)
@@ -167,6 +228,7 @@ class FileExportManager(private val context: Context) {
     }
 
     /** Strict SAF lookup used only by durable overwrite journals. */
+    @WorkerThread
     fun inspectDurableFile(
         folderUriString: String,
         relativePath: String,
@@ -201,6 +263,7 @@ class FileExportManager(private val context: Context) {
      * Resolves one unique target document, creating missing folders/file but writing no content.
      * The returned document ID is persisted before the first byte write.
      */
+    @WorkerThread
     fun bindDurableFile(
         folderUriString: String,
         relativePath: String,
@@ -246,6 +309,7 @@ class FileExportManager(private val context: Context) {
     }
 
     /** Revalidates path-to-document identity and overwrites the bound document with exact bytes. */
+    @WorkerThread
     fun overwriteDurableBoundFile(
         folderUriString: String,
         relativePath: String,
@@ -279,6 +343,7 @@ class FileExportManager(private val context: Context) {
     }
 
     /** Renames one exact staging document to an absent final name in the same strict folder. */
+    @WorkerThread
     fun renameDurableBoundFile(
         folderUriString: String,
         stagingRelativePath: String,
@@ -555,10 +620,13 @@ class FileExportManager(private val context: Context) {
         return null
     }
 
-    private fun writeContent(uri: Uri, content: String): Boolean {
+    private fun writeContent(uri: Uri, content: String): Boolean =
+        writeContent(uri) { stream -> stream.writeUtf8(content) }
+
+    private inline fun writeContent(uri: Uri, writeBody: (OutputStream) -> Unit): Boolean {
         val stream = context.contentResolver.openOutputStream(uri, "wt") ?: return false
-        stream.use {
-            it.write(content.toByteArray(Charsets.UTF_8))
+        BufferedOutputStream(stream, WRITE_BUFFER_BYTES).use {
+            writeBody(it)
             it.flush()
         }
         return true
@@ -619,5 +687,22 @@ class FileExportManager(private val context: Context) {
 
     companion object {
         private const val MAX_DURABLE_FILE_BYTES = 8_388_608
+        private const val WRITE_BUFFER_BYTES = 64 * 1024
+        private const val UTF8_ENCODE_CHUNK_CHARS = 16 * 1024
+
+        /**
+         * Writes exactly `text.toByteArray(UTF_8)` without allocating the whole byte array.
+         * Chunks never end on a high surrogate, so pairs and malformed surrogates encode
+         * identically to whole-string encoding.
+         */
+        internal fun OutputStream.writeUtf8(text: String) {
+            var start = 0
+            while (start < text.length) {
+                var end = minOf(start + UTF8_ENCODE_CHUNK_CHARS, text.length)
+                if (end < text.length && Character.isHighSurrogate(text[end - 1])) end -= 1
+                write(text.substring(start, end).toByteArray(Charsets.UTF_8))
+                start = end
+            }
+        }
     }
 }

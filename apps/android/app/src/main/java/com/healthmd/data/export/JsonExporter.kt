@@ -1,7 +1,9 @@
 package com.healthmd.data.export
 
 import com.healthmd.domain.model.*
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.*
+import java.io.OutputStream
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.pow
@@ -149,6 +151,58 @@ class JsonExporter {
         detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData),
     ): String = render(data, customization, detail, captureContext, includeSleepRecords = true, includeWorkoutRecords = true)
 
+    /**
+     * The historical (no capture authority) document as a tree, for writers that stream it with
+     * [encodeLegacyTree] instead of materializing the whole pretty-printed String. Encoding this
+     * tree produces exactly the UTF-8 bytes of [export] called with the same arguments and no
+     * capture context.
+     */
+    internal fun exportLegacyTree(
+        data: HealthData,
+        customization: FormatCustomization = FormatCustomization(),
+        includeGranularData: Boolean = false,
+        detail: ExportDetailSelection = ExportDetailSelection.uniform(includeGranularData),
+    ): JsonElement = legacyTree(data, customization, detail)
+
+    /** Streams a [exportLegacyTree] document as UTF-8 with the same pretty-print settings as [export]. */
+    @OptIn(ExperimentalSerializationApi::class)
+    internal fun encodeLegacyTree(tree: JsonElement, output: OutputStream) {
+        prettyJson.encodeToStream(JsonElement.serializer(), tree, output)
+    }
+
+    private fun legacyTree(data: HealthData, customization: FormatCustomization, detail: ExportDetailSelection): JsonElement =
+        nativePayload(data, customization, detail, false).withoutNonFiniteNumbers()
+
+    /**
+     * JSON has no NaN/Infinity. A non-finite measurement (for example a pace derived from a zero
+     * speed) is treated like any other missing value in the historical document: its key is
+     * omitted. Finite documents are returned unchanged, so their bytes are unaffected.
+     */
+    private fun JsonElement.withoutNonFiniteNumbers(): JsonElement = when (this) {
+        is JsonObject -> if (values.none { it.containsNonFiniteNumber() }) this else JsonObject(
+            entries.asSequence()
+                .filterNot { (_, value) -> value.isNonFiniteNumber() }
+                .associateTo(LinkedHashMap()) { (key, value) -> key to value.withoutNonFiniteNumbers() },
+        )
+        is JsonArray -> if (none { it.containsNonFiniteNumber() }) this else JsonArray(
+            filterNot { it.isNonFiniteNumber() }.map { it.withoutNonFiniteNumbers() },
+        )
+        else -> this
+    }
+
+    private fun JsonElement.containsNonFiniteNumber(): Boolean = when (this) {
+        is JsonObject -> values.any { it.containsNonFiniteNumber() }
+        is JsonArray -> any { it.containsNonFiniteNumber() }
+        else -> isNonFiniteNumber()
+    }
+
+    private fun JsonElement.isNonFiniteNumber(): Boolean =
+        this is JsonPrimitive && this !is JsonNull && !isString && content in NON_FINITE_LITERALS
+
+    /** Legacy integer projection; a non-finite value stays a double so the tree omits it. */
+    private fun legacyRoundedInt(value: Double): JsonPrimitive =
+        if (value.isFinite()) JsonPrimitive(value.roundToInt()) else JsonPrimitive(value)
+
     /** Aggregate projection retains original data for source authority and summary validation. */
     internal fun exportForNativeComposition(data: HealthData, customization: FormatCustomization,
         includeGranularData: Boolean, captureContext: AndroidCaptureContext,
@@ -164,12 +218,12 @@ class JsonExporter {
             unitPreference = UnitPreference.METRIC,
             dateFormat = DateFormatPreference.ISO8601,
         )
-        if (authority == null) return Json { prettyPrint = true }.encodeToString(
-            JsonElement.serializer(), nativePayload(data, effectiveCustomization, detail, false),
+        if (authority == null) return prettyJson.encodeToString(
+            JsonElement.serializer(), legacyTree(data, effectiveCustomization, detail),
         )
         return try {
             val payload = nativePayload(data, effectiveCustomization, detail, true, includeSleepRecords, includeWorkoutRecords)
-            Json { prettyPrint = true }.encodeToString(JsonElement.serializer(),
+            prettyJson.encodeToString(JsonElement.serializer(),
                 authority.finish(payload, data, effectiveCustomization.includeAndroidNativeFields))
         } catch (error: RuntimeException) {
             if (error is java.util.concurrent.CancellationException) throw error
@@ -1041,15 +1095,15 @@ class JsonExporter {
                             }
                             workout.averageHeartRate?.let {
                                 if (includeLegacyAliases) put("averageHeartRate", it)
-                                put("avgHeartRate", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
+                                put("avgHeartRate", if (nativeSuccessor) JsonPrimitive(it) else legacyRoundedInt(it)) // iOS canonical key
                             }
                             workout.heartRateMin?.let {
                                 if (includeLegacyAliases) put("heartRateMin", it)
-                                put("minHeartRate", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
+                                put("minHeartRate", if (nativeSuccessor) JsonPrimitive(it) else legacyRoundedInt(it)) // iOS canonical key
                             }
                             workout.heartRateMax?.let {
                                 if (includeLegacyAliases) put("heartRateMax", it)
-                                put("maxHeartRate", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
+                                put("maxHeartRate", if (nativeSuccessor) JsonPrimitive(it) else legacyRoundedInt(it)) // iOS canonical key
                             }
                             if (includeAndroidNativeFields) {
                                 workout.averageSpeed?.let {
@@ -1060,23 +1114,23 @@ class JsonExporter {
                             }
                             workout.cyclingCadenceAvg?.let {
                                 if (includeLegacyAliases) put("cyclingCadenceAvg", it)
-                                put("avgCyclingCadence", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
+                                put("avgCyclingCadence", if (nativeSuccessor) JsonPrimitive(it) else legacyRoundedInt(it)) // iOS canonical key
                             }
-                            if (includeAndroidNativeFields) workout.cyclingCadenceMax?.let { put("maxCyclingCadence", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) }
+                            if (includeAndroidNativeFields) workout.cyclingCadenceMax?.let { put("maxCyclingCadence", if (nativeSuccessor) JsonPrimitive(it) else legacyRoundedInt(it)) }
                             workout.stepsCadenceAvg?.let {
                                 if (includeLegacyAliases) put("stepsCadenceAvg", it)
                                 if (workout.workoutType == WorkoutType.RUNNING) {
-                                    put("avgRunningCadence", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
+                                    put("avgRunningCadence", if (nativeSuccessor) JsonPrimitive(it) else legacyRoundedInt(it)) // iOS canonical key
                                 }
                             }
-                            if (includeAndroidNativeFields) workout.stepsCadenceMax?.let { put("maxStepsCadence", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) }
+                            if (includeAndroidNativeFields) workout.stepsCadenceMax?.let { put("maxStepsCadence", if (nativeSuccessor) JsonPrimitive(it) else legacyRoundedInt(it)) }
                             workout.powerAvg?.let {
                                 if (includeLegacyAliases) put("powerAvg", it)
-                                put("avgPower", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
+                                put("avgPower", if (nativeSuccessor) JsonPrimitive(it) else legacyRoundedInt(it)) // iOS canonical key
                             }
                             workout.powerMax?.let {
                                 if (includeLegacyAliases) put("powerMax", it)
-                                put("maxPower", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt())) // iOS canonical key
+                                put("maxPower", if (nativeSuccessor) JsonPrimitive(it) else legacyRoundedInt(it)) // iOS canonical key
                             }
                             if (workout.laps.isNotEmpty()) {
                                 putJsonArray("laps") {
@@ -1112,7 +1166,7 @@ class JsonExporter {
                                             split.distance?.let { put("distance", it) }
                                             split.averageHeartRate?.let {
                                                 if (includeLegacyAliases) put("averageHeartRate", it)
-                                                put("avgHeartRate", if (nativeSuccessor) JsonPrimitive(it) else JsonPrimitive(it.roundToInt()))
+                                                put("avgHeartRate", if (nativeSuccessor) JsonPrimitive(it) else legacyRoundedInt(it))
                                             }
                                             if (analyticalV5 && (detail.workouts || nativeSuccessor)) putExactInterval(split.exactStartTime, split.exactEndTime, split.identity)
                                         }
@@ -1196,5 +1250,11 @@ class JsonExporter {
         }
 
         return json
+    }
+
+    private companion object {
+        /** One shared, thread-safe encoder; the configuration is the historical `prettyPrint` one. */
+        val prettyJson = Json { prettyPrint = true }
+        val NON_FINITE_LITERALS = setOf("NaN", "Infinity", "-Infinity")
     }
 }
