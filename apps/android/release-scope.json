@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "releaseVersionName": "3.5.4",
+  "releaseVersionName": "3.5.5",
   "googlePlay": {
     "phone": {
       "module": ":app",
       "status": "release_candidate",
-      "versionCode": 50,
+      "versionCode": 51,
       "testingTrack": "internal",
       "productionTrack": "production"
     },
