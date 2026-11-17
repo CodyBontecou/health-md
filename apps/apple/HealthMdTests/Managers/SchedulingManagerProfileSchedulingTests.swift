@@ -103,7 +103,7 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
                 // runs exhausted it, skipping every occurrence with
                 // "free export limit reached". Quota semantics have their
                 // own coverage in SchedulingManagerPendingExportsTests.
-                scheduledExportQuotaAccess: { _ in true },
+                scheduledExportQuotaAccess: { _ in .allowed },
                 scheduledExportQuotaRecorder: { _ in },
                 now: now,
                 scheduledEntryStore: ScheduledExportEntryStore(userDefaults: defaults, now: now),
