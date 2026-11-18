@@ -67,6 +67,159 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertFalse(makeManager().canExport(jobID: id))
     }
 
+    private func makeScheduledManager(
+        reliable: @escaping @MainActor () -> Bool,
+        refresh: @escaping @MainActor (PurchaseManager) -> Void
+    ) -> PurchaseManager {
+        let manager = PurchaseManager(
+            keychain: keychain,
+            defaults: defaults,
+            statusRefresher: { refresh($0) },
+            entitlementReadIsReliable: reliable
+        )
+        LifecycleHarness.retain(manager)
+        return manager
+    }
+
+    func testScheduledAccessAwaitsEntitlementRefreshBeforeQuotaCheck() async {
+        let manager = makeScheduledManager(reliable: { false }) {
+            $0.recordStoreKitEntitlementForTesting(productID: PurchaseManager.productID)
+        }
+        manager.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+        XCTAssertFalse(manager.isUnlocked, "A background launch starts locked until StoreKit resolves")
+        let decision = await manager.scheduledExportAccess(jobID: UUID())
+        XCTAssertEqual(decision, .allowed)
+    }
+
+    func testScheduledAccessHonorsLastKnownLifetimeWhenBackgroundReadFails() async {
+        var storeKitReadable = true
+        let manager = makeScheduledManager(reliable: { storeKitReadable }) { manager in
+            if storeKitReadable {
+                manager.recordStoreKitEntitlementForTesting(productID: PurchaseManager.familyProductID)
+            } else {
+                manager.setUnlocked(false)
+            }
+        }
+        manager.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+        let first = await manager.scheduledExportAccess(jobID: nil)
+        XCTAssertEqual(first, .allowed)
+
+        storeKitReadable = false
+        // The persisted entitlement survives a relaunch into the background.
+        let relaunched = makeScheduledManager(reliable: { false }) { $0.setUnlocked(false) }
+        let decision = await relaunched.scheduledExportAccess(jobID: UUID())
+        XCTAssertEqual(decision, .allowed)
+        try? relaunched.recordExportUse(jobID: UUID())
+        relaunched.recordExportUse()
+        XCTAssertEqual(relaunched.freeExportsUsed, PurchaseManager.freeExportLimit,
+                       "A known owner is never charged a free export")
+    }
+
+    func testScheduledAccessIsUnresolvedRatherThanLimitedWhenReadIsUnreliable() async {
+        let manager = makeScheduledManager(reliable: { false }) { $0.setUnlocked(false) }
+        manager.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+        let decision = await manager.scheduledExportAccess(jobID: UUID())
+        XCTAssertEqual(decision, .entitlementUnresolved)
+    }
+
+    func testReliableNegativeReadRevokesLastKnownEntitlement() async {
+        let owner = makeScheduledManager(reliable: { true }) {
+            $0.recordStoreKitEntitlementForTesting(productID: PurchaseManager.productID)
+        }
+        _ = await owner.scheduledExportAccess(jobID: nil)
+        XCTAssertTrue(owner.hasValidLastKnownEntitlement())
+
+        // A locked-device read that finds nothing keeps the cached entitlement...
+        let locked = makeScheduledManager(reliable: { false }) { $0.concludeNoEntitlementForTesting() }
+        locked.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+        let lockedDecision = await locked.scheduledExportAccess(jobID: UUID())
+        XCTAssertEqual(lockedDecision, .allowed)
+
+        // ...but a refund observed by a reliable read on an unlocked device revokes it.
+        let refunded = makeScheduledManager(reliable: { true }) { $0.concludeNoEntitlementForTesting() }
+        let decision = await refunded.scheduledExportAccess(jobID: UUID())
+        XCTAssertEqual(decision, .limitReached)
+        XCTAssertFalse(refunded.hasValidLastKnownEntitlement())
+    }
+
+    func testExpiredSubscriptionIsNotALastKnownEntitlement() async {
+        let now = Date()
+        let manager = makeScheduledManager(reliable: { false }) {
+            $0.recordStoreKitEntitlementForTesting(
+                productID: HealthMdPurchaseOption.yearly.productID,
+                expirationDate: now.addingTimeInterval(60))
+        }
+        _ = await manager.scheduledExportAccess(jobID: nil)
+        XCTAssertTrue(manager.hasValidLastKnownEntitlement(now: now))
+        XCTAssertFalse(manager.hasValidLastKnownEntitlement(now: now.addingTimeInterval(120)))
+    }
+
+    func testUnreliableEmptyReadKeepsAnUnlockedOwnerUnlockedForEveryCaller() {
+        let owner = makeManager()
+        owner.recordStoreKitEntitlementForTesting(productID: PurchaseManager.productID)
+        owner.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+
+        // A locked background refresh in a later launch finds nothing in StoreKit.
+        let relaunched = makeScheduledManager(reliable: { false }) { _ in }
+        relaunched.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+        relaunched.concludeNoEntitlementForTesting()
+
+        // Shortcuts, Direct and API-endpoint paths only read canExport after
+        // refreshStatus(), so the restore must land in the published state.
+        XCTAssertTrue(relaunched.isUnlocked)
+        XCTAssertTrue(relaunched.canExport)
+        XCTAssertEqual(relaunched.unlockedProductID, PurchaseManager.productID)
+    }
+
+    func testUnreliableEmptyReadRestoresLegacyOwner() {
+        makeManager().recordLegacyUnlockForTesting()
+        let relaunched = makeScheduledManager(reliable: { false }) { _ in }
+        relaunched.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+        relaunched.concludeNoEntitlementForTesting()
+        XCTAssertTrue(relaunched.isUnlocked)
+        XCTAssertTrue(relaunched.isLegacyUser)
+        XCTAssertTrue(relaunched.canExport)
+    }
+
+    func testUnreliableEmptyReadWithoutCacheStaysLocked() {
+        let manager = makeScheduledManager(reliable: { false }) { _ in }
+        manager.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+        manager.concludeNoEntitlementForTesting()
+        XCTAssertFalse(manager.isUnlocked)
+        XCTAssertFalse(manager.canExport)
+    }
+
+    func testUnreliableReadDoesNotRestoreAnExpiredSubscription() async {
+        makeManager().recordStoreKitEntitlementForTesting(
+            productID: HealthMdPurchaseOption.weekly.productID,
+            expirationDate: Date().addingTimeInterval(-60))
+        let relaunched = makeScheduledManager(reliable: { false }) { $0.concludeNoEntitlementForTesting() }
+        relaunched.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+        let decision = await relaunched.scheduledExportAccess(jobID: UUID())
+        XCTAssertFalse(relaunched.isUnlocked)
+        // The subscription may have renewed; only a reliable read can say no.
+        XCTAssertEqual(decision, .entitlementUnresolved)
+    }
+
+    func testFreeUserConfirmedByAReliableReadSeesTheLimitWhileLocked() async {
+        let unlockedRead = makeScheduledManager(reliable: { true }) { $0.concludeNoEntitlementForTesting() }
+        unlockedRead.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+        let first = await unlockedRead.scheduledExportAccess(jobID: UUID())
+        XCTAssertEqual(first, .limitReached)
+
+        // Later runs while locked keep reporting the limit instead of deferring forever.
+        let locked = makeScheduledManager(reliable: { false }) { $0.concludeNoEntitlementForTesting() }
+        let decision = await locked.scheduledExportAccess(jobID: UUID())
+        XCTAssertEqual(decision, .limitReached)
+    }
+
+    func testPurchaseAfterConfirmedNoneReplacesTheMarker() async {
+        let free = makeScheduledManager(reliable: { true }) { $0.concludeNoEntitlementForTesting() }
+        _ = await free.scheduledExportAccess(jobID: nil)
+        free.recordStoreKitEntitlementForTesting(productID: PurchaseManager.familyProductID)
+        XCTAssertTrue(free.hasValidLastKnownEntitlement())
+    }
+
     func testEveryLifetimeProductAndLegacyOwnerRetainsAccess() {
         for product in [PurchaseManager.productID, PurchaseManager.familyProductID, PurchaseManager.familyUpgradeProductID] {
             let manager = makeManager()

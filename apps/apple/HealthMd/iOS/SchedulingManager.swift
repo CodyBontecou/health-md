@@ -93,7 +93,7 @@ class SchedulingManager: ObservableObject {
     typealias ScheduledPendingExportRunner = @MainActor ([Date]) async -> ExportOrchestrator.ExportResult
     typealias ScheduledTargetExportRunner = @MainActor ([Date], ExportTargetSelection) async -> ExportOrchestrator.ExportResult
     typealias ScheduledLocalDestinationPreflight = @MainActor ([Date]) -> ExportOrchestrator.ExportResult?
-    typealias ScheduledExportQuotaAccess = @MainActor (UUID?) -> Bool
+    typealias ScheduledExportQuotaAccess = @MainActor (UUID?) async -> ScheduledExportAccessDecision
     typealias ScheduledExportQuotaRecorder = @MainActor (UUID?) throws -> Void
 
     private struct ScheduledMacExportContext {
@@ -116,6 +116,10 @@ class SchedulingManager: ObservableObject {
     private static let exportLimitReachedMessage = String(
         localized: "Free export limit reached. Scheduled exports use the same \(PurchaseManager.freeExportLimit)-export allowance as manual exports. Unlock Full Access to continue.",
         comment: "Message shown when a scheduled export cannot run because free quota is exhausted"
+    )
+    private static let entitlementUnresolvedMessage = String(
+        localized: "Health.md couldn't confirm your access while this device was locked. Unlock it and open Health.md to finish this export.",
+        comment: "Message shown when a scheduled export is deferred because purchase status could not be read in the background"
     )
 
     /// Background task identifier - must match Info.plist entry
@@ -271,8 +275,7 @@ class SchedulingManager: ObservableObject {
         scheduledTargetExportRunner: ScheduledTargetExportRunner? = nil,
         scheduledLocalDestinationPreflight: ScheduledLocalDestinationPreflight? = nil,
         scheduledExportQuotaAccess: @escaping ScheduledExportQuotaAccess = { jobID in
-            guard let jobID else { return PurchaseManager.shared.canExport }
-            return PurchaseManager.shared.canExport(jobID: jobID)
+            await PurchaseManager.shared.scheduledExportAccess(jobID: jobID)
         },
         scheduledExportQuotaRecorder: @escaping ScheduledExportQuotaRecorder = { jobID in
             if let jobID {
@@ -1764,12 +1767,28 @@ class SchedulingManager: ObservableObject {
         let clinicAllowed = if let endpoint = resolvedAPIDestination?.endpointURL.absoluteString {
             await ClinicSponsorshipManager.shared.authorizeExport(endpoint: endpoint)
         } else { false }
-        guard scheduledExportQuotaAccess(quotaJobID) || clinicAllowed else {
+        let access: ScheduledExportAccessDecision = clinicAllowed
+            ? .allowed : await scheduledExportQuotaAccess(quotaJobID)
+        switch access {
+        case .allowed:
+            break
+        case .limitReached:
             logger.info("Scheduled export skipped — free export limit reached")
             return scheduledFailureResult(
                 dates: dates,
                 reason: .unknown,
                 message: Self.exportLimitReachedMessage
+            )
+        case .entitlementUnresolved:
+            // Never report the free limit for an unconfirmed entitlement: a paid
+            // owner's StoreKit state can be unreadable in a locked background
+            // launch. Preserve the request like a locked-device read so it
+            // retries and the person gets the "tap to export" prompt instead.
+            logger.info("Scheduled export deferred — entitlement could not be confirmed")
+            return scheduledFailureResult(
+                dates: dates,
+                reason: .deviceLocked,
+                message: Self.entitlementUnresolvedMessage
             )
         }
 
