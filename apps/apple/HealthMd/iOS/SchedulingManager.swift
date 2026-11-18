@@ -1584,6 +1584,10 @@ class SchedulingManager: ObservableObject {
             // Preserve historical renderer and calendar-rollup authority for Night profiles.
             var snapshot = profile.settings
             snapshot.sleepCaptureContext = context
+            // Freeze this occurrence's calendar with its capture context; stored profiles carry none.
+            if snapshot.calendarTimeZoneIdentifier == nil {
+                snapshot.calendarTimeZoneIdentifier = zone.identifier
+            }
             let providers = (profile.target == .apiEndpoint || settings.writesExternalProviderSidecars) && ConnectedAppsFeature.isEnabled
                 ? scheduledExternalIntegrations?.forCaptureOperation() : nil
             let hasProviders = (providers?.connectedProviderCount ?? 0) > 0
@@ -1595,6 +1599,9 @@ class SchedulingManager: ObservableObject {
             // A historical calendar profile cannot silently become a range summary.
             var snapshot = profile.settings
             snapshot.sleepCaptureContext = context
+            if snapshot.calendarTimeZoneIdentifier == nil {
+                snapshot.calendarTimeZoneIdentifier = zone.identifier
+            }
             return snapshot
         }
         // This is a new occurrence, not recovery of a pending profile job. Its

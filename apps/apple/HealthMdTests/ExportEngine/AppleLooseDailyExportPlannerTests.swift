@@ -802,6 +802,36 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
         XCTAssertEqual(coreCallCount, 0)
     }
 
+    /// Scheduled Night-profile occurrences reuse the stored profile snapshot verbatim:
+    /// frozen nil authority, `generateRangeSummary`, and no calendar time zone. The daily
+    /// write must resolve legacy instead of throwing `HealthRollupRangeRequest.invalidBounds`.
+    func testFrozenRangeSummaryProfileSnapshotWithoutCalendarTimeZoneStaysLegacy() async throws {
+        let counter = M6CoreCallCounter()
+        let planner = AppleLooseDailyExportPlanner(
+            coreExecutor: M6NeverCoreExecutor(counter: counter),
+            identitySource: fixedIdentitySource
+        )
+        let settings = makeSimpleSettings()
+        settings.generateRangeSummary = true
+        let snapshot = ExportSettingsSnapshot.from(
+            settings,
+            healthSubfolder: "Health",
+            appleExportEngineAuthorityIsFrozen: true
+        )
+        XCTAssertNil(snapshot.calendarTimeZoneIdentifier)
+        XCTAssertNil(snapshot.appleExportEnginePin)
+
+        let resolution = try await planner.plan(
+            healthData: ExportFixtures.partialDay,
+            settingsSnapshot: snapshot,
+            surface: .localVaultRangeWithoutSideEffects
+        )
+
+        XCTAssertEqual(resolution, .legacy)
+        let coreCallCount = await counter.value()
+        XCTAssertEqual(coreCallCount, 0)
+    }
+
     func testUnsupportedPureRustDailyRequestFallsBackNewAndFailsClosedWhenPinned() async throws {
         let counter = M6CoreCallCounter()
         let planner = AppleLooseDailyExportPlanner(

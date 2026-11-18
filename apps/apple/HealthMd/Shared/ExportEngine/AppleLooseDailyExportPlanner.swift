@@ -336,7 +336,11 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
             )
         })
-        let requestedRange = settingsSnapshot.generateRangeSummary
+        // Frozen nil authority resolves legacy below and never consumes this request, so a
+        // snapshot without a calendar time zone must not fail its daily write.
+        let resolvesFrozenLegacy = settingsSnapshot.appleExportEnginePin == nil
+            && settingsSnapshot.appleExportEngineAuthorityIsFrozen
+        let requestedRange = settingsSnapshot.generateRangeSummary && !resolvesFrozenLegacy
             ? try HealthRollupRangeRequest(
                 ownerDateIdentifiers: outputDates,
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
