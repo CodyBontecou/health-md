@@ -1781,4 +1781,9 @@
     <string name="frontmatter_key_conflict_inline">Alegeți un nume de câmp unic și nerezervat.</string>
     <string name="frontmatter_key_conflict_message">Conflict de cheie frontmatter. Dați fiecărui câmp activat din Câmpurile frontmatter un nume unic și nerezervat. Nota zilnică nu a fost modificată.</string>
     <string name="automation_run_now_switch_failed">Nu s-a putut comuta la această automatizare, așa că nu a rulat. Deschide-o și încearcă din nou.</string>
+    <string name="trial_reminder_channel_name">Mementouri pentru abonament</string>
+    <string name="trial_reminder_channel_description">Un memento înainte ca o perioadă de probă gratuită să fie facturată</string>
+    <string name="trial_reminder_title">Perioada de probă Health.md se încheie în curând</string>
+    <string name="trial_reminder_body">Perioada ta de probă gratuită se încheie pe %1$s. Vei fi taxat cu %2$s dacă nu anulezi înainte în Google Play.</string>
+    <string name="trial_reminder_body_no_price">Perioada ta de probă gratuită se încheie pe %1$s. Abonamentul începe atunci dacă nu anulezi înainte în Google Play.</string>
 </resources>

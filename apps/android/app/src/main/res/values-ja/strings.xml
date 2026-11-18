@@ -1536,4 +1536,9 @@
     <string name="frontmatter_key_conflict_inline">一意で予約されていないフィールド名を選んでください。</string>
     <string name="frontmatter_key_conflict_message">フロントマターのキーが競合しています。「フロントマターフィールド」で、有効な各フィールドに一意で予約されていない名前を付けてください。デイリーノートは変更されていません。</string>
     <string name="automation_run_now_switch_failed">このオートメーションに切り替えられなかったため、実行されませんでした。開いてもう一度お試しください。</string>
+    <string name="trial_reminder_channel_name">サブスクリプションのリマインダー</string>
+    <string name="trial_reminder_channel_description">無料トライアルの請求前のリマインダー</string>
+    <string name="trial_reminder_title">Health.mdの無料トライアルがまもなく終了します</string>
+    <string name="trial_reminder_body">無料トライアルは%1$sに終了します。それまでにGoogle Playでキャンセルしない限り、%2$sが請求されます。</string>
+    <string name="trial_reminder_body_no_price">無料トライアルは%1$sに終了します。それまでにGoogle Playでキャンセルしない限り、サブスクリプションが開始されます。</string>
 </resources>
