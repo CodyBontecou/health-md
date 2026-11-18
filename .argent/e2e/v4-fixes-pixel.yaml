@@ -1,0 +1,45 @@
+version: 1
+requires:
+  platform: android
+# Real-data regression for v4.0 on the Pixel after an in-place upgrade of
+# com.healthmd.android. Needs an existing automation writing to a device folder.
+# Side effect: re-exports yesterday's file into that folder (same data, overwritten).
+# Waits stay raw `tool: await-ui-element`: the recorder showed the result text is
+# visible in the describe tree but not in the runner's tree.
+steps:
+  - echo: Start Health.md Android from main after an in-place upgrade. Expect Archive
+  - launch: com.healthmd.android
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: counts a day complete
+      timeoutMs: 15000
+  - await: { idle: true }
+  - echo: Open Export now. Expect the export sheet
+  # Coordinate fallback: the floating Export now button has no text or resource-id
+  # in the runner tree (Compose testTags are not exposed as resource ids). It is a
+  # fixed bottom-right FAB; the next step fails if the sheet did not open.
+  - tap: { x: 0.788, y: 0.834 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Export yesterday
+  - await: { idle: true }
+  - echo: Export yesterday (1 day). Expect the raw snapshot to be written
+  - tap: { text: Export yesterday }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Raw snapshot created
+      timeoutMs: 60000
+  - echo: Close the sheet. Expect Archive again
+  - tap: { text: Cancel }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: counts a day complete
+  - await: { idle: true }
