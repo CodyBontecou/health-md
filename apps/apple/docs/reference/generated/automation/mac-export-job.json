@@ -942,6 +942,566 @@
             "customKey" : "medications",
             "isEnabled" : true,
             "originalKey" : "medications"
+          },
+          {
+            "customKey" : "afib_burden_percent",
+            "isEnabled" : true,
+            "originalKey" : "afib_burden_percent"
+          },
+          {
+            "customKey" : "alcoholic_beverages",
+            "isEnabled" : true,
+            "originalKey" : "alcoholic_beverages"
+          },
+          {
+            "customKey" : "basal_body_temperature",
+            "isEnabled" : true,
+            "originalKey" : "basal_body_temperature"
+          },
+          {
+            "customKey" : "biotin_ug",
+            "isEnabled" : true,
+            "originalKey" : "biotin_ug"
+          },
+          {
+            "customKey" : "blood_alcohol_percent",
+            "isEnabled" : true,
+            "originalKey" : "blood_alcohol_percent"
+          },
+          {
+            "customKey" : "calcium_mg",
+            "isEnabled" : true,
+            "originalKey" : "calcium_mg"
+          },
+          {
+            "customKey" : "cervical_mucus",
+            "isEnabled" : true,
+            "originalKey" : "cervical_mucus"
+          },
+          {
+            "customKey" : "chloride_mg",
+            "isEnabled" : true,
+            "originalKey" : "chloride_mg"
+          },
+          {
+            "customKey" : "chromium_ug",
+            "isEnabled" : true,
+            "originalKey" : "chromium_ug"
+          },
+          {
+            "customKey" : "copper_mg",
+            "isEnabled" : true,
+            "originalKey" : "copper_mg"
+          },
+          {
+            "customKey" : "cycling_cadence_rpm",
+            "isEnabled" : true,
+            "originalKey" : "cycling_cadence_rpm"
+          },
+          {
+            "customKey" : "cycling_ftp_w",
+            "isEnabled" : true,
+            "originalKey" : "cycling_ftp_w"
+          },
+          {
+            "customKey" : "cycling_power_w",
+            "isEnabled" : true,
+            "originalKey" : "cycling_power_w"
+          },
+          {
+            "customKey" : "cycling_speed",
+            "isEnabled" : true,
+            "originalKey" : "cycling_speed"
+          },
+          {
+            "customKey" : "downhill_snow_km",
+            "isEnabled" : true,
+            "originalKey" : "downhill_snow_km"
+          },
+          {
+            "customKey" : "downhill_snow_mi",
+            "isEnabled" : true,
+            "originalKey" : "downhill_snow_mi"
+          },
+          {
+            "customKey" : "electrodermal_activity",
+            "isEnabled" : true,
+            "originalKey" : "electrodermal_activity"
+          },
+          {
+            "customKey" : "fev1_l",
+            "isEnabled" : true,
+            "originalKey" : "fev1_l"
+          },
+          {
+            "customKey" : "folate_ug",
+            "isEnabled" : true,
+            "originalKey" : "folate_ug"
+          },
+          {
+            "customKey" : "forced_vital_capacity_l",
+            "isEnabled" : true,
+            "originalKey" : "forced_vital_capacity_l"
+          },
+          {
+            "customKey" : "handwashing",
+            "isEnabled" : true,
+            "originalKey" : "handwashing"
+          },
+          {
+            "customKey" : "heart_rate_recovery",
+            "isEnabled" : true,
+            "originalKey" : "heart_rate_recovery"
+          },
+          {
+            "customKey" : "inhaler_usage",
+            "isEnabled" : true,
+            "originalKey" : "inhaler_usage"
+          },
+          {
+            "customKey" : "insulin_delivery_iu",
+            "isEnabled" : true,
+            "originalKey" : "insulin_delivery_iu"
+          },
+          {
+            "customKey" : "intermenstrual_bleeding",
+            "isEnabled" : true,
+            "originalKey" : "intermenstrual_bleeding"
+          },
+          {
+            "customKey" : "iodine_ug",
+            "isEnabled" : true,
+            "originalKey" : "iodine_ug"
+          },
+          {
+            "customKey" : "iron_mg",
+            "isEnabled" : true,
+            "originalKey" : "iron_mg"
+          },
+          {
+            "customKey" : "magnesium_mg",
+            "isEnabled" : true,
+            "originalKey" : "magnesium_mg"
+          },
+          {
+            "customKey" : "manganese_mg",
+            "isEnabled" : true,
+            "originalKey" : "manganese_mg"
+          },
+          {
+            "customKey" : "menstrual_flow",
+            "isEnabled" : true,
+            "originalKey" : "menstrual_flow"
+          },
+          {
+            "customKey" : "molybdenum_ug",
+            "isEnabled" : true,
+            "originalKey" : "molybdenum_ug"
+          },
+          {
+            "customKey" : "monounsaturated_fat_g",
+            "isEnabled" : true,
+            "originalKey" : "monounsaturated_fat_g"
+          },
+          {
+            "customKey" : "move_minutes",
+            "isEnabled" : true,
+            "originalKey" : "move_minutes"
+          },
+          {
+            "customKey" : "niacin_mg",
+            "isEnabled" : true,
+            "originalKey" : "niacin_mg"
+          },
+          {
+            "customKey" : "number_of_falls",
+            "isEnabled" : true,
+            "originalKey" : "number_of_falls"
+          },
+          {
+            "customKey" : "ovulation_test",
+            "isEnabled" : true,
+            "originalKey" : "ovulation_test"
+          },
+          {
+            "customKey" : "pantothenic_acid_mg",
+            "isEnabled" : true,
+            "originalKey" : "pantothenic_acid_mg"
+          },
+          {
+            "customKey" : "peak_expiratory_flow",
+            "isEnabled" : true,
+            "originalKey" : "peak_expiratory_flow"
+          },
+          {
+            "customKey" : "phosphorus_mg",
+            "isEnabled" : true,
+            "originalKey" : "phosphorus_mg"
+          },
+          {
+            "customKey" : "physical_effort",
+            "isEnabled" : true,
+            "originalKey" : "physical_effort"
+          },
+          {
+            "customKey" : "polyunsaturated_fat_g",
+            "isEnabled" : true,
+            "originalKey" : "polyunsaturated_fat_g"
+          },
+          {
+            "customKey" : "potassium_mg",
+            "isEnabled" : true,
+            "originalKey" : "potassium_mg"
+          },
+          {
+            "customKey" : "riboflavin_mg",
+            "isEnabled" : true,
+            "originalKey" : "riboflavin_mg"
+          },
+          {
+            "customKey" : "running_ground_contact_ms",
+            "isEnabled" : true,
+            "originalKey" : "running_ground_contact_ms"
+          },
+          {
+            "customKey" : "running_power_w",
+            "isEnabled" : true,
+            "originalKey" : "running_power_w"
+          },
+          {
+            "customKey" : "running_speed",
+            "isEnabled" : true,
+            "originalKey" : "running_speed"
+          },
+          {
+            "customKey" : "running_stride_length_m",
+            "isEnabled" : true,
+            "originalKey" : "running_stride_length_m"
+          },
+          {
+            "customKey" : "running_vertical_oscillation_cm",
+            "isEnabled" : true,
+            "originalKey" : "running_vertical_oscillation_cm"
+          },
+          {
+            "customKey" : "selenium_ug",
+            "isEnabled" : true,
+            "originalKey" : "selenium_ug"
+          },
+          {
+            "customKey" : "sexual_activity",
+            "isEnabled" : true,
+            "originalKey" : "sexual_activity"
+          },
+          {
+            "customKey" : "symptom_abdominal_cramps",
+            "isEnabled" : true,
+            "originalKey" : "symptom_abdominal_cramps"
+          },
+          {
+            "customKey" : "symptom_acne",
+            "isEnabled" : true,
+            "originalKey" : "symptom_acne"
+          },
+          {
+            "customKey" : "symptom_appetite_changes",
+            "isEnabled" : true,
+            "originalKey" : "symptom_appetite_changes"
+          },
+          {
+            "customKey" : "symptom_bladder_incontinence",
+            "isEnabled" : true,
+            "originalKey" : "symptom_bladder_incontinence"
+          },
+          {
+            "customKey" : "symptom_bloating",
+            "isEnabled" : true,
+            "originalKey" : "symptom_bloating"
+          },
+          {
+            "customKey" : "symptom_body_ache",
+            "isEnabled" : true,
+            "originalKey" : "symptom_body_ache"
+          },
+          {
+            "customKey" : "symptom_breast_pain",
+            "isEnabled" : true,
+            "originalKey" : "symptom_breast_pain"
+          },
+          {
+            "customKey" : "symptom_chest_pain",
+            "isEnabled" : true,
+            "originalKey" : "symptom_chest_pain"
+          },
+          {
+            "customKey" : "symptom_chills",
+            "isEnabled" : true,
+            "originalKey" : "symptom_chills"
+          },
+          {
+            "customKey" : "symptom_constipation",
+            "isEnabled" : true,
+            "originalKey" : "symptom_constipation"
+          },
+          {
+            "customKey" : "symptom_coughing",
+            "isEnabled" : true,
+            "originalKey" : "symptom_coughing"
+          },
+          {
+            "customKey" : "symptom_diarrhea",
+            "isEnabled" : true,
+            "originalKey" : "symptom_diarrhea"
+          },
+          {
+            "customKey" : "symptom_dizziness",
+            "isEnabled" : true,
+            "originalKey" : "symptom_dizziness"
+          },
+          {
+            "customKey" : "symptom_dry_skin",
+            "isEnabled" : true,
+            "originalKey" : "symptom_dry_skin"
+          },
+          {
+            "customKey" : "symptom_fainting",
+            "isEnabled" : true,
+            "originalKey" : "symptom_fainting"
+          },
+          {
+            "customKey" : "symptom_fatigue",
+            "isEnabled" : true,
+            "originalKey" : "symptom_fatigue"
+          },
+          {
+            "customKey" : "symptom_fever",
+            "isEnabled" : true,
+            "originalKey" : "symptom_fever"
+          },
+          {
+            "customKey" : "symptom_hair_loss",
+            "isEnabled" : true,
+            "originalKey" : "symptom_hair_loss"
+          },
+          {
+            "customKey" : "symptom_headache",
+            "isEnabled" : true,
+            "originalKey" : "symptom_headache"
+          },
+          {
+            "customKey" : "symptom_heartburn",
+            "isEnabled" : true,
+            "originalKey" : "symptom_heartburn"
+          },
+          {
+            "customKey" : "symptom_hot_flashes",
+            "isEnabled" : true,
+            "originalKey" : "symptom_hot_flashes"
+          },
+          {
+            "customKey" : "symptom_loss_of_smell",
+            "isEnabled" : true,
+            "originalKey" : "symptom_loss_of_smell"
+          },
+          {
+            "customKey" : "symptom_loss_of_taste",
+            "isEnabled" : true,
+            "originalKey" : "symptom_loss_of_taste"
+          },
+          {
+            "customKey" : "symptom_lower_back_pain",
+            "isEnabled" : true,
+            "originalKey" : "symptom_lower_back_pain"
+          },
+          {
+            "customKey" : "symptom_memory_lapse",
+            "isEnabled" : true,
+            "originalKey" : "symptom_memory_lapse"
+          },
+          {
+            "customKey" : "symptom_mood_changes",
+            "isEnabled" : true,
+            "originalKey" : "symptom_mood_changes"
+          },
+          {
+            "customKey" : "symptom_nausea",
+            "isEnabled" : true,
+            "originalKey" : "symptom_nausea"
+          },
+          {
+            "customKey" : "symptom_night_sweats",
+            "isEnabled" : true,
+            "originalKey" : "symptom_night_sweats"
+          },
+          {
+            "customKey" : "symptom_pelvic_pain",
+            "isEnabled" : true,
+            "originalKey" : "symptom_pelvic_pain"
+          },
+          {
+            "customKey" : "symptom_rapid_heartbeat",
+            "isEnabled" : true,
+            "originalKey" : "symptom_rapid_heartbeat"
+          },
+          {
+            "customKey" : "symptom_runny_nose",
+            "isEnabled" : true,
+            "originalKey" : "symptom_runny_nose"
+          },
+          {
+            "customKey" : "symptom_shortness_of_breath",
+            "isEnabled" : true,
+            "originalKey" : "symptom_shortness_of_breath"
+          },
+          {
+            "customKey" : "symptom_sinus_congestion",
+            "isEnabled" : true,
+            "originalKey" : "symptom_sinus_congestion"
+          },
+          {
+            "customKey" : "symptom_skipped_heartbeat",
+            "isEnabled" : true,
+            "originalKey" : "symptom_skipped_heartbeat"
+          },
+          {
+            "customKey" : "symptom_sleep_changes",
+            "isEnabled" : true,
+            "originalKey" : "symptom_sleep_changes"
+          },
+          {
+            "customKey" : "symptom_sore_throat",
+            "isEnabled" : true,
+            "originalKey" : "symptom_sore_throat"
+          },
+          {
+            "customKey" : "symptom_vaginal_dryness",
+            "isEnabled" : true,
+            "originalKey" : "symptom_vaginal_dryness"
+          },
+          {
+            "customKey" : "symptom_vomiting",
+            "isEnabled" : true,
+            "originalKey" : "symptom_vomiting"
+          },
+          {
+            "customKey" : "symptom_wheezing",
+            "isEnabled" : true,
+            "originalKey" : "symptom_wheezing"
+          },
+          {
+            "customKey" : "thiamin_mg",
+            "isEnabled" : true,
+            "originalKey" : "thiamin_mg"
+          },
+          {
+            "customKey" : "time_in_daylight_min",
+            "isEnabled" : true,
+            "originalKey" : "time_in_daylight_min"
+          },
+          {
+            "customKey" : "toothbrushing",
+            "isEnabled" : true,
+            "originalKey" : "toothbrushing"
+          },
+          {
+            "customKey" : "underwater_depth_m",
+            "isEnabled" : true,
+            "originalKey" : "underwater_depth_m"
+          },
+          {
+            "customKey" : "uv_exposure",
+            "isEnabled" : true,
+            "originalKey" : "uv_exposure"
+          },
+          {
+            "customKey" : "vitamin_a_ug",
+            "isEnabled" : true,
+            "originalKey" : "vitamin_a_ug"
+          },
+          {
+            "customKey" : "vitamin_b12_ug",
+            "isEnabled" : true,
+            "originalKey" : "vitamin_b12_ug"
+          },
+          {
+            "customKey" : "vitamin_b6_mg",
+            "isEnabled" : true,
+            "originalKey" : "vitamin_b6_mg"
+          },
+          {
+            "customKey" : "vitamin_c_mg",
+            "isEnabled" : true,
+            "originalKey" : "vitamin_c_mg"
+          },
+          {
+            "customKey" : "vitamin_d_ug",
+            "isEnabled" : true,
+            "originalKey" : "vitamin_d_ug"
+          },
+          {
+            "customKey" : "vitamin_e_mg",
+            "isEnabled" : true,
+            "originalKey" : "vitamin_e_mg"
+          },
+          {
+            "customKey" : "vitamin_k_ug",
+            "isEnabled" : true,
+            "originalKey" : "vitamin_k_ug"
+          },
+          {
+            "customKey" : "vo2_max_age_seconds",
+            "isEnabled" : true,
+            "originalKey" : "vo2_max_age_seconds"
+          },
+          {
+            "customKey" : "vo2_max_carried_forward",
+            "isEnabled" : true,
+            "originalKey" : "vo2_max_carried_forward"
+          },
+          {
+            "customKey" : "vo2_max_source_end",
+            "isEnabled" : true,
+            "originalKey" : "vo2_max_source_end"
+          },
+          {
+            "customKey" : "vo2_max_source_start",
+            "isEnabled" : true,
+            "originalKey" : "vo2_max_source_start"
+          },
+          {
+            "customKey" : "vo2_max_source_uuid",
+            "isEnabled" : true,
+            "originalKey" : "vo2_max_source_uuid"
+          },
+          {
+            "customKey" : "walking_steadiness_percent",
+            "isEnabled" : true,
+            "originalKey" : "walking_steadiness_percent"
+          },
+          {
+            "customKey" : "water_temperature",
+            "isEnabled" : true,
+            "originalKey" : "water_temperature"
+          },
+          {
+            "customKey" : "wheelchair_km",
+            "isEnabled" : true,
+            "originalKey" : "wheelchair_km"
+          },
+          {
+            "customKey" : "wheelchair_mi",
+            "isEnabled" : true,
+            "originalKey" : "wheelchair_mi"
+          },
+          {
+            "customKey" : "wrist_temperature",
+            "isEnabled" : true,
+            "originalKey" : "wrist_temperature"
+          },
+          {
+            "customKey" : "zinc_mg",
+            "isEnabled" : true,
+            "originalKey" : "zinc_mg"
           }
         ],
         "includeDate" : true,
