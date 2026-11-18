@@ -1282,6 +1282,117 @@ struct MorningDailyNoteTests {
         #expect(note == preview.content)
     }
 
+    /// A Morning ends daily-note profile with sleep, resting heart rate and steps, as the
+    /// composer previews it (#345).
+    private func dailyNoteProfile(_ f: MorningArchiveTests.Fixture) -> ExportSettingsSnapshot {
+        f.store.statisticsMostRecent[HKQuantityTypeIdentifier.restingHeartRate.rawValue] = 58
+        f.settings.archiveExportFiles = false
+        f.settings.metricSelection.enabledMetrics = ["sleep_total", "resting_heart_rate", "steps"]
+        f.settings.dailyNoteInjection.enabled = true
+        f.settings.dailyNoteInjection.folderPath = "Journal"
+        f.settings.dailyNoteInjection.createIfMissing = true
+        return ExportSettingsSnapshot.from(f.settings, healthSubfolder: "Health",
+            calendarTimeZoneIdentifier: f.context.timeZone.identifier)
+    }
+
+    private func fetch(_ f: MorningArchiveTests.Fixture) -> ProfileDailyNotePreview.Fetch {
+        { date, context, settings in
+            try await f.manager.fetchHealthData(for: date, detailPolicy: .summary,
+                metricSelection: settings.metricSelection, timeZone: context.timeZone, captureContext: context)
+        }
+    }
+
+    /// The composer's note is the note the export writes, in the profile's calendar.
+    @Test func profilePreviewMatchesTheExportedNote() async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        let profile = dailyNoteProfile(f)
+        let outcome = await ProfileDailyNotePreview.render(settings: profile, date: f.dates[1],
+            healthKitManager: f.manager, vaultManager: f.vault, fetch: fetch(f))
+        guard case .note(let path, let content) = outcome else { Issue.record("Expected a note: \(outcome)"); return }
+        #expect(path == "Journal/2026-03-08.md")
+        #expect(path == ProfileDailyNotePreview.notePath(for: profile, date: f.dates[1]))
+        let frontmatter = try #require(MarkdownMerger.splitFrontmatter(from: content)).frontmatter
+        #expect(frontmatter.contains("\nsleep_total_hours: "), "\(frontmatter)")
+        #expect(frontmatter.contains("\nsteps: 42\n"), "\(frontmatter)")
+        #expect(frontmatter.contains("\nresting_heart_rate: 58\n"), "\(frontmatter)")
+
+        // The export: Export Preview's operation, prepared plan and injector, written to disk.
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .preview)
+        let settings = snapshot.makeAdvancedExportSettings()
+        let record = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .summary,
+            metricSelection: settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context)
+        let prepared = try await f.vault.prepareWakeDateDailyNote(record, settingsSnapshot: snapshot)
+        let destination = try f.vault.freezeHealthDataRangeDestination()
+        let result = DailyNoteInjector.inject(healthData: record, into: f.root,
+            settings: settings.dailyNoteInjection, customization: settings.formatCustomization,
+            metricSelection: settings.metricSelection, calendarTimeZone: f.context.timeZone,
+            preparedContent: prepared, destinationBinding: destination.binding)
+        guard case .updated = result else { Issue.record("Expected the exported note: \(result)"); return }
+        #expect(try String(contentsOf: f.root.appendingPathComponent(path), encoding: .utf8) == content)
+    }
+
+    /// Export Preview uses `exportTimeZoneOverride ?? .current`; so does the composer.
+    @Test func profilePreviewUsesTheProfileCalendar() throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        var profile = dailyNoteProfile(f)
+        profile.calendarTimeZoneIdentifier = "Pacific/Kiritimati"
+        #expect(ProfileDailyNotePreview.timeZone(for: profile).identifier == "Pacific/Kiritimati")
+        // 12:00 UTC on 8 March is already 9 March in UTC+14.
+        let instant = try #require(ISO8601DateFormatter().date(from: "2026-03-08T12:00:00Z"))
+        #expect(ProfileDailyNotePreview.notePath(for: profile, date: instant) == "Journal/2026-03-09.md")
+        // Loading this profile for Export Preview sets the same override.
+        let live = AdvancedExportSettings(userDefaults: ExportSettingsSnapshot.makeTemporaryUserDefaults())
+        live.apply(snapshot: profile)
+        #expect((live.exportTimeZoneOverride ?? .current) == ProfileDailyNotePreview.timeZone(for: profile))
+        profile.calendarTimeZoneIdentifier = nil
+        #expect(ProfileDailyNotePreview.timeZone(for: profile) == .current)
+    }
+
+    /// Each failure names its cause; only missing access asks to connect Apple Health.
+    @Test func profilePreviewReportsWhyNoNoteIsShown() async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        let profile = dailyNoteProfile(f)
+        func render(vault: VaultManager?, fetch: ProfileDailyNotePreview.Fetch?) async -> ProfileDailyNotePreview.Outcome {
+            await ProfileDailyNotePreview.render(settings: profile, date: f.dates[1],
+                healthKitManager: f.manager, vaultManager: vault, fetch: fetch)
+        }
+
+        #expect(await render(vault: nil, fetch: fetch(f)) == .unavailable(.rendererUnavailable))
+
+        // A record captured on another calendar can't be planned for this profile.
+        let berlin = AppleSleepCaptureContext(timeZone: try #require(TimeZone(identifier: "Europe/Berlin")),
+            sleepDayAttribution: .morningEnds)
+        let mismatched: ProfileDailyNotePreview.Fetch = { date, _, settings in
+            try await f.manager.fetchHealthData(for: date, detailPolicy: .summary,
+                metricSelection: settings.metricSelection, timeZone: berlin.timeZone, captureContext: berlin)
+        }
+        #expect(await render(vault: f.vault, fetch: mismatched) == .unavailable(.notePreparation))
+
+        struct ReadFailure: Error {}
+        #expect(await render(vault: f.vault, fetch: { _, _, _ in throw ReadFailure() }) == .unavailable(.healthData))
+
+        // A draft-era Morning context without its export profile can't start a new export.
+        let unversioned = try JSONDecoder().decode(AppleSleepCaptureContext.self, from: Data(
+            #"{"calendarTimeZoneIdentifier":"America/New_York","sleepDayAttribution":"morning_ends"}"#.utf8))
+        let capture = await AppleSleepCaptureContext.pinned.withValue(unversioned) {
+            await render(vault: f.vault, fetch: fetch(f))
+        }
+        #expect(capture == .unavailable(.captureSettings))
+
+        try #require(!f.manager.isAuthorized)
+        #expect(await render(vault: f.vault, fetch: nil) == .unavailable(.healthAccess))
+
+        let issues: [ProfileDailyNotePreview.Issue] = [.healthAccess, .captureSettings, .healthData,
+            .rendererUnavailable, .notePreparation]
+        #expect(Set(issues.map(\.message)).count == issues.count)
+        let connect = ProfileDailyNotePreview.Issue.healthAccess.message
+        #expect(issues.filter { $0.message == connect } == [.healthAccess])
+    }
+
     @Test func morningInjectionWithoutAcceptedPlanFailsBeforeCreatingFile() async throws {
         let f = try MorningArchiveTests().fixture(mode: "daily")
         defer { f.cleanup() }
