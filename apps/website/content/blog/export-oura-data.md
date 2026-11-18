@@ -60,7 +60,7 @@ Pick a completed day, then inspect the relevant records and their source in Appl
 
 In Oura, open **Settings → Data Sharing → Health Connect** and choose the relevant sharing categories. Check that Oura may write the desired types and that an actual record for your chosen day exists in Health Connect. Health.md needs separate read access to those types.
 
-Oura's current instructions say its Google Fit integration is no longer available. Follow the Health Connect route rather than an old Google Fit tutorial. The shared store can contain records from multiple apps; this workflow does not promise an Oura-only source filter.
+Oura's current instructions say its Google Fit integration is no longer available. Follow the Health Connect route rather than an old Google Fit tutorial. The [Fitbit export guide](/blog/export-fitbit-data/) covers the same shift for Fitbit tools that used the retired Fitbit Web API. The shared store can contain records from multiple apps; this workflow does not promise an Oura-only source filter.
 
 ## Export a small selection with Health.md
 

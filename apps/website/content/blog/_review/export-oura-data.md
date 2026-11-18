@@ -14,3 +14,5 @@ Verified 2026-10-30 by Codex (agent), method: traced. No Oura account, device, p
 
 - [x] Discovery-only related recommendation now links WHOOP; Oura article body unchanged. Fitbit retains incoming discovery from other guides.
 - [x] Oct30 discovery follow-up adds Clue to related recommendations; Android Obsidian and WHOOP remain, and Oura article body is unchanged. Apple Obsidian retains other incoming recommendations.
+
+- [x] 2026-11-18: one cross-link sentence to /blog/export-fitbit-data/ added; it restates only claims sourced in that guide's ledger (Garmin Health Connect is one-way per this guide; Fitbit Web API retired October 30, 2026 per Google's notice). No other body change.

@@ -14,3 +14,5 @@ Public Garmin support pages were read in a rendered browser because text fetch r
 - [x] History follows https://developer.android.com/health-and-fitness/health-connect/read-data#read-older-data: before initial Health.md grant plus later records; conditional broader access and separate source backfill. Missingness is not zero; existing sleep-date and platform semantics remain unchanged.
 - [x] Privacy follows maintained policy: no Health.md account/server copy by default, separate vendor handling; optional single-owner pilot only retains intentionally uploaded API exports with no signup/automatic sync/general availability. Publication guard includes new slug.
 - [x] Android platform selects Google Play. Three related guides plus inbound Android Obsidian recommendation use existing generator; ledger excluded. No price/quota/configured OAuth/direct-cloud promise or public schema change.
+
+- [x] 2026-11-18: one cross-link sentence to /blog/export-fitbit-data/ added; it restates only claims sourced in that guide's ledger (Garmin Health Connect is one-way per this guide; Fitbit Web API retired October 30, 2026 per Google's notice). No other body change.

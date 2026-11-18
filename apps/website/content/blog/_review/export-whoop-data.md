@@ -13,3 +13,5 @@ Verified 2026-10-30 by Codex (agent), method: traced. Public official articles r
 - [x] Existing platform:both rendering offers both stores. Three related guides and incoming Oura recommendation use existing graph. Oura body unchanged. No native/schema, pricing or quota change; no device/visual QA.
 
 - [x] Related recommendation now includes Withings; discovery-only frontmatter edit, WHOOP body unchanged. Oura retains another incoming recommendation.
+
+- [x] 2026-11-18: third related recommendation changed from Withings to the Oura chooser (discovery metadata only, body unchanged). Oura keeps an inbound recommendation after the Fitbit guide refocused its related list; Withings retains its inbound from the weight guide.
