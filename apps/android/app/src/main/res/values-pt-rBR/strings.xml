@@ -1781,4 +1781,9 @@
     <string name="frontmatter_key_conflict_inline">Escolha um nome de campo exclusivo e não reservado.</string>
     <string name="frontmatter_key_conflict_message">Conflito de chaves do frontmatter. Em Campos do frontmatter, dê a cada campo ativado um nome exclusivo e não reservado. Sua nota diária não foi alterada.</string>
     <string name="automation_run_now_switch_failed">Não foi possível mudar para esta automação, então ela não foi executada. Abra-a e tente novamente.</string>
+    <string name="trial_reminder_channel_name">Lembretes de assinatura</string>
+    <string name="trial_reminder_channel_description">Um lembrete antes da cobrança de um teste gratuito</string>
+    <string name="trial_reminder_title">O teste do Health.md termina em breve</string>
+    <string name="trial_reminder_body">Seu teste gratuito termina em %1$s. Você será cobrado %2$s, a menos que cancele antes no Google Play.</string>
+    <string name="trial_reminder_body_no_price">Seu teste gratuito termina em %1$s. Sua assinatura começará então, a menos que cancele antes no Google Play.</string>
 </resources>

@@ -59,6 +59,7 @@ class BillingRepositoryImpl(
     /** Server read of the paid-period end; null leaves dates as "Shown in Google Play". */
     private val subscriptionVerifier: PlaySubscriptionVerifier? = null,
     private val clock: () -> Long = System::currentTimeMillis,
+    private val trialReminders: TrialReminderScheduler = WorkManagerTrialReminders(context),
 ) : EntitlementRepository, PurchaseRepository, PurchasesUpdatedListener {
 
     companion object {
@@ -103,6 +104,9 @@ class BillingRepositoryImpl(
 
     private val _purchaseError = MutableStateFlow<BillingError?>(null)
     override val purchaseError: StateFlow<BillingError?> = _purchaseError.asStateFlow()
+
+    /** The trial offer whose billing flow is open; its purchase schedules the reminder. */
+    private var pendingTrialOffer: PurchaseOffer? = null
 
     private val _productDetails = MutableStateFlow<ProductDetails?>(null)
     private val _offer = MutableStateFlow<PurchaseOffer?>(null)
@@ -367,6 +371,7 @@ class BillingRepositoryImpl(
                 _purchaseError.value = BillingError.SERVICE_UNAVAILABLE
                 return@withPurchaseLaunchAdmission false
             }
+            pendingTrialOffer = offer.takeIf { it.hasSevenDayTrial }
             val builder = BillingFlowParams.ProductDetailsParams.newBuilder().setProductDetails(details)
             if (plan != PurchasePlan.LIFETIME) {
                 val token = offerTokensByID[plan.productId] ?: return@withPurchaseLaunchAdmission false
@@ -671,6 +676,7 @@ class BillingRepositoryImpl(
         when (billingResult.responseCode) {
             BillingClient.BillingResponseCode.OK -> {
                 Timber.d("Purchases updated: ${purchases?.size ?: 0} purchases")
+                scheduleTrialReminderIfStarted(purchases.orEmpty())
                 scope.launch {
                     processPurchases(purchases ?: emptyList())
                 }
@@ -699,8 +705,22 @@ class BillingRepositoryImpl(
         }
     }
 
+    /** A trial offer the user just bought: remind two days before the first charge. */
+    private fun scheduleTrialReminderIfStarted(purchases: List<Purchase>) {
+        val offer = pendingTrialOffer ?: return
+        val purchase = purchases.firstOrNull {
+            it.purchaseState == Purchase.PurchaseState.PURCHASED && offer.productId in it.products
+        } ?: return
+        pendingTrialOffer = null
+        trialReminders.schedule(purchase.purchaseTime, offer.localizedPriceText)
+    }
+
     private suspend fun processPurchases(purchases: List<Purchase>, fullSnapshot: Boolean = false): Boolean {
         val snapshot = playEntitlementSnapshot(purchases)
+        if (fullSnapshot && snapshot.activePurchase?.let { it.plan != PurchasePlan.LIFETIME && it.isAutoRenewing } != true) {
+            // Cancelled, lapsed, or Lifetime: nothing will be charged, so nothing to remind about.
+            trialReminders.cancel()
+        }
         if (fullSnapshot || snapshot.hasLifetime) {
             // Purchase callbacks are deltas, so absence there cannot revoke anything.
             // Grandfathered access is independent of current Play product ownership.
