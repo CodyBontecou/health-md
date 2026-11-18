@@ -4,10 +4,10 @@
   "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
   "source_app_commit": null,
   "source_revision_strategy": "content-addressed docs/reference tree; commit omitted to avoid same-commit self-reference",
-  "docs_reference_git_tree": "1ae1a6ec1614e32da31e5d5be1e046b2bb068229",
+  "docs_reference_git_tree": "1351aa480327537914ae5c79b753dc02fd4cbdce",
   "aggregate": {
     "algorithm": "SHA-256",
-    "digest": "4b7b1d439dcdf9a2272c3b436d71878ea50c4026beeeefda46579b6dd8a347a5",
+    "digest": "9b943d9d63f16a200612b20b517b50f960d36bb20d35dab129375e45b879241a",
     "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
   },
   "schemas": [
@@ -395,8 +395,8 @@
     },
     {
       "path": "generated/automation/mac-export-job.json",
-      "bytes": 27691,
-      "sha256": "eb4c6c34810ec641f5abc40cb246a52d7127c48fccf7b086879de9561539fee1",
+      "bytes": 44621,
+      "sha256": "3ead9635e7edc99c03186c74d2615aea4393272689e89d693ee5f61937de7d4e",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -426,7 +426,7 @@
     {
       "path": "generated/automation/manifest.json",
       "bytes": 6337,
-      "sha256": "a61955f2c7e4ae93bbd4c93320cc6c610fc52084dbbf7872e071c8e8fe29d8b6",
+      "sha256": "82e90b5be2e200bf90252721a3141e4dc4ab7e257c75965f59e7df401cfd2ad8",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -1378,8 +1378,8 @@
     },
     {
       "path": "public/reference/generated/automation/mac-export-job.json",
-      "bytes": 27691,
-      "sha256": "eb4c6c34810ec641f5abc40cb246a52d7127c48fccf7b086879de9561539fee1",
+      "bytes": 44621,
+      "sha256": "3ead9635e7edc99c03186c74d2615aea4393272689e89d693ee5f61937de7d4e",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/mac-export-job.json"
     },
@@ -1400,7 +1400,7 @@
     {
       "path": "public/reference/generated/automation/manifest.json",
       "bytes": 6337,
-      "sha256": "a61955f2c7e4ae93bbd4c93320cc6c610fc52084dbbf7872e071c8e8fe29d8b6",
+      "sha256": "82e90b5be2e200bf90252721a3141e4dc4ab7e257c75965f59e7df401cfd2ad8",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/manifest.json"
     },
@@ -1960,7 +1960,7 @@
     {
       "path": "src/content/docs/reference/generated/automation/index.md",
       "bytes": 7516,
-      "sha256": "bf44d2082291f0642f118e81a08666dd3d5afd4cfd3c53b5cb470d697a0ee884",
+      "sha256": "2c64e6d6b3c283770184ef8e37e13d901674eabaa234e393d77020440c0d2cd3",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/automation/"
     },
@@ -2037,7 +2037,7 @@
     {
       "path": "src/content/docs/reference/generated/index.md",
       "bytes": 21794,
-      "sha256": "9cffff428894e4f54817cfa694f13fa6fa6c6d4980c086c201aaa7937b6bf60b",
+      "sha256": "0fd398f8b51c5ab99eec172aa34dc71d64d987d55d654c239f51f3790a4220cb",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/"
     },
