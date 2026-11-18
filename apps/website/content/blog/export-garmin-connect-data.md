@@ -104,4 +104,4 @@ This local Health Connect-to-folder workflow requires no Health.md account and c
 
 The separate opt-in, single-owner Health.md Cloud pilot retains only API exports intentionally uploaded to it. There is no public signup and no automatic device sync; the pilot is not generally available. This folder workflow does not upload to that pilot; see [retention and destination boundaries](/privacy-policy.html#retention).
 
-For notes rather than spreadsheets, continue with [Health Connect to Obsidian](/blog/export-health-connect-to-obsidian/). Keep native Garmin files for tasks that require Garmin's own archive or activity representation.
+For notes rather than spreadsheets, continue with [Health Connect to Obsidian](/blog/export-health-connect-to-obsidian/). Keep native Garmin files for tasks that require Garmin's own archive or activity representation. Switching from Fitbit? The [Fitbit export guide](/blog/export-fitbit-data/) explains what to save from Google Health first, since Health Connect does not carry Fitbit history into Garmin.

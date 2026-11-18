@@ -102,4 +102,4 @@ The local Health Connect-to-folder workflow requires no Health.md account and cr
 
 The separate opt-in, single-owner Health.md Cloud pilot retains only API exports intentionally uploaded to it, has no public signup and no automatic device sync, and is not generally available. This folder workflow does not upload to that pilot. See [retention and destination boundaries](/privacy-policy.html#retention).
 
-If your next destination is a vault, continue with [Health Connect to Obsidian](/blog/export-health-connect-to-obsidian/). This is a file-export workflow; it does not migrate Samsung accounts, device settings or purchases.
+If your next destination is a vault, continue with [Health Connect to Obsidian](/blog/export-health-connect-to-obsidian/). This is a file-export workflow; it does not migrate Samsung accounts, device settings or purchases. If you also have Fitbit history, the [Fitbit export guide](/blog/export-fitbit-data/) covers Google Takeout, TCX workouts and the same Health Connect route.
