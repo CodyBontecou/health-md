@@ -153,6 +153,14 @@ final class DailyNoteInjectorTests: XCTestCase {
         return s
     }()
 
+    /// #345: a category metric plus a cumulative and a most-recent quantity metric.
+    private static let sleepRestingHeartRateAndSteps: MetricSelectionState = {
+        let s = MetricSelectionState()
+        s.deselectAll()
+        s.enabledMetrics.formUnion(["sleep_total", "sleep_core", "resting_heart_rate", "steps"])
+        return s
+    }()
+
     private static let workoutsOnly: MetricSelectionState = {
         let s = MetricSelectionState()
         s.deselectAll()
@@ -514,6 +522,39 @@ final class DailyNoteInjectorTests: XCTestCase {
             XCTFail("Injection failed: \(error)")
         } else if case .skipped(let reason) = result {
             XCTFail("Injection skipped: \(reason)")
+        }
+    }
+
+    /// #345: every selected metric with data reaches the preview and the written note;
+    /// a selected metric without data is left out without hiding the others.
+    func testInject_mixedCategoryAndQuantityMetricsMatchPreview() throws {
+        for restingHeartRate in [58.0, nil] {
+            let directory = makeTempDir()
+            defer { cleanup(directory) }
+            var data = HealthData(date: Self.testDate)
+            data.sleep.totalDuration = 27_000
+            data.sleep.coreSleep = 14_400
+            data.activity.steps = 8_421
+            data.heart.restingHeartRate = restingHeartRate
+            guard case .preview(let preview) = DailyNoteInjector.preview(healthData: data, base: .emptyDocument,
+                settings: Self.enabledCreateSettings, customization: Self.customization,
+                metricSelection: Self.sleepRestingHeartRateAndSteps) else {
+                return XCTFail("Expected a daily-note preview")
+            }
+            let frontmatter = try XCTUnwrap(MarkdownMerger.splitFrontmatter(from: preview.content)).frontmatter
+            XCTAssertTrue(frontmatter.contains("\nsleep_total_hours: 7.50\n"), frontmatter)
+            XCTAssertTrue(frontmatter.contains("\nsleep_core_hours: 4.00\n"), frontmatter)
+            XCTAssertTrue(frontmatter.contains("\nsteps: 8421\n"), frontmatter)
+            XCTAssertEqual(frontmatter.contains("\nresting_heart_rate: 58\n"), restingHeartRate != nil, frontmatter)
+            XCTAssertFalse(frontmatter.contains("resting_heart_rate: null"), frontmatter)
+
+            guard case .updated(let path) = DailyNoteInjector.inject(healthData: data, into: directory,
+                settings: Self.enabledCreateSettings, customization: Self.customization,
+                metricSelection: Self.sleepRestingHeartRateAndSteps) else {
+                return XCTFail("Expected injected note")
+            }
+            let note = try String(contentsOf: directory.appendingPathComponent(path), encoding: .utf8)
+            XCTAssertEqual(note, preview.content)
         }
     }
 
