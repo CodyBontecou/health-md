@@ -1,0 +1,49 @@
+version: 1
+requires:
+  platform: ios
+# Real-data regression for the v4.0 parity fixes on a physical iPhone that already
+# has a Default automation writing to a local iPhone folder.
+# Side effect: re-exports yesterday's file into that folder (same data, overwritten).
+steps:
+  - echo: Start Health.md 4.0 from main. Expect Archive
+  - launch: com.codybontecou.obsidianhealth
+  - await: { visible: { id: glass.archive }, timeout: 15000 }
+  - await: { idle: true }
+  - echo: "#349: with real history, Needs attention reports nothing (no false Exports failing card)"
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.archive.attention
+      expectedText: Nothing needs attention
+  - echo: Open Export now. Expect the export sheet with Yesterday selected
+  - tap: { id: glass.exportNow }
+  - await: { visible: { id: glass.exportNow.confirm } }
+  - await: { idle: true }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.exportNow.range.0
+      expectedText: Yesterday
+  - echo: "#347: export yesterday (the 1-day range that hit invalidBounds). Expect success"
+  - tap: { id: glass.exportNow.confirm }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: status.exportBadge
+      expectedText: 1 day written
+      timeoutMs: 60000
+  - echo: Dismiss the result. Expect Archive, still with nothing needing attention
+  - await: { visible: { id: glass.exportMoment.dismiss } }
+  - tap: { id: glass.exportMoment.dismiss }
+  - await: { hidden: { id: glass.exportMoment.dismiss } }
+  - await: { visible: { id: glass.archive } }
+  - await: { idle: true }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.archive.attention
+      expectedText: Nothing needs attention
