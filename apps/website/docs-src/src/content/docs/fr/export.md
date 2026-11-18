@@ -46,6 +46,15 @@ description: "Exportez vos données Apple Health maintenant ou selon une planifi
  <div class="option"> <strong> Dossiers de santé sans perte </strong> <p> L'archive canonique d'enregistrements sources HealthKit . Ce niveau est réservé à Apple. Android ne transforme pas les enregistrements Health Connect en archive HealthKit . </p> </div>
  </div>
 
+### Détail par catégorie
+
+Le niveau de détail des données sert de valeur par défaut. Dans **Détail par catégorie**, vous pouvez le remplacer pour certaines catégories. Par exemple, vous pouvez exporter le sommeil en détail tandis que la fréquence cardiaque, les pas et les signes vitaux restent résumés. Ces remplacements modifient uniquement les sections détaillées écrites. Ils ne modifient jamais la sélection des métriques, les totaux quotidiens, les noms de fichiers ni les archives.
+
+- **Android :** pour le sommeil, l’option **Sessions** liste chaque session de sommeil Health Connect (par exemple une sieste et une nuit de sommeil) avec la date, l’heure et le décalage horaire complets, sans intervalles de phases. **Détaillé** ajoute les phases de sommeil.
+- **Apple :** le sommeil, le cœur et les signes vitaux peuvent être remplacés. HealthKit enregistre le sommeil sous forme d’intervalles de phases plutôt que de sessions ; Apple propose donc le sommeil en Résumé ou Détaillé.
+
+Les fichiers de configuration partagés ne contiennent que le niveau par défaut ; les choix par catégorie restent sur l’appareil ou le profil où vous les avez définis.
+
 ## Ce que fait réellement « l'exportation »
  <ol>
  <li> Pour chaque jour de la plage, capturez les projections récapitulatives sélectionnées. Ajoutez des échantillons compatibles pour les séries chronologiques détaillées. Et, pour les dossiers de santé sans perte, ajoutez des enregistrements sources canoniques et des diagnostics de requête. </li>
