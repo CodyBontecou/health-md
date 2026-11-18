@@ -39,11 +39,11 @@ Record the command, relevant source/dependency/fixture inputs, toolchain, featur
 
 Caches are not qualification receipts. Keep build directories isolated between worktrees and concurrent jobs; a normal incremental build still needs to validate changed inputs.
 
-## Opt-in workflows
+## Device and UI workflows
 
-Root `make test` runs the [portable CI regression suite](qa/two-minute-ci.md) without native SDKs or devices. `make test-apple` is a broad diagnostic that includes iOS simulator work and requires explicit opt-in. Use the owning component's explicit host commands, such as `make -C apps/apple test-macos`, when their scope is appropriate.
+Root `make test` runs the [portable CI regression suite](qa/two-minute-ci.md) without native SDKs or devices. `make test-apple` is a broad diagnostic that includes iOS simulator work. Use the owning component's explicit host commands, such as `make -C apps/apple test-macos`, when their scope is appropriate.
 
-Simulator/emulator QA, device installation/launch, UI automation, and Argent require explicit authorization for the current task. A request to implement, polish UI, or run tests does not authorize those workflows. Mark relevant unrun native/visual surfaces as gaps rather than claiming another platform's tests verify them.
+Simulator/emulator QA, device installation/launch, UI automation, and Argent need no separate opt-in; use them when a change needs runtime verification (see the root [verification policy](../AGENTS.md#verification-policy)). Record that QA as Argent e2e tests in `.argent/e2e/` and replay them with `argent e2e run`. Mark relevant unrun native/visual surfaces as gaps rather than claiming another platform's tests verify them.
 
 ## Native integration
 
@@ -116,8 +116,8 @@ or release qualification. They contain local paths/build logs and stay ignored.
 For a bug fix, add the smallest reliable regression at the owning layer. Prioritize
 startup failures, lost data, broken export/protocol bytes, unauthorized access and
 recovery. If changed lifecycle, permissions, navigation or native runtime behavior
-needs device verification, report the remaining gap and obtain the existing
-explicit QA opt-in. Compilation and portable tests cannot certify those behaviors.
+needs device verification, run it as an Argent e2e test or report the remaining
+gap. Compilation and portable tests cannot certify those behaviors.
 
 ## Optional agent guard and receipts
 
