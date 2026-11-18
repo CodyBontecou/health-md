@@ -86335,7 +86335,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Manual IP / Tailscale"
+            "value" : "IP manual / Tailscale"
           }
         },
         "fr" : {

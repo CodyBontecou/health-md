@@ -38,8 +38,8 @@ PRIVACIDAD Y CONTROL
 • Los datos de salud no se usan para publicidad, elaboración de perfiles, crédito, seguros ni empleo
 • Sin SDK de análisis o atribución de terceros
 • Los datos de salud se procesan en el dispositivo y solo se exportan a un destino que elijas
-• Los endpoints configurados por el usuario solo se contactan para exportaciones que envías explícitamente
-• Los permisos pueden revisarse o revocarse en Health Connect en cualquier momento
+• Los endpoints que configures solo reciben las exportaciones que envíes explícitamente
+• Puedes revisar o revocar los permisos en Health Connect cuando quieras
 • Los análisis limitados y propios sobre atribución de instalaciones, incorporación o precios nunca incluyen historiales de salud, detalles de permisos de Health Connect, contenido exportado, texto de cuentas ni rutas de archivo
 
-Exportar requiere una prueba activa, suscripción semanal/anual o acceso de por vida. Los nuevos suscriptores elegibles reciben 7 días gratis; después se renueva automáticamente al precio de la app, salvo cancelación antes del fin de la prueba o período actual. Gestiona o cancela en Google Play. El acceso de por vida se cobra inmediatamente en un pago único, sin prueba. Se conserva el acceso permanente existente.
+Tu primera exportación es gratis. Las demás requieren una prueba activa, suscripción semanal/anual o acceso de por vida. Los nuevos suscriptores elegibles reciben 7 días gratis; después se renueva automáticamente al precio de la app, salvo cancelación antes del fin de la prueba o período actual. Gestiona o cancela en Google Play. El acceso de por vida se cobra inmediatamente en un pago único, sin prueba. Se conserva el acceso permanente existente.
