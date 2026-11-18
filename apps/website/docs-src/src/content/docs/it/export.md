@@ -46,6 +46,15 @@ description: "Esporta i dati di Apple Health subito o secondo una pianificazione
  <div class="option"> <strong> Lossless Health Records </strong> <p> L'archivio canonico dei record di origine HealthKit . Questo livello è solo per Apple. Android non trasforma i record Health Connect in un archivio HealthKit . </p> </div>
  </div>
 
+### Dettaglio per categoria
+
+Il livello di dettaglio dei dati è l’impostazione predefinita. In **Dettaglio per categoria** puoi sostituirlo per singole categorie. Ad esempio, puoi esportare il sonno dettagliato mentre frequenza cardiaca, passi e parametri vitali restano in forma di riepilogo. Le sostituzioni cambiano solo le sezioni di dettaglio che vengono scritte. Non cambiano mai la selezione delle metriche, i totali giornalieri, i nomi dei file né gli archivi.
+
+- **Android:** per il sonno è disponibile **Sessioni**, che elenca ogni sessione di sonno di Health Connect (ad esempio un pisolino e il sonno notturno) con data, ora e scostamento orario completi, senza intervalli delle fasi. **Dettagliato** aggiunge le fasi del sonno.
+- **Apple:** è possibile sostituire il livello per sonno, cuore e parametri vitali. HealthKit registra il sonno come intervalli di fasi anziché come sessioni, quindi Apple offre il sonno in Riepilogo o Dettagliato.
+
+I file di configurazione condivisi contengono solo il livello predefinito; le scelte per categoria restano sul dispositivo o nel profilo in cui le hai impostate.
+
 ## Cosa comporta effettivamente l'"esportazione"
  <ol>
  <li> Per ogni giorno nell'intervallo, acquisisci le proiezioni riepilogative selezionate. Aggiungi campioni compatibili per serie temporali dettagliate. Inoltre, per i record sanitari senza perdite, aggiungi record di origine canonici ed esegui la diagnostica delle query. </li>

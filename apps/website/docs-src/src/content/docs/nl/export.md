@@ -46,6 +46,15 @@ description: "Exporteer Apple Health-gegevens nu of volgens een schema. Controle
  <div class="option"> <strong> Gezondheidsgegevens zonder verlies </strong> <p> Het canonieke HealthKit bronrecordarchief. Dit niveau is alleen voor Apple. Android zet Health Connect records niet om in een HealthKit archief. </p> </div>
  </div>
 
+### Detail per categorie
+
+Het gegevensdetailniveau is de standaard. Onder **Detail per categorie** kun je het voor afzonderlijke categorieën overschrijven. Je kunt bijvoorbeeld gedetailleerde slaap exporteren terwijl hartslag, stappen en vitale functies samengevat blijven. Overschrijvingen bepalen alleen welke detailsecties worden geschreven. Ze veranderen nooit de selectie van meetwaarden, dagtotalen, bestandsnamen of archieven.
+
+- **Android:** voor slaap is er **Sessies**, dat elke slaapsessie uit Health Connect (bijvoorbeeld een dutje en een nachtrust) toont met volledige datum, tijd en tijdverschil, zonder intervallen van slaapfasen. **Gedetailleerd** voegt slaapfasen toe.
+- **Apple:** slaap, hart en vitale functies kunnen worden overschreven. HealthKit legt slaap vast als faseintervallen in plaats van sessies, dus Apple biedt slaap als Samenvatting of Gedetailleerd.
+
+Gedeelde instellingsbestanden bevatten alleen het standaardniveau; keuzes per categorie blijven op het apparaat of in het profiel waar je ze hebt ingesteld.
+
 ## Wat 'exporteren' eigenlijk doet
  <ol>
  <li> Leg voor elke dag in het bereik geselecteerde samenvattende projecties vast. Voeg compatibele samples toe voor gedetailleerde tijdreeksen. En voor Lossless Health Records kunt u canonieke bronrecords en querydiagnostiek toevoegen. </li>

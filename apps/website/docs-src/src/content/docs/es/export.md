@@ -46,6 +46,15 @@ description: "Exporta datos de Apple Health ahora o según una programación. Co
  <div class="option"> <strong> Registros médicos sin pérdidas </strong> <p> El archivo canónico de registros fuente HealthKit . Este nivel es sólo para Apple. Android no convierte los registros Health Connect en un archivo HealthKit . </p> </div>
  </div>
 
+### Detalle por categoría
+
+El nivel de detalle de datos es el valor predeterminado. En **Detalle por categoría** puedes anularlo para categorías concretas. Por ejemplo, puedes exportar el sueño en detalle mientras la frecuencia cardiaca, los pasos y los signos vitales siguen resumidos. Las anulaciones solo cambian qué secciones de detalle se escriben. Nunca cambian la selección de métricas, los totales diarios, los nombres de archivo ni los archivos canónicos.
+
+- **Android:** para el sueño se ofrece **Sesiones**, que enumera cada sesión de sueño de Health Connect (por ejemplo, una siesta y el sueño nocturno) con fecha, hora y desfase horario completos, sin intervalos de fases. **Detallado** añade las fases del sueño.
+- **Apple:** se pueden anular el sueño, el corazón y los signos vitales. HealthKit registra el sueño como intervalos de fases y no como sesiones, por lo que Apple ofrece el sueño en Resumen o Detallado.
+
+Los archivos de configuración compartidos solo incluyen el nivel predeterminado; las opciones por categoría se quedan en el dispositivo o el perfil donde las configuraste.
+
 ## Qué significa realmente "exportar"
  <ol>
  <li> Para cada día del rango, capture proyecciones resumidas seleccionadas. Agregue muestras compatibles para series temporales detalladas. Y, para registros médicos sin pérdida, agregue registros de origen canónicos y consulte diagnósticos. </li>

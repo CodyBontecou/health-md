@@ -46,6 +46,15 @@ description: "Apple-Health-Daten jetzt oder nach Zeitplan exportieren. Prüfen S
  <div class="option"> <strong> Verlustfreie Gesundheitsakten </strong> <p> Das kanonische HealthKit Quelldatensatzarchiv. Diese Ebene ist nur für Apple verfügbar. Android wandelt Health Connect Datensätze nicht in ein HealthKit Archiv um. </p> </div>
  </div>
 
+### Detailgrad nach Kategorie
+
+Die Datendetailebene ist die Standardeinstellung. Unter **Detailgrad nach Kategorie** können Sie sie für einzelne Kategorien überschreiben. So können Sie zum Beispiel detaillierten Schlaf exportieren, während Herzfrequenz, Schritte und Vitalwerte zusammengefasst bleiben. Überschreibungen ändern nur, welche Detailabschnitte geschrieben werden. Sie ändern nie die Metrikauswahl, die Tagessummen, die Dateinamen oder die Archive.
+
+- **Android:** Für Schlaf gibt es **Sitzungen**. Diese Option listet jede Schlafsitzung aus Health Connect (zum Beispiel ein Nickerchen und den Nachtschlaf) mit vollständigem Datum, Uhrzeit und UTC-Versatz auf, ohne Schlafphasenintervalle. **Detailliert** fügt Schlafphasen hinzu.
+- **Apple:** Schlaf, Herz und Vitalwerte lassen sich überschreiben. HealthKit erfasst Schlaf als Phasenintervalle statt als Sitzungen, daher bietet Apple Schlaf als Zusammenfassung oder Detailliert an.
+
+Geteilte Einrichtungsdateien enthalten nur die Standardebene; Einstellungen pro Kategorie bleiben auf dem Gerät oder im Profil, wo Sie sie festgelegt haben.
+
 ## Was „Exportieren“ tatsächlich bewirkt
  <ol>
  <li> Für jeden Tag im Zeitraum werden ausgewählte Tageszusammenfassungen erfasst. Detaillierte Zeitreihen ergänzen verfügbare Messwerte und Intervalle. Verlustfreie Gesundheitsakten ergänzen kanonische Quelldatensätze und Abfragediagnostik. </li>
