@@ -164,6 +164,32 @@ final class ArchiveDerivationsTests: XCTestCase {
         XCTAssertNil(ArchiveAttention.repeatedStatus([detail, nil]))
     }
 
+    func testRepeatedFolderExportFailuresAreReportedPerAutomation() {
+        func run(_ profile: String, _ target: ExportTargetSelection, ok: Bool, reason: ExportFailureReason? = nil) -> ExportHistoryEntry {
+            ExportHistoryEntry(
+                source: .scheduled, success: ok, dateRangeStart: date(1), dateRangeEnd: date(1),
+                successCount: ok ? 1 : 0, totalCount: 1, failureReason: reason,
+                exportTarget: target, profileName: profile
+            )
+        }
+        // Newest first. Night's failures are interleaved with Morning successes.
+        let history = [
+            run("Night", .localIPhoneFolder, ok: false, reason: .healthKitError),
+            run("Morning", .localIPhoneFolder, ok: true),
+            run("Night", .localIPhoneFolder, ok: false, reason: .healthKitError),
+            run("Night", .localIPhoneFolder, ok: false, reason: .deviceLocked),
+            run("Mac", .connectedMac, ok: false, reason: .fileWriteError),
+            run("Feed", .apiEndpoint, ok: false, reason: .apiUploadFailed),
+            run("Feed", .apiEndpoint, ok: false, reason: .apiUploadFailed),
+            run("Night", .localIPhoneFolder, ok: true),
+        ]
+        XCTAssertEqual(ArchiveAttention.fileFailureStreaks(history), [
+            .init(profileName: "Night", target: .localIPhoneFolder, count: 3, reason: .healthKitError),
+        ], "A single Mac failure waits for the next run; endpoints have their own item")
+        XCTAssertEqual(ArchiveAttention.fileFailureStreaks(history, minimum: 1).map(\.profileName), ["Night", "Mac"])
+        XCTAssertEqual(ArchiveAttention.fileFailureStreaks([run("Night", .localIPhoneFolder, ok: true)] + history), [])
+    }
+
     // MARK: - Window
 
     func testOnlyAnUnfoldedDisplayCountsAsUnfolded() {
