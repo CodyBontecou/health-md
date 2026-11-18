@@ -64,7 +64,7 @@ operations. The component reusable workflow interfaces invoke this same portable
 Install Node 24, Rust 1.88 and Python, then check out the repository/revision named by
 `apps/website/external-sources.json` into ignored `.external/health-md-visualizations`.
 `make test` performs the component npm installs and executes all six groups. No mobile
-QA opt-in is needed for this portable suite. Logs and fresh timing receipts are written
+device is needed for this portable suite. Logs and fresh timing receipts are written
 to a unique ignored `.pi/ci/local-*` directory.
 
 Require `CI / CI` in branch protection, replacing the seven retired component contexts

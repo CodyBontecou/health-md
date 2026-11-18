@@ -2,7 +2,7 @@
 
 Android counterpart of the Apple launch-argument test mode (`apps/apple/HealthMd/Shared/TestMode.swift`). It opens the app in a fixed, synthetic state so an automation tool such as Argent can walk a journey without reading or changing a person's real health data.
 
-Running it on an emulator or device is QA and follows the root [verification policy](../../../../AGENTS.md#verification-policy): it needs an explicit request for the current task.
+Running it on an emulator or device is QA and follows the root [verification policy](../../../../AGENTS.md#verification-policy).
 
 ## Isolation
 

@@ -28,7 +28,7 @@ Apple and Android should expose the same capability, terminology, settings seman
 
 ## Local Build & Deploy
 
-For explicitly requested physical-device deployment or QA, target the Pixel 7 device. Follow the root [verification policy](../../AGENTS.md#verification-policy); ordinary builds and host tests do not authorize installation or launch:
+For physical-device deployment or QA, target the Pixel 7 device and follow the root [verification policy](../../AGENTS.md#verification-policy):
 
 - **Device serial:** `2C061FDH200CJN`
 - **ADB path:** `~/Library/Android/sdk/platform-tools/adb`
@@ -43,4 +43,4 @@ Use the root [test selection guide](../../docs/testing-strategy.md) for focused
 iteration checks and native handoff. Route native integration compilation through
 root `make verify-native` so concurrent worktrees share one build queue. Inspect
 `make plan-native` before relying on automatic platform selection. A passing build
-is compilation evidence; runtime/device QA follows the root opt-in policy.
+is compilation evidence; runtime/device QA follows the root verification policy.
