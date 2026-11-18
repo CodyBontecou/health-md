@@ -307,6 +307,9 @@ final class PurchaseManager: ObservableObject {
     /// False in UI-test, IAP-review and static-price modes, whose configured
     /// purchase state must not be overwritten by a live StoreKit read.
     private let refreshesBeforeScheduledAdmission: Bool
+    /// Test seam for the body of one refresh; nil runs the StoreKit refresh.
+    /// Arguments: includeHistoricalFallback, allowsServerVerification.
+    private let refreshWork: (@MainActor (PurchaseManager, Bool, Bool) async -> Void)?
 
     // MARK: - Init
 
@@ -319,6 +322,7 @@ final class PurchaseManager: ObservableObject {
         self.statusRefresher = { await $0.refreshStatus(allowsServerVerification: false) }
         self.entitlementReadIsReliable = Self.liveEntitlementReadIsReliable
         self.refreshesBeforeScheduledAdmission = Self.usesLiveStoreKit
+        self.refreshWork = nil
         migrateUserDefaultsToKeychain()
 
         #if os(macOS)
@@ -356,7 +360,8 @@ final class PurchaseManager: ObservableObject {
         defaults: UserDefaultsStoring,
         productLoader: @MainActor @escaping ([String]) async throws -> [Product] = { _ in [] },
         statusRefresher: (@MainActor (PurchaseManager) async -> Void)? = nil,
-        entitlementReadIsReliable: @MainActor @escaping () -> Bool = { true }
+        entitlementReadIsReliable: @MainActor @escaping () -> Bool = { true },
+        refreshWork: (@MainActor (PurchaseManager, Bool, Bool) async -> Void)? = nil
     ) {
         self.keychain = keychain
         self.defaults = defaults
@@ -364,6 +369,7 @@ final class PurchaseManager: ObservableObject {
         self.statusRefresher = statusRefresher ?? { await $0.refreshStatus(allowsServerVerification: false) }
         self.entitlementReadIsReliable = entitlementReadIsReliable
         self.refreshesBeforeScheduledAdmission = true
+        self.refreshWork = refreshWork
         migrateUserDefaultsToKeychain()
     }
 
@@ -625,6 +631,9 @@ final class PurchaseManager: ObservableObject {
     func refreshStatus(includeHistoricalFallback: Bool = false, allowsServerVerification: Bool = true) async {
         while let running = inFlightRefresh {
             await running.task.value
+            // A waiter can resume before the refresh's own caller does; clear the
+            // finished entry here so the loop never re-awaits a completed task.
+            if inFlightRefresh?.id == running.id { inFlightRefresh = nil }
             if running.covers(includeHistoricalFallback: includeHistoricalFallback,
                               allowsServerVerification: allowsServerVerification) {
                 return
@@ -634,6 +643,11 @@ final class PurchaseManager: ObservableObject {
         let id = nextRefreshID
         let task = Task { @MainActor [weak self] () -> Void in
             guard let self else { return }
+            if let refreshWork = self.refreshWork {
+                await refreshWork(self, includeHistoricalFallback, allowsServerVerification)
+                self.isCheckingAccess = false
+                return
+            }
             await self.performRefreshStatus(
                 includeHistoricalFallback: includeHistoricalFallback,
                 allowsServerVerification: allowsServerVerification
