@@ -1722,4 +1722,9 @@
     <string name="frontmatter_key_conflict_inline">Kies een unieke veldnaam die niet gereserveerd is.</string>
     <string name="frontmatter_key_conflict_message">Conflict in frontmatter-sleutel. Geef elk ingeschakeld veld in Frontmatter-velden een unieke naam die niet gereserveerd is. Je dagnotitie is niet gewijzigd.</string>
     <string name="automation_run_now_switch_failed">Kon niet naar deze automatisering overschakelen, dus deze is niet uitgevoerd. Open hem en probeer het opnieuw.</string>
+    <string name="trial_reminder_channel_name">Abonnementsherinneringen</string>
+    <string name="trial_reminder_channel_description">Een herinnering voordat een gratis proefperiode wordt gefactureerd</string>
+    <string name="trial_reminder_title">Proefperiode van Health.md eindigt binnenkort</string>
+    <string name="trial_reminder_body">Je gratis proefperiode eindigt op %1$s. Je betaalt %2$s tenzij je vóór die tijd opzegt in Google Play.</string>
+    <string name="trial_reminder_body_no_price">Je gratis proefperiode eindigt op %1$s. Dan start je abonnement, tenzij je vóór die tijd opzegt in Google Play.</string>
 </resources>

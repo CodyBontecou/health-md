@@ -1781,4 +1781,9 @@
     <string name="frontmatter_key_conflict_inline">Choisissez un nom de champ unique et non réservé.</string>
     <string name="frontmatter_key_conflict_message">Conflit de clés du frontmatter. Dans Champs du frontmatter, attribuez à chaque champ activé un nom unique et non réservé. Votre note quotidienne n’a pas été modifiée.</string>
     <string name="automation_run_now_switch_failed">Impossible de passer à cette automatisation, elle n’a donc pas été exécutée. Ouvrez-la et réessayez.</string>
+    <string name="trial_reminder_channel_name">Rappels d’abonnement</string>
+    <string name="trial_reminder_channel_description">Un rappel avant la facturation d’un essai gratuit</string>
+    <string name="trial_reminder_title">L’essai Health.md se termine bientôt</string>
+    <string name="trial_reminder_body">Votre essai gratuit se termine le %1$s. %2$s vous seront facturés sauf si vous résiliez avant dans Google Play.</string>
+    <string name="trial_reminder_body_no_price">Votre essai gratuit se termine le %1$s. Votre abonnement commencera alors, sauf si vous résiliez avant dans Google Play.</string>
 </resources>

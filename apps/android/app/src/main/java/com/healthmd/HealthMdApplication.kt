@@ -139,6 +139,7 @@ class HealthMdApplication : Application(), Configuration.Provider {
         }
         DirectCliForegroundService.createNotificationChannel(this)
         AndroidClinicSyncNotifier.ensureChannel(this)
+        com.healthmd.data.billing.TrialReminder.ensureChannel(this)
     }
 
     companion object {

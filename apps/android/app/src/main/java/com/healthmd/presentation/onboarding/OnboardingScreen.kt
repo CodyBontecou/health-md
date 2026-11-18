@@ -1,8 +1,11 @@
 package com.healthmd.presentation.onboarding
 
+import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
@@ -15,6 +18,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -86,6 +90,27 @@ fun OnboardingScreen(
         pendingRequest = emptySet()
         afterBackground = null
         exportViewModel.refreshPermissions()
+    }
+
+    // The trial timeline promises a reminder before the first charge, which needs notifications.
+    // The answer never blocks the trial: the purchase continues either way.
+    var afterNotificationPrompt by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        afterNotificationPrompt?.invoke()
+        afterNotificationPrompt = null
+    }
+    val withNotificationPrompt: (() -> Unit) -> Unit = { action ->
+        val needsPrompt = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        if (!needsPrompt) {
+            action()
+        } else {
+            afterNotificationPrompt = action
+            if (runCatching { notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) }.isFailure) {
+                afterNotificationPrompt = null
+                action()
+            }
+        }
     }
 
     var advanceAfterFolder by remember { mutableStateOf(true) }
@@ -338,9 +363,11 @@ fun OnboardingScreen(
                 purchaseFailed = state.purchaseError != null,
                 onStartTrial = {
                     viewModel.clearPurchaseError()
-                    withBackgroundAccess {
-                        viewModel.registerTrialCompletion(onComplete)
-                        context.findActivity()?.let(viewModel::startTrial)
+                    withNotificationPrompt {
+                        withBackgroundAccess {
+                            viewModel.registerTrialCompletion(onComplete)
+                            context.findActivity()?.let(viewModel::startTrial)
+                        }
                     }
                 },
                 onEnable = { withBackgroundAccess { viewModel.enableDailyAndFinish(onComplete) } },

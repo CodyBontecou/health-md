@@ -99,6 +99,26 @@ class BillingRevocationTest {
         assertThat(fixture.purchased.value).isTrue()
     }
 
+    @Test fun aFullSnapshotWithoutARenewingSubscriptionCancelsTheTrialReminder() = runTest {
+        val reminders = RecordingTrialReminders()
+        val cancelled = purchase(PurchasePlan.YEARLY).also { every { it.isAutoRenewing } returns false }
+        val fixture = fixture(backgroundScope, purchases = listOf(cancelled), trialReminders = reminders)
+        fixture.repository.restorePurchase()
+        assertThat(reminders.cancels).isEqualTo(1)
+    }
+
+    @Test fun aRenewingSubscriptionOrAPurchaseDeltaKeepsTheTrialReminder() = runTest {
+        val reminders = RecordingTrialReminders()
+        val yearly = purchase(PurchasePlan.YEARLY)
+        val fixture = fixture(backgroundScope, purchases = listOf(yearly), trialReminders = reminders)
+        fixture.repository.restorePurchase()
+        fixture.repository.onPurchasesUpdated(result(BillingClient.BillingResponseCode.OK), emptyList())
+        runCurrent()
+        assertThat(reminders.cancels).isEqualTo(0)
+        // No billing flow was opened from this repository, so nothing is scheduled.
+        assertThat(reminders.scheduled).isEmpty()
+    }
+
     @Test fun validLifetimeStillRestoresAndPersists() = runTest {
         val fixture = fixture(backgroundScope, purchases = listOf(purchase(PurchasePlan.LIFETIME)))
         assertThat(fixture.repository.restorePurchase()).isTrue()
@@ -510,6 +530,7 @@ class BillingRevocationTest {
         freeExportsUsed: Int = 1,
         verifier: PlaySubscriptionVerifier? = null,
         now: () -> Long = { NOW },
+        trialReminders: TrialReminderScheduler = RecordingTrialReminders(),
     ): Fixture {
         val app = ApplicationProvider.getApplicationContext<Context>()
         val prefs = app.getSharedPreferences("healthmd_purchase_prefs", Context.MODE_PRIVATE)
@@ -535,11 +556,18 @@ class BillingRevocationTest {
         every { client.queryPurchasesAsync(any(), any<PurchasesResponseListener>()) } answers {
             secondArg<PurchasesResponseListener>().onQueryPurchasesResponse(result(responseCode), purchases)
         }
-        return Fixture(BillingRepositoryImpl(context, settings, client, scope, verifier, now), prefs, purchased, client)
+        return Fixture(BillingRepositoryImpl(context, settings, client, scope, verifier, now, trialReminders), prefs, purchased, client)
     }
 
     private companion object {
         const val NOW = 1_800_000_000_000L
         const val DAY = 24 * 60 * 60 * 1000L
     }
+}
+
+private class RecordingTrialReminders : TrialReminderScheduler {
+    val scheduled = mutableListOf<Pair<Long, String?>>()
+    var cancels = 0
+    override fun schedule(purchaseTimeMillis: Long, priceText: String?) { scheduled += purchaseTimeMillis to priceText }
+    override fun cancel() { cancels += 1 }
 }

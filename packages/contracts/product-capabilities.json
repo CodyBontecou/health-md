@@ -1312,7 +1312,7 @@
       "id": "purchase.free-export-journey",
       "name": "First free export and paid access",
       "classification": "shared",
-      "summary": "On iOS/iPadOS and Google Play Android, onboarding configures the existing default automation as \"Daily note\" from shared metric packs (sleep, activity, heart, body, mind, nutrition, cycle; members are platform-specific), previews the past 7 days, and writes them as the first export for free. The 7-day trial and daily schedule are offered afterwards. Further exports and scheduled runs require active paid access. Setup, automation editing, previews, and existing files remain reachable. Historical usage is preserved through purchase, restore, and expiry. Eligible subscriptions retain store-backed trials. Free macOS companion and F-Droid Full Access are unchanged.",
+      "summary": "On iOS/iPadOS and Google Play Android, onboarding configures the existing default automation as \"Daily note\" from shared metric packs (sleep, activity, heart, body, mind, nutrition, cycle; members are platform-specific), previews the past 7 days, and writes them as the first export for free. The 7-day trial and daily schedule are offered afterwards. Further exports and scheduled runs require active paid access. Setup, automation editing, previews, and existing files remain reachable. Historical usage is preserved through purchase, restore, and expiry. Eligible subscriptions retain store-backed trials, and a local notification reminds the customer two days before a renewing seven-day trial is billed (iOS reads the StoreKit trial end and renewal state; Play Billing exposes neither on device, so Android anchors to the trial purchase time and cancels when a full snapshot shows no renewing subscription). Free macOS companion and F-Droid Full Access are unchanged.",
       "platforms": {
         "apple": {
           "state": "available"
@@ -1329,7 +1329,9 @@
         "apps/apple/docs/features/onboarding.md",
         "apps/apple/HealthMd/Shared/Models/OnboardingMetricPack.swift",
         "apps/android/docs/features/onboarding.md",
-        "apps/android/docs/features/lifetime-unlock.md"
+        "apps/android/docs/features/lifetime-unlock.md",
+        "apps/apple/HealthMd/Shared/Notifications/TrialReminderNotification.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/billing/TrialReminder.kt"
       ],
       "profiles": []
     },
