@@ -1537,6 +1537,35 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertEqual(try store.loadAll(), [])
     }
 
+    func testNewNightProfileOccurrenceFreezesCalendarTimeZoneForStoredProfileWithoutOne() async throws {
+        let suite = "ScheduledNightProfileZone.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        settings.exportFormats = [.markdown]
+        settings.generateRangeSummary = true
+        settings.includeDataDictionary = false
+        // Stored profiles are portable configuration and carry no calendar zone.
+        let stored = ExportSettingsSnapshot.from(settings, healthSubfolder: "SavedProfile")
+        XCTAssertNil(stored.calendarTimeZoneIdentifier)
+        let profile = ScheduledExportCoordinator.ScheduledProfileRequestContext(profileID: UUID(), profileName: "Default",
+            target: .localIPhoneFolder, settings: stored)
+        let manager = makeManager(store: TestPendingExportStore(),
+            notificationScheduler: InspectableExportNotificationScheduler()) { dates, _ in
+                XCTFail("Profile preparation cannot execute an export")
+                return ExportOrchestrator.ExportResult(successCount: 0, totalCount: dates.count, failedDateDetails: [])
+            }
+        let context = AppleSleepCaptureContext(timeZone: .current, sleepDayAttribution: .nightBegins)
+        let snapshot = await AppleSleepCaptureContext.pinned.withValue(context) {
+            await manager.makeSettingsSnapshotForNewScheduledProfileOperation(profile)
+        }
+        // A nil zone made the loose daily planner throw HealthRollupRangeRequest.invalidBounds
+        // on every scheduled day with a range summary enabled.
+        XCTAssertEqual(snapshot.calendarTimeZoneIdentifier, TimeZone.current.identifier)
+        XCTAssertNotNil(snapshot.makeAdvancedExportSettings().exportTimeZoneOverride)
+        XCTAssertEqual(snapshot.healthSubfolder, "SavedProfile")
+    }
+
     func testNewProfileOccurrencePreservesNightAuthorityAndNeverConvertsCalendarRollups() async throws {
         let suite = "ScheduledNightProfile.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
