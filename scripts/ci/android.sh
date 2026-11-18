@@ -11,6 +11,21 @@ export HEALTHMD_LIVE_PAIRING_CODE=12345678901234567890
 abi=${HEALTHMD_CI_ANDROID_ABI:-x86_64}
 results=apps/android/build/ci-results
 mkdir -p "$results"
+# The Android Gradle plugin creates its debug keystore in the Android user home
+# (~/.android). Sandboxed check runners may not allow writes there; probe with a
+# real file (the permission bits can say writable while a sandbox denies the write)
+# and use a build-local home instead. An explicit ANDROID_USER_HOME is respected.
+android_user_home_writable() {
+    local probe
+    mkdir -p "$1" 2>/dev/null || return 1
+    probe=$(mktemp "$1/.healthmd-ci-write-probe.XXXXXX" 2>/dev/null) || return 1
+    rm -f "$probe"
+}
+if [[ -z "${ANDROID_USER_HOME:-}" ]] && ! android_user_home_writable "$HOME/.android"; then
+    export ANDROID_USER_HOME="$repo_root/apps/android/build/ci-android-user-home"
+    mkdir -p "$ANDROID_USER_HOME"
+    echo "~/.android is not writable; using ANDROID_USER_HOME=$ANDROID_USER_HOME for the debug keystore" >&2
+fi
 rm -rf apps/android/healthmd-core/build/test-results/testDebugUnitTest apps/android/app/build/test-results/testPlayE2eUnitTest apps/android/direct-protocol/build/test-results/test apps/android/healthmd-core/build/outputs/androidTest-results/connected apps/android/app/build/outputs/androidTest-results/connected
 log="$results/rust-listener.log"
 # Launch the test executable directly so the cleanup PID owns the listener,

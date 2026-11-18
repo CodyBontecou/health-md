@@ -1722,4 +1722,9 @@
     <string name="frontmatter_key_conflict_inline">Wählen Sie einen eindeutigen, nicht reservierten Feldnamen.</string>
     <string name="frontmatter_key_conflict_message">Frontmatter-Schlüsselkonflikt. Geben Sie jedem aktivierten Feld unter „Frontmatter-Felder“ einen eindeutigen, nicht reservierten Namen. Ihre Tagesnotiz wurde nicht geändert.</string>
     <string name="automation_run_now_switch_failed">Zu dieser Automatisierung konnte nicht gewechselt werden, daher wurde sie nicht ausgeführt. Öffne sie und versuche es erneut.</string>
+    <string name="trial_reminder_channel_name">Abo-Erinnerungen</string>
+    <string name="trial_reminder_channel_description">Eine Erinnerung, bevor eine kostenlose Testphase abgerechnet wird</string>
+    <string name="trial_reminder_title">Health.md-Testphase endet bald</string>
+    <string name="trial_reminder_body">Deine kostenlose Testphase endet am %1$s. Dir werden %2$s berechnet, wenn du nicht vorher in Google Play kündigst.</string>
+    <string name="trial_reminder_body_no_price">Deine kostenlose Testphase endet am %1$s. Dann beginnt dein Abo, wenn du nicht vorher in Google Play kündigst.</string>
 </resources>

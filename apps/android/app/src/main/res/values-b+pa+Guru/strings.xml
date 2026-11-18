@@ -1696,4 +1696,9 @@
     <string name="frontmatter_key_conflict_inline">ਇੱਕ ਵਿਲੱਖਣ, ਗੈਰ-ਰਾਖਵਾਂ ਫ਼ੀਲਡ ਨਾਮ ਚੁਣੋ।</string>
     <string name="frontmatter_key_conflict_message">Frontmatter ਕੁੰਜੀ ਟਕਰਾਅ। Frontmatter ਫ਼ੀਲਡ ਵਿੱਚ ਹਰ ਚਾਲੂ ਫ਼ੀਲਡ ਨੂੰ ਇੱਕ ਵਿਲੱਖਣ, ਗੈਰ-ਰਾਖਵਾਂ ਨਾਮ ਦਿਓ। ਤੁਹਾਡਾ ਰੋਜ਼ਾਨਾ ਨੋਟ ਨਹੀਂ ਬਦਲਿਆ ਗਿਆ।</string>
     <string name="automation_run_now_switch_failed">ਇਸ ਆਟੋਮੇਸ਼ਨ \'ਤੇ ਨਹੀਂ ਜਾ ਸਕੇ, ਇਸ ਲਈ ਇਹ ਨਹੀਂ ਚੱਲੀ। ਇਸਨੂੰ ਖੋਲ੍ਹੋ ਅਤੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+    <string name="trial_reminder_channel_name">ਸਬਸਕ੍ਰਿਪਸ਼ਨ ਰਿਮਾਈਂਡਰ</string>
+    <string name="trial_reminder_channel_description">ਮੁਫ਼ਤ ਟ੍ਰਾਇਲ ਦਾ ਖਰਚਾ ਲੱਗਣ ਤੋਂ ਪਹਿਲਾਂ ਇੱਕ ਰਿਮਾਈਂਡਰ</string>
+    <string name="trial_reminder_title">Health.md ਟ੍ਰਾਇਲ ਜਲਦੀ ਖਤਮ ਹੋ ਰਿਹਾ ਹੈ</string>
+    <string name="trial_reminder_body">ਤੁਹਾਡਾ ਮੁਫ਼ਤ ਟ੍ਰਾਇਲ %1$s ਨੂੰ ਖਤਮ ਹੋਵੇਗਾ। ਜੇ ਤੁਸੀਂ ਉਸ ਤੋਂ ਪਹਿਲਾਂ Google Play ਵਿੱਚ ਰੱਦ ਨਹੀਂ ਕਰਦੇ, ਤਾਂ ਤੁਹਾਡੇ ਤੋਂ %2$s ਲਏ ਜਾਣਗੇ।</string>
+    <string name="trial_reminder_body_no_price">ਤੁਹਾਡਾ ਮੁਫ਼ਤ ਟ੍ਰਾਇਲ %1$s ਨੂੰ ਖਤਮ ਹੋਵੇਗਾ। ਜੇ ਤੁਸੀਂ ਉਸ ਤੋਂ ਪਹਿਲਾਂ Google Play ਵਿੱਚ ਰੱਦ ਨਹੀਂ ਕਰਦੇ, ਤਾਂ ਤੁਹਾਡੀ ਸਬਸਕ੍ਰਿਪਸ਼ਨ ਸ਼ੁਰੂ ਹੋ ਜਾਵੇਗੀ।</string>
 </resources>

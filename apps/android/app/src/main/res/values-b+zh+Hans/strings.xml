@@ -1534,4 +1534,9 @@
     <string name="frontmatter_key_conflict_inline">请选择唯一且非保留的字段名称。</string>
     <string name="frontmatter_key_conflict_message">Frontmatter 键冲突。请在“Frontmatter 字段”中为每个已启用的字段设置唯一且非保留的名称。你的每日笔记未被更改。</string>
     <string name="automation_run_now_switch_failed">无法切换到此自动化，因此未运行。请打开它后重试。</string>
+    <string name="trial_reminder_channel_name">订阅提醒</string>
+    <string name="trial_reminder_channel_description">免费试用扣费前的提醒</string>
+    <string name="trial_reminder_title">Health.md 试用即将结束</string>
+    <string name="trial_reminder_body">你的免费试用将于 %1$s 结束。除非你在此之前于 Google Play 中取消，否则将收取 %2$s。</string>
+    <string name="trial_reminder_body_no_price">你的免费试用将于 %1$s 结束。除非你在此之前于 Google Play 中取消，否则订阅将随即开始。</string>
 </resources>
