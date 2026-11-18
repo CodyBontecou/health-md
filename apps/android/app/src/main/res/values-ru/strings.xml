@@ -1846,4 +1846,9 @@
     <string name="frontmatter_key_conflict_inline">Выберите уникальное незарезервированное название поля.</string>
     <string name="frontmatter_key_conflict_message">Конфликт ключей frontmatter. Задайте каждому включённому полю уникальное незарезервированное название в разделе «Frontmatter Поля». Ваша ежедневная заметка не изменена.</string>
     <string name="automation_run_now_switch_failed">Не удалось переключиться на эту автоматизацию, поэтому она не запущена. Откройте её и попробуйте снова.</string>
+    <string name="trial_reminder_channel_name">Напоминания о подписке</string>
+    <string name="trial_reminder_channel_description">Напоминание перед списанием оплаты за бесплатный пробный период</string>
+    <string name="trial_reminder_title">Пробный период Health.md скоро закончится</string>
+    <string name="trial_reminder_body">Ваш бесплатный пробный период закончится %1$s. С вас спишут %2$s, если вы не отмените подписку в Google Play до этого.</string>
+    <string name="trial_reminder_body_no_price">Ваш бесплатный пробный период закончится %1$s. Тогда начнётся подписка, если вы не отмените её в Google Play до этого.</string>
 </resources>

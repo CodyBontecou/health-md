@@ -652,6 +652,9 @@ final class PurchaseManager: ObservableObject {
                 includeHistoricalFallback: includeHistoricalFallback,
                 allowsServerVerification: allowsServerVerification
             )
+            #if os(iOS)
+            await self.refreshTrialReminder()
+            #endif
         }
         inFlightRefresh = InFlightRefresh(
             id: id,
@@ -1063,6 +1066,13 @@ final class PurchaseManager: ObservableObject {
                     return
                 }
                 await tx.finish()
+                #if os(iOS)
+                // The trial timeline promised a reminder before the first charge.
+                // The prompt waits on the user, so it must never hold up the purchase.
+                if TrialReminderNotification.isIntroductoryOffer(tx) {
+                    Task { await TrialReminderNotification.requestPermissionIfUndetermined() }
+                }
+                #endif
                 // Reconcile all current entitlements: an expired/upgraded subscription
                 // must never become a permanent unlock via a purchase callback.
                 await refreshStatus()
@@ -1339,6 +1349,15 @@ final class PurchaseManager: ObservableObject {
             }
         }
     }
+
+    #if os(iOS)
+    /// Schedules, replaces or removes the reminder before a renewing trial is billed.
+    private func refreshTrialReminder() async {
+        let prices = productsByID.mapValues(\.displayPrice)
+        let trial = await TrialReminderNotification.currentTrial { prices[$0] }
+        TrialReminderNotification.refresh(trial: trial)
+    }
+    #endif
 
     // MARK: - UserDefaults → Keychain Migration
 

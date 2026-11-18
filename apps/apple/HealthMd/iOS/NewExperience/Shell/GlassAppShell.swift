@@ -532,6 +532,7 @@ struct GlassAppShell: View {
                     onSchedulesChanged: { scheduleRevision += 1 },
                     onOpenExportSettings: { showClassicExport = true }
                 )
+                .environment(\.composerVaultManager, vaultManager)
             }
         case .settings:
             SettingsScreen(
@@ -564,6 +565,7 @@ struct GlassAppShell: View {
                     exportRequest = ExportNowRequest(profileID: profileID)
                 }
             )
+            .environment(\.composerVaultManager, vaultManager)
         }
     }
 

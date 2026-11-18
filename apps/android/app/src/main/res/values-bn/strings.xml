@@ -1696,4 +1696,9 @@
     <string name="frontmatter_key_conflict_inline">একটি অনন্য, রিজার্ভ নয় এমন ফিল্ডের নাম বেছে নিন।</string>
     <string name="frontmatter_key_conflict_message">Frontmatter কী-দ্বন্দ্ব। Frontmatter ফিল্ড-এ প্রতিটি সক্রিয় ফিল্ডকে একটি অনন্য, রিজার্ভ নয় এমন নাম দিন। আপনার দৈনিক নোট পরিবর্তন হয়নি।</string>
     <string name="automation_run_now_switch_failed">এই অটোমেশনে যাওয়া যায়নি, তাই এটি চলেনি। এটি খুলে আবার চেষ্টা করুন।</string>
+    <string name="trial_reminder_channel_name">সাবস্ক্রিপশন রিমাইন্ডার</string>
+    <string name="trial_reminder_channel_description">বিনামূল্যের ট্রায়ালের চার্জ নেওয়ার আগে একটি রিমাইন্ডার</string>
+    <string name="trial_reminder_title">Health.md ট্রায়াল শীঘ্রই শেষ হচ্ছে</string>
+    <string name="trial_reminder_body">আপনার বিনামূল্যের ট্রায়াল %1$s-এ শেষ হবে। তার আগে Google Play-তে বাতিল না করলে আপনার কাছ থেকে %2$s নেওয়া হবে।</string>
+    <string name="trial_reminder_body_no_price">আপনার বিনামূল্যের ট্রায়াল %1$s-এ শেষ হবে। তার আগে Google Play-তে বাতিল না করলে তখন আপনার সাবস্ক্রিপশন শুরু হবে।</string>
 </resources>
