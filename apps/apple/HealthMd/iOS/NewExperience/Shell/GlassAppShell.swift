@@ -868,6 +868,7 @@ struct GlassAppShell: View {
             ))
         }
         items.append(contentsOf: [ExportTargetSelection.apiEndpoint, .agentDataGateway].compactMap(endpointItem))
+        items.append(contentsOf: ArchiveAttention.fileFailureStreaks(exportHistory.history).map(fileFailureItem))
         let macProfiles = profiles.filter { $0.target == .connectedMac }
         if !macProfiles.isEmpty, syncService.connectionState != .connected {
             let mac = syncService.connectedPeerName
@@ -940,6 +941,20 @@ struct GlassAppShell: View {
             message: message,
             actionTitle: String(localized: "View endpoint"),
             action: { endpointSheet = EndpointSheetRequest(target: target) }
+        )
+    }
+
+    /// "Daily notes failed three times: Device locked. Unlock your iPhone, …"
+    private func fileFailureItem(_ streak: ArchiveAttention.FailureStreak) -> AttentionScreen.Item {
+        let name = streak.profileName ?? streak.target.title
+        let times = AttentionCountText.spelled(streak.count)
+        let reason = streak.reason.shortDescription
+        return .init(
+            id: "exports.\(streak.target.rawValue).\(streak.profileName ?? "")",
+            title: String(localized: "Exports failing"),
+            message: String(localized: "\(name) failed \(times) times: \(reason).") + " " + streak.reason.recoverySuggestion,
+            actionTitle: nil,
+            action: nil
         )
     }
 

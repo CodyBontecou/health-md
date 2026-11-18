@@ -203,5 +203,44 @@ enum ArchiveAttention {
         guard let first = codes.first ?? nil, codes.allSatisfy({ $0 == first }) else { return nil }
         return first
     }
+
+    /// One automation whose latest runs all failed.
+    struct FailureStreak: Equatable {
+        let profileName: String?
+        let target: ExportTargetSelection
+        let count: Int
+        let reason: ExportFailureReason
+    }
+
+    /// The targets that write files rather than POST to an endpoint. Endpoint
+    /// failures have their own item, which names the host and status code.
+    static let fileTargets: Set<ExportTargetSelection> = [.localIPhoneFolder, .connectedMac, .googleDrive]
+
+    /// Failure streaks per automation, from history ordered newest first.
+    ///
+    /// A run of another automation never breaks a streak. One failure alone is not
+    /// reported, because a scheduled run that found the iPhone locked recovers
+    /// at the next run on its own.
+    static func fileFailureStreaks(_ history: [ExportHistoryEntry], minimum: Int = 2) -> [FailureStreak] {
+        var order: [String] = []
+        var runsByKey: [String: [ExportHistoryEntry]] = [:]
+        for run in history {
+            guard let target = run.exportTarget, fileTargets.contains(target) else { continue }
+            let key = "\(target.rawValue)\u{1F}\(run.profileName ?? "")"
+            if runsByKey[key] == nil { order.append(key) }
+            runsByKey[key, default: []].append(run)
+        }
+        return order.compactMap { key in
+            guard let runs = runsByKey[key], let latest = runs.first, let target = latest.exportTarget else { return nil }
+            let count = consecutiveFailures(runs.map(\.presentationStatus))
+            guard count >= minimum else { return nil }
+            return FailureStreak(
+                profileName: latest.profileName,
+                target: target,
+                count: count,
+                reason: latest.failureReasonForDisplay ?? .unknown
+            )
+        }
+    }
 }
 #endif
