@@ -51,7 +51,21 @@ enum ComposerPreviewPlan {
     }
 }
 
+/// The vault the composer's daily-note preview prepares Morning ends notes through.
+/// Optional, so a composer shown without it still renders its other files.
+private struct ComposerVaultManagerKey: EnvironmentKey {
+    static let defaultValue: VaultManager? = nil
+}
+
+extension EnvironmentValues {
+    var composerVaultManager: VaultManager? {
+        get { self[ComposerVaultManagerKey.self] }
+        set { self[ComposerVaultManagerKey.self] = newValue }
+    }
+}
+
 /// "Tomorrow's file": the next run's file rendered by the exporter from the day's data so far.
+/// When the profile updates a daily note, this is that note, rendered by the export's injector.
 struct ComposerFilePreview: View {
     let settings: ExportSettingsSnapshot
     let entry: ScheduledExportEntry?
@@ -60,7 +74,10 @@ struct ComposerFilePreview: View {
 
     @Environment(\.glassPalette) private var palette
     @EnvironmentObject private var healthKitManager: HealthKitManager
+    @Environment(\.composerVaultManager) private var vaultManager
     @State private var rendered: Rendered?
+    /// Why nothing is rendered, when the cause isn't missing Apple Health access.
+    @State private var unavailableMessage: String?
     @State private var isLoading = true
 
     private struct Rendered: Equatable {
@@ -84,8 +101,15 @@ struct ComposerFilePreview: View {
             nextRun: nextRun,
             includesToday: entry?.includeToday ?? false,
             now: now,
-            calendar: .current
+            calendar: calendar
         )
+    }
+
+    /// The profile's calendar: Export Preview's `exportTimeZoneOverride ?? .current`.
+    private var calendar: Calendar {
+        var calendar = Calendar.current
+        calendar.timeZone = ProfileDailyNotePreview.timeZone(for: settings)
+        return calendar
     }
 
     private var format: ExportFormat? {
@@ -119,7 +143,17 @@ struct ComposerFilePreview: View {
             .padding(.top, 14)
             .padding(.bottom, 10)
             content
-                .padding(.bottom, 14)
+                .padding(.bottom, settings.dailyNoteInjection.enabled ? 8 : 14)
+            if settings.dailyNoteInjection.enabled {
+                // The preview can't read the note on disk (a profile may write to another
+                // folder), so say what it shows. Export Preview merges into the existing note.
+                Text(String(localized: "Shown as a new note. If the note exists, these properties are added to it and the rest of the note is kept."))
+                    .glassFont(.rowSubtitle)
+                    .foregroundStyle(palette.muted)
+                    .padding(.horizontal, 18)
+                    .padding(.bottom, 14)
+                    .accessibilityIdentifier("glass.composer.file.freshNote")
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassSurface()
@@ -158,7 +192,7 @@ struct ComposerFilePreview: View {
         } else {
             Text(isLoading
                  ? String(localized: "Rendering…")
-                 : String(localized: "Connect Apple Health to see this file rendered."))
+                 : unavailableMessage ?? ProfileDailyNotePreview.Issue.healthAccess.message)
                 .glassFont(.rowSubtitle)
                 .foregroundStyle(palette.muted)
                 .padding(.horizontal, 18)
@@ -166,6 +200,9 @@ struct ComposerFilePreview: View {
     }
 
     private var path: String? {
+        if settings.dailyNoteInjection.enabled {
+            return ProfileDailyNotePreview.notePath(for: settings, date: target.date)
+        }
         guard let format, let defaults = UserDefaults(suiteName: "com.healthmd.glass.output-preview") else { return nil }
         let advanced = AdvancedExportSettings(snapshot: settings, userDefaults: defaults)
         return [
@@ -179,6 +216,11 @@ struct ComposerFilePreview: View {
     private func load() async {
         isLoading = true
         defer { isLoading = false }
+        unavailableMessage = nil
+        if settings.dailyNoteInjection.enabled {
+            await loadDailyNote()
+            return
+        }
         guard let format, let defaults = UserDefaults(suiteName: "com.healthmd.glass.output-preview") else {
             rendered = nil
             return
@@ -208,9 +250,40 @@ struct ComposerFilePreview: View {
             rendered = nil
             return
         }
-        let text = data.export(format: format, settings: advanced)
+        show(data.export(format: format, settings: advanced))
+    }
+
+    private func show(_ text: String?) {
+        guard let text else {
+            rendered = nil
+            return
+        }
         let result = ComposerPreviewPlan.lines(of: text, limit: lineLimit)
         rendered = Rendered(lines: result.lines, isTruncated: result.isTruncated)
+    }
+
+    /// The daily note this profile writes, built as Export Preview builds it (#345). The
+    /// Markdown export starts with a dozen schema lines, which hid every metric here.
+    @MainActor
+    private func loadDailyNote() async {
+        var fetch: ProfileDailyNotePreview.Fetch?
+        #if DEBUG
+        if TestMode.useHealthKitExportPreviewFixtures || MarketingCapture.isActive {
+            fetch = { date, _, _ in
+                UITestHealthKitFixtures.exportPreviewHealthData(for: date, includeGranularData: false)
+            }
+        }
+        #endif
+        let outcome = await ProfileDailyNotePreview.render(settings: settings, date: target.date,
+            healthKitManager: healthKitManager, vaultManager: vaultManager, fetch: fetch)
+        guard !Task.isCancelled else { return }
+        switch outcome {
+        case .note(_, let content):
+            show(content)
+        case .unavailable(let issue):
+            rendered = nil
+            unavailableMessage = issue.message
+        }
     }
 }
 #endif
