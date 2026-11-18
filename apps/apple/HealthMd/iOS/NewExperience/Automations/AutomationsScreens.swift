@@ -966,10 +966,34 @@ struct ComposerFieldList: View {
 
     private var fields: [HealthMetricDefinition] {
         let enabled = settings.metricSelection.enabledMetricIDs
-        return HealthMetrics.availableInCurrentBuild
-            .filter { enabled.contains($0.id) || pending[$0.id] != nil }
-            .prefix(Self.visibleRowCount)
-            .map { $0 }
+        return Self.visibleFields(
+            HealthMetrics.availableInCurrentBuild.filter { enabled.contains($0.id) || pending[$0.id] != nil },
+            limit: Self.visibleRowCount
+        )
+    }
+
+    /// Takes one field per category in turn (#345). In catalog order alone, a full Sleep
+    /// category (8 fields) filled every row and hid steps or resting heart rate.
+    static func visibleFields(_ listed: [HealthMetricDefinition], limit: Int) -> [HealthMetricDefinition] {
+        var queues: [HealthMetricCategory: ArraySlice<HealthMetricDefinition>] = [:]
+        var categories: [HealthMetricCategory] = []
+        for field in listed {
+            if queues[field.category] == nil { categories.append(field.category) }
+            queues[field.category, default: []].append(field)
+        }
+        var picked: [HealthMetricDefinition] = []
+        while picked.count < limit {
+            var tookAny = false
+            for category in categories where picked.count < limit {
+                guard let next = queues[category]?.popFirst() else { continue }
+                picked.append(next)
+                tookAny = true
+            }
+            if !tookAny { break }
+        }
+        // Rows keep the catalog order the metric picker uses.
+        let rank = Dictionary(listed.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return picked.sorted { rank[$0.id, default: 0] < rank[$1.id, default: 0] }
     }
 
     private func isOn(_ field: HealthMetricDefinition) -> Bool {

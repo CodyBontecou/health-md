@@ -51,7 +51,21 @@ enum ComposerPreviewPlan {
     }
 }
 
+/// The vault the composer's daily-note preview prepares Morning ends notes through.
+/// Optional, so a composer shown without it still renders its other files.
+private struct ComposerVaultManagerKey: EnvironmentKey {
+    static let defaultValue: VaultManager? = nil
+}
+
+extension EnvironmentValues {
+    var composerVaultManager: VaultManager? {
+        get { self[ComposerVaultManagerKey.self] }
+        set { self[ComposerVaultManagerKey.self] = newValue }
+    }
+}
+
 /// "Tomorrow's file": the next run's file rendered by the exporter from the day's data so far.
+/// When the profile updates a daily note, this is that note, rendered by the export's injector.
 struct ComposerFilePreview: View {
     let settings: ExportSettingsSnapshot
     let entry: ScheduledExportEntry?
@@ -60,6 +74,7 @@ struct ComposerFilePreview: View {
 
     @Environment(\.glassPalette) private var palette
     @EnvironmentObject private var healthKitManager: HealthKitManager
+    @Environment(\.composerVaultManager) private var vaultManager
     @State private var rendered: Rendered?
     @State private var isLoading = true
 
@@ -166,6 +181,11 @@ struct ComposerFilePreview: View {
     }
 
     private var path: String? {
+        if settings.dailyNoteInjection.enabled {
+            let note = DailyNoteInjectionSettings()
+            settings.dailyNoteInjection.apply(to: note)
+            return note.previewPath(for: target.date)
+        }
         guard let format, let defaults = UserDefaults(suiteName: "com.healthmd.glass.output-preview") else { return nil }
         let advanced = AdvancedExportSettings(snapshot: settings, userDefaults: defaults)
         return [
@@ -179,6 +199,10 @@ struct ComposerFilePreview: View {
     private func load() async {
         isLoading = true
         defer { isLoading = false }
+        if settings.dailyNoteInjection.enabled {
+            show(await renderDailyNote())
+            return
+        }
         guard let format, let defaults = UserDefaults(suiteName: "com.healthmd.glass.output-preview") else {
             rendered = nil
             return
@@ -208,9 +232,74 @@ struct ComposerFilePreview: View {
             rendered = nil
             return
         }
-        let text = data.export(format: format, settings: advanced)
+        show(data.export(format: format, settings: advanced))
+    }
+
+    private func show(_ text: String?) {
+        guard let text else {
+            rendered = nil
+            return
+        }
         let result = ComposerPreviewPlan.lines(of: text, limit: lineLimit)
         rendered = Rendered(lines: result.lines, isTruncated: result.isTruncated)
+    }
+
+    /// The daily note this profile writes, built as Export Preview builds it (#345): the
+    /// same frozen operation, capture clock and injector, so its properties match the note.
+    /// The Markdown export starts with a dozen schema lines, which hid every metric here.
+    @MainActor
+    private func renderDailyNote() async -> String? {
+        guard let defaults = UserDefaults(suiteName: "com.healthmd.glass.output-preview") else { return nil }
+        // A profile is configuration, not a saved operation: start new capture authority.
+        let draft = settings.makeAdvancedExportSettings(userDefaults: defaults, forNewConfiguration: true)
+        // Accept the capture clock first, as Export Preview does. Provider sidecars are
+        // not part of a daily note, so this preview never opens a provider capture.
+        guard let context = try? healthKitManager.resolveSleepCaptureContext(settings: draft),
+              let accepted = try? AcceptedExternalProviderFileCapture(settings: draft, context: context,
+                healthSubfolder: settings.healthSubfolder, includesProviders: false, providers: nil)
+        else { return nil }
+        let acceptedSettings = accepted.snapshot.makeAdvancedExportSettings()
+        acceptedSettings.executionSleepCaptureContextIsFrozen = draft.executionSleepCaptureContextIsFrozen
+        let operation = await ExportSettingsSnapshot.forNewAppleOperation(acceptedSettings,
+            healthSubfolder: accepted.snapshot.healthSubfolder,
+            calendarTimeZone: context.timeZone, surface: .preview)
+        guard !Task.isCancelled, let captureContext = try? operation.recoveredSleepCaptureContext() else {
+            return nil
+        }
+        let advanced = operation.makeAdvancedExportSettings()
+        let date = target.date
+        var data: HealthData?
+        #if DEBUG
+        if TestMode.useHealthKitExportPreviewFixtures || MarketingCapture.isActive {
+            data = UITestHealthKitFixtures.exportPreviewHealthData(for: date, includeGranularData: false)
+        }
+        #endif
+        if data == nil {
+            guard healthKitManager.isAuthorized else { return nil }
+            data = try? await healthKitManager.fetchHealthData(for: date, detailPolicy: .summary,
+                metricSelection: advanced.metricSelection, timeZone: captureContext.timeZone,
+                captureContext: captureContext)
+        }
+        guard !Task.isCancelled, let data else { return nil }
+        let prepared: DailyNoteInjector.PreparedContent?
+        if data.timeContext.sleepDayAttribution == .morningEnds {
+            // Morning ends notes come only from an accepted plan, as in the export.
+            guard let vaultManager,
+                  let plan = try? await vaultManager.prepareWakeDateDailyNote(data, settingsSnapshot: operation)
+            else { return nil }
+            prepared = plan
+        } else {
+            prepared = nil
+        }
+        guard !Task.isCancelled else { return nil }
+        let result = DailyNoteInjector.preview(healthData: data, base: .emptyDocument,
+            settings: advanced.dailyNoteInjection, customization: advanced.formatCustomization,
+            metricSelection: advanced.metricSelection, calendarTimeZone: captureContext.timeZone,
+            preparedContent: prepared)
+        switch result {
+        case .preview(let preview): return preview.content
+        case .skipped(let reason): return reason
+        }
     }
 }
 #endif

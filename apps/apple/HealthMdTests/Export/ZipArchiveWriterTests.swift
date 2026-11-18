@@ -1238,6 +1238,50 @@ struct MorningDailyNoteTests {
         }
     }
 
+    /// #345: a Daily Note profile with sleep (category), steps (cumulative sum) and resting
+    /// heart rate (most recent) keeps every metric with data in the preview and the note.
+    @Test(arguments: [true, false])
+    func mixedCategoryAndQuantityMetricsReachPreviewAndNote(restingHeartRateHasData: Bool) async throws {
+        let f = try MorningArchiveTests().fixture(mode: "daily")
+        defer { f.cleanup() }
+        if restingHeartRateHasData {
+            f.store.statisticsMostRecent[HKQuantityTypeIdentifier.restingHeartRate.rawValue] = 58
+        }
+        f.settings.archiveExportFiles = false
+        f.settings.metricSelection.enabledMetrics = ["sleep_total", "sleep_bedtime", "sleep_wake", "sleep_core",
+            "resting_heart_rate", "steps"]
+        var snapshot = await ExportSettingsSnapshot.forNewAppleOperation(f.settings, healthSubfolder: "Health",
+            calendarTimeZone: f.context.timeZone, surface: .preview)
+        snapshot.dailyNoteInjection.enabled = true
+        snapshot.dailyNoteInjection.folderPath = "Journal"
+        snapshot.dailyNoteInjection.createIfMissing = true
+        let settings = snapshot.makeAdvancedExportSettings()
+        let record = try await f.manager.fetchHealthData(for: f.dates[1], detailPolicy: .summary,
+            metricSelection: settings.metricSelection, timeZone: f.context.timeZone, captureContext: f.context)
+        let prepared = try await f.vault.prepareWakeDateDailyNote(record, settingsSnapshot: snapshot)
+        guard case .preview(let preview) = DailyNoteInjector.preview(healthData: record, base: .emptyDocument,
+            settings: settings.dailyNoteInjection, customization: settings.formatCustomization,
+            metricSelection: settings.metricSelection, calendarTimeZone: f.context.timeZone, preparedContent: prepared) else {
+            Issue.record("Expected a daily-note preview"); return
+        }
+        let frontmatter = try #require(MarkdownMerger.splitFrontmatter(from: preview.content)).frontmatter
+        #expect(frontmatter.contains("\nsleep_total_hours: "), "\(frontmatter)")
+        #expect(frontmatter.contains("\nsleep_bedtime: 10:00\n"), "\(frontmatter)")
+        #expect(frontmatter.contains("\nsteps: 42\n"), "\(frontmatter)")
+        // A metric without data is left out without hiding the others.
+        #expect(frontmatter.contains("\nresting_heart_rate: 58\n") == restingHeartRateHasData, "\(frontmatter)")
+        #expect(!frontmatter.contains("resting_heart_rate: null"))
+
+        let destination = try f.vault.freezeHealthDataRangeDestination()
+        let result = DailyNoteInjector.inject(healthData: record, into: f.root,
+            settings: settings.dailyNoteInjection, customization: settings.formatCustomization,
+            metricSelection: settings.metricSelection, calendarTimeZone: f.context.timeZone,
+            preparedContent: prepared, destinationBinding: destination.binding)
+        guard case .updated = result else { Issue.record("Expected prepared injection: \(result)"); return }
+        let note = try String(contentsOf: f.root.appendingPathComponent("Journal/2026-03-08.md"), encoding: .utf8)
+        #expect(note == preview.content)
+    }
+
     @Test func morningInjectionWithoutAcceptedPlanFailsBeforeCreatingFile() async throws {
         let f = try MorningArchiveTests().fixture(mode: "daily")
         defer { f.cleanup() }

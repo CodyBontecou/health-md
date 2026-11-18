@@ -207,6 +207,23 @@ final class AutomationSentenceTests: XCTestCase {
         XCTAssertEqual(draft.settings(from: saved), saved)
     }
 
+    /// #345: a full Sleep category must not hide the profile's quantity metrics.
+    func testComposerFieldListShowsEverySelectedCategory() {
+        let selected: Set<String> = Set(HealthMetrics.sleep.map(\.id)).union(["resting_heart_rate", "steps"])
+        let listed = HealthMetrics.availableInCurrentBuild.filter { selected.contains($0.id) }
+        XCTAssertGreaterThan(listed.filter { $0.category == .sleep }.count, ComposerFieldList.visibleRowCount)
+
+        let shown = ComposerFieldList.visibleFields(listed, limit: ComposerFieldList.visibleRowCount)
+        XCTAssertEqual(shown.count, ComposerFieldList.visibleRowCount)
+        XCTAssertTrue(shown.contains { $0.id == "steps" })
+        XCTAssertTrue(shown.contains { $0.id == "resting_heart_rate" })
+        XCTAssertEqual(shown.first?.id, "sleep_total")
+        // Rows keep catalog order, and a short list is shown whole.
+        XCTAssertEqual(shown.map(\.id), listed.map(\.id).filter { id in shown.contains { $0.id == id } })
+        XCTAssertEqual(ComposerFieldList.visibleFields(Array(listed.suffix(2)), limit: 6).map(\.id),
+            listed.suffix(2).map(\.id))
+    }
+
     /// A translation that drops a token would silently lose a user's choice.
     func testEveryLocalizedTemplateKeepsEveryToken() throws {
         for locale in ["en", "de", "es", "fr", "it", "ja", "ko", "nl", "pt-BR", "zh-Hans"] {
