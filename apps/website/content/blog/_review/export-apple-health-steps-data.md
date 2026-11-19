@@ -21,3 +21,7 @@ No device step acquisition/export, spreadsheet click-through, source-priority se
 ## Python analysis destination — 2026-10-27
 
 - [x] Related recommendations now include the executable daily CSV Python guide. Existing steps export behavior, producer fixtures and privacy evidence remain unchanged; the recipe is exercised by test/blog-python-recipe.test.mjs.
+
+## WHOOP inbound link — 2026-11-19
+
+- [x] One contextual sentence links to /blog/export-whoop-data/ from "Why steps can differ between views". Claims (WHOOP CSV lacks steps; WHOOP steps follow a wake-to-wake cycle) are sourced in the WHOOP guide's ledger (WHOOP support export table and WHOOP Community step-count announcement, read 2026-11-19). Steps export behavior unchanged; `updated` not bumped because no steps claim changed.
