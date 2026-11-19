@@ -237,6 +237,14 @@ fun FrontmatterCustomizationScreen(
                     },
                 )
 
+                // These switches alone decide frontmatter properties, for every category (#353).
+                Text(
+                    stringResource(R.string.frontmatter_fields_ownership_note),
+                    style = GeistType.copy13,
+                    color = LocalGeistColors.current.secondary,
+                    modifier = Modifier.fillMaxWidth().padding(top = GeistSpacing.space4)
+                        .testTag(FrontmatterCustomizationTags.OWNERSHIP_NOTE),
+                )
                 val metricGroup = stringResource(R.string.frontmatter_metric_fields_section)
                 val filteredFields = normalizedConfiguration.fields.filter { field ->
                     search.isBlank() || field.originalKey.contains(search, ignoreCase = true) || field.customKey.contains(search, ignoreCase = true)

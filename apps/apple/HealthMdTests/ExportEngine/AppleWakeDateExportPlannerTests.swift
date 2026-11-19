@@ -1844,6 +1844,39 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
     }
 
+    /// #353: the Format → Custom `workout_details` switch alone removes the Bases workout
+    /// block, as it does for Night begins; the Markdown body keeps its workout table.
+    func testWorkoutDetailsSwitchOffRemovesNativeWorkoutDetailsFromBasesFrontmatter() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let workout = WorkoutData(sourceUUID: UUID(uuidString: "00000000-0000-4000-8000-000000000139"),
+            workoutType: .running, startTime: ExportFixtures.referenceDate, duration: 1800.5,
+            calories: 320.125, distance: 5000.875, avgHeartRate: 160.125)
+        let day = HealthData(date: ExportFixtures.referenceDate,
+            timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 0), workouts: [workout])
+        for detailsOn in [true, false] {
+            var snapshot = try acceptedSnapshot(context: context, formats: [.markdown, .obsidianBases],
+                selectionIDs: ["workouts", "steps"])
+            if let index = snapshot.formatCustomization.frontmatterConfig.fields
+                .firstIndex(where: { $0.originalKey == "workout_details" }) {
+                snapshot.formatCustomization.frontmatterConfig.fields[index].isEnabled = detailsOn
+            } else {
+                XCTAssertTrue(detailsOn, "workout_details must be listed in Format → Custom")
+            }
+            let resolution = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+                settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects)
+            guard case .planned(let operation) = resolution else { return XCTFail("Selected workouts must plan") }
+            let bases = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .obsidianBases })
+                .artifact.inlineData, as: UTF8.self)
+            let markdown = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .markdown })
+                .artifact.inlineData, as: UTF8.self)
+            XCTAssertEqual(bases.contains("native_workout_details:"), detailsOn, "workout_details on: \(detailsOn)")
+            XCTAssertTrue(bases.contains("workout_count"), "Other workout properties keep their own switches")
+            XCTAssertTrue(markdown.contains("Workout Details"), "The body table is not frontmatter")
+        }
+    }
+
     func testExplicitWorkoutRangeAuthorityUsesMeasuredDurationsAndTrueExtremaAcrossAllFormats() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)

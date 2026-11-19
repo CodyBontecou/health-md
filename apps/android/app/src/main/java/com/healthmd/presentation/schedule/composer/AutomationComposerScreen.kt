@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -530,6 +531,14 @@ private fun ComposerFields(
                 }
             }
         }
+        // The checks choose collected data; Format owns frontmatter properties (#353).
+        HorizontalDivider(color = colors.gray.c400)
+        Text(
+            stringResource(R.string.composer_fields_frontmatter_note),
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.secondary,
+            modifier = Modifier.padding(vertical = GeistSpacing.space3).testTag("composer.fields.frontmatterNote"),
+        )
     }
 }
 

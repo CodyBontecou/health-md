@@ -8,14 +8,18 @@ nonisolated struct AppleWakeDateWorkoutProjection: Sendable {
     let captureContext: AppleSleepCaptureContext
     let timeFormatIdentifier: String
     let hasSelectedOwner: Bool
+    /// The Format → Custom `workout_details` switch owns the Bases frontmatter block (#353).
+    let includesFrontmatterBlock: Bool
     var hasRecords: Bool { !source.workouts.isEmpty }
+    var writesFrontmatterBlock: Bool { hasRecords && includesFrontmatterBlock }
 
     init(data: HealthData, captureContext: AppleSleepCaptureContext, timeFormatIdentifier: String,
-        selectedOutputKeys: Set<String>) {
+        selectedOutputKeys: Set<String>, includesFrontmatterBlock: Bool = true) {
         source = HealthData(date: data.date, timeContext: data.timeContext, workouts: data.workouts)
         self.captureContext = captureContext
         self.timeFormatIdentifier = timeFormatIdentifier
         hasSelectedOwner = selectedOutputKeys.contains { $0 == "workouts" || $0.hasPrefix("workout_") }
+        self.includesFrontmatterBlock = includesFrontmatterBlock
     }
 
     static func selectedOutputKeys(from semanticResult: Data) throws -> Set<String> {
@@ -55,7 +59,7 @@ nonisolated struct AppleWakeDateWorkoutProjection: Sendable {
     }
 
     func writeFrontmatterBlock(to sink: ExportByteSink) throws {
-        guard hasRecords else { return }
+        guard writesFrontmatterBlock else { return }
         try sink.write(Data("\nnative_workout_details:\n".utf8))
         try records().forEach { value in
             try Task.checkCancellation()

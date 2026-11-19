@@ -49,7 +49,8 @@ nonisolated enum AppleWakeDateArchiveComposer {
             }
             let workoutContext = AppleSleepCaptureContext(timeZone: workoutZone, sleepDayAttribution: .morningEnds)
             let workouts = AppleWakeDateWorkoutProjection(data: day.filteredData, captureContext: workoutContext,
-                timeFormatIdentifier: settings.formatCustomization.timeFormat.rawValue, selectedOutputKeys: sourceOutputKeys)
+                timeFormatIdentifier: settings.formatCustomization.timeFormat.rawValue, selectedOutputKeys: sourceOutputKeys,
+                includesFrontmatterBlock: settings.formatCustomization.frontmatterConfig.isFieldEnabled("workout_details"))
             let mindfulness = AppleWakeDateMindfulnessProjection(data: day.filteredData, captureContext: workoutContext,
                 timeFormatIdentifier: settings.formatCustomization.timeFormat.rawValue, selectedOutputKeys: sourceOutputKeys)
             for target in ExportPathPlanner.aggregateOutputTargets(vaultURL: root,
@@ -153,8 +154,9 @@ nonisolated enum AppleWakeDateArchiveComposer {
                     try HealthKitArchiveCSVProjection.writeWorkouts(source.workouts, ownerDate: source.ownerDate, to: sink)
                     try HealthKitArchiveCSVProjection.writeMindfulness(source.mindfulness, ownerDate: source.ownerDate, to: sink)
                 case .markdown, .obsidianBases:
-                    if source.format == .obsidianBases && (hasQuantities || hasSleepStages || hasCorrelations || hasWorkouts || hasMindfulness) {
-                        let keys = (hasQuantities ? ["native_quantity_details"] : []) + (hasSleepStages ? ["sleep_stage_details"] : []) + (hasCorrelations ? ["native_correlation_details"] : []) + (hasWorkouts ? ["native_workout_details"] : []) + (hasMindfulness ? ["native_mindfulness_details"] : [])
+                    let hasWorkoutBlock = source.workouts.writesFrontmatterBlock
+                    if source.format == .obsidianBases && (hasQuantities || hasSleepStages || hasCorrelations || hasWorkoutBlock || hasMindfulness) {
+                        let keys = (hasQuantities ? ["native_quantity_details"] : []) + (hasSleepStages ? ["sleep_stage_details"] : []) + (hasCorrelations ? ["native_correlation_details"] : []) + (hasWorkoutBlock ? ["native_workout_details"] : []) + (hasMindfulness ? ["native_mindfulness_details"] : [])
                         try AppleWakeDateSourceFrontmatter.write(aggregate: aggregate, keys: keys, to: sink) { output in
                             try source.quantities.writeFrontmatterBlock(to: output)
                             try source.sleepStages.writeFrontmatterBlock(to: output)
