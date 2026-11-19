@@ -83,6 +83,7 @@ import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.ExportFormat
+import com.healthmd.domain.model.withMetricSelection
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FolderOrganization
@@ -549,7 +550,7 @@ fun ExportProfileEditorDialog(
                     MetricSelectionScreen(
                         metricSelection = draft.settings.metricSelection,
                         onSelectionChanged = { selection ->
-                            updateSettings { it.copy(metricSelection = selection) }
+                            updateSettings { it.withMetricSelection(selection) }
                         },
                         onBack = { showMetricSelection = false },
                     )

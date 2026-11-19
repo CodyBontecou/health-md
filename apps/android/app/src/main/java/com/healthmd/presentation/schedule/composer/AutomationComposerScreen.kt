@@ -66,6 +66,7 @@ import com.healthmd.presentation.common.LocalAppFolderName
 import com.healthmd.rawexport.ExportMode
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthMetrics
+import com.healthmd.domain.model.writesFrontmatter
 import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.export.ExportProfilesViewModel
 import com.healthmd.presentation.i18n.localizedDisplayName
@@ -497,7 +498,9 @@ private fun ComposerFields(
             }
         }
         fields.forEach { metric ->
-            val on = pending[metric.id] ?: saved.metricSelection.isEnabled(metric.id)
+            // Checked only when the note will hold the field: selected here and not switched off
+            // in Format → Custom, which the export also requires.
+            val on = pending[metric.id] ?: saved.writesFrontmatter(metric.id)
             HorizontalDivider(color = colors.gray.c400)
             Row(
                 Modifier

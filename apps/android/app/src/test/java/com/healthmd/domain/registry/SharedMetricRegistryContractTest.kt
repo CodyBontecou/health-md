@@ -36,6 +36,21 @@ class SharedMetricRegistryContractTest {
     }
 
     @Test
+    fun generatedFrontmatterKeysMatchRegistryOutputSelections() {
+        val frozen = registry.getValue("profiles").jsonArray.map { it.jsonObject }
+            .single { it.getValue("id").jsonPrimitive.content == "android_frozen_v4" }
+        val expected = linkedMapOf<String, MutableList<String>>()
+        frozen.getValue("outputs").jsonArray.map { it.jsonObject }.forEach { output ->
+            output.getValue("selection_ids").jsonArray.forEach { id ->
+                expected.getOrPut(id.jsonPrimitive.content) { mutableListOf() } += output.getValue("key").jsonPrimitive.content
+            }
+        }
+        assertThat(HealthDataFields.metricIdToFrontmatterKeys).isEqualTo(expected)
+        assertThat(HealthDataFields.metricIdToFrontmatterKeys.keys.toList())
+            .isEqualTo(HealthMetrics.allMetrics.map { it.id }.filter { it in expected })
+    }
+
+    @Test
     fun clinicallyDistinctHrvAndNativeAggregationsAreExplicit() {
         val semanticRows = registry.getValue("metrics").jsonArray
             .map { it.jsonObject }
