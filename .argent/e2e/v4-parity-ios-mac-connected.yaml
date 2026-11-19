@@ -1,0 +1,130 @@
+# PR #360 (v4 parity, iOS): connected-Mac controls on an iPad simulator.
+#   C-01 Auto-sync after export toggle (iPad only), M-08 nearby Mac Disconnect.
+#
+# Prerequisites
+# - Debug build of HealthMd installed on an iPad simulator (iPad Pro 13-inch (M5),
+#   portrait). C-01 is iPad-only (AutoSyncAfterExportPolicy.isAvailable).
+# - No real Mac is paired. The connection is the app's synthetic UI-test state
+#   (--uitesting -UITEST_SYNC_STATE connected -UITEST_MAC_EXPORT_STATUS ready):
+#   SyncService reports connected to "Test Mac" over the default (multipeer)
+#   transport without a real MCSession. This proves the UI gating, toggle and
+#   Disconnect wiring, not a live Bonjour session or the auto-sync transfer itself.
+# - -syncEnabled YES pins the Mac destination switch on (argument domain).
+# - Auto-sync after export starts off (the 3.5 default). The test flips it on and
+#   back off, so it leaves it as it found it.
+#
+# Side effects
+# - Disconnect clears the synthetic connection for this process only; the next
+#   launch re-creates it.
+#
+# Coordinate exceptions
+# - SwiftUI controls have no backing UIView, so the simulator runner tree carries
+#   none of this app's ids or text (see v4-parity-ios-settings.yaml). Taps are
+#   describe-derived points for this iPad layout, each named by an echo and
+#   followed by an accessibility-tree check (raw await-ui-element).
+version: 1
+requires:
+  platform: ios
+steps:
+  - echo: Launch Health.md in UI-test mode with a synthetic connected Mac
+      (UITEST_SYNC_STATE=connected, Mac export ready). Expect Archive
+  - launch:
+      native: com.codybontecou.obsidianhealth
+      ios:
+        app: com.codybontecou.obsidianhealth
+        args:
+          - --uitesting
+          - -UITEST_PURCHASE_UNLOCKED
+          - "true"
+          - -UITEST_SYNC_STATE
+          - connected
+          - -UITEST_MAC_EXPORT_STATUS
+          - ready
+          - -syncEnabled
+          - "YES"
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.exportNow
+      timeoutMs: 15000
+  - await: { idle: true }
+  - echo: Tap the Settings tab (glass.tab.settings; point tap). Expect Settings with
+      the Mac Destination row Online
+  # Point = centre of glass.tab.settings from describe (sidebar, iPad portrait).
+  - tap: { x: 0.131, y: 0.173 }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.settings.mac
+      expectedText: Online
+  - await: { idle: true }
+  - echo: "C-01: open the Mac row (glass.settings.mac; point tap). Expect the
+      connected panel with Auto-sync after export (sync.autoSyncToggle) and
+      Disconnect (glass.macDestination.disconnect)"
+  # Point = centre of glass.settings.mac from describe.
+  - tap: { x: 0.418, y: 0.203 }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: sync.connectionStatus
+      expectedText: Connected
+  - await: { idle: true }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: sync.autoSyncToggle
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.macDestination.disconnect
+  - echo: "C-01: Auto-sync after export starts off (3.5 default). Tap it (point
+      tap). Expect it on"
+  # The toggle's accessibility text ends with its value: 0 = off, 1 = on.
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: sync.autoSyncToggle
+      expectedText: when you export 0
+  # Point = centre of sync.autoSyncToggle from describe.
+  - tap: { x: 0.7865, y: 0.2495 }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: sync.autoSyncToggle
+      expectedText: when you export 1
+  - echo: "C-01: tap Auto-sync again (point tap) to restore the off default. Expect
+      it off"
+  - tap: { x: 0.7865, y: 0.2495 }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: sync.autoSyncToggle
+      expectedText: when you export 0
+  - echo: "M-08: tap Disconnect (glass.macDestination.disconnect; point tap). Expect
+      Waiting for Mac and the Auto-sync and Disconnect rows gone"
+  # Point = centre of glass.macDestination.disconnect from describe.
+  - tap: { x: 0.787, y: 0.2925 }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: sync.connectionStatus
+      expectedText: Waiting for Mac
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: sync.autoSyncToggle
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: glass.macDestination.disconnect

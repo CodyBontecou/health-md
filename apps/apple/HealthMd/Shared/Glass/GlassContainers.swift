@@ -18,24 +18,45 @@ struct GlassRow<Leading: View, Trailing: View>: View {
     @ViewBuilder var trailing: Trailing
 
     @Environment(\.glassPalette) private var palette
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        HStack(spacing: 12) {
-            leading
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).glassFont(.body).foregroundStyle(palette.text)
-                if let subtitle {
-                    Text(subtitle).glassFont(.rowSubtitle).foregroundStyle(palette.muted)
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                // At accessibility sizes the icon and the trailing value share a top line so the
+                // title gets the full row width instead of breaking mid-word beside them.
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 12) {
+                        leading
+                        Spacer(minLength: 8)
+                        trailing
+                    }
+                    labels
+                }
+                .padding(.vertical, 10)
+            } else {
+                HStack(spacing: 12) {
+                    leading
+                    labels
+                    Spacer(minLength: 8)
+                    trailing
                 }
             }
-            Spacer(minLength: 8)
-            trailing
         }
         .padding(.horizontal, GlassMetrics.panelPadding)
         .frame(
             minHeight: subtitle == nil ? GlassMetrics.rowMinHeight : GlassMetrics.rowWithSubtitleMinHeight
         )
         .contentShape(Rectangle())
+    }
+
+    private var labels: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title).glassFont(.body).foregroundStyle(palette.text)
+            if let subtitle {
+                Text(subtitle).glassFont(.rowSubtitle).foregroundStyle(palette.muted)
+            }
+        }
     }
 }
 

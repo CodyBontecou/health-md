@@ -8,6 +8,8 @@ struct GlassMacDestinationScreen: View {
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @Environment(\.glassPalette) private var palette
     @AppStorage("syncEnabled") private var syncEnabled = false
+    /// Defaults to the value `HealthMdApp` registers (false), as in 3.5.
+    @AppStorage(AutoSyncAfterExportPolicy.key) private var autoSyncAfterExport = AutoSyncAfterExportPolicy.registeredDefault
     @AppStorage("manualIPLastHost") private var manualMacHost = ""
     @AppStorage("manualIPLastPort") private var savedManualMacPort = String(SyncService.manualIPPort)
     @State private var manualMacPort = String(SyncService.manualIPPort)
@@ -30,7 +32,10 @@ struct GlassMacDestinationScreen: View {
                 GlassPanel {
                     GlassToggleRow(
                         title: String(localized: "Mac destination"),
-                        subtitle: String(localized: "Advertise this iPhone on your local network"),
+                        subtitle: HostDevice.current.pick(
+                            iPhone: String(localized: "Advertise this iPhone on your local network"),
+                            iPad: String(localized: "Advertise this iPad on your local network")
+                        ),
                         isOn: $syncEnabled
                     )
                     .accessibilityIdentifier(AccessibilityID.Sync.syncToggle)
@@ -69,7 +74,10 @@ struct GlassMacDestinationScreen: View {
                     )
                 }
 
-                Text("The Mac writes files using the setup you choose on iPhone.")
+                Text(HostDevice.current.pick(
+                    iPhone: String(localized: "The Mac writes files using the setup you choose on iPhone."),
+                    iPad: String(localized: "The Mac writes files using the setup you choose on iPad.")
+                ))
                     .glassFont(.rowSubtitle)
                     .foregroundStyle(palette.muted)
             }
@@ -136,6 +144,27 @@ struct GlassMacDestinationScreen: View {
                 } else {
                     GlassRow(title: destinationTitle, subtitle: destinationSubtitle) { EmptyView() }
                         .accessibilityElement(children: .combine)
+                }
+                // 3.5 iPad parity: push each successful local export to this Mac.
+                if AutoSyncAfterExportPolicy.isAvailable(idiom: UIDevice.current.userInterfaceIdiom) {
+                    GlassToggleRow(
+                        title: String(localized: "Auto-sync after export"),
+                        subtitle: String(localized: "Automatically send data to Mac when you export"),
+                        isOn: configurationProtection.protecting($autoSyncAfterExport)
+                    )
+                    .accessibilityIdentifier(AccessibilityID.Sync.autoSyncToggle)
+                }
+                // A manual-IP connection has its own Disconnect under Connect by IP.
+                if syncService.activeTransport != .manualIP {
+                    Button { syncService.disconnect() } label: {
+                        GlassRow(title: String(localized: "Disconnect")) {
+                            Image(systemName: "xmark.circle")
+                                .foregroundStyle(palette.accent)
+                                .accessibilityHidden(true)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("glass.macDestination.disconnect")
                 }
             }
         }
@@ -335,7 +364,10 @@ struct GlassMacDestinationScreen: View {
             return String(localized: "Waiting for destination status from Mac.")
         }
         guard capabilities.platform == .macOS, capabilities.isCompatibleWithMacExportJobs else {
-            return String(localized: "Update Health.md on Mac to receive iPhone-configured export jobs.")
+            return HostDevice.current.pick(
+                iPhone: String(localized: "Update Health.md on Mac to receive iPhone-configured export jobs."),
+                iPad: String(localized: "Update Health.md on Mac to receive iPad-configured export jobs.")
+            )
         }
         guard let status = syncService.macDestinationStatus else {
             return String(localized: "Waiting for destination status from Mac.")

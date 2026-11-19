@@ -47,6 +47,8 @@ Health.md includes **5 free export actions**, followed by a single lifetime unlo
 
 A longer range produces **one CSV file per day**, not one combined spreadsheet. Each file has the header `Date,Category,Metric,Value,Unit,Timestamp`. The `Value` column is mixed-type: metadata and capture status appear alongside numbers, and selected data can add times, booleans, identifiers, or quoted JSON. Filter Category, Metric, and Unit before numeric analysis.
 
+If your steps or sleep come from an Oura ring, first confirm Oura shares them to Apple Health; the [Oura export guide](/blog/export-oura-data/) covers that and Oura's own download.
+
 Keep your original CSV files. Detailed Time-Series adds selected samples and intervals; do not add those readings to daily summary totals or mix daily files with weekly/monthly rollups.
 
 ## Before uploading: choose the destination deliberately

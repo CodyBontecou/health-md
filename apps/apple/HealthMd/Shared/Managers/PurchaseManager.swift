@@ -132,13 +132,19 @@ nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sen
     var badge: String? { isFamilyPlan ? String(localized: "Family") : nil }
     var iconName: String { isFamilyPlan ? "person.3.fill" : "person.fill" }
 
-    /// PaywallG price-column suffix: only the weekly price carries one ("/wk"); the yearly
-    /// period is in the trial subtitle and one-time purchases say "charged today".
+    /// The billing period spelled out after every price, so no plan label leaves the
+    /// renewal term implicit (App Review guideline 3.1.2): "/week", "/year" or " one-time".
     var priceSuffix: String {
         switch self {
-        case .weekly, .familyWeekly: return String(localized: "/wk")
-        default: return ""
+        case .weekly, .familyWeekly: return String(localized: "/week")
+        case .yearly, .familyYearly: return String(localized: "/year")
+        case .individual, .family, .familyUpgrade: return String(localized: " one-time")
         }
+    }
+
+    /// A StoreKit display price with its billing period, e.g. "$29.99/year".
+    func priceLabel(displayPrice: String) -> String {
+        displayPrice + priceSuffix
     }
 }
 

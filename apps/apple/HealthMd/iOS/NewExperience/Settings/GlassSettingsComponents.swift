@@ -79,6 +79,8 @@ struct GlassSettingsBadge: View {
 struct GlassSettingsRow: View {
     let title: String
     var subtitle: String?
+    /// VoiceOver hint read after the row's label, describing what activating it does.
+    var hint: String?
     var systemImage: String?
     var tile: Color = .clear
     var badge: GlassSettingsBadgeState?
@@ -87,6 +89,7 @@ struct GlassSettingsRow: View {
     let action: () -> Void
 
     @Environment(\.glassPalette) private var palette
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         Button(action: action) {
@@ -96,7 +99,8 @@ struct GlassSettingsRow: View {
                 HStack(spacing: 8) {
                     if let badge { GlassSettingsBadge(title: badge.title, tone: badge.tone) }
                     if let value {
-                        Text(value).glassFont(.body).foregroundStyle(palette.muted).lineLimit(1)
+                        Text(value).glassFont(.body).foregroundStyle(palette.muted)
+                            .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
                     }
                     Image(systemName: "chevron.right")
                         .font(.system(size: 13, weight: .semibold))
@@ -112,6 +116,7 @@ struct GlassSettingsRow: View {
             }
         }
         .buttonStyle(.plain)
+        .accessibilityHint(hint ?? "")
     }
 }
 

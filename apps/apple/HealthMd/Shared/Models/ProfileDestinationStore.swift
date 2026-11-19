@@ -374,6 +374,60 @@ final class ProfileDestinationStore: ObservableObject {
         persistAPIEndpoints()
     }
 
+    /// Runs `APIEndpointKeystrokeCleanup` once per cleanup version and returns
+    /// how many endpoints it removed, or nil when this version already ran.
+    /// Rows referenced by `referencedEndpointIDs`, by any other persisted
+    /// value in these defaults (legacy and v2 profile lists, pending exports),
+    /// or matching the live Settings endpoint URL are never removed. Each
+    /// removed row's own Keychain token goes with it; tokens are keyed by row
+    /// id, so a kept row's token is never touched.
+    @discardableResult
+    func removeKeystrokeAPIEndpointsIfNeeded(
+        referencedEndpointIDs: Set<UUID>,
+        liveEndpointURLString: String
+    ) -> Int? {
+        guard userDefaults.integer(forKey: APIEndpointKeystrokeCleanup.versionKey)
+                < APIEndpointKeystrokeCleanup.currentVersion else { return nil }
+        reloadPersistedDestinations()
+
+        let liveURL = APIEndpointKeystrokeCleanup.trimmed(liveEndpointURLString)
+        var protectedIDs = referencedEndpointIDs
+        if !liveURL.isEmpty {
+            for endpoint in apiEndpoints where APIEndpointKeystrokeCleanup.trimmed(endpoint.endpointURLString)
+                .caseInsensitiveCompare(liveURL) == .orderedSame {
+                protectedIDs.insert(endpoint.id)
+            }
+        }
+        let persistedValues = userDefaults.dictionaryRepresentation()
+            .filter { $0.key != Key.apiEndpoints }
+            .map { [$0.key, $0.value] as [Any] }
+        protectedIDs.formUnion(APIEndpointKeystrokeCleanup.idsMentioned(
+            in: persistedValues,
+            candidates: Set(apiEndpoints.map(\.id)).subtracting(protectedIDs)
+        ))
+
+        let rows = apiEndpoints.map {
+            APIEndpointKeystrokeCleanup.Row(
+                id: $0.id,
+                name: $0.name,
+                endpointURLString: $0.endpointURLString,
+                token: token(for: $0.id),
+                createdAt: $0.createdAt
+            )
+        }
+        let removable = APIEndpointKeystrokeCleanup.removableIDs(in: rows, protectedIDs: protectedIDs)
+        if !removable.isEmpty {
+            apiEndpoints.removeAll { removable.contains($0.id) }
+            persistAPIEndpoints()
+            let keptTokenKeys = Set(apiEndpoints.map { Self.apiTokenKey(for: $0.id) })
+            for id in removable where !keptTokenKeys.contains(Self.apiTokenKey(for: id)) {
+                keychain.remove(key: Self.apiTokenKey(for: id))
+            }
+        }
+        userDefaults.set(APIEndpointKeystrokeCleanup.currentVersion, forKey: APIEndpointKeystrokeCleanup.versionKey)
+        return removable.count
+    }
+
     // MARK: - Agent Data gateway CRUD
 
     /// Adds or updates a gateway destination keyed by the normalized endpoint

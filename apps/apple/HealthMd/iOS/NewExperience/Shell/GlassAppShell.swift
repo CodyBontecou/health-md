@@ -284,7 +284,10 @@ struct GlassAppShell: View {
                             .glassTheme()
                     }
                 } else {
-                    GlassAPIDestinationSheet(settings: apiExportSettings)
+                    GlassAPIDestinationSheet(
+                        settings: apiExportSettings,
+                        sharedWithProfileNames: profileCoordinator?.otherProfileNamesSharingActiveAPIEndpoint() ?? []
+                    )
                 }
             }
             .glassTheme()
@@ -829,7 +832,7 @@ struct GlassAppShell: View {
     private func destinationLabel(for target: ExportTargetSelection, profile: ExportProfile?) -> String {
         switch target {
         case .localIPhoneFolder:
-            return vaultManager.hasVaultSelection ? vaultManager.vaultName : String(localized: "iPhone folder")
+            return vaultManager.hasVaultSelection ? vaultManager.vaultName : HostDevice.current.folderName
         case .connectedMac:
             return syncService.macDestinationStatus?.destinationPathForDisplay
                 ?? syncService.macDestinationStatus?.destinationDisplayName

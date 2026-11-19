@@ -494,6 +494,19 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         }
     }
     
+    /// Turns every health metric field on or off (3.5 "Enable All Fields" /
+    /// "Disable All Fields"). Core, custom and placeholder fields are unchanged.
+    func setAllFieldsEnabled(_ isEnabled: Bool) {
+        var updated = fields
+        for i in updated.indices { updated[i].isEnabled = isEnabled }
+        fields = updated
+    }
+
+    /// 3.5 "Reset Names": every field returns to its default snake_case key.
+    func resetFieldNames() {
+        applyKeyStyle(.snakeCase)
+    }
+
     /// Reset all fields to defaults
     func reset() {
         fields = Self.defaultFields

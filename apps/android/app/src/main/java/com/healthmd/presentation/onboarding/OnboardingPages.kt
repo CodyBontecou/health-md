@@ -51,6 +51,7 @@ import com.healthmd.presentation.endpoints.BoundEndpointRow
 import com.healthmd.domain.repository.PurchaseOffer
 import com.healthmd.presentation.common.HealthConnectActionError
 import com.healthmd.presentation.common.HealthConnectErrorNotice
+import com.healthmd.presentation.paywall.periodPrice
 import com.healthmd.presentation.theme.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -1051,7 +1052,7 @@ internal fun DailyStep(
                     else -> {
                         Text(stringResource(R.string.onboarding_daily_timeline_today), style = GeistType.copy14, color = colors.secondary)
                         Text(stringResource(R.string.onboarding_daily_timeline_reminder), style = GeistType.copy14, color = colors.secondary)
-                        Text(stringResource(R.string.onboarding_daily_timeline_billing, trialOffer.localizedPriceText), style = GeistType.copy14, color = colors.secondary)
+                        Text(stringResource(R.string.onboarding_daily_timeline_billing, periodPrice(trialOffer)), style = GeistType.copy14, color = colors.secondary)
                     }
                 }
             }

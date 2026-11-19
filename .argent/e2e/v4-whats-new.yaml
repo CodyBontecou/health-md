@@ -1,0 +1,208 @@
+version: 1
+requires:
+  platform: ios
+# Health.md 4.0.0 What's New sheet: every row is present with its full title and description,
+# in English and Japanese (CJK), and the sheet's last row and Continue stay reachable.
+# The waits stay raw `tool: await-ui-element` steps because the sheet is only in the
+# accessibility tree, not in the runner's native view tree.
+#
+# Prerequisites: a Debug-iOS build of Health.md 4.0.0 installed on an iPhone simulator.
+# Launch arguments: --uitesting (deterministic test mode, no HealthKit/StoreKit/network),
+# -UITEST_SHOW_RELEASE_NOTES true (resets the seen version so What's New presents),
+# -UITEST_PURCHASE_UNLOCKED true, and -AppleLanguages/-AppleLocale per pass.
+# Side effects: UI-test mode rewrites the app's onboarding-completed flag and Notelet's
+# seen-version key in the simulator's app defaults; nothing is exported. Leaves the app on
+# Archive in Japanese until it is next launched without the language arguments.
+steps:
+  - echo: Launch Health.md in UI-test mode, English, with What's New forced. Expect
+      the 4.0.0 What's New sheet
+  - launch:
+      native: com.codybontecou.obsidianhealth
+      ios:
+        app: com.codybontecou.obsidianhealth
+        args:
+          - --uitesting
+          - -UITEST_SHOW_RELEASE_NOTES
+          - "true"
+          - -UITEST_PURCHASE_UNLOCKED
+          - "true"
+          - -AppleLanguages
+          - (en)
+          - -AppleLocale
+          - en_US
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: whatsNew.title
+      timeoutMs: 15000
+  - echo: "English sheet: check every 4.0.0 row title and its full description are
+      visible"
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Health.md 4.0.0
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: "Your Archive, "
+      expectedText: Your Archive, Each exported day fills a square on the calendar.
+        Open a day to see the file each automation wrote.
+      textMatch: equals
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: "Needs attention, "
+      expectedText: Needs attention, Problems such as an unavailable folder, an
+        offline Mac or a failing endpoint appear in one list, each with its fix.
+      textMatch: equals
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: "Automations you can read, "
+      expectedText: Automations you can read, Each saved export reads as a sentence,
+        with a live preview of the file it will write.
+      textMatch: equals
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: "Export now, "
+      expectedText: Export now, Export yesterday, the last 7 or 30 days, or any dates,
+        and see what was written when it finishes.
+      textMatch: equals
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: "Choose your sleep day, "
+      expectedText: Choose your sleep day, Keep the noon-to-noon window, or assign
+        each night’s sleep to the day you wake up.
+      textMatch: equals
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: "Detail by category, "
+      expectedText: Detail by category, Export detailed sleep while keeping other
+        categories summarized.
+      textMatch: equals
+  - tool: screenshot
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: whatsNew.continue
+  - echo: Relaunch in Japanese with What's New forced. Expect the 4.0.0 sheet with
+      Japanese rows
+  - launch:
+      native: com.codybontecou.obsidianhealth
+      ios:
+        app: com.codybontecou.obsidianhealth
+        args:
+          - --uitesting
+          - -UITEST_SHOW_RELEASE_NOTES
+          - "true"
+          - -UITEST_PURCHASE_UNLOCKED
+          - "true"
+          - -AppleLanguages
+          - (ja)
+          - -AppleLocale
+          - ja_JP
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: whatsNew.title
+      timeoutMs: 15000
+  - echo: "Japanese sheet: check every 4.0.0 row title and its full description are
+      visible"
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: アーカイブ、
+      expectedText: アーカイブ、書き出した日ごとにカレンダーのマスが埋まります。日付を開くと、各オートメーションが書き出したファイルを確認できます。
+      textMatch: equals
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: 要確認、
+      expectedText: 要確認、フォルダを利用できない、Macがオフライン、エンドポイントでエラーなどの問題が、解決方法とともに1つのリストに表示されます。
+      textMatch: equals
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: 読んでわかるオートメーション、
+      expectedText: 読んでわかるオートメーション、保存した各エクスポートが1つの文として表示され、書き出されるファイルをライブプレビューで確認できます。
+      textMatch: equals
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: 今すぐエクスポート、
+      expectedText: 今すぐエクスポート、昨日、過去7日間または30日間、任意の日付を書き出し、完了時に書き出された内容を確認できます。
+      textMatch: equals
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: 睡眠の日付を選択、
+      expectedText: 睡眠の日付を選択、正午から翌日の正午までの時間枠をそのまま使うか、各夜の睡眠を起床した日に割り当てます。
+      textMatch: equals
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: カテゴリ別の詳細度、
+      expectedText: カテゴリ別の詳細度、睡眠は詳細に、ほかのカテゴリは概要のまま書き出せます。
+      textMatch: equals
+  - echo: "Raw swipe (the sheet is not in the runner tree, so scroll-to cannot
+      target it): scroll the Japanese sheet to its end; expect the last row and
+      Continue still visible"
+  - tool: gesture-swipe
+    args:
+      fromX: 0.5
+      fromY: 0.7
+      toX: 0.5
+      toY: 0.4
+      momentum: false
+  - tool: screenshot
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: カテゴリ別の詳細度、
+      expectedText: カテゴリ別の詳細度、睡眠は詳細に、ほかのカテゴリは概要のまま書き出せます。
+      textMatch: equals
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: whatsNew.continue
+  - echo: Tap Continue; expect the What's New sheet to close
+  # Coordinate exception: the What's New sheet is absent from the runner's native view tree
+  # (every selector on it only resolves in the accessibility tree), so a tap on
+  # { id: whatsNew.continue } cannot resolve at replay. (0.5, 0.921) is the centre of
+  # whatsNew.continue from describe; the visible check above and hidden check below prove it.
+  - tap:
+      x: 0.5
+      y: 0.921
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: whatsNew.continue
+      timeoutMs: 8000
+  - tool: screenshot
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.tab.archive

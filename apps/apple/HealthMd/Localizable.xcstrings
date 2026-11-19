@@ -1,6 +1,10 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Reset export configuration?" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Reset export configuration?"}}, "de": {"stringUnit": {"state": "translated", "value": "Exportkonfiguration zurücksetzen?"}}, "es": {"stringUnit": {"state": "translated", "value": "¿Restablecer la configuración de exportación?"}}, "fr": {"stringUnit": {"state": "translated", "value": "Réinitialiser la configuration d’exportation ?"}}, "it": {"stringUnit": {"state": "translated", "value": "Ripristinare la configurazione di esportazione?"}}, "ja": {"stringUnit": {"state": "translated", "value": "書き出し設定をリセットしますか？"}}, "ko": {"stringUnit": {"state": "translated", "value": "내보내기 구성을 재설정할까요?"}}, "nl": {"stringUnit": {"state": "translated", "value": "Exportconfiguratie herstellen?"}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Redefinir a configuração de exportação?"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "要重置导出配置吗？"}}}},
+    "Formats, metrics, file names, format customization, entries and daily notes return to their defaults for this automation. Its destination, subfolder and schedule stay the same." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Formats, metrics, file names, format customization, entries and daily notes return to their defaults for this automation. Its destination, subfolder and schedule stay the same."}}, "de": {"stringUnit": {"state": "translated", "value": "Formate, Metriken, Dateinamen, Formatanpassung, Einträge und Tagesnotizen werden für diese Automation auf die Standardwerte zurückgesetzt. Ziel, Unterordner und Zeitplan bleiben unverändert."}}, "es": {"stringUnit": {"state": "translated", "value": "Los formatos, las métricas, los nombres de archivo, la personalización del formato, las entradas y las notas diarias vuelven a sus valores predeterminados en esta automatización. Su destino, subcarpeta y programación no cambian."}}, "fr": {"stringUnit": {"state": "translated", "value": "Les formats, les mesures, les noms de fichiers, la personnalisation du format, les entrées et les notes quotidiennes reprennent leurs valeurs par défaut pour cette automatisation. Sa destination, son sous-dossier et sa planification restent inchangés."}}, "it": {"stringUnit": {"state": "translated", "value": "Formati, metriche, nomi dei file, personalizzazione del formato, voci e note giornaliere tornano ai valori predefiniti per questa automazione. Destinazione, sottocartella e programmazione restano invariate."}}, "ja": {"stringUnit": {"state": "translated", "value": "このオートメーションのフォーマット、指標、ファイル名、フォーマットのカスタマイズ、エントリ、デイリーノートがデフォルトに戻ります。保存先、サブフォルダ、スケジュールは変わりません。"}}, "ko": {"stringUnit": {"state": "translated", "value": "이 자동화의 형식, 지표, 파일 이름, 형식 사용자화, 항목 및 일일 노트가 기본값으로 돌아갑니다. 대상, 하위 폴더 및 일정은 그대로 유지됩니다."}}, "nl": {"stringUnit": {"state": "translated", "value": "Formaten, statistieken, bestandsnamen, formaataanpassing, items en dagnotities gaan voor deze automatisering terug naar de standaardwaarden. De bestemming, submap en planning blijven hetzelfde."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Formatos, métricas, nomes de arquivo, personalização do formato, entradas e notas diárias voltam ao padrão nesta automação. O destino, a subpasta e o agendamento continuam os mesmos."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "此自动化的格式、指标、文件名、格式自定义、条目和每日笔记将恢复为默认值。其目标位置、子文件夹和计划保持不变。"}}}},
+    "Clear folder selection?" : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Clear folder selection?"}}, "de": {"stringUnit": {"state": "translated", "value": "Ordnerauswahl löschen?"}}, "es": {"stringUnit": {"state": "translated", "value": "¿Borrar la selección de carpeta?"}}, "fr": {"stringUnit": {"state": "translated", "value": "Effacer la sélection de dossier ?"}}, "it": {"stringUnit": {"state": "translated", "value": "Cancellare la selezione della cartella?"}}, "ja": {"stringUnit": {"state": "translated", "value": "フォルダ選択をクリアしますか？"}}, "ko": {"stringUnit": {"state": "translated", "value": "폴더 선택을 지울까요?"}}, "nl": {"stringUnit": {"state": "translated", "value": "Mapselectie wissen?"}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Limpar a seleção de pasta?"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "要清除文件夹选择吗？"}}}},
+    "Health.md stops writing to this folder until you choose one again. Files already in the folder are not deleted." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Health.md stops writing to this folder until you choose one again. Files already in the folder are not deleted."}}, "de": {"stringUnit": {"state": "translated", "value": "Health.md schreibt nicht mehr in diesen Ordner, bis du erneut einen auswählst. Dateien, die bereits im Ordner liegen, werden nicht gelöscht."}}, "es": {"stringUnit": {"state": "translated", "value": "Health.md deja de escribir en esta carpeta hasta que vuelvas a elegir una. Los archivos que ya están en la carpeta no se eliminan."}}, "fr": {"stringUnit": {"state": "translated", "value": "Health.md cesse d’écrire dans ce dossier jusqu’à ce que vous en choisissiez un à nouveau. Les fichiers déjà présents dans le dossier ne sont pas supprimés."}}, "it": {"stringUnit": {"state": "translated", "value": "Health.md smette di scrivere in questa cartella finché non ne scegli di nuovo una. I file già presenti nella cartella non vengono eliminati."}}, "ja": {"stringUnit": {"state": "translated", "value": "もう一度フォルダを選択するまで、Health.mdはこのフォルダに書き込みません。フォルダ内の既存のファイルは削除されません。"}}, "ko": {"stringUnit": {"state": "translated", "value": "폴더를 다시 선택할 때까지 Health.md는 이 폴더에 쓰지 않습니다. 폴더에 이미 있는 파일은 삭제되지 않습니다."}}, "nl": {"stringUnit": {"state": "translated", "value": "Health.md schrijft niet meer naar deze map totdat je er opnieuw een kiest. Bestanden die al in de map staan, worden niet verwijderd."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "O Health.md deixa de gravar nesta pasta até você escolher uma novamente. Os arquivos que já estão na pasta não são apagados."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "在你重新选择文件夹之前，Health.md 不会再写入此文件夹。文件夹中已有的文件不会被删除。"}}}},
     "This profile’s sleep day or time zone can’t be used for a new export, so its daily note can’t be previewed." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "This profile’s sleep day or time zone can’t be used for a new export, so its daily note can’t be previewed."}}, "de": {"stringUnit": {"state": "translated", "value": "Der Schlaftag oder die Zeitzone dieses Profils kann für einen neuen Export nicht verwendet werden, daher lässt sich seine Tagesnotiz nicht in der Vorschau anzeigen."}}, "es": {"stringUnit": {"state": "translated", "value": "El día de sueño o la zona horaria de este perfil no se pueden usar para una nueva exportación, así que no se puede previsualizar su nota diaria."}}, "fr": {"stringUnit": {"state": "translated", "value": "Le jour de sommeil ou le fuseau horaire de ce profil ne peut pas servir à un nouvel export ; l’aperçu de sa note quotidienne est donc impossible."}}, "it": {"stringUnit": {"state": "translated", "value": "Il giorno del sonno o il fuso orario di questo profilo non possono essere usati per una nuova esportazione, quindi non è possibile l’anteprima della sua nota giornaliera."}}, "ja": {"stringUnit": {"state": "translated", "value": "このプロファイルの睡眠日またはタイムゾーンは新しい書き出しに使用できないため、デイリーノートをプレビューできません。"}}, "ko": {"stringUnit": {"state": "translated", "value": "이 프로필의 수면 날짜 또는 시간대를 새 내보내기에 사용할 수 없어 일일 노트를 미리 볼 수 없습니다."}}, "nl": {"stringUnit": {"state": "translated", "value": "De slaapdag of tijdzone van dit profiel kan niet worden gebruikt voor een nieuwe export, dus de dagnotitie kan niet worden voorvertoond."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "O dia de sono ou o fuso horário deste perfil não pode ser usado em uma nova exportação, então não é possível pré-visualizar a nota diária."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "此配置的睡眠日或时区无法用于新的导出，因此无法预览其每日笔记。"}}}},
     "Apple Health data for this day couldn’t be read." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Apple Health data for this day couldn’t be read."}}, "de": {"stringUnit": {"state": "translated", "value": "Die Apple Health-Daten für diesen Tag konnten nicht gelesen werden."}}, "es": {"stringUnit": {"state": "translated", "value": "No se pudieron leer los datos de Apple Health de este día."}}, "fr": {"stringUnit": {"state": "translated", "value": "Impossible de lire les données Apple Santé de ce jour."}}, "it": {"stringUnit": {"state": "translated", "value": "Impossibile leggere i dati di Apple Salute per questo giorno."}}, "ja": {"stringUnit": {"state": "translated", "value": "この日のAppleヘルスケアのデータを読み取れませんでした。"}}, "ko": {"stringUnit": {"state": "translated", "value": "이 날의 Apple 건강 데이터를 읽을 수 없습니다."}}, "nl": {"stringUnit": {"state": "translated", "value": "De Apple Gezondheid-gegevens voor deze dag konden niet worden gelezen."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Não foi possível ler os dados do Apple Saúde deste dia."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "无法读取这一天的 Apple 健康数据。"}}}},
     "This daily note can’t be previewed here." : {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "This daily note can’t be previewed here."}}, "de": {"stringUnit": {"state": "translated", "value": "Diese Tagesnotiz kann hier nicht in der Vorschau angezeigt werden."}}, "es": {"stringUnit": {"state": "translated", "value": "Esta nota diaria no se puede previsualizar aquí."}}, "fr": {"stringUnit": {"state": "translated", "value": "L’aperçu de cette note quotidienne n’est pas disponible ici."}}, "it": {"stringUnit": {"state": "translated", "value": "L’anteprima di questa nota giornaliera non è disponibile qui."}}, "ja": {"stringUnit": {"state": "translated", "value": "このデイリーノートはここではプレビューできません。"}}, "ko": {"stringUnit": {"state": "translated", "value": "이 일일 노트는 여기에서 미리 볼 수 없습니다."}}, "nl": {"stringUnit": {"state": "translated", "value": "Deze dagnotitie kan hier niet worden voorvertoond."}}, "pt-BR": {"stringUnit": {"state": "translated", "value": "Esta nota diária não pode ser pré-visualizada aqui."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "无法在此预览这篇每日笔记。"}}}},
@@ -115805,6 +115809,65 @@
         }
       }
     },
+    "Settings…" : {
+      "comment" : "Mac menu bar item that opens the Settings window (⌘,)",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einstellungen…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajustes…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages…"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impostazioni…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "설정…"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instellingen…"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configurações…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置…"
+          }
+        }
+      }
+    },
     "SETTINGS" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -154059,6 +154122,474 @@
         "nl": {"stringUnit":{"state":"translated","value":"Exporteer je maanden of jaren? Gedetailleerde tijdreeksen behoudt metingen met tijdstempel zonder het bronarchief en is veel sneller en lichter voor lange periodes."}},
         "pt-BR": {"stringUnit":{"state":"translated","value":"Exportando meses ou anos? Séries temporais detalhadas mantém amostras com data e hora sem o arquivo de origem e é muito mais rápida e leve para períodos longos."}},
         "zh-Hans": {"stringUnit":{"state":"translated","value":"要导出数月或数年的数据？“详细时间序列”保留带时间戳的样本，但不包含源归档，在长时间范围内速度更快、文件更小。"}}
+      }
+    },
+    "A redesigned Health.md" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Health.md, neu gestaltet"}},
+        "es": {"stringUnit":{"state":"translated","value":"Un Health.md rediseñado"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Health.md repensé"}},
+        "it": {"stringUnit":{"state":"translated","value":"Health.md ridisegnato"}},
+        "ja": {"stringUnit":{"state":"translated","value":"Health.md を一新"}},
+        "ko": {"stringUnit":{"state":"translated","value":"새롭게 디자인된 Health.md"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Een vernieuwd Health.md"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Um Health.md redesenhado"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"全新设计的 Health.md"}}
+      }
+    },
+    "Automations you can read" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Lesbare Automationen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Automatizaciones fáciles de leer"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Des automatisations lisibles"}},
+        "it": {"stringUnit":{"state":"translated","value":"Automazioni facili da leggere"}},
+        "ja": {"stringUnit":{"state":"translated","value":"読んでわかるオートメーション"}},
+        "ko": {"stringUnit":{"state":"translated","value":"읽기 쉬운 자동화"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Leesbare automatiseringen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Automações fáceis de ler"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"一目了然的自动化"}}
+      }
+    },
+    "Choose your sleep day" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Wähle deinen Schlaftag"}},
+        "es": {"stringUnit":{"state":"translated","value":"Elige tu día del sueño"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Choisissez votre jour du sommeil"}},
+        "it": {"stringUnit":{"state":"translated","value":"Scegli il giorno del sonno"}},
+        "ja": {"stringUnit":{"state":"translated","value":"睡眠の日付を選択"}},
+        "ko": {"stringUnit":{"state":"translated","value":"수면 날짜 선택"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Kies je slaapdag"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Escolha seu dia do sono"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"选择睡眠日期"}}
+      }
+    },
+    "Detail by category" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Detailgrad je Kategorie"}},
+        "es": {"stringUnit":{"state":"translated","value":"Detalle por categoría"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Détail par catégorie"}},
+        "it": {"stringUnit":{"state":"translated","value":"Dettaglio per categoria"}},
+        "ja": {"stringUnit":{"state":"translated","value":"カテゴリ別の詳細度"}},
+        "ko": {"stringUnit":{"state":"translated","value":"카테고리별 세부 수준"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Detail per categorie"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Detalhe por categoria"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"按类别设置详细程度"}}
+      }
+    },
+    "Each exported day fills a square on the calendar. Open a day to see the file each automation wrote." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Jeder exportierte Tag füllt ein Feld im Kalender. Öffne einen Tag, um die Datei zu sehen, die jede Automation geschrieben hat."}},
+        "es": {"stringUnit":{"state":"translated","value":"Cada día exportado llena un cuadro del calendario. Abre un día para ver el archivo que escribió cada automatización."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Chaque jour exporté remplit une case du calendrier. Ouvrez un jour pour voir le fichier écrit par chaque automatisation."}},
+        "it": {"stringUnit":{"state":"translated","value":"Ogni giorno esportato riempie una casella del calendario. Apri un giorno per vedere il file scritto da ciascuna automazione."}},
+        "ja": {"stringUnit":{"state":"translated","value":"書き出した日ごとにカレンダーのマスが埋まります。日付を開くと、各オートメーションが書き出したファイルを確認できます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"내보낸 날마다 캘린더 칸이 채워집니다. 날짜를 열면 각 자동화가 작성한 파일을 볼 수 있습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Elke geëxporteerde dag vult een vakje in de kalender. Open een dag om het bestand te zien dat elke automatisering heeft geschreven."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Cada dia exportado preenche um quadrado no calendário. Abra um dia para ver o arquivo que cada automação gravou."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"每导出一天，就会填满日历上的一格。打开某一天，即可查看每个自动化写入的文件。"}}
+      }
+    },
+    "Each saved export reads as a sentence, with a live preview of the file it will write." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Jeder gespeicherte Export liest sich wie ein Satz, mit einer Live-Vorschau der Datei, die er schreiben wird."}},
+        "es": {"stringUnit":{"state":"translated","value":"Cada exportación guardada se lee como una frase, con una vista previa en tiempo real del archivo que escribirá."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Chaque exportation enregistrée se lit comme une phrase, avec un aperçu en direct du fichier qu’elle écrira."}},
+        "it": {"stringUnit":{"state":"translated","value":"Ogni esportazione salvata si legge come una frase, con un’anteprima in tempo reale del file che scriverà."}},
+        "ja": {"stringUnit":{"state":"translated","value":"保存した各エクスポートが1つの文として表示され、書き出されるファイルをライブプレビューで確認できます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"저장된 각 내보내기가 하나의 문장으로 표시되며, 작성될 파일을 실시간 미리보기로 확인할 수 있습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Elke bewaarde export leest als een zin, met een live voorvertoning van het bestand dat wordt geschreven."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Cada exportação salva aparece como uma frase, com uma pré-visualização ao vivo do arquivo que será gravado."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"每个已保存的导出都以一句话呈现，并实时预览将要写入的文件。"}}
+      }
+    },
+    "Export detailed sleep while keeping other categories summarized." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Exportiere Schlaf detailliert, während andere Kategorien zusammengefasst bleiben."}},
+        "es": {"stringUnit":{"state":"translated","value":"Exporta el sueño detallado y mantén resumidas las demás categorías."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Exportez le sommeil en détail tout en gardant les autres catégories résumées."}},
+        "it": {"stringUnit":{"state":"translated","value":"Esporta il sonno in dettaglio mantenendo riepilogate le altre categorie."}},
+        "ja": {"stringUnit":{"state":"translated","value":"睡眠は詳細に、ほかのカテゴリは概要のまま書き出せます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"다른 카테고리는 요약으로 두고 수면만 상세하게 내보낼 수 있습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Exporteer slaap gedetailleerd en houd andere categorieën samengevat."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Exporte o sono detalhado e mantenha as outras categorias resumidas."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"详细导出睡眠数据，其他类别保持摘要。"}}
+      }
+    },
+    "Export yesterday, the last 7 or 30 days, or any dates, and see what was written when it finishes." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Exportiere gestern, die letzten 7 oder 30 Tage oder beliebige Daten und sieh nach Abschluss, was geschrieben wurde."}},
+        "es": {"stringUnit":{"state":"translated","value":"Exporta ayer, los últimos 7 o 30 días o cualquier fecha, y consulta lo que se escribió al terminar."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Exportez hier, les 7 ou 30 derniers jours ou les dates de votre choix, et voyez ce qui a été écrit une fois l’exportation terminée."}},
+        "it": {"stringUnit":{"state":"translated","value":"Esporta ieri, gli ultimi 7 o 30 giorni o qualsiasi data, e al termine vedi cosa è stato scritto."}},
+        "ja": {"stringUnit":{"state":"translated","value":"昨日、過去7日間または30日間、任意の日付を書き出し、完了時に書き出された内容を確認できます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"어제, 최근 7일 또는 30일, 원하는 날짜를 내보내고 완료되면 작성된 내용을 확인하세요."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Exporteer gisteren, de afgelopen 7 of 30 dagen of willekeurige datums, en zie na afloop wat er is geschreven."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Exporte ontem, os últimos 7 ou 30 dias ou qualquer data e veja o que foi gravado quando terminar."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"导出昨天、最近 7 天或 30 天，或任意日期，完成后即可查看写入的内容。"}}
+      }
+    },
+    "Keep the noon-to-noon window, or assign each night’s sleep to the day you wake up." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Behalte das Zeitfenster von Mittag bis Mittag oder ordne den Schlaf jeder Nacht dem Tag des Aufwachens zu."}},
+        "es": {"stringUnit":{"state":"translated","value":"Mantén el intervalo de mediodía a mediodía o asigna el sueño de cada noche al día en que te despiertas."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Gardez la plage de midi à midi ou attribuez le sommeil de chaque nuit au jour du réveil."}},
+        "it": {"stringUnit":{"state":"translated","value":"Mantieni l’intervallo da mezzogiorno a mezzogiorno o assegna il sonno di ogni notte al giorno in cui ti svegli."}},
+        "ja": {"stringUnit":{"state":"translated","value":"正午から翌日の正午までの時間枠をそのまま使うか、各夜の睡眠を起床した日に割り当てます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"정오부터 다음 날 정오까지의 시간 범위를 유지하거나, 매일 밤의 수면을 깨어난 날에 배정하세요."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Behoud het venster van middag tot middag, of wijs de slaap van elke nacht toe aan de dag waarop je wakker wordt."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Mantenha o intervalo de meio-dia a meio-dia ou atribua o sono de cada noite ao dia em que você acorda."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"保留从中午到次日中午的时间范围，或将每晚的睡眠归入你醒来的那一天。"}}
+      }
+    },
+    "Problems such as an unavailable folder, an offline Mac or a failing endpoint appear in one list, each with its fix." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Probleme wie ein nicht verfügbarer Ordner, ein Mac offline oder ein fehlschlagender Endpunkt erscheinen in einer Liste, jeweils mit ihrer Lösung."}},
+        "es": {"stringUnit":{"state":"translated","value":"Los problemas, como una carpeta no disponible, un Mac sin conexión o un endpoint con fallos, aparecen en una sola lista, cada uno con su solución."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Les problèmes, comme un dossier indisponible, un Mac hors ligne ou un point de terminaison en échec, apparaissent dans une seule liste, chacun avec sa solution."}},
+        "it": {"stringUnit":{"state":"translated","value":"I problemi, come una cartella non disponibile, un Mac offline o un endpoint in errore, compaiono in un unico elenco, ciascuno con la sua soluzione."}},
+        "ja": {"stringUnit":{"state":"translated","value":"フォルダを利用できない、Macがオフライン、エンドポイントでエラーなどの問題が、解決方法とともに1つのリストに表示されます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"폴더를 사용할 수 없거나 Mac이 오프라인이거나 엔드포인트에 오류가 있는 등의 문제가 해결 방법과 함께 하나의 목록에 표시됩니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Problemen zoals een onbeschikbare map, een offline Mac of een mislukkend eindpunt staan in één lijst, elk met de oplossing."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Problemas como uma pasta indisponível, um Mac offline ou um endpoint com falha aparecem em uma única lista, cada um com sua solução."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"文件夹不可用、Mac 离线或端点故障等问题会集中列在一个列表中，并附有解决方法。"}}
+      }
+    },
+    "Your Archive" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Dein Archiv"}},
+        "es": {"stringUnit":{"state":"translated","value":"Tu archivo"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Vos archives"}},
+        "it": {"stringUnit":{"state":"translated","value":"Il tuo archivio"}},
+        "ja": {"stringUnit":{"state":"translated","value":"アーカイブ"}},
+        "ko": {"stringUnit":{"state":"translated","value":"내 아카이브"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Je archief"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Seu arquivo"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"你的归档"}}
+      }
+    },
+    " one-time" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":" einmalig"}},
+        "es": {"stringUnit":{"state":"translated","value":" pago único"}},
+        "fr": {"stringUnit":{"state":"translated","value":" paiement unique"}},
+        "it": {"stringUnit":{"state":"translated","value":" una tantum"}},
+        "ja": {"stringUnit":{"state":"translated","value":"（買い切り）"}},
+        "ko": {"stringUnit":{"state":"translated","value":" (1회 결제)"}},
+        "nl": {"stringUnit":{"state":"translated","value":" eenmalig"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":" pagamento único"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"（一次性）"}}
+      }
+    },
+    "%@. Auto-renews; cancel anytime." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"%@. Automatische Verlängerung; jederzeit kündbar."}},
+        "es": {"stringUnit":{"state":"translated","value":"%@. Renovación automática; cancela cuando quieras."}},
+        "fr": {"stringUnit":{"state":"translated","value":"%@. Renouvellement automatique ; résiliable à tout moment."}},
+        "it": {"stringUnit":{"state":"translated","value":"%@. Rinnovo automatico; annulla quando vuoi."}},
+        "ja": {"stringUnit":{"state":"translated","value":"%@。自動更新。いつでも解約できます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"%@. 자동 갱신되며 언제든 해지할 수 있습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"%@. Automatische verlenging; altijd opzegbaar."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"%@. Renovação automática; cancele quando quiser."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"%@。自动续订，可随时取消。"}}
+      }
+    },
+    "Advertise this iPad on your local network" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Dieses iPad im lokalen Netzwerk anzeigen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Anunciar este iPad en tu red local"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Annoncer cet iPad sur votre réseau local"}},
+        "it": {"stringUnit":{"state":"translated","value":"Rendi visibile questo iPad sulla rete locale"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ローカルネットワークでこのiPadを公開"}},
+        "ko": {"stringUnit":{"state":"translated","value":"로컬 네트워크에 이 iPad 표시"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Deze iPad aankondigen op je lokale netwerk"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Anunciar este iPad na sua rede local"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"在本地网络上广播此 iPad"}}
+      }
+    },
+    "Applies to every automation on this iPad." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Gilt für alle Automationen auf diesem iPad."}},
+        "es": {"stringUnit":{"state":"translated","value":"Se aplica a todas las automatizaciones de este iPad."}},
+        "fr": {"stringUnit":{"state":"translated","value":"S’applique à toutes les automatisations de cet iPad."}},
+        "it": {"stringUnit":{"state":"translated","value":"Vale per tutte le automazioni su questo iPad."}},
+        "ja": {"stringUnit":{"state":"translated","value":"このiPadのすべてのオートメーションに適用されます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이 iPad의 모든 자동화에 적용됩니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Geldt voor alle automatiseringen op deze iPad."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Vale para todas as automações deste iPad."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"适用于此 iPad 上的所有自动化。"}}
+      }
+    },
+    "Billed %@ a year. Cancel anytime." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"%@ pro Jahr. Jederzeit kündbar."}},
+        "es": {"stringUnit":{"state":"translated","value":"%@ al año. Cancela cuando quieras."}},
+        "fr": {"stringUnit":{"state":"translated","value":"%@ par an. Résiliable à tout moment."}},
+        "it": {"stringUnit":{"state":"translated","value":"%@ all’anno. Annulla quando vuoi."}},
+        "ja": {"stringUnit":{"state":"translated","value":"年額%@。いつでも解約できます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"연 %@. 언제든 해지할 수 있습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"%@ per jaar. Altijd opzegbaar."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"%@ por ano. Cancele quando quiser."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"每年 %@。可随时取消。"}}
+      }
+    },
+    "Billed yearly. Cancel anytime." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Jährliche Abrechnung. Jederzeit kündbar."}},
+        "es": {"stringUnit":{"state":"translated","value":"Cobro anual. Cancela cuando quieras."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Facturation annuelle. Résiliable à tout moment."}},
+        "it": {"stringUnit":{"state":"translated","value":"Addebito annuale. Annulla quando vuoi."}},
+        "ja": {"stringUnit":{"state":"translated","value":"年額で請求。いつでも解約できます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"연간 결제. 언제든 해지할 수 있습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Jaarlijkse betaling. Altijd opzegbaar."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Cobrança anual. Cancele quando quiser."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"按年扣费。可随时取消。"}}
+      }
+    },
+    "Day 5 · Reminder before you're charged" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Tag 5 · Erinnerung vor der Abbuchung"}},
+        "es": {"stringUnit":{"state":"translated","value":"Día 5 · Recordatorio antes del cobro"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Jour 5 · Rappel avant le prélèvement"}},
+        "it": {"stringUnit":{"state":"translated","value":"Giorno 5 · Promemoria prima dell’addebito"}},
+        "ja": {"stringUnit":{"state":"translated","value":"5日目 · 請求前にリマインダー"}},
+        "ko": {"stringUnit":{"state":"translated","value":"5일차 · 결제 전 알림"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dag 5 · Herinnering voordat je betaalt"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Dia 5 · Lembrete antes da cobrança"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"第 5 天 · 扣费前提醒"}}
+      }
+    },
+    "Day 7 · Billed %@ a year unless cancelled" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Tag 7 · %@ pro Jahr, sofern nicht gekündigt"}},
+        "es": {"stringUnit":{"state":"translated","value":"Día 7 · Se cobran %@ al año salvo que canceles"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Jour 7 · %@ par an facturés sauf résiliation"}},
+        "it": {"stringUnit":{"state":"translated","value":"Giorno 7 · Addebito di %@ all’anno, salvo annullamento"}},
+        "ja": {"stringUnit":{"state":"translated","value":"7日目 · 解約しない限り年額%@を請求"}},
+        "ko": {"stringUnit":{"state":"translated","value":"7일차 · 해지하지 않으면 연 %@ 청구"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dag 7 · %@ per jaar, tenzij je opzegt"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Dia 7 · Cobrança de %@ por ano, a menos que cancele"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"第 7 天 · 除非取消，否则按每年 %@ 扣费"}}
+      }
+    },
+    "Day 7 · Billed yearly unless cancelled" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Tag 7 · Jährliche Abbuchung, sofern nicht gekündigt"}},
+        "es": {"stringUnit":{"state":"translated","value":"Día 7 · Cobro anual salvo que canceles"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Jour 7 · Facturation annuelle sauf résiliation"}},
+        "it": {"stringUnit":{"state":"translated","value":"Giorno 7 · Addebito annuale, salvo annullamento"}},
+        "ja": {"stringUnit":{"state":"translated","value":"7日目 · 解約しない限り年額で請求"}},
+        "ko": {"stringUnit":{"state":"translated","value":"7일차 · 해지하지 않으면 연간 결제"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dag 7 · Jaarlijkse betaling, tenzij je opzegt"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Dia 7 · Cobrança anual, a menos que cancele"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"第 7 天 · 除非取消，否则按年扣费"}}
+      }
+    },
+    "Double tap to choose an Obsidian vault folder" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Doppeltippen, um einen Obsidian-Vault-Ordner auszuwählen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Toca dos veces para elegir una carpeta de bóveda de Obsidian"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Touchez deux fois pour choisir un dossier de coffre Obsidian"}},
+        "it": {"stringUnit":{"state":"translated","value":"Tocca due volte per scegliere una cartella vault di Obsidian"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ダブルタップしてObsidianのVaultフォルダを選択"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이중 탭하여 Obsidian 보관함 폴더 선택"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dubbeltik om een Obsidian-vaultmap te kiezen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Toque duas vezes para escolher uma pasta de cofre do Obsidian"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"双击以选择 Obsidian 仓库文件夹"}}
+      }
+    },
+    "Double tap to connect or disconnect third-party health providers" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Doppeltippen, um Gesundheitsanbieter von Drittanbietern zu verbinden oder zu trennen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Toca dos veces para conectar o desconectar proveedores de salud de terceros"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Touchez deux fois pour connecter ou déconnecter des fournisseurs de santé tiers"}},
+        "it": {"stringUnit":{"state":"translated","value":"Tocca due volte per collegare o scollegare fornitori di salute di terze parti"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ダブルタップして他社のヘルスケアサービスを接続または接続解除"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이중 탭하여 타사 건강 서비스 연결 또는 연결 해제"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dubbeltik om gezondheidsdiensten van derden te koppelen of te ontkoppelen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Toque duas vezes para conectar ou desconectar provedores de saúde de terceiros"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"双击以连接或断开第三方健康服务"}}
+      }
+    },
+    "Double tap to manage purchases and Family Sharing" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Doppeltippen, um Käufe und Familienfreigabe zu verwalten"}},
+        "es": {"stringUnit":{"state":"translated","value":"Toca dos veces para gestionar las compras y En familia"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Touchez deux fois pour gérer les achats et le partage familial"}},
+        "it": {"stringUnit":{"state":"translated","value":"Tocca due volte per gestire gli acquisti e In famiglia"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ダブルタップして購入とファミリー共有を管理"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이중 탭하여 구입 항목 및 가족 공유 관리"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dubbeltik om aankopen en Delen met gezin te beheren"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Toque duas vezes para gerenciar compras e o Compartilhamento Familiar"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"双击以管理购买项目和家人共享"}}
+      }
+    },
+    "Double tap to open Diagnostics" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Doppeltippen, um die Diagnose zu öffnen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Toca dos veces para abrir Diagnóstico"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Touchez deux fois pour ouvrir Diagnostic"}},
+        "it": {"stringUnit":{"state":"translated","value":"Tocca due volte per aprire Diagnostica"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ダブルタップして診断を開く"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이중 탭하여 진단 열기"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dubbeltik om Diagnostiek te openen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Toque duas vezes para abrir Diagnóstico"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"双击以打开诊断"}}
+      }
+    },
+    "Double tap to open Discord" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Doppeltippen, um Discord zu öffnen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Toca dos veces para abrir Discord"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Touchez deux fois pour ouvrir Discord"}},
+        "it": {"stringUnit":{"state":"translated","value":"Tocca due volte per aprire Discord"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ダブルタップしてDiscordを開く"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이중 탭하여 Discord 열기"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dubbeltik om Discord te openen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Toque duas vezes para abrir o Discord"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"双击以打开 Discord"}}
+      }
+    },
+    "Double tap to open GitHub Issues" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Doppeltippen, um GitHub Issues zu öffnen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Toca dos veces para abrir GitHub Issues"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Touchez deux fois pour ouvrir GitHub Issues"}},
+        "it": {"stringUnit":{"state":"translated","value":"Tocca due volte per aprire GitHub Issues"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ダブルタップしてGitHub Issuesを開く"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이중 탭하여 GitHub Issues 열기"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dubbeltik om GitHub Issues te openen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Toque duas vezes para abrir o GitHub Issues"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"双击以打开 GitHub Issues"}}
+      }
+    },
+    "Double tap to open the Health.md privacy policy" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Doppeltippen, um die Datenschutzrichtlinie von Health.md zu öffnen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Toca dos veces para abrir la política de privacidad de Health.md"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Touchez deux fois pour ouvrir la politique de confidentialité de Health.md"}},
+        "it": {"stringUnit":{"state":"translated","value":"Tocca due volte per aprire l’informativa sulla privacy di Health.md"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ダブルタップしてHealth.mdのプライバシーポリシーを開く"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이중 탭하여 Health.md 개인정보 처리방침 열기"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dubbeltik om het privacybeleid van Health.md te openen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Toque duas vezes para abrir a política de privacidade do Health.md"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"双击以打开 Health.md 隐私政策"}}
+      }
+    },
+    "Double tap to review purchase verification for myself.md" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Doppeltippen, um die Kaufbestätigung für myself.md zu prüfen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Toca dos veces para revisar la verificación de compra de myself.md"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Touchez deux fois pour vérifier l’achat myself.md"}},
+        "it": {"stringUnit":{"state":"translated","value":"Tocca due volte per controllare la verifica dell’acquisto di myself.md"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ダブルタップしてmyself.mdの購入確認を表示"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이중 탭하여 myself.md 구입 확인 검토"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dubbeltik om de aankoopverificatie voor myself.md te bekijken"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Toque duas vezes para revisar a verificação de compra do myself.md"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"双击以查看 myself.md 的购买验证"}}
+      }
+    },
+    "Double tap to send feedback by email" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Doppeltippen, um Feedback per E-Mail zu senden"}},
+        "es": {"stringUnit":{"state":"translated","value":"Toca dos veces para enviar comentarios por correo electrónico"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Touchez deux fois pour envoyer vos commentaires par e-mail"}},
+        "it": {"stringUnit":{"state":"translated","value":"Tocca due volte per inviare un feedback via email"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ダブルタップしてメールでフィードバックを送信"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이중 탭하여 이메일로 피드백 보내기"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dubbeltik om feedback per e-mail te sturen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Toque duas vezes para enviar feedback por e-mail"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"双击以通过电子邮件发送反馈"}}
+      }
+    },
+    "Stored in the iPad Keychain, never in your notes." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Im iPad-Schlüsselbund gespeichert, nie in deinen Notizen."}},
+        "es": {"stringUnit":{"state":"translated","value":"Se guarda en el llavero del iPad, nunca en tus notas."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Stocké dans le trousseau de l’iPad, jamais dans vos notes."}},
+        "it": {"stringUnit":{"state":"translated","value":"Salvato nel portachiavi dell’iPad, mai nelle tue note."}},
+        "ja": {"stringUnit":{"state":"translated","value":"iPadのキーチェーンに保存され、メモには保存されません。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"iPad 키체인에 저장되며 메모에는 저장되지 않습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Opgeslagen in de iPad-sleutelhanger, nooit in je notities."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Armazenado nas Chaves do iPad, nunca nas suas notas."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"存储在 iPad 钥匙串中，绝不会写入你的笔记。"}}
+      }
+    },
+    "Stored in the iPhone Keychain, never in your notes." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Im iPhone-Schlüsselbund gespeichert, nie in deinen Notizen."}},
+        "es": {"stringUnit":{"state":"translated","value":"Se guarda en el llavero del iPhone, nunca en tus notas."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Stocké dans le trousseau de l’iPhone, jamais dans vos notes."}},
+        "it": {"stringUnit":{"state":"translated","value":"Salvato nel portachiavi dell’iPhone, mai nelle tue note."}},
+        "ja": {"stringUnit":{"state":"translated","value":"iPhoneのキーチェーンに保存され、メモには保存されません。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"iPhone 키체인에 저장되며 메모에는 저장되지 않습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Opgeslagen in de iPhone-sleutelhanger, nooit in je notities."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Armazenado nas Chaves do iPhone, nunca nas suas notas."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"存储在 iPhone 钥匙串中，绝不会写入你的笔记。"}}
+      }
+    },
+    "The Mac writes files using the setup you choose on iPad." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Der Mac schreibt Dateien mit den Einstellungen, die du auf dem iPad auswählst."}},
+        "es": {"stringUnit":{"state":"translated","value":"El Mac escribe los archivos con la configuración que elijas en el iPad."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Le Mac écrit les fichiers selon la configuration choisie sur l’iPad."}},
+        "it": {"stringUnit":{"state":"translated","value":"Il Mac scrive i file usando la configurazione che scegli su iPad."}},
+        "ja": {"stringUnit":{"state":"translated","value":"MacはiPadで選択した設定に従ってファイルを書き込みます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"Mac은 iPad에서 선택한 설정에 따라 파일을 저장합니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"De Mac schrijft bestanden met de instellingen die je op je iPad kiest."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"O Mac grava os arquivos usando a configuração que você escolhe no iPad."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"Mac 会按照你在 iPad 上选择的设置写入文件。"}}
+      }
+    },
+    "This automation writes somewhere this iPad can’t read, so the file isn’t shown here." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Diese Automation schreibt an einen Ort, den dieses iPad nicht lesen kann, daher wird die Datei hier nicht angezeigt."}},
+        "es": {"stringUnit":{"state":"translated","value":"Esta automatización escribe en un lugar que este iPad no puede leer, así que el archivo no se muestra aquí."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Cette automatisation écrit à un endroit que cet iPad ne peut pas lire ; le fichier n’est donc pas affiché ici."}},
+        "it": {"stringUnit":{"state":"translated","value":"Questa automazione scrive in un luogo che questo iPad non può leggere, quindi il file non viene mostrato qui."}},
+        "ja": {"stringUnit":{"state":"translated","value":"このオートメーションはこのiPadから読めない場所に書き出すため、ここにはファイルを表示できません。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이 자동화는 이 iPad이 읽을 수 없는 위치에 기록하므로 여기에서 파일을 표시할 수 없습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Deze automatisering schrijft naar een plek die deze iPad niet kan lezen, dus het bestand wordt hier niet getoond."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Esta automação grava em um local que este iPad não consegue ler, então o arquivo não é mostrado aqui."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"此自动化写入的位置这台 iPad 无法读取，因此这里不显示文件。"}}
+      }
+    },
+    "Today · Start free trial" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Heute · Kostenlose Testphase starten"}},
+        "es": {"stringUnit":{"state":"translated","value":"Hoy · Inicia la prueba gratuita"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Aujourd’hui · Début de l’essai gratuit"}},
+        "it": {"stringUnit":{"state":"translated","value":"Oggi · Inizia la prova gratuita"}},
+        "ja": {"stringUnit":{"state":"translated","value":"今日 · 無料トライアル開始"}},
+        "ko": {"stringUnit":{"state":"translated","value":"오늘 · 무료 체험 시작"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Vandaag · Start gratis proefperiode"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Hoje · Comece o teste grátis"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"今天 · 开始免费试用"}}
+      }
+    },
+    "Update Health.md on Mac to receive iPad-configured export jobs." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Aktualisiere Health.md auf dem Mac, um auf dem iPad konfigurierte Exportaufträge zu empfangen."}},
+        "es": {"stringUnit":{"state":"translated","value":"Actualiza Health.md en el Mac para recibir tareas de exportación configuradas en el iPad."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Mettez à jour Health.md sur Mac pour recevoir les tâches d’export configurées sur l’iPad."}},
+        "it": {"stringUnit":{"state":"translated","value":"Aggiorna Health.md sul Mac per ricevere le attività di esportazione configurate su iPad."}},
+        "ja": {"stringUnit":{"state":"translated","value":"iPadで設定したエクスポートジョブを受信するには、MacのHealth.mdをアップデートしてください。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"iPad에서 설정한 내보내기 작업을 받으려면 Mac의 Health.md를 업데이트하세요."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Werk Health.md op de Mac bij om exporttaken te ontvangen die op de iPad zijn geconfigureerd."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Atualize o Health.md no Mac para receber tarefas de exportação configuradas no iPad."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"更新 Mac 上的 Health.md 以接收在 iPad 上配置的导出任务。"}}
+      }
+    },
+    "iPad folder" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"iPad-Ordner"}},
+        "es": {"stringUnit":{"state":"translated","value":"Carpeta del iPad"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Dossier de l’iPad"}},
+        "it": {"stringUnit":{"state":"translated","value":"Cartella iPad"}},
+        "ja": {"stringUnit":{"state":"translated","value":"iPadのフォルダ"}},
+        "ko": {"stringUnit":{"state":"translated","value":"iPad 폴더"}},
+        "nl": {"stringUnit":{"state":"translated","value":"iPad-map"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Pasta do iPad"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"iPad 文件夹"}}
       }
     }
   },

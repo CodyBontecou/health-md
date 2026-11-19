@@ -1,7 +1,13 @@
-Health.md 3.5.0 adds weekly and yearly subscriptions alongside one-time Lifetime access on iPhone and iPad.
+Health.md 4.0 is a complete redesign for iPhone, iPad, Mac and Apple Watch.
 
-• Eligible subscriptions include a 7-day free trial, then renew automatically at the displayed price unless canceled.
-• Existing Lifetime purchases and grandfathered access are preserved, including eligible Family Sharing.
-• Active access is required before setup and exports on iPhone and iPad. The free macOS companion is unchanged.
-• Purchase status and scheduling guidance distinguish subscription and Lifetime access.
-• Custom app usage analytics and advertising attribution have been removed.
+• Archive: a calendar that fills in as you export, with a page for each day showing the file each automation wrote.
+• Needs attention: problems such as an unavailable folder, an offline Mac or a failing endpoint are listed with their fix.
+• Automations read as plain sentences, with a live preview of the file they will write. Run, duplicate or pause each one, or use it in Shortcuts.
+• Export now: yesterday, the last 7 or 30 days, or any dates.
+• New setup: choose what to track, preview your past week as notes, and save them. Your first export is free.
+• Choose whether each night's sleep counts on the day it starts or the day you wake.
+• Set detail per category, for example detailed sleep with summarized heart rate.
+• Schedules can include today, and folders can be organized by ISO week.
+• New Archive widget and refreshed widgets, Live Activity, Mac menu bar and Watch app.
+• Saved API endpoints can be shared across automations.
+• Fixes for custom date ranges, daily-note frontmatter fields and empty-day exports.

@@ -1,0 +1,106 @@
+# PR #360 (v4 parity, iOS): M-11 Expand All / Collapse All on an automation's
+# Metrics page, on an iPad simulator.
+#
+# Prerequisites
+# - Debug build of HealthMd installed on an iPad simulator (iPad Pro 13-inch (M5),
+#   portrait). UI-test launch state (--uitesting, -UITEST_*): onboarding skipped,
+#   synthetic TestVault, purchase unlocked, one Default automation.
+# - The test ends on the Metrics page on purpose: leaving Metrics asks Apple Health
+#   for the selected metrics (existing behaviour), and on this simulator that system
+#   sheet cannot be dismissed.
+#
+# Side effects
+# - None persisted (expand/collapse is view state; no metric is toggled).
+#
+# Coordinate exceptions
+# - SwiftUI controls have no backing UIView, so the simulator runner tree carries
+#   none of this app's ids or text (see v4-parity-ios-settings.yaml). Taps are
+#   describe-derived points for this iPad layout, each named by an echo and
+#   followed by an accessibility-tree check (raw await-ui-element).
+# - The chip row is a horizontal SwiftUI ScrollView that clips Expand All and hides
+#   Collapse All; scroll-to needs the runner tree, so a raw momentum-free swipe on
+#   the chip row reveals them.
+version: 1
+requires:
+  platform: ios
+steps:
+  - echo: Launch Health.md in UI-test mode (synthetic TestVault, unlocked, one
+      Default automation). Expect Archive
+  - launch:
+      native: com.codybontecou.obsidianhealth
+      ios:
+        app: com.codybontecou.obsidianhealth
+        args:
+          - --uitesting
+          - -UITEST_VAULT_SELECTED
+          - "true"
+          - -UITEST_PURCHASE_UNLOCKED
+          - "true"
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.tab.automations
+      timeoutMs: 15000
+  - await: { idle: true }
+  - echo: Tap the Automations tab (glass.tab.automations; point tap). Expect the
+      Default automation
+  # Point = centre of glass.tab.automations from describe (sidebar, iPad portrait).
+  - tap: { x: 0.131, y: 0.138 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.metrics
+  - await: { idle: true }
+  - echo: "M-11: open Metrics (glass.automation.metrics; point tap). Expect Expand
+      All / Collapse All chips"
+  # Point = centre of glass.automation.metrics from describe.
+  - tap: { x: 0.777, y: 0.2945 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.metrics.expandAll
+  - await: { idle: true }
+  - echo: "M-11: swipe the chip row left (raw momentum-free swipe; the chip
+      ScrollView is SwiftUI so scroll-to cannot see it). Expect Expand All and
+      Collapse All fully on screen"
+  - tool: gesture-swipe
+    args:
+      fromX: 0.9
+      fromY: 0.2235
+      toX: 0.62
+      toY: 0.2235
+      momentum: false
+      durationMs: 400
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.metrics.collapseAll
+  # The chip ScrollView swallows the first touch while it is still settling.
+  - await: { idle: true }
+  - echo: "M-11: tap Expand All (glass.metrics.expandAll; point tap). Expect every
+      category opened (individual metric rows appear)"
+  # Point = centre of glass.metrics.expandAll after the swipe, from describe.
+  - tap: { x: 0.808, y: 0.2315 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Total Sleep
+  - echo: "M-11: tap Collapse All (glass.metrics.collapseAll; point tap). Expect
+      metric rows gone"
+  # Point = centre of glass.metrics.collapseAll after the swipe, from describe.
+  - tap: { x: 0.917, y: 0.2315 }
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        text: Total Sleep
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Workouts

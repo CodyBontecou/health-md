@@ -184,8 +184,9 @@ struct ArchiveScreen: View {
     private func titleRow(_ title: String, size: CGFloat, showsHeart: Bool) -> some View {
         HStack(alignment: .center) {
             Text(title)
-                .font(.system(size: size, weight: .bold))
+                .glassScaledFont(size, weight: .bold, relativeTo: .largeTitle)
                 .tracking(size >= 34 ? -0.6 : 0)
+                .lineLimit(1).minimumScaleFactor(0.5)
                 .foregroundStyle(palette.text)
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 8)
@@ -1152,10 +1153,11 @@ struct EmptyArchiveCard: View {
                     .frame(width: 64, height: 64)
                     .accessibilityHidden(true)
                 Text("Your archive starts here")
-                    .font(.system(size: 20, weight: .bold))
+                    .glassScaledFont(20, weight: .bold, relativeTo: .title3)
+                    .multilineTextAlignment(.center)
                     .foregroundStyle(palette.text)
                 Text("Each day you export fills a square on the calendar. Two steps first:")
-                    .font(.system(size: 15))
+                    .glassScaledFont(15, relativeTo: .subheadline)
                     .lineSpacing(3)
                     .foregroundStyle(palette.sec)
                     .multilineTextAlignment(.center)
@@ -1229,8 +1231,8 @@ struct EmptyArchiveCard: View {
                     .background(RoundedRectangle(cornerRadius: GlassMetrics.iconTileRadius, style: .continuous).fill(tile))
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.system(size: 16)).foregroundStyle(palette.text)
-                    Text(subtitle).font(.system(size: 12.5)).foregroundStyle(palette.muted)
+                    Text(title).glassScaledFont(16).foregroundStyle(palette.text)
+                    Text(subtitle).glassScaledFont(12.5, relativeTo: .footnote).foregroundStyle(palette.muted)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if let badge {
