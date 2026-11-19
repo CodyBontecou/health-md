@@ -1,0 +1,90 @@
+version: 1
+requires:
+  platform: ios
+# v4-external-pairing-link (ledger C-09, 3.5 → 4.0 parity): a Direct CLI pairing link opened
+# from outside Health.md must not pair (same as 3.5). The app must show its rejection
+# banner on Settings › healthmd CLI. In 4.0 that banner must name the 4.0 location;
+# before the fix it still said "open the Sync tab and use Scan Pairing QR", but 4.0 has
+# no Sync tab.
+#
+# Prerequisites: an iPhone simulator (recorded on a 6.3-inch iPhone, iOS 27) with a Debug-iOS
+# build of Health.md installed. --uitesting gives a deterministic synthetic state (no
+# HealthKit/StoreKit/network); -UITEST_PURCHASE_UNLOCKED skips the paywall. The link uses
+# a private-range host and a fake 20-digit code; nothing connects to it.
+# Side effects: UI-test mode rewrites the app's UI-test defaults on the simulator. No export,
+# no pairing, no network. Leaves the app on Settings › healthmd CLI.
+#
+# Coordinate exceptions: the glass tab bar and the Settings rows are not in the runner's
+# native view tree (the waits are kept raw for the same reason, as in
+# v4-duplicate-automation-endpoint). Each coordinate tap is followed by a wait on an id that
+# exists only on the destination screen, so a missed tap fails the run.
+steps:
+  - echo: Launch Health.md in UI-test mode. Expect Archive
+  - launch:
+      native: com.codybontecou.obsidianhealth
+      ios:
+        app: com.codybontecou.obsidianhealth
+        args:
+          - --uitesting
+          - -UITEST_PURCHASE_UNLOCKED
+          - "true"
+          - -AppleLanguages
+          - (en)
+          - -AppleLocale
+          - en_US
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.archive.nextRun
+      timeoutMs: 15000
+  - await: { idle: true }
+  - echo: Open a Direct CLI pairing link from outside the app (the action under test).
+      Expect Health.md to stay in front without pairing
+  - tool: open-url
+    args:
+      url: healthmd://direct-cli/pair?host=192.168.1.20&port=17645&code=12345678901234567890
+  # iOS asks "Open in Health.md?" only the first time per simulator boot.
+  - when: { visible: { text: Open in } }
+    steps:
+      - tap: { text: Open, role: button }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.archive.nextRun
+      timeoutMs: 10000
+  - await: { idle: true }
+  - echo: Open Settings. Expect the healthmd CLI row
+  - tap: { x: 0.613, y: 0.895 } # Settings tab (glass.tab.settings)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.settings.cli
+      timeoutMs: 10000
+  - await: { idle: true }
+  - echo: Open healthmd CLI. Expect the Scan pairing QR button
+  - tap: { x: 0.5, y: 0.457 } # healthmd CLI row (glass.settings.cli)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: sync.directCLIScanButton
+      timeoutMs: 10000
+  - await: { idle: true }
+  - echo: Expect the rejection banner naming Settings › healthmd CLI (not the 3.5 Sync
+      tab), and Direct CLI access still off (the link did not pair)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: For secure pairing, open Settings › healthmd CLI and tap Scan pairing QR.
+      timeoutMs: 5000
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: sync.directCLIToggle
+      expectedText: "0"
+      timeoutMs: 3000
