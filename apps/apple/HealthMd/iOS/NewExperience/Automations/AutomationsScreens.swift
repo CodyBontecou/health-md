@@ -24,7 +24,7 @@ struct AutomationFacts {
         )
         switch summary {
         // A profile without its own folder writes to the Settings folder, so name that one.
-        case .localFolder(let name): return name ?? coordinator.sharedFolderName ?? String(localized: "iPhone folder")
+        case .localFolder(let name): return name ?? coordinator.sharedFolderName ?? HostDevice.current.folderName
         case .googleDrive(let label): return label ?? "Google Drive"
         case .connectedMac: return String(localized: "Connected Mac")
         case .apiEndpoint(let url), .agentDataGateway(let url):

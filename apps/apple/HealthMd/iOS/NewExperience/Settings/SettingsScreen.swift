@@ -470,11 +470,7 @@ struct SettingsScreen: View {
             : String(localized: "\(purchaseManager.activePlanTitle) · restore or manage")
     }
 
-    private var folderTitle: String {
-        UIDevice.current.userInterfaceIdiom == .pad
-            ? String(localized: "Vault on this iPad")
-            : String(localized: "Vault on this iPhone")
-    }
+    private var folderTitle: String { HostDevice.current.vaultTitle }
 
     /// Folder automations can each write to their own folder, so summarise how many are in use.
     private var folderSubtitle: String? {

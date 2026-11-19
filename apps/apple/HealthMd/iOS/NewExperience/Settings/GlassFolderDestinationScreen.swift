@@ -15,7 +15,6 @@ struct GlassFolderDestinationScreen: View {
     @ObservedObject private var history = ExportHistoryManager.shared
     @AppStorage(NewAutomationDestinationPreference.key) private var newAutomationsUseDefaultFolder = false
 
-    private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
 
     private var needsReselection: Bool {
         switch vaultManager.destinationState {
@@ -41,7 +40,7 @@ struct GlassFolderDestinationScreen: View {
         vaultManager.vaultURL.flatMap {
             FolderLocationDescription.parentLocation(
                 of: $0,
-                onDeviceTitle: isPad ? String(localized: "On My iPad") : String(localized: "On My iPhone")
+                onDeviceTitle: HostDevice.current.onMyDeviceTitle
             )
         }
     }
@@ -128,9 +127,10 @@ struct GlassFolderDestinationScreen: View {
                     .accessibilityIdentifier("glass.folderDestination.activity")
                 }
 
-                Text(isPad
-                     ? String(localized: "Works best with iCloud Drive, On My iPad, or a synced app folder. Health.md writes directly — no account needed.")
-                     : String(localized: "Works best with iCloud Drive, On My iPhone, or a synced app folder. Health.md writes directly — no account needed."))
+                Text(HostDevice.current.pick(
+                    iPhone: String(localized: "Works best with iCloud Drive, On My iPhone, or a synced app folder. Health.md writes directly — no account needed."),
+                    iPad: String(localized: "Works best with iCloud Drive, On My iPad, or a synced app folder. Health.md writes directly — no account needed.")
+                ))
                     .glassFont(.rowSubtitle)
                     .foregroundStyle(palette.muted)
                     .padding(.horizontal, 4)
@@ -141,7 +141,7 @@ struct GlassFolderDestinationScreen: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .background(palette.bg.ignoresSafeArea())
-        .navigationTitle(isPad ? String(localized: "Vault on this iPad") : String(localized: "Vault on this iPhone"))
+        .navigationTitle(HostDevice.current.vaultTitle)
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("glass.folderDestination")
         .alert(String(localized: "Subfolder"), isPresented: $editingSubfolder) {
