@@ -98,12 +98,30 @@ final class ExportProfileCoordinator: ObservableObject {
             ?? SharedSetupV2ProfileTransaction()
 
         bootstrapIfNeeded(initialTarget: initialTarget)
+        removeKeystrokeAPIEndpointsIfNeeded()
 
         guard profileStore.unknownProfileRecordCount == 0 || profileStore.activeProfileID != nil,
               let activeID = profileStore.activeProfileID ?? profileStore.profiles.first?.id else {
             return
         }
         activate(profileID: activeID, adoptVault: true)
+    }
+
+    // MARK: - Upgrade cleanup
+
+    /// Removes the per-keystroke endpoint rows Health.md 3.5 saved (see
+    /// `APIEndpointKeystrokeCleanup`). Runs before activation adopts an
+    /// endpoint, so the live Settings URL is still the pre-upgrade one. Skipped
+    /// (and retried next launch) while any profile record is unreadable, since
+    /// its endpoint binding cannot be proven.
+    private func removeKeystrokeAPIEndpointsIfNeeded() {
+        guard profileStore.unknownProfileRecordCount == 0 else { return }
+        let referenced = Set(profileStore.profiles.compactMap(\.apiEndpointID))
+        guard let removed = destinationStore.removeKeystrokeAPIEndpointsIfNeeded(
+            referencedEndpointIDs: referenced,
+            liveEndpointURLString: apiExportSettings.endpointURLString
+        ) else { return }
+        Self.logger.info("API endpoint keystroke cleanup removed \(removed, privacy: .public) saved endpoints")
     }
 
     // MARK: - Bootstrap
