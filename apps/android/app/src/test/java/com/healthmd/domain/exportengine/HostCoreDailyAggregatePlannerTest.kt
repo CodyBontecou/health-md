@@ -319,6 +319,14 @@ class HostCoreDailyAggregatePlannerTest {
             }
             for (item in result.plan.items) {
                 val text = item.content.decodeToString()
+                // #353: with planned_workout_count and medical_resource_count switched off in Format → Custom
+                // (metadata = false), Bases frontmatter leaves their native records out; body formats keep them.
+                if (!metadata && item.relativePath.endsWith("-bases.md")) {
+                    assertWithMessage(item.relativePath).that(text).doesNotContain("native_planned_workout_details")
+                    assertWithMessage(item.relativePath).that(text).doesNotContain("native_medical_resource_details")
+                    assertWithMessage(item.relativePath).that(text).doesNotContain("Synthetic planned run")
+                    continue
+                }
                 assertWithMessage(item.relativePath).that(text).contains("Synthetic planned run")
                 assertWithMessage(item.relativePath).that(text).contains("synthetic-observation")
                 assertWithMessage(item.relativePath).that(text).contains("Retain the complete planned block")
@@ -343,7 +351,8 @@ class HostCoreDailyAggregatePlannerTest {
                         .replace("`", "\\u0060").replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
                     else -> medical.toString()
                 }
-                // JSON is pretty printed; its decoded document was checked above.
+                // JSON is pretty printed; its decoded document was checked above. Hidden Bases blocks are checked above.
+                if (!metadata && item.relativePath.endsWith("-bases.md")) continue
                 if (!item.relativePath.endsWith(".json")) assertWithMessage(item.relativePath)
                     .that(item.content.decodeToString()).contains(expected)
             }
@@ -1415,6 +1424,89 @@ class HostCoreDailyAggregatePlannerTest {
                 }
             }
         }
+    }
+
+    /**
+     * #353: Format → Custom owns frontmatter in "Morning ends" Bases notes too. With every workout
+     * field switched off, the selected workout stays in JSON, CSV and the Markdown body, but no
+     * workout property or native_workout_details block reaches any frontmatter.
+     */
+    @Test
+    fun workoutFieldsOffInFormatCustomLeaveNoWorkoutFrontmatterInWakeDateBases() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val start = Instant.parse("2026-11-01T01:30:00Z")
+        val end = start.plusSeconds(1800)
+        val workout = com.healthmd.domain.model.WorkoutData(
+            workoutType = com.healthmd.domain.model.WorkoutType.RUNNING,
+            startTime = start.atZone(context.zoneId).toLocalDateTime(),
+            endTime = end.atZone(context.zoneId).toLocalDateTime(), duration = 30.minutes,
+            averageHeartRate = 160.125,
+            exactStartTime = com.healthmd.domain.model.ExactSourceTimestamp.from(start, ZoneOffset.UTC),
+            exactEndTime = com.healthmd.domain.model.ExactSourceTimestamp.from(end, ZoneOffset.UTC),
+            identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-hidden-workout"))
+        val registry = HealthMdCoreService().getMetricRegistry(com.healthmd.core.CoreMetricRegistryProfile.ANDROID_SLEEP_V6, 2u)
+        val workoutKeys = registry.outputs.filter { it.key == "workouts" || it.key.startsWith("workout_") }.map { it.key }
+        suspend fun plan(disabled: List<String>): ExportArtifactPlan {
+            val selection = MetricSelectionState(enabledMetrics = setOf("workouts", "steps"))
+            val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(),
+                formatCustomization = FormatCustomization(frontmatterConfig = com.healthmd.domain.model.FrontmatterConfiguration(
+                    fields = disabled.map { com.healthmd.domain.model.CustomFrontmatterField(it, isEnabled = false) })),
+                metricSelection = selection, executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+            val data = HealthData(LocalDate.of(2026, 11, 1), workouts = listOf(workout), activity = ActivityData(steps = 42))
+                .filtered(selection, context)
+            val request = FrozenDailyAggregateExportRequest.capture(data, settings, AndroidExportProfile.android_sleep_v6,
+                ExportEngineMode.rust, DailyAggregateExportIds("hidden-workout-${disabled.size}", "hidden-workout-session-${disabled.size}"))
+            return HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("No ambient clock") }).plan(request).plan
+        }
+        fun frontmatterKeys(text: String): List<String> {
+            val lines = text.lines()
+            check(lines.first() == "---")
+            return lines.drop(1).takeWhile { it != "---" }
+                .filter { it.isNotEmpty() && !it.first().isWhitespace() && ':' in it }.map { it.substringBefore(':') }
+        }
+        fun isWorkoutProperty(key: String) = key == "workouts" || key.startsWith("workout_") || key.contains("workout_details")
+
+        val shown = plan(emptyList())
+        assertThat(shown.items.single { it.relativePath.endsWith("-bases.md") }.content.decodeToString())
+            .contains("native_workout_details:")
+
+        val hidden = plan(workoutKeys)
+        assertThat(hidden.items).hasSize(4)
+        for (item in hidden.items.filter { it.relativePath.endsWith(".md") }) {
+            val keys = frontmatterKeys(item.content.decodeToString())
+            assertWithMessage("frontmatter of ${item.relativePath}").that(keys.filter(::isWorkoutProperty)).isEmpty()
+            assertWithMessage("frontmatter of ${item.relativePath}").that(keys).contains("steps")
+        }
+        // Body formats keep the collected workout.
+        assertThat(hidden.items.single { it.relativePath.endsWith(".json") }.content.decodeToString()).contains("synthetic-hidden-workout")
+        assertThat(hidden.items.single { it.relativePath.endsWith(".csv") }.content.decodeToString()).contains(",Native Detail,Workout,")
+        assertThat(hidden.items.single { it.relativePath.endsWith(".md") && !it.relativePath.endsWith("-bases.md") }
+            .content.decodeToString()).contains("Workout Details")
+    }
+
+    /** #353: each native Bases block follows the Format → Custom switches of the fields that own it. */
+    @Test
+    fun nativeBasesBlocksFollowTheirOwningFrontmatterSwitches() {
+        val root = Json.parseToJsonElement("""{"plannedWorkouts":[{"startTimeISO":"2026-11-01T01:30:00Z"}],
+            "mindfulness":{"sessions":[{"startTimeISO":"2026-11-01T01:30:00Z","endTimeISO":"2026-11-01T01:40:00Z"}]}}""").jsonObject
+        val selected = listOf("planned_workout_count", "mindful_minutes")
+        fun blocks(details: kotlinx.serialization.json.JsonObject) =
+            details.getValue("bases_frontmatter_blocks").jsonArray.map { it.jsonObject.getValue("key").jsonPrimitive.content }
+        fun rows(details: kotlinx.serialization.json.JsonObject) = details.getValue("csv_rows").jsonArray.size
+
+        val planned = com.healthmd.domain.render.HealthMdRenderInputAdapter.plannedAndMedicalDetails(root, "2026-11-01", selected)
+        assertThat(blocks(planned)).containsExactly("native_planned_workout_details")
+        val plannedHidden = com.healthmd.domain.render.HealthMdRenderInputAdapter.plannedAndMedicalDetails(
+            root, "2026-11-01", selected) { it != "planned_workout_count" }
+        assertThat(blocks(plannedHidden)).isEmpty()
+        assertThat(rows(plannedHidden)).isEqualTo(rows(planned))
+
+        val mindful = com.healthmd.domain.render.HealthMdRenderInputAdapter.mindfulnessDetails(root, "2026-11-01", selected)
+        assertThat(blocks(mindful)).containsExactly("native_mindfulness_details")
+        val mindfulHidden = com.healthmd.domain.render.HealthMdRenderInputAdapter.mindfulnessDetails(
+            root, "2026-11-01", selected) { it != "mindful_minutes" }
+        assertThat(blocks(mindfulHidden)).isEmpty()
+        assertThat(rows(mindfulHidden)).isEqualTo(rows(mindful))
     }
 
     @Test

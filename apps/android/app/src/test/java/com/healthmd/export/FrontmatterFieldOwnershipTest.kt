@@ -15,6 +15,7 @@ import org.junit.Test
  * Format → Custom (the frontmatter field switches) decides which properties go into
  * frontmatter, for every category including workouts (#353). The per-note field list
  * (metric selection) decides which data is collected; it is not a second frontmatter switch.
+ * The "Morning ends" Bases path is covered in HostCoreDailyAggregatePlannerTest.
  */
 class FrontmatterFieldOwnershipTest {
     private val markdown = MarkdownExporter()
@@ -22,8 +23,9 @@ class FrontmatterFieldOwnershipTest {
 
     private val workoutKeys = HealthDataFields.allKeys.filter { it.isWorkoutKey() }
 
+    // Also matches native blocks such as native_workout_details and native_planned_workout_details.
     private fun String.isWorkoutKey() =
-        this == "workouts" || startsWith("workout_") || startsWith("planned_workout")
+        this == "workouts" || startsWith("workout_") || startsWith("planned_workout") || contains("workout_details")
 
     private fun frontmatterKeys(output: String): List<String> {
         val lines = output.lines()
