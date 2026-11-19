@@ -79,6 +79,8 @@ struct GlassSettingsBadge: View {
 struct GlassSettingsRow: View {
     let title: String
     var subtitle: String?
+    /// VoiceOver hint read after the row's label, describing what activating it does.
+    var hint: String?
     var systemImage: String?
     var tile: Color = .clear
     var badge: GlassSettingsBadgeState?
@@ -112,6 +114,7 @@ struct GlassSettingsRow: View {
             }
         }
         .buttonStyle(.plain)
+        .accessibilityHint(hint ?? "")
     }
 }
 

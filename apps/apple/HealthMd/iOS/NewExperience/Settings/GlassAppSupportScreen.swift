@@ -59,6 +59,7 @@ struct GlassAppSupportScreen: View {
                         GlassSettingsRow(
                             title: String(localized: "Privacy policy"),
                             subtitle: String(localized: "No analytics"),
+                            hint: String(localized: "Double tap to open the Health.md privacy policy"),
                             systemImage: "hand.raised.fill",
                             tile: .settingsTileBlue
                         ) {
@@ -67,6 +68,7 @@ struct GlassAppSupportScreen: View {
                         if MyselfClaimFeature.isEnabled {
                             GlassSettingsRow(
                                 title: String(localized: "Claim myself.md access"),
+                                hint: String(localized: "Double tap to review purchase verification for myself.md"),
                                 systemImage: "person.crop.circle.badge.checkmark",
                                 tile: .settingsTileGreen,
                                 showsDivider: true
@@ -79,11 +81,13 @@ struct GlassAppSupportScreen: View {
                     GlassPanel {
                         GlassSettingsRow(
                             title: String(localized: "Join our Discord"),
+                            hint: String(localized: "Double tap to open Discord"),
                             systemImage: "bubble.left.fill",
                             tile: .settingsTileDiscord
                         ) { UIApplication.shared.open(discordURL) }
                         GlassSettingsRow(
                             title: String(localized: "Send feedback"),
+                            hint: String(localized: "Double tap to send feedback by email"),
                             systemImage: "envelope.fill",
                             tile: .settingsTileGreen,
                             showsDivider: true
@@ -93,6 +97,7 @@ struct GlassAppSupportScreen: View {
                         .accessibilityIdentifier("feedback.sendFeedback")
                         GlassSettingsRow(
                             title: String(localized: "Report a bug"),
+                            hint: String(localized: "Double tap to open GitHub Issues"),
                             systemImage: "ladybug.fill",
                             tile: .settingsTileRed,
                             value: "GitHub",
@@ -116,6 +121,7 @@ struct GlassAppSupportScreen: View {
                         ) { showReview = true }
                         GlassSettingsRow(
                             title: String(localized: "Diagnostics"),
+                            hint: String(localized: "Double tap to open Diagnostics"),
                             systemImage: "stethoscope",
                             tile: .settingsTileGray,
                             showsDivider: true

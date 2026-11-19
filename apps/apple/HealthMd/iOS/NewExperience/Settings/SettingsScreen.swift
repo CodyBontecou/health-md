@@ -103,6 +103,7 @@ struct SettingsScreen: View {
                         GlassSettingsRow(
                             title: folderTitle,
                             subtitle: folderSubtitle,
+                            hint: String(localized: "Double tap to choose an Obsidian vault folder"),
                             systemImage: "folder.fill", tile: .settingsTileViolet,
                             badge: folderBadge
                         ) { open(.folder) }
@@ -163,6 +164,7 @@ struct SettingsScreen: View {
                         if ConnectedAppsFeature.isEnabled {
                             GlassSettingsRow(
                                 title: String(localized: "Connected apps"),
+                                hint: String(localized: "Double tap to connect or disconnect third-party health providers"),
                                 systemImage: "plus", tile: .settingsTileOrange,
                                 value: connectedAppsValue,
                                 showsDivider: !usesTwoPanes
@@ -179,6 +181,7 @@ struct SettingsScreen: View {
                         }
                         GlassSettingsRow(
                             title: String(localized: "Clinician report"),
+                            hint: ClinicianReportCopy().string(.accessibility_hint),
                             systemImage: "doc.text.fill", tile: .settingsTileGray,
                             showsDivider: !usesTwoPanes || ConnectedAppsFeature.isEnabled
                                 || showsClinicAccess
@@ -447,6 +450,7 @@ struct SettingsScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
+        .accessibilityHint(String(localized: "Double tap to manage purchases and Family Sharing"))
         .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier("glass.settings.plan")
     }
