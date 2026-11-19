@@ -94,6 +94,7 @@ struct SettingsScreen: View {
                     // iPadSettingsG: the sidebar already names the app, so the pane has no title.
                     if !usesTwoPanes {
                         Text("Settings").glassFont(.largeTitle).foregroundStyle(palette.text)
+                            .lineLimit(1).minimumScaleFactor(0.5)
                     }
 
                     planRow
@@ -428,10 +429,11 @@ struct SettingsScreen: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: compact ? 0 : 3) {
                     Text(verbatim: "Health.md")
-                        .font(.system(size: compact ? 16 : 19, weight: .bold))
+                        .glassScaledFont(compact ? 16 : 19, weight: .bold, relativeTo: .headline)
+                        .lineLimit(1).minimumScaleFactor(0.6)
                         .foregroundStyle(palette.text)
                     Text(planSubtitle)
-                        .font(.system(size: compact ? 12 : 14))
+                        .glassScaledFont(compact ? 12 : 14, relativeTo: .subheadline)
                         .foregroundStyle(palette.muted)
                 }
                 Spacer(minLength: 8)

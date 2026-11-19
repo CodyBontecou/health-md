@@ -191,9 +191,37 @@ private struct GlassThemeModifier: ViewModifier {
     }
 }
 
+/// A board's one-off point size that still follows Dynamic Type, for text no `GlassTextStyle` matches.
+private struct GlassScaledSystemFontModifier: ViewModifier {
+    let weight: Font.Weight
+    let design: Font.Design
+    @ScaledMetric private var size: CGFloat
+
+    init(size: CGFloat, weight: Font.Weight, design: Font.Design, relativeTo textStyle: Font.TextStyle) {
+        self.weight = weight
+        self.design = design
+        _size = ScaledMetric(wrappedValue: size, relativeTo: textStyle)
+    }
+
+    func body(content: Content) -> some View {
+        content.font(.system(size: size, weight: weight, design: design))
+    }
+}
+
 extension View {
     func glassFont(_ style: GlassTextStyle) -> some View {
         modifier(GlassFontModifier(style))
+    }
+
+    /// `.font(.system(size:weight:design:))` that scales with Dynamic Type relative to `textStyle`.
+    /// Use it in place of a fixed `.system(size:)` so accessibility sizes enlarge the text.
+    func glassScaledFont(
+        _ size: CGFloat,
+        weight: Font.Weight = .regular,
+        design: Font.Design = .default,
+        relativeTo textStyle: Font.TextStyle = .body
+    ) -> some View {
+        modifier(GlassScaledSystemFontModifier(size: size, weight: weight, design: design, relativeTo: textStyle))
     }
 
     /// Resolves `glassPalette` for this subtree. Apply once at the shell root.

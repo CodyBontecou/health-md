@@ -7,6 +7,7 @@ import SwiftUI
 /// come from `PaywallView`; this view owns only slide and plan selection.
 struct SignalPaywallCarousel<Status: View>: View {
     @Environment(\.glassPalette) private var palette
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     struct Pricing {
         let priceLabel: (HealthMdPurchaseOption) -> String?
         let weeklyEquivalent: (HealthMdPurchaseOption) -> String?
@@ -62,6 +63,16 @@ struct SignalPaywallCarousel<Status: View>: View {
     }
 
     var body: some View {
+        GeometryReader { proxy in
+            layout(availableHeight: proxy.size.height)
+        }
+        .background(palette.bg.ignoresSafeArea())
+        .onChange(of: visibleSlides) { _, slides in
+            if !slides.contains(slide) { slide = .plans }
+        }
+    }
+
+    private func layout(availableHeight: CGFloat) -> some View {
         VStack(spacing: 0) {
             if allowsDismissal {
                 HStack {
@@ -85,11 +96,17 @@ struct SignalPaywallCarousel<Status: View>: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
 
-            footer
-        }
-        .background(palette.bg.ignoresSafeArea())
-        .onChange(of: visibleSlides) { _, slides in
-            if !slides.contains(slide) { slide = .plans }
+            if dynamicTypeSize.isAccessibilitySize {
+                // At accessibility sizes the footer alone is taller than the screen: scroll it
+                // within half the height so the slide stays readable and the button unclipped.
+                ScrollView { footer }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .frame(maxHeight: availableHeight * 0.5)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .background { footerChrome }
+            } else {
+                footer.background { footerChrome }
+            }
         }
     }
 
@@ -280,14 +297,15 @@ struct SignalPaywallCarousel<Status: View>: View {
         .padding(.horizontal, Spacing.s6)
         .padding(.top, Spacing.s2)
         .padding(.bottom, Spacing.s2)
-        .background {
-            Color.clear
-                .glassSurface(in: Rectangle(), style: .strong)
-                .overlay(alignment: .top) {
-                    Rectangle().fill(palette.edge).frame(height: 1)
-                }
-                .ignoresSafeArea(edges: .bottom)
-        }
+    }
+
+    private var footerChrome: some View {
+        Color.clear
+            .glassSurface(in: Rectangle(), style: .strong)
+            .overlay(alignment: .top) {
+                Rectangle().fill(palette.edge).frame(height: 1)
+            }
+            .ignoresSafeArea(edges: .bottom)
     }
 
     /// Restore, Terms and Privacy stay on every slide; "See all plans" joins them
@@ -826,7 +844,11 @@ private struct SignalPlanCard: View {
 
     private var labels: some View {
         VStack(alignment: .leading, spacing: Spacing.s1) {
-            HStack(spacing: Spacing.s2) {
+            // The badge drops under the plan name when both cannot share a line.
+            let titleLine = textSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.s1))
+                : AnyLayout(HStackLayout(spacing: Spacing.s2))
+            titleLine {
                 Text(title)
                     .glassFont(.navTitle)
                     .foregroundStyle(palette.text)
@@ -858,6 +880,7 @@ private struct SignalPlanCard: View {
 
 private struct SignalStepButton: View {
     @Environment(\.glassPalette) private var palette
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let number: Int
     let title: String
     let isReached: Bool
@@ -870,7 +893,11 @@ private struct SignalStepButton: View {
                 Capsule()
                     .fill(isReached ? palette.accent : palette.edge)
                     .frame(height: 3)
-                (Text(verbatim: String(format: "%02d ", number)) + Text(title))
+                // Three titles cannot share a row at accessibility sizes; the number stays and
+                // VoiceOver still reads the title from the label below.
+                (dynamicTypeSize.isAccessibilitySize
+                    ? Text(verbatim: String(format: "%02d", number))
+                    : Text(verbatim: String(format: "%02d ", number)) + Text(title))
                     .glassFont(.monoBody).fontWeight(.semibold)
                     .foregroundStyle(isCurrent ? palette.text : palette.sec)
                     .textCase(.uppercase)
