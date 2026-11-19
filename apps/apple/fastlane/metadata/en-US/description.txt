@@ -25,7 +25,7 @@ FLEXIBLE FORMATTING
 • Export as Markdown, CSV, JSON, or Obsidian Bases YAML
 
 PLANS AND TRIALS
-The subscription-enabled release requires access before setup and exports. Choose Individual or Apple Family Sharing, with weekly, yearly, or Lifetime options. Eligible subscriptions include a 7-day free trial, then renew automatically at the displayed price and interval. Lifetime is charged once immediately with no trial. Existing paid access remains valid. Manage or cancel in Apple Account settings at least 24 hours before the trial or period ends. Deleting the app or buying Lifetime does not cancel a subscription. Family Sharing shares access, not health records.
+Setup is free, and so is your first export. After that, exports and automations need a subscription or Lifetime access. Choose Individual or Apple Family Sharing, with weekly, yearly, or Lifetime options. Eligible subscriptions include a 7-day free trial, then renew automatically at the displayed price and interval. Lifetime is charged once immediately with no trial. Existing paid access remains valid. Manage or cancel in Apple Account settings at least 24 hours before the trial or period ends. Deleting the app or buying Lifetime does not cancel a subscription. Family Sharing shares access, not health records.
 
 PRIVACY
 Health.md processes health data on your devices and sends exports only to destinations you choose. This version removes custom app usage analytics and advertising attribution. Purchase verification, scheduling, optional provider connections, and destinations you enable are described in the Privacy Policy. Earlier versions and retained service records are covered separately.
