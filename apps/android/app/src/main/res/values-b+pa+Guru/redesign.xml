@@ -475,4 +475,6 @@
 <string name="export_result_retry_note_one">ਪੂਰੀਆਂ ਤਾਰੀਖਾਂ ਪੂਰੀਆਂ ਹੀ ਰਹਿੰਦੀਆਂ ਹਨ। ਮੁੜ ਕੋਸ਼ਿਸ਼ ਸਿਰਫ਼ %1$s ਲਿਖਦੀ ਹੈ।</string>
 <string name="export_result_retry_note">ਪੂਰੀਆਂ ਤਾਰੀਖਾਂ ਪੂਰੀਆਂ ਹੀ ਰਹਿੰਦੀਆਂ ਹਨ। ਮੁੜ ਕੋਸ਼ਿਸ਼ %1$s ਲਿਖਦੀ ਹੈ।</string>
 <string name="export_result_show_in_files">ਫਾਈਲਾਂ ਵਿੱਚ ਦਿਖਾਓ</string>
+    <string name="composer_fields_frontmatter_note">ਇਹ ਚੁਣਦਾ ਹੈ ਕਿ ਇਹ ਨੋਟ ਕਿਹੜਾ ਡਾਟਾ ਇਕੱਠਾ ਕਰੇ। ਫਰੰਟਮੈਟਰ ਗੁਣ ਸਾਰੀਆਂ ਸੈਟਿੰਗਾਂ → ਫਾਰਮੈਟ ਵਿੱਚ ਸੈੱਟ ਹੁੰਦੇ ਹਨ।</string>
+    <string name="frontmatter_fields_ownership_note">ਸਿਰਫ਼ ਇੱਥੇ ਚਾਲੂ ਕੀਤੇ ਫੀਲਡ ਹੀ ਫਰੰਟਮੈਟਰ ਵਿੱਚ ਜਾਂਦੇ ਹਨ। ਡਾਟਾ ਹੋਣ ਲਈ ਫੀਲਡ ਦਾ ਮੈਟ੍ਰਿਕ ਵੀ ਚਾਲੂ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ।</string>
 </resources>

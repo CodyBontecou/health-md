@@ -1058,6 +1058,13 @@ struct ComposerFieldList: View {
                 .accessibilityValue(on ? String(localized: "On") : String(localized: "Off"))
                 .accessibilityIdentifier("glass.composer.field.\(field.id)")
             }
+            // The checks choose collected data; Format owns frontmatter properties (#353).
+            Rectangle().fill(palette.line).frame(height: 1)
+            Text(String(localized: "Picks the data this note collects. Frontmatter properties are set in All settings → Format."))
+                .glassFont(.rowSubtitle)
+                .foregroundStyle(palette.muted)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.vertical, 10)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 6)

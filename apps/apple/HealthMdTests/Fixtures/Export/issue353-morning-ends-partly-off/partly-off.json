@@ -1,0 +1,141 @@
+{
+  "activity" : {
+    "steps" : 4321
+  },
+  "date" : "2026-03-15",
+  "heart" : {
+    "averageHeartRate" : 61.5,
+    "heartRateMax" : 70,
+    "heartRateMin" : 55,
+    "heartRateSamples" : [
+      {
+        "metadata" : {
+          "synthetic" : "golden-heart"
+        },
+        "timestamp" : "2026-03-14T23:55:00.000000000Z",
+        "value" : 61.5
+      }
+    ]
+  },
+  "mindfulness" : {
+    "associations" : [
+      "Health"
+    ],
+    "emotionLabels" : [
+      "Calm"
+    ],
+    "stateOfMindCount" : 1,
+    "stateOfMindEntries" : [
+      {
+        "associations" : [
+          "Health"
+        ],
+        "displayTime" : "23:58",
+        "endDate" : "2026-03-14T23:58:20.000000000Z",
+        "id" : "00000000-0000-4000-8000-000000000353",
+        "kind" : "Daily Mood",
+        "labels" : [
+          "Calm"
+        ],
+        "timestamp" : "2026-03-14T23:58:20.000000000Z",
+        "valence" : 0.5,
+        "valenceDescription" : "Pleasant",
+        "valencePercent" : 75
+      }
+    ]
+  },
+  "raw_capture_status" : "not_requested",
+  "schema" : "healthmd.health_data",
+  "schema_profile" : "apple-v11",
+  "schema_version" : 11,
+  "sleep" : {
+    "deepSleep" : 600,
+    "deepSleepFormatted" : "10m",
+    "remSleep" : 600,
+    "remSleepFormatted" : "10m",
+    "sleepStages" : [
+      {
+        "durationSeconds" : 600,
+        "endDate" : "2026-03-14T23:50:00.000000000Z",
+        "stage" : "deep",
+        "startDate" : "2026-03-14T23:40:00.000000000Z"
+      },
+      {
+        "durationSeconds" : 600,
+        "endDate" : "2026-03-15T00:00:00.000000000Z",
+        "stage" : "rem",
+        "startDate" : "2026-03-14T23:50:00.000000000Z"
+      }
+    ],
+    "totalDuration" : 1200,
+    "totalDurationFormatted" : "20m"
+  },
+  "time_context" : {
+    "calendar_timezone" : "GMT",
+    "sleep_day_attribution" : "morning_ends",
+    "sleep_interval_clipping" : "none",
+    "sleep_owner_day_rule" : "session_end_date",
+    "timestamp_timezone" : "UTC"
+  },
+  "type" : "health-data",
+  "unit_system" : "metric",
+  "units" : {
+    "average_heart_rate" : "bpm",
+    "blood_pressure_diastolic" : "mmHg",
+    "blood_pressure_diastolic_avg" : "mmHg",
+    "blood_pressure_systolic" : "mmHg",
+    "blood_pressure_systolic_avg" : "mmHg",
+    "heart_rate_max" : "bpm",
+    "heart_rate_min" : "bpm",
+    "mood_entries" : "entries",
+    "sleep_deep_hours" : "hours",
+    "sleep_rem_hours" : "hours",
+    "sleep_total_hours" : "hours",
+    "steps" : "steps",
+    "workout_avg_heart_rate" : "bpm",
+    "workout_calories" : "kcal",
+    "workout_count" : "count",
+    "workout_distance_km" : "km",
+    "workout_distance_mi" : "mi",
+    "workout_minutes" : "min"
+  },
+  "vitals" : {
+    "bloodPressureDiastolic" : 76,
+    "bloodPressureDiastolicAvg" : 76,
+    "bloodPressureSamples" : [
+      {
+        "diastolic" : 76,
+        "endDate" : "2026-03-14T23:56:40.000000000Z",
+        "systolic" : 118,
+        "timestamp" : "2026-03-14T23:56:40.000000000Z",
+        "unit" : "mmHg"
+      }
+    ],
+    "bloodPressureSystolic" : 118,
+    "bloodPressureSystolicAvg" : 118
+  },
+  "workouts" : [
+    {
+      "avgHeartRate" : 150,
+      "avgPaceFormatted" : "6:00 \/km",
+      "avgPacePerKmFormatted" : "6:00 \/km",
+      "avgPacePerMiFormatted" : "9:39 \/mi",
+      "calories" : 300,
+      "distance" : 5000,
+      "distanceFormatted" : "5.00 km",
+      "distanceKm" : 5,
+      "distanceMi" : 3.1068559611866697,
+      "duration" : 1800,
+      "durationFormatted" : "30m",
+      "elapsedDuration" : 1800,
+      "endTimeISO" : "2026-03-14T23:30:00.000000000Z",
+      "id" : "00000000-0000-4000-8000-000000000354",
+      "speedKmh" : 10,
+      "speedMph" : 6.2137119223733395,
+      "sport" : "running",
+      "startTime" : "23:00",
+      "startTimeISO" : "2026-03-14T23:00:00.000000000Z",
+      "type" : "Running"
+    }
+  ]
+}

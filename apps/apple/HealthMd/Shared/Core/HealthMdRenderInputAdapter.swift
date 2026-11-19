@@ -570,18 +570,26 @@ enum HealthMdRenderInputAdapter {
                 throw AdapterError.invalidPresentation
             }
             let selected = frozenSelectedOutputKeys ?? selectedOutputKeys
-            var details = mergeDetails(try quantityDetails(root, ownerDate: ownerDate, selectedOutputKeys: selected),
-                try bloodPressureDetails(root, ownerDate: ownerDate, selectedOutputKeys: selected))
+            // Native records stay in every body format; their Bases frontmatter lines follow the
+            // Format → Custom switches of the fields that own them (#353).
+            let frontmatterConfig = presentationCustomization.frontmatterConfig
+            let frontmatter: (String) -> Bool = { frontmatterConfig.isFieldEnabled($0) }
+            var details = mergeDetails(try quantityDetails(root, ownerDate: ownerDate, selectedOutputKeys: selected,
+                                                           frontmatter: frontmatter),
+                try bloodPressureDetails(root, ownerDate: ownerDate, selectedOutputKeys: selected, frontmatter: frontmatter))
             if !data.sleep.stages.isEmpty {
                 guard let sleep = root["sleep"] as? [String: Any],
                       let stages = sleep["sleepStages"] as? [[String: Any]] else {
                     throw AdapterError.invalidPresentation
                 }
-                let sleepDetails = try sleepStageDetails(stages, ownerDate: ownerDate, selectedOutputKeys: selected)
+                let sleepDetails = try sleepStageDetails(stages, ownerDate: ownerDate, selectedOutputKeys: selected,
+                                                         frontmatter: frontmatter)
                 details = mergeDetails(sleepDetails, details)
             }
-            details = mergeDetails(details, try workoutDetails(root, ownerDate: ownerDate, selectedOutputKeys: selected))
-            details = mergeDetails(details, try mindfulnessDetails(root, ownerDate: ownerDate, selectedOutputKeys: selected))
+            details = mergeDetails(details, try workoutDetails(root, ownerDate: ownerDate, selectedOutputKeys: selected,
+                frontmatterFieldKeys: frontmatterConfig.nativeOwnerCandidateKeys, frontmatter: frontmatter))
+            details = mergeDetails(details, try mindfulnessDetails(root, ownerDate: ownerDate, selectedOutputKeys: selected,
+                frontmatter: frontmatter))
             if !(details["output_keys"] as? [String] ?? []).isEmpty { renderedDay["native_details"] = details }
         }
         return renderedDay
@@ -611,9 +619,12 @@ enum HealthMdRenderInputAdapter {
     }
 
     private static func mindfulnessDetails(_ root: [String: Any], ownerDate: String,
-                                           selectedOutputKeys: [String]) throws -> [String: Any] {
+                                           selectedOutputKeys: [String],
+                                           frontmatter: (String) -> Bool) throws -> [String: Any] {
         let samples = (root["mindfulness"] as? [String: Any])?["stateOfMindEntries"] as? [[String: Any]] ?? []
         let owner = ["mood_entries", "mood_labels", "mood_associations"].first(where: selectedOutputKeys.contains)
+        // Records without an accepted owner are not authorized; leave them out instead of failing (#353).
+        guard owner != nil else { return emptyNativeDetails }
         var rows: [[String: Any]] = []
         var yaml: [String] = []
         var lines = ["| Native Record (JSON) |", "|---|"]
@@ -639,7 +650,8 @@ enum HealthMdRenderInputAdapter {
         }
         return ["output_keys": samples.isEmpty ? [] : [try requireNativeDetailOwner(owner)], "csv_rows": rows,
             "markdown_blocks": samples.isEmpty ? [] : [["heading": "State of Mind Details", "lines": lines, "ordinal": 0]],
-            "bases_frontmatter_blocks": yaml.isEmpty ? [] : [["key": "native_mindfulness_details", "lines": yaml, "ordinal": 0]]]
+            "bases_frontmatter_blocks": yaml.isEmpty || !WakeDateNativeFrontmatterOwners.showsMindfulness(frontmatter)
+                ? [] : [["key": "native_mindfulness_details", "lines": yaml, "ordinal": 0]]]
     }
 
     private static func mergeDetails(_ first: [String: Any], _ second: [String: Any]) -> [String: Any] {
@@ -671,8 +683,12 @@ enum HealthMdRenderInputAdapter {
         }
     }
 
+    /// The Bases frontmatter block shows while any Workouts field is on in Format → Custom (#353);
+    /// the Markdown table and CSV rows are body content.
     private static func workoutDetails(_ root: [String: Any], ownerDate: String,
-                                       selectedOutputKeys: [String]) throws -> [String: Any] {
+                                       selectedOutputKeys: [String],
+                                       frontmatterFieldKeys: [String],
+                                       frontmatter: (String) -> Bool) throws -> [String: Any] {
         let workouts = root["workouts"] as? [[String: Any]] ?? []
         var rows: [[String: Any]] = []
         var yaml: [String] = []
@@ -680,6 +696,8 @@ enum HealthMdRenderInputAdapter {
         let owners = ["workout_count", "workouts", "workout_minutes"]
         let owner = owners.first(where: selectedOutputKeys.contains)
             ?? selectedOutputKeys.sorted().first(where: { $0.hasPrefix("workout_") })
+        // With every Workouts field off the records are not authorized; leave them out (#353).
+        guard owner != nil else { return emptyNativeDetails }
         for workout in workouts {
             guard owner != nil, let start = workout["startTimeISO"] as? String,
                   let end = workout["endTimeISO"] as? String,
@@ -695,8 +713,15 @@ enum HealthMdRenderInputAdapter {
         }
         return ["output_keys": workouts.isEmpty ? [] : [try requireNativeDetailOwner(owner)], "csv_rows": rows,
             "markdown_blocks": workouts.isEmpty ? [] : [["heading": "Workout Details", "lines": lines, "ordinal": 0]],
-            "bases_frontmatter_blocks": yaml.isEmpty ? [] : [["key": "native_workout_details", "lines": yaml, "ordinal": 0]]]
+            "bases_frontmatter_blocks": yaml.isEmpty
+                || !WakeDateNativeFrontmatterOwners.showsWorkouts(fieldKeys: frontmatterFieldKeys, frontmatter)
+                ? [] : [["key": "native_workout_details", "lines": yaml, "ordinal": 0]]]
     }
+
+    private static let emptyNativeDetails: [String: Any] = [
+        "output_keys": [String](), "csv_rows": [[String: Any]](),
+        "markdown_blocks": [[String: Any]](), "bases_frontmatter_blocks": [[String: Any]](),
+    ]
 
     private static func requireNativeDetailOwner(_ value: String?) throws -> String {
         guard let value else { throw AdapterError.invalidPresentation }
@@ -704,7 +729,8 @@ enum HealthMdRenderInputAdapter {
     }
 
     private static func quantityDetails(_ root: [String: Any], ownerDate: String,
-                                        selectedOutputKeys: [String]) throws -> [String: Any] {
+                                        selectedOutputKeys: [String],
+                                        frontmatter: (String) -> Bool) throws -> [String: Any] {
         let definitions: [(String, String, String, String, [String], String)] = [
             ("heart", "heartRateSamples", "heart_rate", "bpm", ["average_heart_rate", "heart_rate_min", "heart_rate_max"], "Heart Rate"),
             ("heart", "hrvSamples", "hrv_sdnn", "ms", ["hrv_ms"], "HRV SDNN"),
@@ -721,8 +747,10 @@ enum HealthMdRenderInputAdapter {
         for (category, field, identity, unit, owners, label) in definitions {
             let samples = (root[category] as? [String: Any])?[field] as? [[String: Any]] ?? []
             guard !samples.isEmpty else { continue }
-            guard let owner = owners.first(where: selectedOutputKeys.contains) else { throw AdapterError.invalidPresentation }
+            // A series without an accepted owner is not authorized; leave it out (#353).
+            guard let owner = owners.first(where: selectedOutputKeys.contains) else { continue }
             keys.insert(owner)
+            let inFrontmatter = WakeDateNativeFrontmatterOwners.showsQuantity(field: field, frontmatter)
             var lines = ["| Timestamp (UTC) | Value | Unit |", "|---|---|---|"]
             for sample in samples {
                 guard let timestamp = sample["timestamp"] as? String, timestamp.hasSuffix("Z"),
@@ -734,7 +762,7 @@ enum HealthMdRenderInputAdapter {
                 rows.append(["date": ownerDate, "category": "Native Detail", "metric": "Quantity Sample",
                     "value": encoded, "unit": "json", "timestamp": timestamp, "ordinal": rows.count])
                 lines.append("| \(timestamp) | \(value.stringValue) | \(unit) |")
-                yaml.append("  - \(encoded)")
+                if inFrontmatter { yaml.append("  - \(encoded)") }
             }
             blocks.append(["heading": "\(label) Sample Details", "lines": lines, "ordinal": blocks.count])
         }
@@ -743,17 +771,19 @@ enum HealthMdRenderInputAdapter {
     }
 
     private static func bloodPressureDetails(_ root: [String: Any], ownerDate: String,
-                                             selectedOutputKeys: [String]) throws -> [String: Any] {
+                                             selectedOutputKeys: [String],
+                                             frontmatter: (String) -> Bool) throws -> [String: Any] {
         let samples = (root["vitals"] as? [String: Any])?["bloodPressureSamples"] as? [[String: Any]] ?? []
         var rows: [[String: Any]] = []
         var yaml: [String] = []
         var lines = ["| Timestamp (UTC) | End (UTC) | Systolic | Diastolic | Unit |", "|---|---|---|---|---|"]
         let keys = ["blood_pressure_systolic", "blood_pressure_diastolic"]
+        // A pair is authorized only while both halves are accepted; otherwise leave it out (#353).
+        guard keys.allSatisfy(selectedOutputKeys.contains) else { return emptyNativeDetails }
         let clock = ISO8601DateFormatter()
         clock.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         for sample in samples {
-            guard keys.allSatisfy(selectedOutputKeys.contains),
-                  let timestamp = sample["timestamp"] as? String, timestamp.hasSuffix("Z"),
+            guard let timestamp = sample["timestamp"] as? String, timestamp.hasSuffix("Z"),
                   let start = clock.date(from: timestamp),
                   let endDate = sample["endDate"] as? String, endDate.hasSuffix("Z"),
                   let end = clock.date(from: endDate), end >= start,
@@ -771,11 +801,13 @@ enum HealthMdRenderInputAdapter {
         }
         return ["output_keys": samples.isEmpty ? [] : keys.sorted(), "csv_rows": rows,
             "markdown_blocks": samples.isEmpty ? [] : [["heading": "Blood Pressure Correlation Details", "lines": lines, "ordinal": 0]],
-            "bases_frontmatter_blocks": samples.isEmpty ? [] : [["key": "native_correlation_details", "lines": yaml, "ordinal": 0]]]
+            "bases_frontmatter_blocks": samples.isEmpty || !WakeDateNativeFrontmatterOwners.showsCorrelation(frontmatter)
+                ? [] : [["key": "native_correlation_details", "lines": yaml, "ordinal": 0]]]
     }
 
     private static func sleepStageDetails(_ stages: [[String: Any]], ownerDate: String,
-                                         selectedOutputKeys: [String]) throws -> [String: Any] {
+                                         selectedOutputKeys: [String],
+                                         frontmatter: (String) -> Bool) throws -> [String: Any] {
         let keysByStage = ["deep": "sleep_deep_hours", "rem": "sleep_rem_hours",
                            "core": "sleep_core_hours", "awake": "sleep_awake_hours",
                            "inBed": "sleep_in_bed_hours", "unspecified": "sleep_total_hours"]
@@ -785,19 +817,21 @@ enum HealthMdRenderInputAdapter {
         var yaml: [String] = []
         for (ordinal, stage) in stages.enumerated() {
             guard let name = stage["stage"] as? String, let key = keysByStage[name],
-                  selectedOutputKeys.contains(key),
                   let start = stage["startDate"] as? String,
                   let end = stage["endDate"] as? String else { throw AdapterError.invalidPresentation }
+            // A stage without an accepted owner is not authorized; leave it out (#353).
+            guard selectedOutputKeys.contains(key) else { continue }
             let value = String(decoding: try canonicalJSON(stage), as: UTF8.self)
             keys.insert(key)
             rows.append(["date": ownerDate, "category": "Sleep Detail", "metric": "Sleep Stage",
                          "value": value, "unit": "seconds", "timestamp": start, "ordinal": ordinal])
             lines.append("| \(start) | \(end) | \(name) | \(nativeJSONCodeCell(value)) |")
-            yaml.append("  - \(value)")
+            if WakeDateNativeFrontmatterOwners.showsSleepStage(name, frontmatter) { yaml.append("  - \(value)") }
         }
+        guard !rows.isEmpty else { return emptyNativeDetails }
         return ["output_keys": keys.sorted(), "csv_rows": rows,
                 "markdown_blocks": [["heading": "Sleep Stage Details", "lines": lines, "ordinal": 0]],
-                "bases_frontmatter_blocks": [["key": "sleep_stage_details", "lines": yaml, "ordinal": 0]]]
+                "bases_frontmatter_blocks": yaml.isEmpty ? [] : [["key": "sleep_stage_details", "lines": yaml, "ordinal": 0]]]
     }
 
     private static func profileDocuments(

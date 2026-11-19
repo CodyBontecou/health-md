@@ -1,0 +1,44 @@
+{
+  "schema": "healthmd.native_frontmatter_owners",
+  "version": 1,
+  "issue": "https://github.com/CodyBontecou/health-md/issues/353",
+  "rule": "In Morning ends Bases notes a native record's lines enter its frontmatter block only while at least one owning Format → Custom field is on; a correlation pair needs every owner on. Unowned records stay out of frontmatter.",
+  "shared": {
+    "quantity": {
+      "heartRateSamples": ["average_heart_rate", "heart_rate_min", "heart_rate_max"],
+      "hrvSamples": ["hrv_ms"],
+      "bloodOxygenSamples": ["blood_oxygen", "blood_oxygen_avg", "blood_oxygen_min", "blood_oxygen_max"],
+      "bloodGlucoseSamples": ["blood_glucose", "blood_glucose_avg", "blood_glucose_min", "blood_glucose_max"],
+      "respiratoryRateSamples": ["respiratory_rate", "respiratory_rate_avg", "respiratory_rate_min", "respiratory_rate_max"]
+    },
+    "correlation": ["blood_pressure_systolic", "blood_pressure_diastolic"]
+  },
+  "apple": {
+    "sleep_stage": {
+      "deep": "sleep_deep_hours", "rem": "sleep_rem_hours", "core": "sleep_core_hours",
+      "awake": "sleep_awake_hours", "inBed": "sleep_in_bed_hours", "unspecified": "sleep_total_hours"
+    },
+    "mindfulness": ["mood_entries", "mood_labels", "mood_associations"],
+    "workouts": ["workouts", "workout_*"]
+  },
+  "android": {
+    "sleep_stage": {
+      "deep": "sleep_deep_hours", "rem": "sleep_rem_hours", "light": "sleep_light_hours",
+      "awake": "sleep_awake_hours", "wake": "sleep_awake_hours", "sleeping": "sleep_total_hours",
+      "unknown": "sleep_total_hours"
+    },
+    "sleep_session": ["sleep_total_hours", "sleep_in_bed_hours"],
+    "mindfulness": ["mindful_minutes", "mindful_sessions"],
+    "workouts": ["workouts", "workout_*"],
+    "activity": {"stepSamples": "steps", "activityIntensity": "activity_intensity_minutes"},
+    "planned_workouts": ["planned_workout_count"],
+    "medical_resources": ["medical_resource_count"],
+    "android_records": {
+      "bodyTemperatureSamples": ["body_temperature", "body_temperature_avg", "body_temperature_min", "body_temperature_max"],
+      "basalBodyTemperatureSamples": ["basal_body_temperature"],
+      "skinTemperatureDeltas": ["skin_temperature_delta"],
+      "meals": ["nutrition_meal_count", "dietary_calories", "protein_g", "carbohydrates_g", "fat_g", "energy_from_fat_kcal"],
+      "menstruationPeriods": ["menstruation_period_count", "menstruation_period_days", "menstruation_period_hours"]
+    }
+  }
+}

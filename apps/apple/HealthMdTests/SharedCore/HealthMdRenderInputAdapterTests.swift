@@ -49,8 +49,17 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
         XCTAssertTrue(bases.contains("3601"))
         let json = try XCTUnwrap(plan.items.first { $0.relativePath.hasSuffix(".json") })
         XCTAssertEqual(json.content, try data.toJSONDataThrowing(customization: customization, captureContext: context))
+        // #353: a stage without an accepted owner is left out of every format instead of failing.
+        var unowned = data
+        unowned.sleep.stages = data.sleep.stages + [SleepStageSample(stage: "deep", startDate: start, endDate: end,
+                                                                     metadata: ["synthetic": "unowned-deep-stage"])]
+        let unownedPlan = try HealthMdRenderInputAdapter.encode(semanticResult: semantic, registry: registry,
+            calendarTimeZoneIdentifier: "GMT", options: .init(requestID: "apple-stage-detail",
+                formats: ["json", "csv", "markdown", "obsidian_bases"]),
+            presentationByOwnerDate: ["2026-07-25": unowned], presentationCustomization: customization, captureContext: context)
+        // The native-detail rows omit it; AppleWakeDateExportPlannerTests checks every output file.
+        XCTAssertFalse(unownedPlan.batches.isEmpty)
         for invalidStages in [
-            [SleepStageSample(stage: "deep", startDate: start, endDate: end)],
             Array(repeating: data.sleep.stages[0], count: 1500),
         ] {
             var invalid = data
