@@ -12,3 +12,7 @@ Verified: 2026-10-27 by Codex (agent), method: mixed.
 - [x] Browser combiner link and scope follow assets/csv-combiner-core.js and its tests. It preserves duplicates; the Python recipe fails on repeated selected dates. No canonical records, sample rows, weekly or monthly rollups should be summed with daily summaries. The recipe assumes user-selected daily Summary exports and cannot prove their provenance.
 - [x] Local folder/account/server/provider and optional pilot boundaries reuse verified-snippets.md, current privacy-policy.html and the CSV page. The example imports no networking or storage SDK, only reads named files and prints stdout/stderr. The public privacy check explicitly covers this article. No personal health data, network export or device QA was used.
 - [x] Existing blog build supplies title, description, canonical, BlogPosting/BreadcrumbList, related guides, directory and sitemap publication. Inbound links come from the CSV hub, guides directory and steps recommendations. Full website tests/build and live publication checks validate these surfaces; they do not prove indexing, ranking or traffic.
+
+## Workout distance inbound link — 2026-11-19
+
+- [x] One contextual sentence links to /blog/apple-health-export-xml-workout-distance/ from the opening note on Apple's XML archive. The linked tutorial's format claims are traced in its own ledger (`_review/apple-health-export-xml-workout-distance.md`). This page's existing claims are unchanged; `updated` not bumped.
