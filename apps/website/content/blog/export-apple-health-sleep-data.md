@@ -31,7 +31,7 @@ The iPhone app includes **5 free export actions**, followed by a single lifetime
 
 ## Before you start
 
-- Check that the night you want is present in Apple Health. Health.md can read only the records your watch, sleep app, or another source has written there.
+- Check that the night you want is present in Apple Health. Health.md can read only the records your watch, sleep app, or another source has written there. For a ring or other wearable, check that its app writes sleep to Apple Health; the [Oura export guide](/blog/export-oura-data/) lists what Oura shares.
 - Install Health.md on the iPhone with that data and authorize access to Sleep. Review app read permissions in Health if you previously skipped authorization. [Apple explains how to manage app permissions](https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios).
 - Choose a writable folder in Files, such as an on-device folder, iCloud Drive, or a folder inside your Obsidian vault. A provider-backed folder follows that provider's sync and privacy rules.
 
