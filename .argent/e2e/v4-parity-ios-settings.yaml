@@ -1,0 +1,135 @@
+# PR #360 (v4 parity, iOS): Settings-side controls on an iPad simulator.
+#   M-05 Clear Folder Selection, C-01 Auto-sync toggle absent while disconnected,
+#   M-09 Apple Health permissions row.
+#
+# Prerequisites
+# - Debug build of HealthMd installed on an iPad simulator (iPad Pro 13-inch (M5),
+#   portrait). Build with simulator ad-hoc signing (CODE_SIGN_IDENTITY=-), not
+#   CODE_SIGNING_ALLOWED=NO: without the HealthKit entitlement the M-09 request
+#   throws silently and no sheet appears.
+# - Apple Health access for Health.md never decided on this simulator. The iPadOS 27
+#   simulator's Health Access sheet shows no reachable Allow/Don't Allow buttons, so
+#   the decision stays open and every run takes the request branch. If access was
+#   ever decided, M-09 shows the "Adjust Health Permissions" guide instead and the
+#   last check fails.
+# - Launch state comes from the app's UI-test hooks (--uitesting, -UITEST_*): onboarding
+#   skipped, synthetic TestVault folder, purchase unlocked, Mac disconnected.
+#   -syncEnabled YES pins the Mac destination switch on (argument domain).
+#
+# Side effects
+# - Clears the synthetic TestVault folder selection (re-created on the next launch).
+# - Leaves the system Health Access sheet open; the next launch dismisses it.
+#
+# Coordinate exceptions
+# - SwiftUI controls have no backing UIView, so on the iOS simulator the runner tree
+#   carries none of this app's ids or text (checked with native-find-views and a
+#   scratch assert on glass.tab.settings / "Export now": both unmatched while the
+#   runner tree was connected). Taps on SwiftUI rows are describe-derived points for
+#   this iPad layout; each is named by an echo and followed by an accessibility-tree
+#   check (raw await-ui-element), which is why those checks stay raw tool steps.
+version: 1
+requires:
+  platform: ios
+steps:
+  - echo: Launch Health.md in UI-test mode (synthetic TestVault, unlocked, Mac
+      destination on, Mac disconnected). Expect Archive
+  - launch:
+      native: com.codybontecou.obsidianhealth
+      ios:
+        app: com.codybontecou.obsidianhealth
+        args:
+          - --uitesting
+          - -UITEST_VAULT_SELECTED
+          - "true"
+          - -UITEST_PURCHASE_UNLOCKED
+          - "true"
+          - -syncEnabled
+          - "YES"
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.exportNow
+      timeoutMs: 15000
+  - await: { idle: true }
+  - echo: Tap the Settings tab (glass.tab.settings; point tap, SwiftUI ids are not
+      in the simulator runner tree). Expect Settings with Apple Health (M-09)
+      and the Vault pane
+  # Point = centre of glass.tab.settings from describe (sidebar, iPad portrait).
+  - tap: { x: 0.131, y: 0.173 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.settings.healthPermissions
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.folderDestination.clearSelection
+  - await: { idle: true }
+  - echo: "M-05: tap Clear Folder Selection (glass.folderDestination.clearSelection;
+      point tap). Expect the confirm dialog"
+  # Point = centre of glass.folderDestination.clearSelection from describe.
+  - tap: { x: 0.787, y: 0.3635 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.folderDestination.clearSelection.confirm
+  # The popover is in the AX tree before its presentation animation ends; a tap
+  # during the animation is dropped.
+  - await: { idle: true }
+  - echo: "M-05: confirm. Expect the Clear row gone and the folder unset"
+  # Point = centre of glass.folderDestination.clearSelection.confirm from describe
+  # (iPad popover). Runner selector taps on this button (id and text both resolve)
+  # reported a pass without activating it on replay, so the live point is kept.
+  - tap: { x: 0.437, y: 0.5735 }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.folderDestination.chooseDefault
+      expectedText: No folder chosen
+  # After the dialog is gone (the open popover also hides the row from AX).
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: glass.folderDestination.clearSelection
+  - echo: "C-01: open Mac Destination (glass.settings.mac; point tap). Mac
+      destination is on but no Mac is connected. Expect the status panel without
+      Auto-sync or Disconnect"
+  # Point = centre of glass.settings.mac from describe (after the Vault row shrank).
+  - tap: { x: 0.418, y: 0.203 }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: sync.connectionStatus
+      expectedText: Waiting for Mac
+  - await: { idle: true }
+  # Both ids are proven present in v4-parity-ios-mac-connected.yaml.
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: sync.autoSyncToggle
+      timeoutMs: 1500
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: glass.macDestination.disconnect
+      timeoutMs: 1500
+  - echo: "M-09: tap Apple Health (glass.settings.healthPermissions; point tap).
+      Health access is undecided on this simulator, so expect the system Health
+      Access request sheet"
+  # Point = centre of glass.settings.healthPermissions from describe.
+  - tap: { x: 0.418, y: 0.421 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: to access your Health data
+      timeoutMs: 15000

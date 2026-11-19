@@ -143,6 +143,16 @@ struct GlassFormatCustomScreen: View {
             .foregroundStyle(palette.muted)
             .padding(.horizontal, 20)
 
+        // 3.5 parity: bulk field actions from the classic Frontmatter Fields menu.
+        GlassPanel {
+            fieldAction(String(localized: "Enable All Fields"), systemImage: "checkmark.circle",
+                        identifier: "glass.formatCustom.enableAllFields") { config.setAllFieldsEnabled(true) }
+            fieldAction(String(localized: "Disable All Fields"), systemImage: "circle",
+                        identifier: "glass.formatCustom.disableAllFields") { config.setAllFieldsEnabled(false) }
+            fieldAction(String(localized: "Reset Names"), systemImage: "arrow.counterclockwise",
+                        identifier: "glass.formatCustom.resetFieldNames") { config.resetFieldNames() }
+        }
+
         GlassSectionLabel(title: String(localized: "Your fields"))
         GlassPanel {
             fieldLink(
@@ -166,6 +176,23 @@ struct GlassFormatCustomScreen: View {
             Button(String(localized: "Add Placeholder Field")) { addFieldKind = .placeholder }
         }
         .glassAddFieldAlerts(config: config, kind: addFieldKind, onDismiss: { addFieldKind = nil })
+    }
+
+    private func fieldAction(
+        _ title: String,
+        systemImage: String,
+        identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            GlassRow(title: title) {
+                Image(systemName: systemImage)
+                    .foregroundStyle(palette.accent)
+                    .accessibilityHidden(true)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(identifier)
     }
 
     private func fieldLink<Destination: View>(
