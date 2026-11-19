@@ -21,13 +21,23 @@ requires:
 #  7. Settings > Lock Configuration Changes ON (Prevent Accidental Changes); dismiss Discord.
 #  8. Terminate the app, then install the 4.0 build over it with `xcrun simctl install`
 #     (no uninstall). Do not launch it before this test.
+# Re-running without rebuilding 3.5: with the app terminated, import the saved 3.5 domain
+# into the app container by path (`xcrun simctl spawn <udid> defaults delete
+# <container>/Library/Preferences/com.codybontecou.obsidianhealth`, then `defaults import`
+# of the same path from .pi/v4-parity/upgrade/prefs-35-final-pre-upgrade.plist). Plain
+# `defaults import com.codybontecou.obsidianhealth` writes the simulator's shared user
+# domain, not the container. Keep `debugOriginalAppVersion` in the shared domain (step 2),
+# then reinstall the 4.0 build. The 3.5 domain carries 53 saved API endpoints, one per
+# keystroke of the URL; the first 4.0 launch must keep only the one Default uses.
 # Today Refresh is not reachable in the 3.5 UI once per-profile schedules exist, so it is
 # not part of the setup. C-01 (iPad-only autoSyncAfterExport) and the full defaults diff are
 # checked outside this test with plutil/defaults; see .pi/v4-parity/upgrade/.
 #
 # Side effects: the test runs Export now (Yesterday) for QA Folder. On a simulator with an
 # empty Health store this writes no file and appends one failed "no_health_data" entry to
-# exportHistory. It changes no settings (the lock blocks the one editor it opens).
+# exportHistory. It turns Lock configuration off to open Default's Output page and turns
+# it back on before it ends; no other setting changes (the lock blocks the one editor the
+# earlier steps open).
 #
 # Coordinate exception: on this iOS 27 simulator the runner tree carries none of the app's
 # SwiftUI ids or labels (every recorded check warned "does NOT hold against the tree the
@@ -275,3 +285,207 @@ steps:
       selector:
         identifier: geist-dialog.title
       timeoutMs: 5000
+  - echo: The export leaves the History access warning panel over Settings
+      (empty simulator Health store). Point tap on its Dismiss button (xmark, no
+      runner selector). Expect the warning gone
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: export.historyWarning.message
+      timeoutMs: 5000
+  - await: { idle: true }
+  - tap:
+      x: 0.8985
+      y: 0.554
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: export.historyWarning.message
+      timeoutMs: 5000
+  - echo: "Saved API endpoints after upgrade: 3.5 saved one per keystroke of the URL
+      (53 rows). 4.0 must list only the endpoint the Default automation uses. The
+      Output page is behind the 3.5 lock, so turn the lock off, check, then turn it
+      back on. Expect Settings with the lock On"
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.settings.lock
+      expectedText: Lock configuration, On
+      textMatch: equals
+      timeoutMs: 8000
+  - echo: Scroll Settings so the Lock configuration row clears the tab bar (raw
+      swipe; the next steps prove the row is reachable)
+  - tool: gesture-swipe
+    args:
+      fromX: 0.5
+      fromY: 0.7
+      toX: 0.5
+      toY: 0.35
+      momentum: false
+  - echo: Point tap on Lock configuration (glass.settings.lock, no runner
+      selector). Expect App & support with the lock switch
+  - tap:
+      x: 0.5
+      y: 0.686
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: configurationProtection.toggle
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: Lock is on (3.5 setting). Point tap on the lock switch
+      (configurationProtection.toggle) to turn it off. Expect the switch value 0
+  - tap:
+      x: 0.834
+      y: 0.221
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: configurationProtection.toggle
+      expectedText: "0"
+      textMatch: contains
+      timeoutMs: 5000
+  - echo: Lock is off. Tap Back. Expect Settings with the lock Off
+  - tap:
+      id: chevron.backward
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.settings.lock
+      expectedText: Lock configuration, Off
+      textMatch: equals
+      timeoutMs: 6000
+  - await: { idle: true }
+  - echo: Point tap on the Automations tab (glass.tab.automations). Expect the
+      Default card
+  - tap:
+      x: 0.405
+      y: 0.895
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: Default, Every morning at 8:00
+      expectedText: Markdown + JSON to https://example.invalid/healthmd
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: Point tap on the Default card body (first glass.automation.card, away
+      from its toggle). Expect its pane with the 3.5 profile ID
+  - tap:
+      x: 0.4
+      y: 0.34
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: 0D7E518C-B8F6-4445-9949-D102ACABF006
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: Point tap on Output (glass.automation.output). Expect the saved API
+      endpoint list holding only the 3.5 endpoint, used by Default
+  - tap:
+      x: 0.5
+      y: 0.66
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.output.endpoint.https://example.invalid/healthmd
+      expectedText: Used by Default
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: "No keystroke rows: without the cleanup the list starts with the row
+      named \"ht\" and the next row after the kept URL is \"…/healthmdt\" (both on
+      screen above New endpoint). Expect both absent and New endpoint directly
+      reachable"
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: glass.output.endpoint.ht
+      timeoutMs: 3000
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: glass.output.endpoint.https://example.invalid/healthmdt
+      timeoutMs: 3000
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: New endpoint
+      timeoutMs: 3000
+  - echo: Output lists one saved endpoint. Tap Back twice. Expect the Default
+      pane, then the Automations list
+  - tap:
+      id: chevron.backward
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: 0D7E518C-B8F6-4445-9949-D102ACABF006
+      timeoutMs: 6000
+  - tap:
+      id: chevron.backward
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: New automation
+      timeoutMs: 6000
+  - await: { idle: true }
+  - echo: Restore the lock. Point tap on the Settings tab (glass.tab.settings).
+      Expect the lock row Off
+  - tap:
+      x: 0.613
+      y: 0.895
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.settings.lock
+      expectedText: Lock configuration, Off
+      textMatch: equals
+      timeoutMs: 6000
+  - await: { idle: true }
+  - echo: Scroll so Lock configuration clears the tab bar, then point tap on it
+      (glass.settings.lock). Expect the lock switch
+  - tool: gesture-swipe
+    args:
+      fromX: 0.5
+      fromY: 0.7
+      toX: 0.5
+      toY: 0.35
+      momentum: false
+  - tap:
+      x: 0.5
+      y: 0.686
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: configurationProtection.toggle
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: Point tap on the lock switch (configurationProtection.toggle) to turn the
+      3.5 lock back on. Tap Back. Expect Settings with the lock On
+  - tap:
+      x: 0.834
+      y: 0.221
+  - tap:
+      id: chevron.backward
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.settings.lock
+      expectedText: Lock configuration, On
+      textMatch: equals
+      timeoutMs: 6000
