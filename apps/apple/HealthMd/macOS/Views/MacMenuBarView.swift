@@ -7,12 +7,14 @@ struct MacMenuBarView: View {
     @EnvironmentObject var vaultManager: VaultManager
     @EnvironmentObject var syncService: SyncService
     @ObservedObject private var historyManager = ExportHistoryManager.shared
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         glassBody.glassTheme()
     }
 
-    /// MacMenuBarG: status header, last export and folder, then Open, History and Quit.
+    /// MacMenuBarG: status header, last export and folder, then Open, History, the 3.5
+    /// destination shortcuts (Change/Choose Destination…, Settings… ⌘,) and Quit.
     private var glassBody: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
@@ -46,6 +48,21 @@ struct MacMenuBarView: View {
             menuAction(String(localized: "History")) {
                 showMainWindow(destination: .history)
             }
+            menuAction(
+                vaultManager.hasVaultSelection
+                    ? String(localized: "Change Destination…")
+                    : String(localized: "Choose Destination…")
+            ) {
+                chooseDestinationFolder()
+            }
+            .accessibilityIdentifier(AccessibilityID.Mac.menuBarChangeDestination)
+            // 3.5 called this "Destination Settings…"; in 4.0 ⌘, opens the general Settings
+            // window, and the folder itself lives on the Mac destination page.
+            menuAction(String(localized: "Settings…"), shortcut: "⌘,") {
+                openSettingsWindow()
+            }
+            .keyboardShortcut(",", modifiers: .command)
+            .accessibilityIdentifier(AccessibilityID.Mac.menuBarSettings)
             menuAction(String(localized: "Quit Health.md"), shortcut: "⌘Q") {
                 NSApp.terminate(nil)
             }
@@ -207,6 +224,19 @@ struct MacMenuBarView: View {
     }
 
     // MARK: - Actions
+
+    private func chooseDestinationFolder() {
+        // The menu bar window is not key for a modal panel until the app is active.
+        NSApp.activate(ignoringOtherApps: true)
+        MacFolderPicker.show { url in
+            vaultManager.setVaultFolder(url)
+        }
+    }
+
+    private func openSettingsWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+        openSettings()
+    }
 
     private func showMainWindow(destination: MacSidebarNavigation.Destination? = nil) {
         NSApp.activate(ignoringOtherApps: true)
