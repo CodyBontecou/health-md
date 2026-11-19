@@ -8,6 +8,8 @@ struct GlassMacDestinationScreen: View {
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @Environment(\.glassPalette) private var palette
     @AppStorage("syncEnabled") private var syncEnabled = false
+    /// Defaults to the value `HealthMdApp` registers (false), as in 3.5.
+    @AppStorage(AutoSyncAfterExportPolicy.key) private var autoSyncAfterExport = AutoSyncAfterExportPolicy.registeredDefault
     @AppStorage("manualIPLastHost") private var manualMacHost = ""
     @AppStorage("manualIPLastPort") private var savedManualMacPort = String(SyncService.manualIPPort)
     @State private var manualMacPort = String(SyncService.manualIPPort)
@@ -136,6 +138,27 @@ struct GlassMacDestinationScreen: View {
                 } else {
                     GlassRow(title: destinationTitle, subtitle: destinationSubtitle) { EmptyView() }
                         .accessibilityElement(children: .combine)
+                }
+                // 3.5 iPad parity: push each successful local export to this Mac.
+                if AutoSyncAfterExportPolicy.isAvailable(idiom: UIDevice.current.userInterfaceIdiom) {
+                    GlassToggleRow(
+                        title: String(localized: "Auto-sync after export"),
+                        subtitle: String(localized: "Automatically send data to Mac when you export"),
+                        isOn: configurationProtection.protecting($autoSyncAfterExport)
+                    )
+                    .accessibilityIdentifier(AccessibilityID.Sync.autoSyncToggle)
+                }
+                // A manual-IP connection has its own Disconnect under Connect by IP.
+                if syncService.activeTransport != .manualIP {
+                    Button { syncService.disconnect() } label: {
+                        GlassRow(title: String(localized: "Disconnect")) {
+                            Image(systemName: "xmark.circle")
+                                .foregroundStyle(palette.accent)
+                                .accessibilityHidden(true)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("glass.macDestination.disconnect")
                 }
             }
         }
