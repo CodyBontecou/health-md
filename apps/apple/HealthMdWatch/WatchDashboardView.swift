@@ -9,6 +9,11 @@ private enum WatchGlass {
     static let heart = Color(red: 0xFF / 255, green: 0x7A / 255, blue: 0x93 / 255)
     static let steps = Color(red: 0xA6 / 255, green: 0xF2 / 255, blue: 0x5F / 255)
     static let oxygen = Color(red: 0x5E / 255, green: 0xD3 / 255, blue: 0xF2 / 255)
+    // Softened orange / yellow / blue: the hue families the complications use for move,
+    // exercise and stand.
+    static let move = Color(red: 0xFF / 255, green: 0x8A / 255, blue: 0x5B / 255)
+    static let exercise = Color(red: 0xFF / 255, green: 0xD6 / 255, blue: 0x5C / 255)
+    static let stand = Color(red: 0x7F / 255, green: 0xB2 / 255, blue: 0xFF / 255)
     static let line = Color.white.opacity(0.14)
 }
 
@@ -145,7 +150,8 @@ final class WatchDashboardViewModel: ObservableObject {
     }
 }
 
-/// WatchDashboardG: the crystal-heart header over five metric rows. Health access and refresh
+/// WatchDashboardG: the crystal-heart header over the metric rows (sleep, recovery, then the
+/// three activity rings and blood oxygen, as in 3.5). Health access, widget guidance and refresh
 /// controls sit below the rows, and the access button only shows until Health is connected.
 struct WatchDashboardView: View {
     @StateObject private var viewModel = WatchDashboardViewModel()
@@ -185,13 +191,35 @@ struct WatchDashboardView: View {
 
     private var metricRows: [WatchMetricRowModel] {
         let snapshot = viewModel.snapshot
-        return [
-            WatchMetricRowModel(title: "Sleep", value: WatchDashboardFormat.hoursMinutes(snapshot.sleepHours), tint: WatchGlass.accent),
-            WatchMetricRowModel(title: "HRV", value: WatchHealthFormatter.milliseconds(snapshot.heartRateVariabilityMS), tint: WatchGlass.hrv),
-            WatchMetricRowModel(title: "Resting HR", value: WatchHealthFormatter.wholeNumber(snapshot.restingHeartRate), tint: WatchGlass.heart),
-            WatchMetricRowModel(title: "Steps", value: WatchHealthFormatter.wholeNumber(snapshot.steps), tint: WatchGlass.steps),
-            WatchMetricRowModel(title: "Blood oxygen", value: WatchHealthFormatter.percent(snapshot.bloodOxygenPercent), tint: WatchGlass.oxygen)
-        ]
+        return WatchDashboardMetric.allCases.map { metric in
+            WatchMetricRowModel(
+                id: metric.id,
+                title: metric.titleKey,
+                value: metric.value(in: snapshot),
+                tint: tint(for: metric)
+            )
+        }
+    }
+
+    private func tint(for metric: WatchDashboardMetric) -> Color {
+        switch metric {
+        case .sleep: return WatchGlass.accent
+        case .heartRateVariability: return WatchGlass.hrv
+        case .restingHeartRate: return WatchGlass.heart
+        case .steps: return WatchGlass.steps
+        case .activeEnergy: return WatchGlass.move
+        case .exerciseMinutes: return WatchGlass.exercise
+        case .standHours: return WatchGlass.stand
+        case .bloodOxygen: return WatchGlass.oxygen
+        }
+    }
+
+    /// 3.5's header guidance, kept below the rows: once Health is connected, point people at
+    /// the Smart Stack and watch-face widgets; before that, ask for access first.
+    private var widgetGuidance: LocalizedStringKey {
+        viewModel.isHealthConnected
+            ? "Add Health.md widgets to your Smart Stack or watch face."
+            : "Allow Health access here, then add Health.md widgets to your Smart Stack or watch face."
     }
 
     @ViewBuilder
@@ -216,6 +244,17 @@ struct WatchDashboardView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            Label {
+                Text(widgetGuidance)
+            } icon: {
+                Image(systemName: "applewatch.watchface")
+                    .foregroundStyle(WatchGlass.accent)
+            }
+            .font(.footnote)
+            .foregroundStyle(WatchGlass.label)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityIdentifier("watch.dashboard.widgetGuidance")
+
             if !viewModel.isHealthConnected {
                 Button {
                     Task { await viewModel.requestAuthorizationAndRefresh() }
@@ -239,7 +278,7 @@ struct WatchDashboardView: View {
 }
 
 private struct WatchMetricRowModel: Identifiable {
-    var id: String { title }
+    let id: String
     let title: String
     let value: String
     let tint: Color
@@ -268,17 +307,7 @@ private struct WatchMetricRow: View {
             Rectangle().fill(WatchGlass.line).frame(height: 1)
         }
         .accessibilityElement(children: .combine)
-    }
-}
-
-enum WatchDashboardFormat {
-    /// "7h 12m" as on WatchDashboardG; "—" when there is no sleep.
-    static func hoursMinutes(_ hours: Double?) -> String {
-        guard let hours, hours > 0 else { return "—" }
-        let totalMinutes = Int((hours * 60).rounded())
-        let wholeHours = totalMinutes / 60
-        let minutes = totalMinutes % 60
-        return wholeHours == 0 ? "\(minutes)m" : "\(wholeHours)h \(minutes)m"
+        .accessibilityIdentifier("watch.dashboard.metric.\(row.id)")
     }
 }
 
