@@ -1,0 +1,239 @@
+# PR #360 (v4 parity, iOS): automation-level controls on an iPad simulator.
+#   M-10 Enable All Fields / Disable All Fields / Reset Names on Customize format,
+#   M-04 Reset Export Configuration on Output (automation keeps name and destination).
+#
+# Prerequisites
+# - Debug build of HealthMd installed on an iPad simulator (iPad Pro 13-inch (M5),
+#   portrait). UI-test launch state (--uitesting, -UITEST_*): onboarding skipped,
+#   synthetic TestVault, purchase unlocked, one synthetic "Default" automation
+#   (On demand -> TestVault, Format Standard, all 229 frontmatter fields on).
+# - Does not open Metrics: leaving Metrics asks Apple Health for access, and that
+#   system sheet cannot be dismissed on this simulator (see v4-parity-ios-metrics.yaml).
+#
+# Side effects (synthetic Default automation only)
+# - Renames frontmatter key sleep_wake -> sleep_wake_qa, then Reset Names restores it.
+# - Disables all frontmatter fields, then Reset Export Configuration restores the
+#   defaults. The automation ends in its starting configuration.
+#
+# Coordinate exceptions
+# - SwiftUI controls have no backing UIView, so the simulator runner tree carries
+#   none of this app's ids or text (see v4-parity-ios-settings.yaml). Taps on SwiftUI
+#   rows are describe-derived points for this iPad layout, each named by an echo and
+#   followed by an accessibility-tree check (raw await-ui-element). UIKit controls
+#   (nav Back = chevron.backward, alert buttons) use runner selectors.
+version: 1
+requires:
+  platform: ios
+steps:
+  - echo: Launch Health.md in UI-test mode (synthetic TestVault, unlocked, one
+      Default automation). Expect Archive
+  - launch:
+      native: com.codybontecou.obsidianhealth
+      ios:
+        app: com.codybontecou.obsidianhealth
+        args:
+          - --uitesting
+          - -UITEST_VAULT_SELECTED
+          - "true"
+          - -UITEST_PURCHASE_UNLOCKED
+          - "true"
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.tab.automations
+      timeoutMs: 15000
+  - await: { idle: true }
+  - echo: Tap the Automations tab (glass.tab.automations; point tap). Expect the
+      Default automation composer
+  # Point = centre of glass.tab.automations from describe (sidebar, iPad portrait).
+  - tap: { x: 0.131, y: 0.138 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.allSettings
+  - await: { idle: true }
+  - echo: Open All settings (glass.automation.allSettings; point tap). Expect the
+      full list with Format (glass.automation.formatCustom)
+  # Point = centre of glass.automation.allSettings from describe.
+  - tap: { x: 0.777, y: 0.5135 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.formatCustom
+  - await: { idle: true }
+  - echo: "M-10: open Format (glass.automation.formatCustom; point tap). Expect the
+      frontmatter bulk actions"
+  # Point = centre of glass.automation.formatCustom from describe.
+  - tap: { x: 0.777, y: 0.3965 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.formatCustom.disableAllFields
+  - await: { idle: true }
+  - echo: "M-10: tap Disable All Fields (glass.formatCustom.disableAllFields; point
+      tap). Expect categories at 0 fields"
+  # Point = centre of glass.formatCustom.disableAllFields from describe.
+  - tap: { x: 0.777, y: 0.7155 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Sleep, 0 of
+  - echo: "M-10: tap Enable All Fields (glass.formatCustom.enableAllFields; point
+      tap). Expect every category back to all fields"
+  # Point = centre of glass.formatCustom.enableAllFields from describe.
+  - tap: { x: 0.777, y: 0.6805 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Sleep, 8 of 8
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        text: Sleep, 0 of
+  - echo: "M-10 setup: open the Sleep field list (point tap) to rename one field key"
+  # Point = centre of the Sleep category row from describe.
+  - tap: { x: 0.777, y: 0.2165 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: sleep_wake
+  - await: { idle: true }
+  # Point = centre of the sleep_wake rename button from describe.
+  - tap: { x: 0.7425, y: 0.2325 }
+  # The Rename Field alert opens with its text field focused and prefilled.
+  - await: { idle: true }
+  - tool: keyboard
+    args:
+      text: _qa
+  - tap: { text: Save Name }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: sleep_wake_qa
+  - echo: Back to Customize format (BackButton). Expect Reset Names
+  - tap: { id: chevron.backward }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.formatCustom.resetFieldNames
+  - await: { idle: true }
+  - echo: "M-10: tap Reset Names (glass.formatCustom.resetFieldNames; point tap),
+      then reopen Sleep. Expect sleep_wake back and sleep_wake_qa gone"
+  # Point = centre of glass.formatCustom.resetFieldNames from describe.
+  - tap: { x: 0.777, y: 0.7505 }
+  - tap: { x: 0.777, y: 0.2165 }
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        text: sleep_wake_qa
+  # The field's toggle reads "<key> <value>"; equals rules out sleep_wake_qa.
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: sleep_wake
+      expectedText: sleep_wake 1
+      textMatch: equals
+  - echo: Back twice (BackButton) to the automation's All settings. Expect the
+      Output row
+  - tap: { id: chevron.backward }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.formatCustom.resetFieldNames
+  - await: { idle: true }
+  - tap: { id: chevron.backward }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.output
+  - await: { idle: true }
+  - echo: "M-04 setup: open Format (point tap) and Disable All Fields so the reset
+      has something to undo"
+  # Point = centre of glass.automation.formatCustom on All settings from describe.
+  - tap: { x: 0.777, y: 0.4035 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.formatCustom.disableAllFields
+  - await: { idle: true }
+  - tap: { x: 0.777, y: 0.7155 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Sleep, 0 of
+  - tap: { id: chevron.backward }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.output
+  - await: { idle: true }
+  - echo: "M-04: open Output (glass.automation.output; point tap). Expect Reset
+      Export Configuration"
+  # Point = centre of glass.automation.output on All settings from describe.
+  - tap: { x: 0.777, y: 0.3685 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.output.resetConfiguration
+  - await: { idle: true }
+  # Point = centre of glass.output.resetConfiguration from describe.
+  - tap: { x: 0.777, y: 0.8085 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.output.resetConfiguration.confirm
+  # The confirm popover is in the AX tree before its presentation animation ends.
+  - await: { idle: true }
+  - echo: "M-04: confirm Reset to Defaults (glass.output.resetConfiguration.confirm).
+      Expect Format back to Standard, and the automation still named Default
+      writing to TestVault"
+  # Point = centre of glass.output.resetConfiguration.confirm from describe (popover);
+  # runner selector taps on popover confirm buttons reported a pass without
+  # activating them (see v4-parity-ios-settings.yaml).
+  - tap: { x: 0.418, y: 0.5945 }
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: glass.output.resetConfiguration.confirm
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.automation.card
+      expectedText: Default, No schedule, On demand → TestVault
+      textMatch: equals
+  - tap: { id: chevron.backward }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.automation.formatCustom
+      expectedText: Format, Standard
+      textMatch: equals
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.automation.name
+      expectedText: Name, Default
+      textMatch: equals
