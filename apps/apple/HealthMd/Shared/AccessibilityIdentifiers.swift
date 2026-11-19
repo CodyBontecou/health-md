@@ -45,9 +45,12 @@ enum AccessibilityID {
     // MARK: - Mac Destination
     enum Mac {
         static let exportActivity = "mac.exportActivity"
+        static let destinationFolder = "mac.destination.folder"
+        static let changeDestinationFolder = "mac.destination.changeFolder"
         static let clearDestinationFolder = "mac.destination.clearFolder"
         static let systemStatusReceiver = "mac.systemStatus.receiver"
         static let systemStatusPermissions = "mac.systemStatus.permissions"
+        static let systemStatusLastCheck = "mac.systemStatus.lastCheck"
         static let checkAgain = "mac.systemStatus.checkAgain"
         static let menuBarChangeDestination = "mac.menuBar.changeDestination"
         static let menuBarSettings = "mac.menuBar.settings"

@@ -423,7 +423,9 @@ struct MacSyncView: View {
 
     private var readinessSection: some View {
         MacGlassSection(title: String(localized: "Readiness")) {
-            MacGlassRow(title: String(localized: "Destination folder")) {
+            // `.contain` keeps the path button and Choose Folder addressable instead of folding
+            // them into one row-wide element whose centre is not the button.
+            MacGlassRow(title: String(localized: "Destination folder"), accessibilityChildren: .contain) {
                 if folderAccessHealthy {
                     // MacHomeG shows only the path; clicking it (or the context menu) changes it.
                     Button {
@@ -434,6 +436,7 @@ struct MacSyncView: View {
                     .buttonStyle(.plain)
                     .help(String(localized: "Change destination folder"))
                     .accessibilityLabel(String(localized: "Change destination folder"))
+                    .accessibilityIdentifier(AccessibilityID.Mac.changeDestinationFolder)
                 } else {
                     MacGlassValue(destinationFolderText, tone: .warning)
                     Button(String(localized: "Choose Folder")) {
@@ -441,6 +444,7 @@ struct MacSyncView: View {
                     }
                     .buttonStyle(MacGlassRowButtonStyle())
                     .accessibilityLabel(String(localized: "Choose destination folder"))
+                    .accessibilityIdentifier(AccessibilityID.Mac.changeDestinationFolder)
                 }
             }
             .contextMenu {
@@ -455,10 +459,12 @@ struct MacSyncView: View {
             }
             .accessibilityLabel("Destination folder")
             .accessibilityValue(folderAccessibilityValue)
+            .accessibilityIdentifier(AccessibilityID.Mac.destinationFolder)
             if vaultManager.hasVaultSelection {
                 MacGlassDivider()
                 // 3.5 MacSettingsView offered "Clear Folder Selection"; 4.0 keeps it beside the folder.
-                MacGlassRow(title: String(localized: "Clear Folder Selection")) {
+                // `.contain` gives the Clear button its own frame for accessibility clients.
+                MacGlassRow(title: String(localized: "Clear Folder Selection"), accessibilityChildren: .contain) {
                     Button(String(localized: "Clear")) {
                         vaultManager.clearVaultFolder()
                     }
@@ -492,6 +498,7 @@ struct MacSyncView: View {
                 value: status.receiverValue,
                 tone: status.receiverIsHealthy ? .ok : .warning
             )
+            .accessibilityValue(status.receiverValue)
             .accessibilityIdentifier(AccessibilityID.Mac.systemStatusReceiver)
             MacGlassDivider()
             MacGlassRow(
@@ -499,10 +506,15 @@ struct MacSyncView: View {
                 value: status.permissionsValue,
                 tone: status.permissionsGranted ? .ok : .warning
             )
+            .accessibilityValue(status.permissionsValue)
             .accessibilityIdentifier(AccessibilityID.Mac.systemStatusPermissions)
             MacGlassDivider()
-            MacGlassRow(title: String(localized: "Last Check")) {
+            // `.contain` keeps the Last Check value and Check Again separately addressable.
+            MacGlassRow(title: String(localized: "Last Check"), accessibilityChildren: .contain) {
                 MacGlassValue(status.lastCheckValue)
+                    .accessibilityLabel(String(localized: "Last Check"))
+                    .accessibilityValue(status.lastCheckValue)
+                    .accessibilityIdentifier(AccessibilityID.Mac.systemStatusLastCheck)
                 Button(String(localized: "Check Again")) {
                     checkAgain()
                 }

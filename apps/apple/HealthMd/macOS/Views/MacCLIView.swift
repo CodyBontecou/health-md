@@ -83,7 +83,8 @@ struct MacCLIView: View {
             MacGlassDivider()
             // The install, host configuration and command snippets moved to Help ▸ CLI & MCP
             // Reference in 4.0; this row keeps them one click away from the pane.
-            MacGlassRow(title: String(localized: "CLI & MCP Reference")) {
+            // `.contain` gives the Open button its own frame, so a click on it is not a click on the title.
+            MacGlassRow(title: String(localized: "CLI & MCP Reference"), accessibilityChildren: .contain) {
                 Button(String(localized: "Open")) {
                     NSApp.activate(ignoringOtherApps: true)
                     openWindow(id: MacCLIReferenceView.windowID)
