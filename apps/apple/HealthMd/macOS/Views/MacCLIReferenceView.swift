@@ -54,6 +54,14 @@ struct MacCLIReferenceView: View {
                 subtitle: String(localized: "Choose agent-assisted setup or copy the manual shell commands.")
             )
 
+            MacGlassSection(title: String(localized: "How It Works")) {
+                ForEach(Array(Self.howItWorks.enumerated()), id: \.offset) { index, step in
+                    if index > 0 { MacGlassDivider() }
+                    stepRow(number: index + 1, title: step.title, detail: step.detail)
+                }
+            }
+            MacGlassFootnote(text: String(localized: "App Store-safe by design."))
+
             MacGlassSection(title: String(localized: "Install for Terminal")) {
                 commandBlock(String(localized: "Agent install prompt"), agentInstallPrompt, key: "prompt")
                 MacGlassDivider()
@@ -143,6 +151,27 @@ struct MacCLIReferenceView: View {
         .padding(.vertical, 8)
     }
 
+    private func stepRow(number: Int, title: String, detail: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(verbatim: "\(number)")
+                .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                .foregroundStyle(Color.glassAdaptive(\.accent))
+                .frame(minWidth: 16, alignment: .leading)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.glassAdaptive(\.text))
+                Text(detail)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.glassAdaptive(\.muted))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.vertical, 10)
+        .accessibilityElement(children: .combine)
+    }
+
     private func copyButton(_ value: String, key: String) -> some View {
         Button(copiedKey == key ? String(localized: "Copied") : String(localized: "Copy")) {
             NSPasteboard.general.clearContents()
@@ -157,6 +186,20 @@ struct MacCLIReferenceView: View {
     private struct CommandExample {
         let title: String
         let command: String
+    }
+
+    /// 3.5's "How It Works": why the bundled helpers stay App Store-safe.
+    private static var howItWorks: [(title: String, detail: String)] {
+        [
+            (String(localized: "Mac app runs the service"),
+             String(localized: "Health.md listens only on localhost and owns iPhone connection state.")),
+            (String(localized: "Helpers send JSON"),
+             String(localized: "Bundled helpers are sandboxed. Use the Mac app's saved folder or stream JSON to stdout. For direct exports to arbitrary paths, install the standalone CLI.")),
+            (String(localized: "iPhone remains source of truth"),
+             String(localized: "HealthKit reads happen on your unlocked, connected iPhone.")),
+            (String(localized: "You opt into installation"),
+             String(localized: "The app never mutates `/usr/local/bin` or shell files without your action."))
+        ]
     }
 
     private static var commands: [CommandExample] {
