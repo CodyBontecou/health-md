@@ -28,11 +28,16 @@ struct GlassDailyNoteScreen: View {
             if draft.dailyNoteInjection.enabled {
                 GlassSectionLabel(title: String(localized: "Location"))
                 GlassPanel {
-                    GlassTemplateField(title: String(localized: "Folder"), text: $draft.dailyNoteInjection.folderPath)
+                    GlassTemplateField(
+                        title: String(localized: "Folder"),
+                        text: $draft.dailyNoteInjection.folderPath,
+                        identifier: "glass.dailyNotes.folder"
+                    )
                     GlassTemplateField(
                         title: String(localized: "Filename"),
                         text: $draft.dailyNoteInjection.filenamePattern,
-                        tokens: ["{date}", "{year}", "{month}", "{day}", "{weekday}", "{week}", "{weekYear}"]
+                        tokens: ["{date}", "{year}", "{month}", "{day}", "{weekday}", "{week}", "{weekYear}"],
+                        identifier: "glass.dailyNotes.filename"
                     )
                     // Daily note paths always resolve from the destination's root, never the
                     // Health subfolder, so this is a fact rather than a choice.
@@ -86,8 +91,8 @@ struct GlassDailyNoteScreen: View {
         }
         guard draft.dailyNoteInjection.enabled else { return nil }
         let note = draft.dailyNoteInjection
-        if (try? SharedSetupValidation.validateFilename(note.filenamePattern.trimmingCharacters(in: .whitespaces))) == nil {
-            return String(localized: "Enter a filename such as {date}, without slashes or percent signs.")
+        if !AutomationOutputPathValidation.isValidDailyNoteFilenamePattern(note.filenamePattern) {
+            return String(localized: "Enter a filename such as {date} or {year}/{month}/{date}, without percent signs.")
         }
         if (try? SharedSetupValidation.validateRelativePath(note.folderPath)) == nil {
             return String(localized: "Enter a folder inside your vault, such as Daily.")

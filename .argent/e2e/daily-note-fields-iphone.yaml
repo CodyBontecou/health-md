@@ -1,0 +1,149 @@
+version: 1
+requires:
+  platform: ios
+# Regression for a v4.0 TestFlight report (Discord): a Daily Note automation showed Steps
+# checked in "Fields in this note" but never wrote it, because the field was switched off in
+# Format → Custom; and the Daily notes page refused a 3.x filename pattern with folders
+# ("/{year}/{month}/{date}"), discarding every change on the page, including the folder.
+#
+# Prerequisites: Health.md (glass UI) with Apple Health access, a destination folder, exactly
+# one automation named "Default" with daily notes off and a Standard format, and step data for
+# yesterday (the composer preview must contain a steps: line).
+# Side effects: duplicates Default as "Default 2", edits that copy, then deletes it. Default is
+# not changed and nothing is exported.
+steps:
+  - echo: Restart Health.md. Expect the tab bar
+  - launch: com.codybontecou.obsidianhealth
+  - await: { visible: { id: glass.tab.automations }, timeout: 15000 }
+  - await: { idle: true }
+
+  - echo: Open Automations, then the Default automation
+  - tap: { id: glass.tab.automations }
+  - await: { visible: { id: glass.automations } }
+  - await: { idle: true }
+  - tap: { text: { matches: '^Default$' } }
+  - await: { visible: { id: glass.automation.editSentence } }
+  - await: { idle: true }
+
+  - echo: Duplicate Default so the test edits its own copy
+  - tap: { text: Duplicate }
+  - await: { text: { in: { id: export.profiles.overlap-warning }, contains: Default 2 } }
+  - tap: { id: BackButton }
+  - await: { visible: { text: { matches: '^Default 2$' } } }
+  - await: { idle: true }
+
+  - echo: Open Default 2 and switch the steps field off in Format, as the reporter's old setup had
+  - tap: { text: { matches: '^Default 2$' } }
+  - await: { text: { in: { id: glass.automation.name }, contains: Default 2 } }
+  - await: { idle: true }
+  - tap: { id: glass.automation.formatCustom }
+  - await: { visible: { id: glass.formatCustom.reset } }
+  - await: { idle: true }
+  - tap: { text: { matches: '^Activity, ' } }
+  - await: { visible: { text: active_calories } }
+  - await: { idle: true }
+  - tap: { text: steps, role: Adjustable }
+  - tool: await-ui-element
+    args:
+      condition: exists
+      selector:
+        text: steps
+        role: Adjustable
+      timeoutMs: 3000
+  - tap: { id: BackButton }
+  - await: { visible: { id: glass.formatCustom.reset } }
+  - await: { idle: true }
+  - tap: { id: BackButton }
+  - await: { text: { in: { id: glass.automation.formatCustom }, contains: Custom } }
+  - await: { idle: true }
+
+  - echo: Composer. Switch Default 2 to update the daily note
+  - tap: { id: glass.automation.editSentence }
+  - await: { visible: { text: leave daily notes alone } }
+  - await: { idle: true }
+  - tap: { text: leave daily notes alone }
+  - await: { visible: { text: update my daily note } }
+
+  - echo: "Fields in this note: Steps is selected but its field is off in Format, so its row must read Off (v4.0 showed it checked and dropped it)"
+  # The On/Off state is the row's accessibility value, which the raw tool reads.
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.composer.field.steps
+      expectedText: "Off"
+  - tap: { id: glass.composer.field.steps }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.composer.field.steps
+      expectedText: "On"
+  - echo: Checking Steps turns its field back on, so the note preview holds steps again
+  - await: { text: { in: { id: glass.composer.file }, contains: "steps:" }, timeout: 10000 }
+  - tap: { id: glass.composer.save }
+  - await: { text: { in: { id: glass.automation.dailyNotes }, contains: "On" } }
+  - await: { idle: true }
+  - echo: Every field is on again, so the format reads Standard
+  - await: { text: { in: { id: glass.automation.formatCustom }, contains: Standard } }
+
+  - echo: "Daily notes: a 3.x filename pattern with folders must save (v4.0 refused it and discarded every change on the page)"
+  - tap: { id: glass.automation.dailyNotes }
+  - await: { visible: { id: glass.dailyNotes.merge } }
+  - await: { idle: true }
+  - tap: { id: glass.dailyNotes.filename }
+  # Clear whatever the copied pattern holds (up to 30 characters), then type the 3.x pattern.
+  - tool: run-sequence
+    args:
+      steps:
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { text: "/{year}/{month}/{date}" } }
+  - await: { visible: { text: Writes to Daily/2 } }
+  - echo: Leaving saves the pattern. v4.0 replaced Back with a Discard prompt here
+  - tap: { id: BackButton }
+  - await: { visible: { id: glass.automation.dailyNotes } }
+  - await: { idle: true }
+  - tap: { id: glass.automation.dailyNotes }
+  - await: { visible: { text: Writes to Daily/2 } }
+  - await: { idle: true }
+  - tap: { id: BackButton }
+  - await: { visible: { id: glass.automation.dailyNotes } }
+  - await: { idle: true }
+
+  - echo: "Clean up: delete Default 2"
+  - scroll-to: { target: { text: Delete automation } }
+  - tap: { text: Delete automation }
+  - await: { visible: { text: Delete “Default 2” } }
+  - tap: { text: Delete “Default 2” }
+  - await: { visible: { id: glass.automations } }
+  - await: { idle: true }
+  - await: { hidden: { text: { matches: '^Default 2$' } } }

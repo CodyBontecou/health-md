@@ -271,6 +271,8 @@ struct GlassTemplateField: View {
     var tokens: [String] = []
     /// Shown when the field is empty, for templates whose empty value has a meaning.
     var placeholder: String?
+    /// The text field's accessibility identifier, for UI automation.
+    var identifier: String?
     @Environment(\.glassPalette) private var palette
 
     var body: some View {
@@ -283,6 +285,7 @@ struct GlassTemplateField: View {
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
                 .frame(minHeight: GlassMetrics.touchTarget)
+                .accessibilityIdentifier(identifier ?? "")
             if !tokens.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {

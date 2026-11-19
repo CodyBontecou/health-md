@@ -20,6 +20,17 @@ final class GlassAutomationSettingsDerivationTests: XCTestCase {
         XCTAssertNotNil(AutomationOutputPathValidation.invalidReason(folders: ["Health", "../escape"], filename: "{date}"))
     }
 
+    /// Discord report (v4.0 TestFlight): a 3.x daily-note pattern "/{year}/{month}/{date}"
+    /// made the Daily notes page refuse every change, so its folder could not be edited.
+    func testDailyNoteFilenamePatternMayHoldFoldersButNeverLeaveTheVault() {
+        for pattern in ["{date}", "{year}/{month}/{date}", "/{year}/{month}/{date}", "Journal/{date}"] {
+            XCTAssertTrue(AutomationOutputPathValidation.isValidDailyNoteFilenamePattern(pattern), pattern)
+        }
+        for pattern in ["", "  ", "/", "../{date}", "{year}/../{date}", "a\\b", "a%2fb", "a\nb"] {
+            XCTAssertFalse(AutomationOutputPathValidation.isValidDailyNoteFilenamePattern(pattern), pattern)
+        }
+    }
+
     // MARK: - Frontmatter field groups
 
     func testExtendedFieldsUseTheirMetricCategory() {
