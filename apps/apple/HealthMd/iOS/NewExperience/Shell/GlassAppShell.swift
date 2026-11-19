@@ -284,7 +284,10 @@ struct GlassAppShell: View {
                             .glassTheme()
                     }
                 } else {
-                    GlassAPIDestinationSheet(settings: apiExportSettings)
+                    GlassAPIDestinationSheet(
+                        settings: apiExportSettings,
+                        sharedWithProfileNames: profileCoordinator?.otherProfileNamesSharingActiveAPIEndpoint() ?? []
+                    )
                 }
             }
             .glassTheme()

@@ -476,10 +476,19 @@ final class ExportProfileCoordinator: ObservableObject {
         return endpoint.id
     }
 
-    /// Called when API endpoint settings change while a profile is active.
-    /// Edits the active profile's bound endpoint in place (keeping its name, so
-    /// the change reaches every automation that shares it), or saves and binds a
-    /// new one named after its host.
+    /// Called when the live API settings change while a profile is active
+    /// (Settings > API endpoint, which edits the active automation only).
+    ///
+    /// When no other automation uses the active profile's bound endpoint, the
+    /// endpoint is edited in place, keeping its name. When it is shared (for
+    /// example with the automation this one was duplicated from), a new URL
+    /// saves or reuses a separate endpoint and rebinds only the active profile,
+    /// as 3.5 did, so the other automations keep sending where they did.
+    /// Deliberate shared edits go through `saveAPIEndpoint(editingID:)`, whose
+    /// editor lists every automation the change applies to. Saved endpoints
+    /// are unique by URL and own their token, so a token-only change to a
+    /// shared endpoint still reaches every automation using that URL; the
+    /// Settings sheet says so (`otherProfileNamesSharingActiveAPIEndpoint()`).
     func apiEndpointDidChange() {
         guard let activeID = profileStore.activeProfileID,
               !isProfileExecutionBlocked(activeID) else { return }
@@ -491,6 +500,7 @@ final class ExportProfileCoordinator: ObservableObject {
         let token = apiExportSettings.bearerToken.trimmingCharacters(in: .whitespacesAndNewlines)
         if let boundID = profileStore.profile(id: activeID)?.apiEndpointID,
            let bound = destinationStore.apiEndpoint(id: boundID),
+           !profileStore.profiles.contains(where: { $0.id != activeID && $0.apiEndpointID == boundID }),
            destinationStore.updateAPIEndpoint(
                id: bound.id,
                name: bound.name,
@@ -612,6 +622,17 @@ final class ExportProfileCoordinator: ObservableObject {
     /// Names of the automations bound to a saved endpoint, in list order.
     func profileNames(usingAPIEndpoint id: UUID) -> [String] {
         profileStore.profiles.filter { $0.apiEndpointID == id }.map(\.name)
+    }
+
+    /// Names of the other automations bound to the active profile's endpoint,
+    /// in list order. Empty when the active profile has no endpoint or is its
+    /// only user.
+    func otherProfileNamesSharingActiveAPIEndpoint() -> [String] {
+        guard let active = profileStore.activeProfile,
+              let endpointID = active.apiEndpointID else { return [] }
+        return profileStore.profiles
+            .filter { $0.id != active.id && $0.apiEndpointID == endpointID }
+            .map(\.name)
     }
 
     private func readoptActiveEndpointIfBound(to endpointID: UUID) {
