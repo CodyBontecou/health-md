@@ -1,0 +1,50 @@
+# PR #359 (X-20): CLI & MCP pane "CLI & MCP Reference · Open" opens the reference window.
+#
+# Prerequisites:
+#   - A Debug HealthMd-macOS build started by argent (boot-device with the built
+#     Health.md.app; a hardened-runtime build needs ENABLE_HARDENED_RUNTIME=NO).
+#   - English UI (sidebar and reference-window targets use fixed English text).
+# Side effects:
+#   - Restarts the Mac app and selects the CLI & MCP sidebar page.
+#   - Opens the CLI & MCP Reference window, then closes it with File > Close.
+#     No settings, clipboard, or files change (no Copy button is pressed).
+version: 1
+requires:
+  platform: macos
+steps:
+  - echo: Restart Health.md (Mac). Expect the main window sidebar
+  - launch:
+      macos: com.codybontecou.obsidianhealth
+  - await:
+      visible:
+        text: CLI & MCP
+      timeout: 15000
+  - tap:
+      text: CLI & MCP
+  - await:
+      visible:
+        id: mac.cli.openReference
+      timeout: 10000
+  - await: { idle: true }
+  - echo: On the CLI & MCP pane. Click Open on the CLI & MCP Reference row. Expect the reference window
+  - tap:
+      id: mac.cli.openReference
+  - await:
+      visible:
+        text: Agent install prompt
+      timeout: 10000
+  - await: { idle: true }
+  - assert:
+      visible:
+        text: Install for Terminal
+  - echo: Close the reference window. Expect its content to go away
+  - tool: menu-bar
+    args:
+      action: choose
+      path:
+        - File
+        - Close
+  - await:
+      hidden:
+        text: Agent install prompt
+      timeout: 5000

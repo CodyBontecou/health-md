@@ -1,0 +1,104 @@
+# PR #359 (M-06): Mac destination "Clear Folder Selection", inline button and context menu.
+#
+# Prerequisites:
+#   - A Debug HealthMd-macOS build started by argent (boot-device with the built
+#     Health.md.app; a hardened-runtime build needs ENABLE_HARDENED_RUNTIME=NO).
+#   - English UI (the context-menu item is matched by its English title).
+#   - /private/tmp exists (it does on every Mac). The test answers the folder picker
+#     with it through a file-panel stub, so no Finder interaction is needed.
+# Side effects (DESTRUCTIVE to the Mac destination setting):
+#   - The debug build shares the sandbox container and UserDefaults of the installed
+#     Health.md (com.codybontecou.obsidianhealth). The test replaces the destination
+#     folder with /private/tmp and then clears it, so it ends with NO destination
+#     folder selected and the saved folder bookmark removed.
+#   - Back up the real setting before running and restore it afterwards, with the app
+#     quit:
+#       P=~/Library/Containers/com.codybontecou.obsidianhealth/Data/Library/Preferences/com.codybontecou.obsidianhealth
+#       defaults export "$P" backup.plist   # before
+#       defaults import "$P" backup.plist   # after
+#   - No files are written to /private/tmp (choosing a folder only stores a bookmark).
+version: 1
+requires:
+  platform: macos
+steps:
+  - echo: Restart Health.md (Mac). Expect the Mac destination Readiness section
+  - launch:
+      macos: com.codybontecou.obsidianhealth
+  - await:
+      visible:
+        id: mac.destination.changeFolder
+      timeout: 15000
+  - await: { idle: true }
+  - echo: Choose /private/tmp as a throwaway destination through the folder picker. Expect the folder row to name tmp and the Clear row to appear
+  - tool: file-panel
+    args:
+      action: stub
+      path: /private/tmp
+      panelKind: open
+  - tap:
+      id: mac.destination.changeFolder
+  - await:
+      text:
+        in:
+          id: mac.destination.folder
+        contains: tmp
+      timeout: 8000
+  - assert:
+      visible:
+        id: mac.destination.clearFolder
+  - echo: Click the inline Clear button. Expect the Clear row to disappear and the folder row to read No folder selected
+  - tap:
+      id: mac.destination.clearFolder
+  - await:
+      hidden:
+        id: mac.destination.clearFolder
+      timeout: 5000
+  - assert:
+      text:
+        in:
+          id: mac.destination.folder
+        contains: No folder selected
+  - assert:
+      text:
+        in:
+          id: mac.systemStatus.permissions
+        contains: Needs Access
+  - echo: Choose /private/tmp again with Choose Folder, then clear it from the folder row's context menu
+  - tool: file-panel
+    args:
+      action: stub
+      path: /private/tmp
+      panelKind: open
+  - tap:
+      id: mac.destination.changeFolder
+  - await:
+      visible:
+        id: mac.destination.clearFolder
+      timeout: 8000
+  - tap:
+      on:
+        id: mac.destination.changeFolder
+      button: right
+  - await:
+      visible:
+        text: Clear Folder Selection
+        role: MenuItem
+      timeout: 4000
+  # COORDINATE EXCEPTION: both context-menu items share the AppKit id "menuAction:", and a
+  # selector tap on { text: Clear Folder Selection, role: MenuItem } resolves the item but its
+  # click does not choose it (the menu extends past the window; argent 2026-11-18). The raw
+  # point is the item's centre from describe, in the window-plus-menu space, for the default
+  # window size. The await above proves the menu is open; the hidden check below proves the
+  # item ran.
+  - tap:
+      x: 0.868
+      y: 0.2705
+  - await:
+      hidden:
+        id: mac.destination.clearFolder
+      timeout: 5000
+  - assert:
+      text:
+        in:
+          id: mac.destination.folder
+        contains: No folder selected

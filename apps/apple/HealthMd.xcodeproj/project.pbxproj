@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A7D2B0022F6E400100A5E002 /* WatchDashboardMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7D2B0012F6E400100A5E001 /* WatchDashboardMetrics.swift */; };
+		A7D2B0032F6E400100A5E003 /* WatchDashboardMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7D2B0012F6E400100A5E001 /* WatchDashboardMetrics.swift */; };
+		A7D2B0042F6E400100A5E004 /* WatchHealthSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0C92EF568620D0B32D839B /* WatchHealthSnapshot.swift */; };
+		A7D2B0062F6E400100A5E006 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A7D2B0052F6E400100A5E005 /* Localizable.xcstrings */; };
 		A90000000000000000000004 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000002 /* main.swift */; };
 		A90000000000000000000005 /* HealthMdMCPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000003 /* HealthMdMCPServer.swift */; };
 		A90000000000000000000012 /* HealthMdMCPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000011 /* HealthMdMCPApp.swift */; };
@@ -143,6 +147,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A7D2B0012F6E400100A5E001 /* WatchDashboardMetrics.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchDashboardMetrics.swift; sourceTree = "<group>"; };
+		A7D2B0052F6E400100A5E005 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		C11C00000000000000000001 /* NativeLicensing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = NativeLicensing.xcconfig; path = ../licensing/deploy/NativeLicensing.xcconfig; sourceTree = SOURCE_ROOT; };
 		A90000000000000000000001 /* healthmd-mcp */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "healthmd-mcp"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A90000000000000000000002 /* main.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "mcp-main.swift"; path = "Sources/healthmd-mcp/main.swift"; sourceTree = "<group>"; };
@@ -401,6 +407,7 @@
 				74CD8B25767E323E53B1E898 /* HealthMdWatchApp.swift */,
 				711A8CDB89953F166353BE5B /* WatchDashboardView.swift */,
 				A1C0A5E72F62100100A5E771 /* Assets.xcassets */,
+				A7D2B0052F6E400100A5E005 /* Localizable.xcstrings */,
 				26E2FC207AE97863065685C9 /* Info.plist */,
 				396931E850C42BA63FAFB47F /* HealthMdWatch.entitlements */,
 			);
@@ -481,6 +488,7 @@
 			children = (
 				5B0C92EF568620D0B32D839B /* WatchHealthSnapshot.swift */,
 				8EE59041238A4C32044037A6 /* WatchHealthSnapshotStore.swift */,
+				A7D2B0012F6E400100A5E001 /* WatchDashboardMetrics.swift */,
 			);
 			name = HealthMdWatchShared;
 			path = HealthMdWatchShared;
@@ -819,6 +827,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1C0A5E82F62100100A5E771 /* Assets.xcassets in Resources */,
+				A7D2B0062F6E400100A5E006 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -910,6 +919,7 @@
 				55A0643059CF9F13F62D71E1 /* HealthMdWatchApp.swift in Sources */,
 				761414846D67334FF89CBD1C /* WatchDashboardView.swift in Sources */,
 				879D39734DDB734FC62C0104 /* WatchHealthSnapshotStore.swift in Sources */,
+				A7D2B0022F6E400100A5E002 /* WatchDashboardMetrics.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -924,6 +934,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A7D2B0042F6E400100A5E004 /* WatchHealthSnapshot.swift in Sources */,
+				A7D2B0032F6E400100A5E003 /* WatchDashboardMetrics.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
