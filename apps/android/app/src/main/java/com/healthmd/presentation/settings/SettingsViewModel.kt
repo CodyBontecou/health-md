@@ -201,7 +201,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun updateMetricSelection(selection: MetricSelectionState) = update { it.copy(metricSelection = selection) }
+    fun updateMetricSelection(selection: MetricSelectionState) = update { it.withMetricSelection(selection) }
     fun updateDailyNoteInjection(settings: DailyNoteInjectionSettings) = update { it.copy(dailyNoteInjection = settings) }
     fun updateIndividualTracking(settings: IndividualTrackingSettings) = update { it.copy(individualTracking = settings) }
     fun updateFormatCustomization(customization: FormatCustomization) = update { it.copy(formatCustomization = customization) }
