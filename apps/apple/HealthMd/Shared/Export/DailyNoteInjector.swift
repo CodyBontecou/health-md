@@ -463,18 +463,19 @@ struct DailyNoteInjector {
         } catch {
             return .skipped(reason: error.localizedDescription)
         }
-        let filename = settings.formatFilename(
-            for: healthData.date,
+        let path = ExportPathPlanner.dailyNoteRelativePath(
+            settings: settings,
+            date: healthData.date,
             timeZone: calendarTimeZone
-        ) + ".md"
+        )
+        // The filename pattern may hold folders ("{year}/{month}/{date}"). Those belong to
+        // the note's folder, so the filename is only the last component of the written path;
+        // callers that show folder + filename otherwise repeat them.
+        let filename = path.split(separator: "/").last.map(String.init) ?? path
 
         return .preview(InjectionPreview(
             filename: filename,
-            path: ExportPathPlanner.dailyNoteRelativePath(
-                settings: settings,
-                date: healthData.date,
-                timeZone: calendarTimeZone
-            ),
+            path: path,
             content: content
         ))
     }

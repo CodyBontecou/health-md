@@ -294,6 +294,127 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         XCTAssertEqual(apiSettings.bearerToken, "second-token")
     }
 
+    // Regression (v4 parity): since d1a8de62e the live-settings path edited
+    // the active profile's bound endpoint in place, so editing a duplicated
+    // automation's URL from Settings > API endpoint silently changed the
+    // automation it was copied from. In 3.5 the copy moved to its own endpoint.
+    func testEditingDuplicateEndpointURLFromSettingsLeavesSourceAutomationAlone() throws {
+        let vaultManager = makeVaultManager()
+        selectVaultFolder(in: vaultManager, path: "/Users/x/Health")
+        let apiSettings = makeAPIExportSettings()
+        let coordinator = makeCoordinator(vaultManager: vaultManager, apiExportSettings: apiSettings)
+        let sourceID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        let endpointID = try XCTUnwrap(coordinator.saveAPIEndpoint(
+            editingID: nil,
+            name: "My API",
+            endpointURLString: "https://first.example.com",
+            bearerToken: "first-token"
+        ))
+        XCTAssertTrue(coordinator.bindAPIEndpoint(endpointID, toProfile: sourceID))
+
+        // Duplicate from the Automations list, then open the copy.
+        let copy = try XCTUnwrap(coordinator.duplicateProfile(id: sourceID))
+        XCTAssertEqual(coordinator.profileStore.profile(id: copy.id)?.apiEndpointID, endpointID)
+        XCTAssertTrue(coordinator.activate(profileID: copy.id))
+        let sourceName = try XCTUnwrap(coordinator.profileStore.profile(id: sourceID)?.name)
+        XCTAssertEqual(coordinator.otherProfileNamesSharingActiveAPIEndpoint(), [sourceName])
+
+        // Settings > API endpoint saves a new URL and token for the copy.
+        apiSettings.endpointURLString = "https://second.example.com"
+        apiSettings.bearerToken = "second-token"
+        coordinator.apiEndpointDidChange()
+
+        // The source keeps its endpoint row, URL, name and token.
+        let source = try XCTUnwrap(coordinator.profileStore.profile(id: sourceID))
+        XCTAssertEqual(source.apiEndpointID, endpointID)
+        let original = try XCTUnwrap(coordinator.destinationStore.apiEndpoint(id: endpointID))
+        XCTAssertEqual(original.name, "My API")
+        XCTAssertEqual(original.endpointURLString, "https://first.example.com")
+        XCTAssertEqual(coordinator.destinationStore.token(for: endpointID), "first-token")
+
+        // The copy moved to its own endpoint and no longer shares one.
+        let copyEndpointID = try XCTUnwrap(coordinator.profileStore.profile(id: copy.id)?.apiEndpointID)
+        XCTAssertNotEqual(copyEndpointID, endpointID)
+        XCTAssertEqual(
+            coordinator.destinationStore.apiEndpoint(id: copyEndpointID)?.endpointURLString,
+            "https://second.example.com"
+        )
+        XCTAssertEqual(coordinator.destinationStore.token(for: copyEndpointID), "second-token")
+        XCTAssertEqual(coordinator.otherProfileNamesSharingActiveAPIEndpoint(), [])
+
+        // Choosing another folder for the copy leaves the source's folder alone too.
+        let sourceVaultID = source.folderVaultID
+        selectVaultFolder(in: vaultManager, path: "/Users/x/CopyVault")
+        coordinator.vaultFolderWasSelected()
+        XCTAssertEqual(coordinator.profileStore.profile(id: sourceID)?.folderVaultID, sourceVaultID)
+        XCTAssertNotEqual(coordinator.profileStore.profile(id: copy.id)?.folderVaultID, sourceVaultID)
+
+        // Switching back adopts the source's untouched endpoint.
+        XCTAssertTrue(coordinator.activate(profileID: sourceID))
+        XCTAssertEqual(apiSettings.endpointURLString, "https://first.example.com")
+        XCTAssertEqual(apiSettings.bearerToken, "first-token")
+    }
+
+    // An endpoint used only by the active automation is still edited in place
+    // from Settings, keeping its saved name (the d1a8de62e behavior).
+    func testEditingUnsharedEndpointFromSettingsEditsItInPlace() throws {
+        let apiSettings = makeAPIExportSettings()
+        let coordinator = makeCoordinator(apiExportSettings: apiSettings)
+        let activeID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        let endpointID = try XCTUnwrap(coordinator.saveAPIEndpoint(
+            editingID: nil,
+            name: "My API",
+            endpointURLString: "https://first.example.com",
+            bearerToken: "first-token"
+        ))
+        XCTAssertTrue(coordinator.bindAPIEndpoint(endpointID, toProfile: activeID))
+        XCTAssertEqual(coordinator.otherProfileNamesSharingActiveAPIEndpoint(), [])
+
+        apiSettings.endpointURLString = "https://second.example.com"
+        apiSettings.bearerToken = "second-token"
+        coordinator.apiEndpointDidChange()
+
+        XCTAssertEqual(coordinator.profileStore.profile(id: activeID)?.apiEndpointID, endpointID)
+        XCTAssertEqual(coordinator.destinationStore.apiEndpoints.count, 1)
+        XCTAssertEqual(coordinator.destinationStore.apiEndpoint(id: endpointID)?.name, "My API")
+        XCTAssertEqual(
+            coordinator.destinationStore.apiEndpoint(id: endpointID)?.endpointURLString,
+            "https://second.example.com"
+        )
+        XCTAssertEqual(coordinator.destinationStore.token(for: endpointID), "second-token")
+    }
+
+    // The named-endpoint editor (Output page) is the deliberate shared edit:
+    // it lists every automation it applies to and changes them all.
+    func testSavedEndpointEditorStillAppliesToEveryAutomationUsingIt() throws {
+        let apiSettings = makeAPIExportSettings()
+        let coordinator = makeCoordinator(apiExportSettings: apiSettings)
+        let sourceID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        let endpointID = try XCTUnwrap(coordinator.saveAPIEndpoint(
+            editingID: nil,
+            name: "My API",
+            endpointURLString: "https://first.example.com",
+            bearerToken: nil
+        ))
+        XCTAssertTrue(coordinator.bindAPIEndpoint(endpointID, toProfile: sourceID))
+        let copy = try XCTUnwrap(coordinator.duplicateProfile(id: sourceID))
+        XCTAssertEqual(coordinator.profileNames(usingAPIEndpoint: endpointID).count, 2)
+
+        XCTAssertEqual(coordinator.saveAPIEndpoint(
+            editingID: endpointID,
+            name: "My API",
+            endpointURLString: "https://moved.example.com",
+            bearerToken: nil
+        ), endpointID)
+
+        XCTAssertEqual(coordinator.profileStore.profile(id: sourceID)?.apiEndpointID, endpointID)
+        XCTAssertEqual(coordinator.profileStore.profile(id: copy.id)?.apiEndpointID, endpointID)
+        XCTAssertEqual(
+            coordinator.destinationStore.apiEndpoint(id: endpointID)?.endpointURLString,
+            "https://moved.example.com"
+        )
+    }
+
     // MARK: - Destination persistence (issues #143 and #150)
 
     func testVaultFolderSelectionStoresIdentityEvidence() throws {
@@ -1142,5 +1263,115 @@ final class ExportProfileCoordinatorTests: XCTestCase {
             ).isEmpty,
             "editing the only automation never overlaps with itself"
         )
+    }
+
+    // MARK: - Reset export configuration (v3.5 parity M-04)
+
+    /// The Output page's "Reset Export Configuration" saves a reset snapshot through
+    /// `updateProfile` with the stored bindings, as the page's autosave does. The
+    /// automation keeps its id, name, destination, subfolder and schedule.
+    func testResetExportConfigurationPreservesIdentityDestinationAndSchedule() throws {
+        let vaultManager = makeVaultManager()
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        selectVaultFolder(in: vaultManager, path: "/Users/x/ResetVault")
+        coordinator.vaultFolderWasSelected()
+        let defaultID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        let destinationID = try XCTUnwrap(coordinator.destinationStore.vaults.first?.id)
+        let created = try XCTUnwrap(coordinator.createProfile(
+            name: "Nightly",
+            target: .localIPhoneFolder,
+            folderVaultID: destinationID
+        ))
+        coordinator.activate(profileID: defaultID)
+
+        var customized = created.settings
+        customized.exportFormats = [.json, .csv]
+        customized.filenameFormat = "custom-{date}"
+        customized.folderStructure = "{year}"
+        customized.healthSubfolder = "Health/Daily"
+        customized.writeMode = .append
+        customized.archiveExportFiles = true
+        customized.generateRangeSummary = true
+        let customization = FormatCustomization()
+        customization.frontmatterConfig.setAllFieldsEnabled(false)
+        customization.unitPreference = .imperial
+        customized.formatCustomization = .from(customization)
+        let metrics = MetricSelectionState()
+        metrics.deselectAll()
+        customized.metricSelection = .from(metrics)
+        let stored = try XCTUnwrap(coordinator.updateProfile(
+            id: created.id, name: created.name, target: created.target,
+            folderVaultID: created.folderVaultID, apiEndpointID: created.apiEndpointID,
+            settings: customized
+        ))
+        XCTAssertEqual(stored.settings.exportFormats, [.json, .csv])
+
+        let schedule = ScheduledExportEntry(profileID: created.id, isEnabled: true)
+        XCTAssertTrue(coordinator.scheduledEntryStore.upsert(schedule))
+        let scheduleBefore = try XCTUnwrap(coordinator.scheduledEntryStore.entry(profileID: created.id))
+
+        let reset = try XCTUnwrap(coordinator.updateProfile(
+            id: stored.id, name: stored.name, target: stored.target,
+            folderVaultID: stored.folderVaultID, apiEndpointID: stored.apiEndpointID,
+            settings: stored.settings.resettingExportConfiguration()
+        ))
+
+        XCTAssertEqual(reset.id, created.id)
+        XCTAssertEqual(reset.name, "Nightly")
+        XCTAssertEqual(reset.target, .localIPhoneFolder)
+        XCTAssertEqual(reset.folderVaultID, destinationID)
+        XCTAssertEqual(reset.settings.healthSubfolder, "Health/Daily", "the destination subfolder is kept")
+        XCTAssertEqual(coordinator.scheduledEntryStore.entry(profileID: created.id), scheduleBefore)
+        XCTAssertEqual(coordinator.profileStore.activeProfileID, defaultID, "reset never changes activation")
+
+        XCTAssertEqual(reset.settings.exportFormats, [.markdown])
+        XCTAssertEqual(reset.settings.filenameFormat, AdvancedExportSettings.defaultFilenameFormat)
+        XCTAssertEqual(reset.settings.folderStructure, AdvancedExportSettings.defaultFolderStructure)
+        XCTAssertEqual(reset.settings.writeMode, .overwrite)
+        XCTAssertFalse(reset.settings.archiveExportFiles)
+        XCTAssertFalse(reset.settings.generateRangeSummary)
+        XCTAssertEqual(reset.settings.formatCustomization, .from(FormatCustomization()))
+        XCTAssertEqual(reset.settings.metricSelection, .from(MetricSelectionState()))
+    }
+
+    /// The per-automation reset uses the same defaults as the classic
+    /// `AdvancedExportSettings.reset()`, so the two cannot drift apart.
+    func testResetExportConfigurationMatchesClassicResetDefaults() {
+        let live = makeSettings()
+        live.exportFormats = [.csv]
+        live.filenameFormat = "x-{date}"
+        live.writeMode = .update
+        live.reset()
+        let classic = ExportSettingsSnapshot.from(live)
+
+        var customized = classic
+        customized.exportFormats = [.json]
+        customized.includeMetadata = false
+        customized.groupByCategory = false
+        customized.filenameFormat = "y-{date}"
+        customized.folderStructure = "{year}/{month}"
+        customized.organizeFormatsIntoFolders = true
+        customized.includeDataDictionary = false
+        customized.summaryOnlyExport = true
+        customized.writeMode = .append
+        customized.detailPolicy = .lossless
+        let reset = customized.resettingExportConfiguration()
+
+        XCTAssertEqual(reset.exportFormats, classic.exportFormats)
+        XCTAssertEqual(reset.includeMetadata, classic.includeMetadata)
+        XCTAssertEqual(reset.groupByCategory, classic.groupByCategory)
+        XCTAssertEqual(reset.filenameFormat, classic.filenameFormat)
+        XCTAssertEqual(reset.folderStructure, classic.folderStructure)
+        XCTAssertEqual(reset.organizeFormatsIntoFolders, classic.organizeFormatsIntoFolders)
+        XCTAssertEqual(reset.archiveExportFiles, classic.archiveExportFiles)
+        XCTAssertEqual(reset.includeDataDictionary, classic.includeDataDictionary)
+        XCTAssertEqual(reset.summaryOnlyExport, classic.summaryOnlyExport)
+        XCTAssertEqual(reset.writeMode, classic.writeMode)
+        XCTAssertEqual(reset.formatCustomization, classic.formatCustomization)
+        XCTAssertEqual(reset.individualTracking, classic.individualTracking)
+        XCTAssertEqual(reset.dailyNoteInjection, classic.dailyNoteInjection)
+        XCTAssertEqual(reset.detailPolicy, classic.detailPolicy)
+        XCTAssertEqual(reset.generateRangeSummary, classic.generateRangeSummary)
+        XCTAssertEqual(reset.metricSelection, classic.metricSelection)
     }
 }

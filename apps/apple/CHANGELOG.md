@@ -4,6 +4,11 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- Fields in this note shows a field as checked only when the daily note will contain it. Checking a field also turns it on in Format → Custom, so a field switched off there earlier no longer drops a metric you just picked.
+- The Daily notes page accepts a filename with folders, such as `{year}/{month}/{date}`. A pattern like this from an earlier version no longer blocks every change on the page, including the folder.
+- Export Preview shows a daily note's path once, without repeating the date folders from its filename.
+
 ## [3.5.0] - Unreleased
 
 ### Mac companion

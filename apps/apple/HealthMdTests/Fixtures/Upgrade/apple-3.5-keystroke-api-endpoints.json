@@ -1,0 +1,325 @@
+{
+ "_comment": "Shape of exportProfileDestinations.apiEndpoints in a Health.md 3.5.0 simulator after typing the API URL in the Export tab (one row per keystroke, including a typed-past-then-deleted tail). Synthetic URL and ids; createdAt values kept from the capture.",
+ "apiExportEndpointURL": "https://example.invalid/healthmd",
+ "boundEndpointID": "00000000-0000-4000-8000-000000000031",
+ "apiEndpoints": [
+  {
+   "id": "00000000-0000-4000-8000-000000000001",
+   "name": "ht",
+   "endpointURLString": "ht",
+   "createdAt": 816784085.939219
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000002",
+   "name": "htt",
+   "endpointURLString": "htt",
+   "createdAt": 816784085.998418
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000003",
+   "name": "http",
+   "endpointURLString": "http",
+   "createdAt": 816784086.038523
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000004",
+   "name": "https",
+   "endpointURLString": "https",
+   "createdAt": 816784086.071324
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000005",
+   "name": "https:",
+   "endpointURLString": "https:",
+   "createdAt": 816784086.166253
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000006",
+   "name": "https:/",
+   "endpointURLString": "https:/",
+   "createdAt": 816784086.236332
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000007",
+   "name": "https://",
+   "endpointURLString": "https://",
+   "createdAt": 816784086.341221
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000008",
+   "name": "https://e",
+   "endpointURLString": "https://e",
+   "createdAt": 816784086.397118
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000009",
+   "name": "https://ex",
+   "endpointURLString": "https://ex",
+   "createdAt": 816784086.465168
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000010",
+   "name": "https://exa",
+   "endpointURLString": "https://exa",
+   "createdAt": 816784086.531271
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000011",
+   "name": "https://exam",
+   "endpointURLString": "https://exam",
+   "createdAt": 816784086.617631
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000012",
+   "name": "https://examp",
+   "endpointURLString": "https://examp",
+   "createdAt": 816784086.725022
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000013",
+   "name": "https://exampl",
+   "endpointURLString": "https://exampl",
+   "createdAt": 816784086.794811
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000014",
+   "name": "https://example",
+   "endpointURLString": "https://example",
+   "createdAt": 816784086.891913
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000015",
+   "name": "https://example.",
+   "endpointURLString": "https://example.",
+   "createdAt": 816784086.991003
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000016",
+   "name": "https://example.i",
+   "endpointURLString": "https://example.i",
+   "createdAt": 816784087.091113
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000017",
+   "name": "https://example.in",
+   "endpointURLString": "https://example.in",
+   "createdAt": 816784087.190627
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000018",
+   "name": "https://example.inv",
+   "endpointURLString": "https://example.inv",
+   "createdAt": 816784087.292971
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000019",
+   "name": "https://example.inva",
+   "endpointURLString": "https://example.inva",
+   "createdAt": 816784087.394566
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000020",
+   "name": "https://example.inval",
+   "endpointURLString": "https://example.inval",
+   "createdAt": 816784087.497728
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000021",
+   "name": "https://example.invali",
+   "endpointURLString": "https://example.invali",
+   "createdAt": 816784087.598841
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000022",
+   "name": "https://example.invalid",
+   "endpointURLString": "https://example.invalid",
+   "createdAt": 816784087.700605
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000023",
+   "name": "https://example.invalid/",
+   "endpointURLString": "https://example.invalid/",
+   "createdAt": 816784087.80437
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000024",
+   "name": "https://example.invalid/h",
+   "endpointURLString": "https://example.invalid/h",
+   "createdAt": 816784087.902832
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000025",
+   "name": "https://example.invalid/he",
+   "endpointURLString": "https://example.invalid/he",
+   "createdAt": 816784088.006136
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000026",
+   "name": "https://example.invalid/hea",
+   "endpointURLString": "https://example.invalid/hea",
+   "createdAt": 816784088.117189
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000027",
+   "name": "https://example.invalid/heal",
+   "endpointURLString": "https://example.invalid/heal",
+   "createdAt": 816784088.209749
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000028",
+   "name": "https://example.invalid/healt",
+   "endpointURLString": "https://example.invalid/healt",
+   "createdAt": 816784088.312703
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000029",
+   "name": "https://example.invalid/health",
+   "endpointURLString": "https://example.invalid/health",
+   "createdAt": 816784088.416744
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000030",
+   "name": "https://example.invalid/healthm",
+   "endpointURLString": "https://example.invalid/healthm",
+   "createdAt": 816784088.517871
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000031",
+   "name": "https://example.invalid/healthmd",
+   "endpointURLString": "https://example.invalid/healthmd",
+   "createdAt": 816784088.626474
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000032",
+   "name": "https://example.invalid/healthmdt",
+   "endpointURLString": "https://example.invalid/healthmdt",
+   "createdAt": 816784089.085087
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000033",
+   "name": "https://example.invalid/healthmdtq",
+   "endpointURLString": "https://example.invalid/healthmdtq",
+   "createdAt": 816784089.582109
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000034",
+   "name": "https://example.invalid/healthmdtqa",
+   "endpointURLString": "https://example.invalid/healthmdtqa",
+   "createdAt": 816784089.680834
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000035",
+   "name": "https://example.invalid/healthmdtqa-",
+   "endpointURLString": "https://example.invalid/healthmdtqa-",
+   "createdAt": 816784089.78435
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000036",
+   "name": "https://example.invalid/healthmdtqa-s",
+   "endpointURLString": "https://example.invalid/healthmdtqa-s",
+   "createdAt": 816784089.886537
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000037",
+   "name": "https://example.invalid/healthmdtqa-sy",
+   "endpointURLString": "https://example.invalid/healthmdtqa-sy",
+   "createdAt": 816784089.988313
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000038",
+   "name": "https://example.invalid/healthmdtqa-syn",
+   "endpointURLString": "https://example.invalid/healthmdtqa-syn",
+   "createdAt": 816784090.09161
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000039",
+   "name": "https://example.invalid/healthmdtqa-synt",
+   "endpointURLString": "https://example.invalid/healthmdtqa-synt",
+   "createdAt": 816784090.197351
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000040",
+   "name": "https://example.invalid/healthmdtqa-synth",
+   "endpointURLString": "https://example.invalid/healthmdtqa-synth",
+   "createdAt": 816784090.297637
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000041",
+   "name": "https://example.invalid/healthmdtqa-synthe",
+   "endpointURLString": "https://example.invalid/healthmdtqa-synthe",
+   "createdAt": 816784090.397626
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000042",
+   "name": "https://example.invalid/healthmdtqa-synthet",
+   "endpointURLString": "https://example.invalid/healthmdtqa-synthet",
+   "createdAt": 816784090.498469
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000043",
+   "name": "https://example.invalid/healthmdtqa-syntheti",
+   "endpointURLString": "https://example.invalid/healthmdtqa-syntheti",
+   "createdAt": 816784090.600846
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000044",
+   "name": "https://example.invalid/healthmdtqa-synthetic",
+   "endpointURLString": "https://example.invalid/healthmdtqa-synthetic",
+   "createdAt": 816784090.702257
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000045",
+   "name": "https://example.invalid/healthmdtqa-synthetic-",
+   "endpointURLString": "https://example.invalid/healthmdtqa-synthetic-",
+   "createdAt": 816784090.806012
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000046",
+   "name": "https://example.invalid/healthmdtqa-synthetic-t",
+   "endpointURLString": "https://example.invalid/healthmdtqa-synthetic-t",
+   "createdAt": 816784090.910909
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000047",
+   "name": "https://example.invalid/healthmdtqa-synthetic-to",
+   "endpointURLString": "https://example.invalid/healthmdtqa-synthetic-to",
+   "createdAt": 816784091.018119
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000048",
+   "name": "https://example.invalid/healthmdtqa-synthetic-tok",
+   "endpointURLString": "https://example.invalid/healthmdtqa-synthetic-tok",
+   "createdAt": 816784091.121907
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000049",
+   "name": "https://example.invalid/healthmdtqa-synthetic-toke",
+   "endpointURLString": "https://example.invalid/healthmdtqa-synthetic-toke",
+   "createdAt": 816784091.219078
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000050",
+   "name": "https://example.invalid/healthmdtqa-synthetic-token",
+   "endpointURLString": "https://example.invalid/healthmdtqa-synthetic-token",
+   "createdAt": 816784091.33745
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000051",
+   "name": "https://example.invalid/healthmdtqa-synthetic-token-",
+   "endpointURLString": "https://example.invalid/healthmdtqa-synthetic-token-",
+   "createdAt": 816784091.437021
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000052",
+   "name": "https://example.invalid/healthmdtqa-synthetic-token-3",
+   "endpointURLString": "https://example.invalid/healthmdtqa-synthetic-token-3",
+   "createdAt": 816784091.540864
+  },
+  {
+   "id": "00000000-0000-4000-8000-000000000053",
+   "name": "https://example.invalid/healthmdtqa-synthetic-token-35",
+   "endpointURLString": "https://example.invalid/healthmdtqa-synthetic-token-35",
+   "createdAt": 816784091.643919
+  }
+ ]
+}

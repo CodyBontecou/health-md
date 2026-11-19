@@ -1,0 +1,253 @@
+version: 1
+requires:
+  platform: ios
+# v4-duplicate-automation-endpoint: editing a duplicated automation's API endpoint URL
+# from Settings > API endpoint must not change the automation it was copied from
+# (v4 parity; regression since d1a8de62e, which edited the shared saved endpoint in
+# place). While the endpoint is shared, the page names the other automations.
+#
+# Prerequisites: an iPhone simulator with a Debug build of Health.md installed. The UI-test
+# launch arguments reset automations, saved endpoints and scheduled entries, and unlock
+# the app; no Health data is needed. No export runs.
+# Side effects: the live API endpoint setting ends as https://first.example.com/health
+# (Default active), and the app keeps two automations (Default, Default 2) and two saved
+# endpoints until the next UI-test launch resets them. Any earlier API token stays with
+# the first endpoint.
+#
+# Coordinate exception: on this iOS 27 simulator the runner tree carries none of the
+# app's SwiftUI ids or labels (every recorded check warned that it does NOT hold against
+# the runner tree), so checks stay raw `tool: await-ui-element` steps and taps on SwiftUI
+# controls are points. Each point tap names its target in a comment and is followed by
+# a hard check on the destination. Taps on UIKit text fields and the Back chevron keep
+# the recorder's selectors.
+steps:
+  - echo: Launch Health.md in UI-test mode (profiles and saved endpoints reset,
+      unlocked). Expect Archive
+  - launch:
+      native: com.codybontecou.obsidianhealth
+      ios:
+        app: com.codybontecou.obsidianhealth
+        args:
+          - --uitesting
+          - -UITEST_HAS_COMPLETED_ONBOARDING
+          - "true"
+          - -UITEST_PURCHASE_UNLOCKED
+          - "true"
+          - -UITEST_HEALTH_AUTHORIZED
+          - "true"
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.archive.attention
+      timeoutMs: 20000
+  - await: { idle: true }
+  - echo: Open Settings > API endpoint for the only automation (Default). Expect the
+      API endpoint page with no shared-endpoint note
+  - tap: { x: 0.613, y: 0.895 } # Settings tab (glass.tab.settings)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.settings.api
+      timeoutMs: 8000
+  - await: { idle: true }
+  - tap: { x: 0.5, y: 0.518 } # API endpoint row (glass.settings.api)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.api.testConnection
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: Clear any earlier URL with Remove endpoint, then save
+      https://first.example.com/health for Default
+  - tap: { x: 0.5, y: 0.749 } # Remove endpoint row (no note: Default is the only user)
+  - await: { idle: true } # let the confirmation popover finish presenting
+  - tap: { x: 0.5, y: 0.167 } # "Remove endpoint" button in the confirmation popover (its title has the same text, so a text tap hits the title)
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: API endpoint URL
+      expectedText: https://api.example.com/healthmd
+      timeoutMs: 5000
+  - tap:
+      text: https://api.example.com/healthmd
+  - tool: keyboard
+    args:
+      text: https://first.example.com/health
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: API endpoint URL
+      expectedText: API endpoint URL https://first.example.com/health
+      textMatch: equals
+      timeoutMs: 5000
+  - tap: { x: 0.872, y: 0.096 } # Save button in the API endpoint header
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.settings.api
+      expectedText: first.example.com
+      timeoutMs: 8000
+  - echo: Point tap on the Automations tab (glass.tab.automations), open Default and
+      tap Duplicate. Expect a second automation "Default 2" that shares
+      Default's endpoint
+  - tap: { x: 0.405, y: 0.895 } # Automations tab (glass.tab.automations)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: New automation
+      timeoutMs: 8000
+  - await: { idle: true }
+  - tap: { x: 0.4, y: 0.3 } # Default automation card (only card, glass.automation.card)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.output
+      timeoutMs: 8000
+  - await: { idle: true }
+  - tap: { x: 0.735, y: 0.37 } # Duplicate button on the Default detail page
+  - tap:
+      id: chevron.backward
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Default 2, On demand
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: Make Default 2 the active automation from the Export now sheet's profile
+      chips, then close the sheet without exporting
+  - tap: { x: 0.817, y: 0.895 } # Export now button (glass.exportNow)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.exportNow.confirm
+      timeoutMs: 8000
+  - await: { idle: true }
+  - tap: { x: 0.362, y: 0.212 } # "Default 2" profile chip in the Export now sheet
+  - tap: { x: 0.127, y: 0.112 } # Cancel in the Export now sheet
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: glass.exportNow.confirm
+      timeoutMs: 8000
+  - echo: Point tap on the Settings tab (glass.tab.settings), then API endpoint
+      (glass.settings.api). Expect the note "Also used by Default" because
+      Default 2 shares Default's endpoint
+  - tap: { x: 0.613, y: 0.895 } # Settings tab (glass.tab.settings)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.settings.api
+      timeoutMs: 8000
+  - await: { idle: true }
+  - tap: { x: 0.5, y: 0.518 } # API endpoint row (glass.settings.api)
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.api.sharedEndpointNote
+      expectedText: Also used by Default. A new URL applies only to this automation.
+      timeoutMs: 8000
+  - echo: "For Default 2: clear the form with Remove endpoint (point taps on the row
+      and the confirmation), type https://second.example.com/health and Save"
+  - tap: { x: 0.5, y: 0.819 } # Remove endpoint row (below the shared-endpoint note)
+  - await: { idle: true } # let the confirmation popover finish presenting
+  - tap: { x: 0.5, y: 0.167 } # "Remove endpoint" button in the confirmation popover (its title has the same text, so a text tap hits the title)
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: API endpoint URL
+      expectedText: https://api.example.com/healthmd
+      timeoutMs: 5000
+  - tap:
+      text: https://api.example.com/healthmd
+  - tool: keyboard
+    args:
+      text: https://second.example.com/health
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: API endpoint URL
+      expectedText: API endpoint URL https://second.example.com/health
+      textMatch: equals
+      timeoutMs: 5000
+  - tap: { x: 0.872, y: 0.096 } # Save button in the API endpoint header
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.settings.api
+      expectedText: second.example.com
+      timeoutMs: 8000
+  - echo: Reopen API endpoint for Default 2. Expect the new URL and no
+      shared-endpoint note (Default 2 now has its own endpoint)
+  - tap: { x: 0.5, y: 0.518 } # API endpoint row (glass.settings.api)
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: API endpoint URL
+      expectedText: https://second.example.com/health
+      timeoutMs: 8000
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: glass.api.sharedEndpointNote
+      timeoutMs: 5000
+  - echo: Go back, switch the active automation to Default in the Export now sheet,
+      cancel. Expect Settings > API endpoint still on first.example.com (Default
+      was not changed by the copy's edit)
+  - tap:
+      id: chevron.backward
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.settings.api
+      timeoutMs: 8000
+  - await: { idle: true }
+  - tap: { x: 0.817, y: 0.895 } # Export now button (glass.exportNow)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.exportNow.confirm
+      timeoutMs: 8000
+  - await: { idle: true }
+  - tap: { x: 0.136, y: 0.212 } # "Default" profile chip in the Export now sheet
+  - tap: { x: 0.127, y: 0.112 } # Cancel in the Export now sheet
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.settings.api
+      expectedText: first.example.com
+      timeoutMs: 8000
+  - tap: { x: 0.5, y: 0.518 } # API endpoint row (glass.settings.api)
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: API endpoint URL
+      expectedText: https://first.example.com/health
+      timeoutMs: 8000
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: glass.api.sharedEndpointNote
+      timeoutMs: 5000

@@ -49,6 +49,7 @@ import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.ExportFormat
+import com.healthmd.domain.model.withMetricSelection
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.RawSnapshotSettings
@@ -261,7 +262,7 @@ fun AutomationProfilePage(
     when (page) {
         AutomationPage.METRICS -> {
             val state = rememberProfileAutosave(key, stored.settings.metricSelection) { value ->
-                saveDraft { it.copy(settings = it.settings.copy(metricSelection = value)) }
+                saveDraft { it.copy(settings = it.settings.withMetricSelection(value)) }
             }
             MetricSelectionScreen(metricSelection = state.value, onSelectionChanged = { state.value = it }, onBack = onBack)
         }

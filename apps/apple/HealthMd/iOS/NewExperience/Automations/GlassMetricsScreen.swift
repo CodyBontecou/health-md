@@ -44,7 +44,7 @@ struct GlassMetricsScreen: View {
             .glassAutosave(
                 MetricSelectionSnapshot.from(state),
                 revert: { $0.apply(to: state) },
-                save: { value in coordinator.saveSettings(for: profile) { $0.metricSelection = value } }
+                save: { value in coordinator.saveSettings(for: profile) { $0.setMetricSelection(value) } }
             )
             .accessibilityIdentifier("glass.metrics")
     }
@@ -66,6 +66,13 @@ struct GlassMetricsScreen: View {
                             standardMetrics.forEach { state.setMetric($0.id, enabled: true) }
                         }
                         GlassChip(title: String(localized: "Select none")) { state.deselectAll() }
+                        // 3.5 parity: open or close every category at once.
+                        GlassChip(title: String(localized: "Expand All")) {
+                            expanded = Set(HealthMetricCategory.availableCases)
+                        }
+                        .accessibilityIdentifier("glass.metrics.expandAll")
+                        GlassChip(title: String(localized: "Collapse All")) { expanded.removeAll() }
+                            .accessibilityIdentifier("glass.metrics.collapseAll")
                     }
                 }
                 GlassPanel {

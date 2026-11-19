@@ -48,6 +48,7 @@ Recorded product decisions for phases 2–5:
 
 - `ExportProfileStore` persists the ordered list plus `activeProfileID` to UserDefaults as one JSON payload, following the `ExportSchedule` pattern. An empty list means **legacy mode**: the app keeps reading live `AdvancedExportSettings` exactly as before. Undecodable data degrades to legacy mode rather than changing export behavior.
 - First-run migration synthesizes a localized "Default" profile from current live settings and the saved export target. It runs at most once (no-op when any profile exists), and legacy `AdvancedExportSettings` keys are never deleted.
+- 3.5 saved a named API endpoint on every keystroke of the classic endpoint field, each named after its own URL ("ht", "htt", … the full URL). `APIEndpointKeystrokeCleanup` runs once when `ExportProfileCoordinator` starts (flag `exportProfileDestinations.apiEndpointKeystrokeCleanupVersion`) and removes only unprotected rows: auto-named strict URL prefixes of a remaining row, auto-named tokenless rows typed one character at a time past a protected row, and exact URL+token duplicates of a kept row. A row is protected when a profile binds it, any other persisted defaults value mentions its id (legacy list, pending exports), or it matches the live Settings endpoint URL. Removed rows lose their own Keychain token; it is skipped (and retried) while any profile record is unreadable. The classic API and gateway sheets now edit a draft and commit when they close, so live per-keystroke upserts no longer happen.
 
 ## Store semantics
 

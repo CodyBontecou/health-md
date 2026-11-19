@@ -12,6 +12,11 @@ import com.healthmd.domain.model.ExportSource
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FormatCustomization
 import com.healthmd.domain.model.FrontmatterConfiguration
+import com.healthmd.domain.model.HealthDataFields
+import com.healthmd.domain.model.MetricSelectionState
+import com.healthmd.domain.model.writesFrontmatter
+import com.healthmd.data.export.DailyNoteInjector
+import com.healthmd.export.ExportFixtures
 import com.healthmd.domain.model.UnitPreference
 import com.healthmd.presentation.archive.CoverageStatus
 import java.time.LocalDate
@@ -187,5 +192,55 @@ class AutomationFactsTest {
         draft = draft.toggleField(metric, saved).toggleNote(saved)
         assertThat(draft.isEmpty).isTrue()
         assertThat(draft.applyTo(saved)).isEqualTo(saved)
+    }
+
+    private fun savedWith(selected: Set<String>, disabledKeys: Set<String>) = ExportSettings(
+        metricSelection = MetricSelectionState(enabledMetrics = selected),
+        formatCustomization = FormatCustomization(frontmatterConfig = FrontmatterConfiguration(
+            fields = FrontmatterConfiguration.defaultFields.map { it.copy(isEnabled = it.originalKey !in disabledKeys) },
+        )),
+    )
+
+    @Test
+    fun composerFieldIsCheckedOnlyWhenTheNoteWritesIt() {
+        // Steps is selected but its only field is off in Format → Custom: the note drops it.
+        val saved = savedWith(setOf("steps", "resting_hr"), disabledKeys = setOf("steps"))
+        assertThat(saved.writesFrontmatter("steps")).isFalse()
+        assertThat(saved.writesFrontmatter("resting_hr")).isTrue()
+
+        // The row shows unchecked, so a tap stages "on" (not "off").
+        val draft = ComposerDraft().toggleField("steps", saved)
+        assertThat(draft.fields).containsExactly("steps", true)
+        assertThat(draft.toggleField("steps", saved).isEmpty).isTrue()
+
+        val applied = draft.applyTo(saved)
+        assertThat(applied.metricSelection.isEnabled("steps")).isTrue()
+        assertThat(applied.writesFrontmatter("steps")).isTrue()
+    }
+
+    @Test
+    fun composerSelectingAMetricEnablesItsFieldsAndKeepsOtherTrims() {
+        val workoutKeys = HealthDataFields.frontmatterKeys("workouts").toSet()
+        val trimmed = workoutKeys - "workout_count"
+        val saved = savedWith(setOf("workouts"), disabledKeys = trimmed + "steps" + "resting_heart_rate")
+
+        val applied = ComposerDraft().toggleField("steps", saved).applyTo(saved)
+        assertThat(applied.metricSelection.isEnabled("steps")).isTrue()
+        val enabled = applied.formatCustomization.frontmatterConfig.fields.filter { it.isEnabled }.map { it.originalKey }
+        assertThat(enabled).contains("steps")
+        assertThat(enabled).containsNoneIn(trimmed + "resting_heart_rate")
+
+        // The note now holds steps, and the trimmed workout fields stay out of it.
+        val (_, note) = DailyNoteInjector().inject(null, ExportFixtures.fullDay,
+            DailyNoteInjectionSettings(enabled = true, createIfMissing = true), applied.formatCustomization)
+        val header = requireNotNull(note).lineSequence().drop(1).takeWhile { it != "---" }.map { it.substringBefore(':') }.toList()
+        assertThat(header).contains("steps")
+        assertThat(header).contains("workout_count")
+        assertThat(header).containsNoneIn(trimmed + "resting_heart_rate")
+
+        // Unchecking a written metric deselects it without touching its fields.
+        val unchecked = ComposerDraft().toggleField("workouts", saved).applyTo(saved)
+        assertThat(unchecked.metricSelection.isEnabled("workouts")).isFalse()
+        assertThat(unchecked.formatCustomization).isEqualTo(saved.formatCustomization)
     }
 }

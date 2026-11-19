@@ -176,6 +176,21 @@ def android_region(document: dict) -> str:
     return "\n".join(lines)
 
 
+def android_frontmatter_keys(document: dict, outputs: list[dict]) -> dict[str, list[str]]:
+    """Group frozen-v4 output keys by Android selection id, in catalog then output order."""
+    android_metrics = [metric["android"] for metric in document["metrics"] if metric["android"]["status"] == "backed"]
+    android_metrics.sort(key=lambda metric: metric["ordinal"])
+    keys_by_metric: dict[str, list[str]] = {}
+    for output in outputs:
+        for selection_id in output["selection_ids"]:
+            keys_by_metric.setdefault(selection_id, []).append(output["key"])
+    ordered = [metric["selection_id"] for metric in android_metrics]
+    unknown = set(keys_by_metric) - set(ordered)
+    if unknown:
+        raise ValueError(f"frozen-v4 outputs name unknown Android selections: {sorted(unknown)}")
+    return {metric_id: keys_by_metric[metric_id] for metric_id in ordered if metric_id in keys_by_metric}
+
+
 def fields_region(document: dict) -> str:
     frozen = next(profile for profile in document["profiles"] if profile["id"] == "android_frozen_v4")
     outputs = frozen["outputs"]
@@ -197,6 +212,17 @@ def fields_region(document: dict) -> str:
         "    /** Android-native values with no exact frozen iOS-v4 equivalent. */",
         "    private val androidNativeFieldKeys: Set<String> = setOf(",
         *[f"        {quoted(key)}," for key in native],
+        "    )",
+        "",
+        "    /**",
+        "     * Frontmatter keys each selected metric writes (iOS `HealthMetricExportMapping.frontmatterKeys`).",
+        "     * A key shared by several metrics (sleep_bedtime, sleep_wake) is listed under each of them.",
+        "     */",
+        "    val metricIdToFrontmatterKeys: Map<String, List<String>> = mapOf(",
+        *[
+            f"        {quoted(metric_id)} to listOf({', '.join(quoted(key) for key in metric_keys)}),"
+            for metric_id, metric_keys in android_frontmatter_keys(document, outputs).items()
+        ],
         "    )",
         FIELDS_END,
     ]

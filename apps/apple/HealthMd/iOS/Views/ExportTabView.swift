@@ -2009,12 +2009,38 @@ private struct ExportTargetOptionRow: View {
     }
 }
 
+/// Classic API endpoint form. Edits stay in a draft and reach the live
+/// settings only when the sheet closes: every live change saves a named
+/// endpoint for the active profile, and 3.5 saved one per keystroke.
 struct APIExportSettingsSheet: View {
     @ObservedObject private var clinic = ClinicSponsorshipManager.shared
     @ObservedObject private var purchases = PurchaseManager.shared
     @ObservedObject var settings: APIExportSettings
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    @State private var draftEndpoint: String
+    @State private var draftToken: String
+
+    init(settings: APIExportSettings) {
+        self.settings = settings
+        _draftEndpoint = State(initialValue: settings.endpointURLString)
+        _draftToken = State(initialValue: settings.bearerToken)
+    }
+
+    private var isDraftConfigured: Bool {
+        APIExportSettings.supportedEndpointURL(from: draftEndpoint) != nil
+    }
+
+    /// Writes the draft once. Unchanged fields are not reassigned, so closing
+    /// the sheet without edits never touches the saved endpoint.
+    private func commitDraft() {
+        guard draftEndpoint != settings.endpointURLString || draftToken != settings.bearerToken else { return }
+        configurationProtection.performConfigurationChange {
+            if draftEndpoint != settings.endpointURLString { settings.endpointURLString = draftEndpoint }
+            if draftToken != settings.bearerToken { settings.bearerToken = draftToken }
+        }
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -2027,7 +2053,7 @@ struct APIExportSettingsSheet: View {
                 Section {
                     TextField(
                         "https://api.example.com/healthmd",
-                        text: configurationProtection.protecting($settings.endpointURLString)
+                        text: configurationProtection.protecting($draftEndpoint)
                     )
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
@@ -2036,7 +2062,7 @@ struct APIExportSettingsSheet: View {
 
                     SecureField(
                         "Optional bearer token",
-                        text: configurationProtection.protecting($settings.bearerToken)
+                        text: configurationProtection.protecting($draftToken)
                     )
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -2049,9 +2075,9 @@ struct APIExportSettingsSheet: View {
 
                 Section {
                     HStack {
-                        Image(systemName: settings.isConfigured ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                            .foregroundStyle(settings.isConfigured ? Color.success : Color.warning)
-                        Text(LocalizedStringKey(settings.isConfigured ? "Ready to export to API" : "Enter a valid HTTP or HTTPS URL"))
+                        Image(systemName: isDraftConfigured ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundStyle(isDraftConfigured ? Color.success : Color.warning)
+                        Text(LocalizedStringKey(isDraftConfigured ? "Ready to export to API" : "Enter a valid HTTP or HTTPS URL"))
                     }
                 } footer: {
                     Text("Only send Apple Health data to endpoints you control or trust. API exports use your selected metrics and Data Detail setting.")
@@ -2066,6 +2092,7 @@ struct APIExportSettingsSheet: View {
                 }
             }
         }
+        .onDisappear(perform: commitDraft)
         .overlay(alignment: .top) {
             ConfigurationProtectionToast(configurationProtection: configurationProtection)
                 .padding(.horizontal, Spacing.s4)
@@ -2082,10 +2109,30 @@ struct APIExportSettingsSheet: View {
 /// Agent Data gateway endpoint configuration, mirroring the API endpoint
 /// sheet. Gateways carry no credential in ingestion protocol v1, so the form
 /// is a single endpoint URL.
+///
+/// Like the API sheet, edits stay in a draft until the sheet closes, so the
+/// active profile's saved gateway is not upserted once per keystroke.
 struct AgentDataGatewaySettingsSheet: View {
     @ObservedObject var settings: AgentDataGatewaySettings
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    @State private var draftEndpoint: String
+
+    init(settings: AgentDataGatewaySettings) {
+        self.settings = settings
+        _draftEndpoint = State(initialValue: settings.endpointURLString)
+    }
+
+    private var isDraftConfigured: Bool {
+        AgentDataGatewayDestinationSnapshot(endpointURLString: draftEndpoint) != nil
+    }
+
+    private func commitDraft() {
+        guard draftEndpoint != settings.endpointURLString else { return }
+        configurationProtection.performConfigurationChange {
+            settings.endpointURLString = draftEndpoint
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -2093,7 +2140,7 @@ struct AgentDataGatewaySettingsSheet: View {
                 Section {
                     TextField(
                         "https://gateway.example.com",
-                        text: configurationProtection.protecting($settings.endpointURLString)
+                        text: configurationProtection.protecting($draftEndpoint)
                     )
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
@@ -2107,9 +2154,9 @@ struct AgentDataGatewaySettingsSheet: View {
 
                 Section {
                     HStack {
-                        Image(systemName: settings.isConfigured ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                            .foregroundStyle(settings.isConfigured ? Color.success : Color.warning)
-                        Text(LocalizedStringKey(settings.isConfigured ? "Ready to export to the gateway" : "Enter a valid HTTP or HTTPS URL"))
+                        Image(systemName: isDraftConfigured ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundStyle(isDraftConfigured ? Color.success : Color.warning)
+                        Text(LocalizedStringKey(isDraftConfigured ? "Ready to export to the gateway" : "Enter a valid HTTP or HTTPS URL"))
                     }
                 } footer: {
                     Text("Only send Apple Health data to gateways you control or trust. Gateway uploads use your selected metrics and Data Detail setting, and always include the JSON daily export.")
@@ -2123,6 +2170,7 @@ struct AgentDataGatewaySettingsSheet: View {
                 }
             }
         }
+        .onDisappear(perform: commitDraft)
         .overlay(alignment: .top) {
             ConfigurationProtectionToast(configurationProtection: configurationProtection)
                 .padding(.horizontal, Spacing.s4)
