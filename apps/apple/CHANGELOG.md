@@ -9,7 +9,39 @@ All notable changes to Health.md will be documented in this file.
 - The Daily notes page accepts a filename with folders, such as `{year}/{month}/{date}`. A pattern like this from an earlier version no longer blocks every change on the page, including the folder.
 - Export Preview shows a daily note's path once, without repeating the date folders from its filename.
 
-## [3.5.0] - Unreleased
+## [4.0.0] - Unreleased
+
+### Added
+- A redesigned app with Liquid Glass styling on iPhone, iPad, Mac, Apple Watch, widgets and the Live Activity. iPhone and iPad are organized around Archive, Automations and Settings, with Export now always one tap away.
+- Archive: a month or week calendar that fills a square for each exported day, a next-run card, the number of gaps, and a day page that shows the file each automation wrote for that date. Unfolded iPhone and iPad show the calendar beside the day.
+- Needs attention: Archive lists problems such as an unavailable folder, an offline Mac, a failing API endpoint or an automation that failed twice in a row, each with its fix.
+- Automations: each saved export reads as a sentence, with a live preview of the file it will write. Run now, Duplicate, Pause, Use in Shortcuts and a Recommended metrics preset are on every automation.
+- Export now: export yesterday, the last 7 or 30 days, or custom dates, with an estimate of the files that will be written and a warning before large exports. When it finishes, the result card shows what was written and where.
+- New onboarding: choose metric packs, connect Apple Health, choose a folder or API endpoint, then preview and save your past week as notes. Your first export is free.
+- A reminder two days before a renewing free trial ends.
+- Saved API endpoints that several automations can share, with a connection test.
+- Sleep day setting: keep the noon-to-noon window (Night begins, the default) or assign each night's sleep to the date you wake up (Morning ends).
+- Detail by category: keep a default detail level and override it per category, for example detailed sleep with summarized heart rate. Detailed sleep stages now name their source when you have more than one sleep tracker.
+- Include today for schedules: end each look-back range on today instead of yesterday.
+- ISO week folders and filenames: new `{week}` and `{weekYear}` placeholders and a "By Year and Week" folder option.
+- Archive widget showing this month's archived days and a 14-day coverage strip.
+- An optional Sunday reminder, shown only if notifications are already allowed, that counts this week's Archive gaps; tap it to backfill.
+- Select or clear a whole metric category with one checkbox.
+
+### Changed
+- On iPhone and iPad, setup and your first 7-day export no longer require paid access. Scheduled exports still need an active trial, subscription or Lifetime access. The macOS companion stays free.
+- Export history and retry now live in the Archive and the export result card.
+- Clinician report periods are now 30 days, 90 days, 6 months or Custom.
+- Mac: a single-column home and a redesigned menu bar.
+- Apple Watch: refreshed dashboard order and complication.
+
+### Fixed
+- Custom date ranges can move earlier or later after a previous custom export.
+- Daily-note merges write only the frontmatter fields you selected, and explain when two fields would use the same name.
+- Manual exports skip days that have no data instead of writing empty Lossless files.
+- Feedback reports explain how to recover when a report can't be sent.
+
+## [3.5.0] - 2026-10-30
 
 ### Mac companion
 - Sandbox both bundled CLI helpers for Mac App Store distribution. Mac-managed folders and stdout remain available; arbitrary-path direct file exports use the standalone CLI.

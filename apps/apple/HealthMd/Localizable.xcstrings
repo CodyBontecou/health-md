@@ -154060,6 +154060,149 @@
         "pt-BR": {"stringUnit":{"state":"translated","value":"Exportando meses ou anos? Séries temporais detalhadas mantém amostras com data e hora sem o arquivo de origem e é muito mais rápida e leve para períodos longos."}},
         "zh-Hans": {"stringUnit":{"state":"translated","value":"要导出数月或数年的数据？“详细时间序列”保留带时间戳的样本，但不包含源归档，在长时间范围内速度更快、文件更小。"}}
       }
+    },
+    "A redesigned Health.md" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Health.md, neu gestaltet"}},
+        "es": {"stringUnit":{"state":"translated","value":"Un Health.md rediseñado"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Health.md repensé"}},
+        "it": {"stringUnit":{"state":"translated","value":"Health.md ridisegnato"}},
+        "ja": {"stringUnit":{"state":"translated","value":"Health.md を一新"}},
+        "ko": {"stringUnit":{"state":"translated","value":"새롭게 디자인된 Health.md"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Een vernieuwd Health.md"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Um Health.md redesenhado"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"全新设计的 Health.md"}}
+      }
+    },
+    "Automations you can read" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Lesbare Automationen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Automatizaciones fáciles de leer"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Des automatisations lisibles"}},
+        "it": {"stringUnit":{"state":"translated","value":"Automazioni facili da leggere"}},
+        "ja": {"stringUnit":{"state":"translated","value":"読んでわかるオートメーション"}},
+        "ko": {"stringUnit":{"state":"translated","value":"읽기 쉬운 자동화"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Leesbare automatiseringen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Automações fáceis de ler"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"一目了然的自动化"}}
+      }
+    },
+    "Choose your sleep day" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Wähle deinen Schlaftag"}},
+        "es": {"stringUnit":{"state":"translated","value":"Elige tu día del sueño"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Choisissez votre jour du sommeil"}},
+        "it": {"stringUnit":{"state":"translated","value":"Scegli il giorno del sonno"}},
+        "ja": {"stringUnit":{"state":"translated","value":"睡眠の日付を選択"}},
+        "ko": {"stringUnit":{"state":"translated","value":"수면 날짜 선택"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Kies je slaapdag"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Escolha seu dia do sono"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"选择睡眠日期"}}
+      }
+    },
+    "Detail by category" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Detailgrad je Kategorie"}},
+        "es": {"stringUnit":{"state":"translated","value":"Detalle por categoría"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Détail par catégorie"}},
+        "it": {"stringUnit":{"state":"translated","value":"Dettaglio per categoria"}},
+        "ja": {"stringUnit":{"state":"translated","value":"カテゴリ別の詳細度"}},
+        "ko": {"stringUnit":{"state":"translated","value":"카테고리별 세부 수준"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Detail per categorie"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Detalhe por categoria"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"按类别设置详细程度"}}
+      }
+    },
+    "Each exported day fills a square on the calendar. Open a day to see the file each automation wrote." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Jeder exportierte Tag füllt ein Feld im Kalender. Öffne einen Tag, um die Datei zu sehen, die jede Automation geschrieben hat."}},
+        "es": {"stringUnit":{"state":"translated","value":"Cada día exportado llena un cuadro del calendario. Abre un día para ver el archivo que escribió cada automatización."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Chaque jour exporté remplit une case du calendrier. Ouvrez un jour pour voir le fichier écrit par chaque automatisation."}},
+        "it": {"stringUnit":{"state":"translated","value":"Ogni giorno esportato riempie una casella del calendario. Apri un giorno per vedere il file scritto da ciascuna automazione."}},
+        "ja": {"stringUnit":{"state":"translated","value":"書き出した日ごとにカレンダーのマスが埋まります。日付を開くと、各オートメーションが書き出したファイルを確認できます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"내보낸 날마다 캘린더 칸이 채워집니다. 날짜를 열면 각 자동화가 작성한 파일을 볼 수 있습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Elke geëxporteerde dag vult een vakje in de kalender. Open een dag om het bestand te zien dat elke automatisering heeft geschreven."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Cada dia exportado preenche um quadrado no calendário. Abra um dia para ver o arquivo que cada automação gravou."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"每导出一天，就会填满日历上的一格。打开某一天，即可查看每个自动化写入的文件。"}}
+      }
+    },
+    "Each saved export reads as a sentence, with a live preview of the file it will write." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Jeder gespeicherte Export liest sich wie ein Satz, mit einer Live-Vorschau der Datei, die er schreiben wird."}},
+        "es": {"stringUnit":{"state":"translated","value":"Cada exportación guardada se lee como una frase, con una vista previa en tiempo real del archivo que escribirá."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Chaque exportation enregistrée se lit comme une phrase, avec un aperçu en direct du fichier qu’elle écrira."}},
+        "it": {"stringUnit":{"state":"translated","value":"Ogni esportazione salvata si legge come una frase, con un’anteprima in tempo reale del file che scriverà."}},
+        "ja": {"stringUnit":{"state":"translated","value":"保存した各エクスポートが1つの文として表示され、書き出されるファイルをライブプレビューで確認できます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"저장된 각 내보내기가 하나의 문장으로 표시되며, 작성될 파일을 실시간 미리보기로 확인할 수 있습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Elke bewaarde export leest als een zin, met een live voorvertoning van het bestand dat wordt geschreven."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Cada exportação salva aparece como uma frase, com uma pré-visualização ao vivo do arquivo que será gravado."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"每个已保存的导出都以一句话呈现，并实时预览将要写入的文件。"}}
+      }
+    },
+    "Export detailed sleep while keeping other categories summarized." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Exportiere Schlaf detailliert, während andere Kategorien zusammengefasst bleiben."}},
+        "es": {"stringUnit":{"state":"translated","value":"Exporta el sueño detallado y mantén resumidas las demás categorías."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Exportez le sommeil en détail tout en gardant les autres catégories résumées."}},
+        "it": {"stringUnit":{"state":"translated","value":"Esporta il sonno in dettaglio mantenendo riepilogate le altre categorie."}},
+        "ja": {"stringUnit":{"state":"translated","value":"睡眠は詳細に、ほかのカテゴリは概要のまま書き出せます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"다른 카테고리는 요약으로 두고 수면만 상세하게 내보낼 수 있습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Exporteer slaap gedetailleerd en houd andere categorieën samengevat."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Exporte o sono detalhado e mantenha as outras categorias resumidas."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"详细导出睡眠数据，其他类别保持摘要。"}}
+      }
+    },
+    "Export yesterday, the last 7 or 30 days, or any dates, and see what was written when it finishes." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Exportiere gestern, die letzten 7 oder 30 Tage oder beliebige Daten und sieh nach Abschluss, was geschrieben wurde."}},
+        "es": {"stringUnit":{"state":"translated","value":"Exporta ayer, los últimos 7 o 30 días o cualquier fecha, y consulta lo que se escribió al terminar."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Exportez hier, les 7 ou 30 derniers jours ou les dates de votre choix, et voyez ce qui a été écrit une fois l’exportation terminée."}},
+        "it": {"stringUnit":{"state":"translated","value":"Esporta ieri, gli ultimi 7 o 30 giorni o qualsiasi data, e al termine vedi cosa è stato scritto."}},
+        "ja": {"stringUnit":{"state":"translated","value":"昨日、過去7日間または30日間、任意の日付を書き出し、完了時に書き出された内容を確認できます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"어제, 최근 7일 또는 30일, 원하는 날짜를 내보내고 완료되면 작성된 내용을 확인하세요."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Exporteer gisteren, de afgelopen 7 of 30 dagen of willekeurige datums, en zie na afloop wat er is geschreven."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Exporte ontem, os últimos 7 ou 30 dias ou qualquer data e veja o que foi gravado quando terminar."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"导出昨天、最近 7 天或 30 天，或任意日期，完成后即可查看写入的内容。"}}
+      }
+    },
+    "Keep the noon-to-noon window, or assign each night’s sleep to the day you wake up." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Behalte das Zeitfenster von Mittag bis Mittag oder ordne den Schlaf jeder Nacht dem Tag des Aufwachens zu."}},
+        "es": {"stringUnit":{"state":"translated","value":"Mantén el intervalo de mediodía a mediodía o asigna el sueño de cada noche al día en que te despiertas."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Gardez la plage de midi à midi ou attribuez le sommeil de chaque nuit au jour du réveil."}},
+        "it": {"stringUnit":{"state":"translated","value":"Mantieni l’intervallo da mezzogiorno a mezzogiorno o assegna il sonno di ogni notte al giorno in cui ti svegli."}},
+        "ja": {"stringUnit":{"state":"translated","value":"正午から翌日の正午までの時間枠をそのまま使うか、各夜の睡眠を起床した日に割り当てます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"정오부터 다음 날 정오까지의 시간 범위를 유지하거나, 매일 밤의 수면을 깨어난 날에 배정하세요."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Behoud het venster van middag tot middag, of wijs de slaap van elke nacht toe aan de dag waarop je wakker wordt."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Mantenha o intervalo de meio-dia a meio-dia ou atribua o sono de cada noite ao dia em que você acorda."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"保留从中午到次日中午的时间范围，或将每晚的睡眠归入你醒来的那一天。"}}
+      }
+    },
+    "Problems such as an unavailable folder, an offline Mac or a failing endpoint appear in one list, each with its fix." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Probleme wie ein nicht verfügbarer Ordner, ein Mac offline oder ein fehlschlagender Endpunkt erscheinen in einer Liste, jeweils mit ihrer Lösung."}},
+        "es": {"stringUnit":{"state":"translated","value":"Los problemas, como una carpeta no disponible, un Mac sin conexión o un endpoint con fallos, aparecen en una sola lista, cada uno con su solución."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Les problèmes, comme un dossier indisponible, un Mac hors ligne ou un point de terminaison en échec, apparaissent dans une seule liste, chacun avec sa solution."}},
+        "it": {"stringUnit":{"state":"translated","value":"I problemi, come una cartella non disponibile, un Mac offline o un endpoint in errore, compaiono in un unico elenco, ciascuno con la sua soluzione."}},
+        "ja": {"stringUnit":{"state":"translated","value":"フォルダを利用できない、Macがオフライン、エンドポイントでエラーなどの問題が、解決方法とともに1つのリストに表示されます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"폴더를 사용할 수 없거나 Mac이 오프라인이거나 엔드포인트에 오류가 있는 등의 문제가 해결 방법과 함께 하나의 목록에 표시됩니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Problemen zoals een onbeschikbare map, een offline Mac of een mislukkend eindpunt staan in één lijst, elk met de oplossing."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Problemas como uma pasta indisponível, um Mac offline ou um endpoint com falha aparecem em uma única lista, cada um com sua solução."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"文件夹不可用、Mac 离线或端点故障等问题会集中列在一个列表中，并附有解决方法。"}}
+      }
+    },
+    "Your Archive" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Dein Archiv"}},
+        "es": {"stringUnit":{"state":"translated","value":"Tu archivo"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Vos archives"}},
+        "it": {"stringUnit":{"state":"translated","value":"Il tuo archivio"}},
+        "ja": {"stringUnit":{"state":"translated","value":"アーカイブ"}},
+        "ko": {"stringUnit":{"state":"translated","value":"내 아카이브"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Je archief"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Seu arquivo"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"你的归档"}}
+      }
     }
   },
   "version" : "1.0"
