@@ -1065,7 +1065,6 @@ struct ComposerFieldList: View {
                 .foregroundStyle(palette.muted)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 10)
-                .accessibilityIdentifier("glass.composer.fields.frontmatterNote")
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 6)
