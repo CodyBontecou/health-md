@@ -294,6 +294,127 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         XCTAssertEqual(apiSettings.bearerToken, "second-token")
     }
 
+    // Regression (v4 parity): since d1a8de62e the live-settings path edited
+    // the active profile's bound endpoint in place, so editing a duplicated
+    // automation's URL from Settings > API endpoint silently changed the
+    // automation it was copied from. In 3.5 the copy moved to its own endpoint.
+    func testEditingDuplicateEndpointURLFromSettingsLeavesSourceAutomationAlone() throws {
+        let vaultManager = makeVaultManager()
+        selectVaultFolder(in: vaultManager, path: "/Users/x/Health")
+        let apiSettings = makeAPIExportSettings()
+        let coordinator = makeCoordinator(vaultManager: vaultManager, apiExportSettings: apiSettings)
+        let sourceID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        let endpointID = try XCTUnwrap(coordinator.saveAPIEndpoint(
+            editingID: nil,
+            name: "My API",
+            endpointURLString: "https://first.example.com",
+            bearerToken: "first-token"
+        ))
+        XCTAssertTrue(coordinator.bindAPIEndpoint(endpointID, toProfile: sourceID))
+
+        // Duplicate from the Automations list, then open the copy.
+        let copy = try XCTUnwrap(coordinator.duplicateProfile(id: sourceID))
+        XCTAssertEqual(coordinator.profileStore.profile(id: copy.id)?.apiEndpointID, endpointID)
+        XCTAssertTrue(coordinator.activate(profileID: copy.id))
+        let sourceName = try XCTUnwrap(coordinator.profileStore.profile(id: sourceID)?.name)
+        XCTAssertEqual(coordinator.otherProfileNamesSharingActiveAPIEndpoint(), [sourceName])
+
+        // Settings > API endpoint saves a new URL and token for the copy.
+        apiSettings.endpointURLString = "https://second.example.com"
+        apiSettings.bearerToken = "second-token"
+        coordinator.apiEndpointDidChange()
+
+        // The source keeps its endpoint row, URL, name and token.
+        let source = try XCTUnwrap(coordinator.profileStore.profile(id: sourceID))
+        XCTAssertEqual(source.apiEndpointID, endpointID)
+        let original = try XCTUnwrap(coordinator.destinationStore.apiEndpoint(id: endpointID))
+        XCTAssertEqual(original.name, "My API")
+        XCTAssertEqual(original.endpointURLString, "https://first.example.com")
+        XCTAssertEqual(coordinator.destinationStore.token(for: endpointID), "first-token")
+
+        // The copy moved to its own endpoint and no longer shares one.
+        let copyEndpointID = try XCTUnwrap(coordinator.profileStore.profile(id: copy.id)?.apiEndpointID)
+        XCTAssertNotEqual(copyEndpointID, endpointID)
+        XCTAssertEqual(
+            coordinator.destinationStore.apiEndpoint(id: copyEndpointID)?.endpointURLString,
+            "https://second.example.com"
+        )
+        XCTAssertEqual(coordinator.destinationStore.token(for: copyEndpointID), "second-token")
+        XCTAssertEqual(coordinator.otherProfileNamesSharingActiveAPIEndpoint(), [])
+
+        // Choosing another folder for the copy leaves the source's folder alone too.
+        let sourceVaultID = source.folderVaultID
+        selectVaultFolder(in: vaultManager, path: "/Users/x/CopyVault")
+        coordinator.vaultFolderWasSelected()
+        XCTAssertEqual(coordinator.profileStore.profile(id: sourceID)?.folderVaultID, sourceVaultID)
+        XCTAssertNotEqual(coordinator.profileStore.profile(id: copy.id)?.folderVaultID, sourceVaultID)
+
+        // Switching back adopts the source's untouched endpoint.
+        XCTAssertTrue(coordinator.activate(profileID: sourceID))
+        XCTAssertEqual(apiSettings.endpointURLString, "https://first.example.com")
+        XCTAssertEqual(apiSettings.bearerToken, "first-token")
+    }
+
+    // An endpoint used only by the active automation is still edited in place
+    // from Settings, keeping its saved name (the d1a8de62e behavior).
+    func testEditingUnsharedEndpointFromSettingsEditsItInPlace() throws {
+        let apiSettings = makeAPIExportSettings()
+        let coordinator = makeCoordinator(apiExportSettings: apiSettings)
+        let activeID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        let endpointID = try XCTUnwrap(coordinator.saveAPIEndpoint(
+            editingID: nil,
+            name: "My API",
+            endpointURLString: "https://first.example.com",
+            bearerToken: "first-token"
+        ))
+        XCTAssertTrue(coordinator.bindAPIEndpoint(endpointID, toProfile: activeID))
+        XCTAssertEqual(coordinator.otherProfileNamesSharingActiveAPIEndpoint(), [])
+
+        apiSettings.endpointURLString = "https://second.example.com"
+        apiSettings.bearerToken = "second-token"
+        coordinator.apiEndpointDidChange()
+
+        XCTAssertEqual(coordinator.profileStore.profile(id: activeID)?.apiEndpointID, endpointID)
+        XCTAssertEqual(coordinator.destinationStore.apiEndpoints.count, 1)
+        XCTAssertEqual(coordinator.destinationStore.apiEndpoint(id: endpointID)?.name, "My API")
+        XCTAssertEqual(
+            coordinator.destinationStore.apiEndpoint(id: endpointID)?.endpointURLString,
+            "https://second.example.com"
+        )
+        XCTAssertEqual(coordinator.destinationStore.token(for: endpointID), "second-token")
+    }
+
+    // The named-endpoint editor (Output page) is the deliberate shared edit:
+    // it lists every automation it applies to and changes them all.
+    func testSavedEndpointEditorStillAppliesToEveryAutomationUsingIt() throws {
+        let apiSettings = makeAPIExportSettings()
+        let coordinator = makeCoordinator(apiExportSettings: apiSettings)
+        let sourceID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        let endpointID = try XCTUnwrap(coordinator.saveAPIEndpoint(
+            editingID: nil,
+            name: "My API",
+            endpointURLString: "https://first.example.com",
+            bearerToken: nil
+        ))
+        XCTAssertTrue(coordinator.bindAPIEndpoint(endpointID, toProfile: sourceID))
+        let copy = try XCTUnwrap(coordinator.duplicateProfile(id: sourceID))
+        XCTAssertEqual(coordinator.profileNames(usingAPIEndpoint: endpointID).count, 2)
+
+        XCTAssertEqual(coordinator.saveAPIEndpoint(
+            editingID: endpointID,
+            name: "My API",
+            endpointURLString: "https://moved.example.com",
+            bearerToken: nil
+        ), endpointID)
+
+        XCTAssertEqual(coordinator.profileStore.profile(id: sourceID)?.apiEndpointID, endpointID)
+        XCTAssertEqual(coordinator.profileStore.profile(id: copy.id)?.apiEndpointID, endpointID)
+        XCTAssertEqual(
+            coordinator.destinationStore.apiEndpoint(id: endpointID)?.endpointURLString,
+            "https://moved.example.com"
+        )
+    }
+
     // MARK: - Destination persistence (issues #143 and #150)
 
     func testVaultFolderSelectionStoresIdentityEvidence() throws {

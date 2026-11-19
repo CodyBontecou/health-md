@@ -44,7 +44,7 @@ struct GlassMetricsScreen: View {
             .glassAutosave(
                 MetricSelectionSnapshot.from(state),
                 revert: { $0.apply(to: state) },
-                save: { value in coordinator.saveSettings(for: profile) { $0.metricSelection = value } }
+                save: { value in coordinator.saveSettings(for: profile) { $0.setMetricSelection(value) } }
             )
             .accessibilityIdentifier("glass.metrics")
     }

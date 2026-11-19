@@ -409,7 +409,11 @@ struct SettingsScreen: View {
         case .cli:
             GlassCLIDestinationScreen()
         case .api:
-            GlassAPIDestinationSheet(settings: apiExportSettings, presentedAsSheet: false)
+            GlassAPIDestinationSheet(
+                settings: apiExportSettings,
+                presentedAsSheet: false,
+                sharedWithProfileNames: profileCoordinator?.otherProfileNamesSharingActiveAPIEndpoint() ?? []
+            )
         case .gateway:
             GlassGatewayDestinationSheet(
                 settings: gatewaySettings,

@@ -207,6 +207,54 @@ final class AutomationSentenceTests: XCTestCase {
         XCTAssertEqual(draft.settings(from: saved), saved)
     }
 
+    /// Discord report (v4.0 TestFlight): Steps and Resting Heart Rate showed checked in
+    /// "Fields in this note" but never reached the note, because Format → Custom had their
+    /// fields off. A row is checked only when the note writes it, and checking it turns the
+    /// fields on, so the composer is the one switch.
+    func testComposerFieldCheckTurnsOnFieldsSwitchedOffInFormatCustom() {
+        var saved = settings(formats: [], metricCount: 0, note: true)
+        saved.metricSelection.enabledMetricIDs = ["sleep_total", "steps", "resting_heart_rate"]
+        for index in saved.formatCustomization.frontmatterConfig.fields.indices
+            where ["steps", "resting_heart_rate"].contains(saved.formatCustomization.frontmatterConfig.fields[index].originalKey) {
+            saved.formatCustomization.frontmatterConfig.fields[index].isEnabled = false
+        }
+        XCTAssertTrue(saved.writesFrontmatter(forMetric: "sleep_total"))
+        XCTAssertFalse(saved.writesFrontmatter(forMetric: "steps"), "Shown unchecked, as the note omits it")
+
+        var draft = ComposerDraft()
+        draft.toggleField("steps", saved: saved)
+        draft.toggleField("resting_heart_rate", saved: saved)
+        let next = draft.settings(from: saved)
+        XCTAssertTrue(next.writesFrontmatter(forMetric: "steps"))
+        XCTAssertTrue(next.writesFrontmatter(forMetric: "resting_heart_rate"))
+        let state = MetricSelectionState()
+        next.metricSelection.apply(to: state)
+        let keys = DailyNoteInjector.frontmatterKeys(enabledIn: state)
+            .filter { key in next.formatCustomization.frontmatterConfig.fields.first { $0.originalKey == key }?.isEnabled ?? true }
+        XCTAssertEqual(Set(keys).intersection(["sleep_total_hours", "steps", "resting_heart_rate"]),
+            ["sleep_total_hours", "steps", "resting_heart_rate"])
+    }
+
+    /// Selecting a metric (composer or the metrics page) turns its fields on; a metric that
+    /// stays selected keeps the fields Format → Custom trimmed.
+    func testSelectingAMetricTurnsOnItsFieldsButKeepsTrimsOfSelectedMetrics() {
+        var saved = settings(formats: [], metricCount: 0, note: true)
+        saved.metricSelection.enabledMetricIDs = ["workouts"]
+        func setField(_ key: String, _ on: Bool) {
+            let index = saved.formatCustomization.frontmatterConfig.fields.firstIndex { $0.originalKey == key }!
+            saved.formatCustomization.frontmatterConfig.fields[index].isEnabled = on
+        }
+        setField("workout_running_cadence", false)
+        setField("steps", false)
+        var next = saved
+        var selection = saved.metricSelection
+        selection.enabledMetricIDs.insert("steps")
+        next.setMetricSelection(selection)
+        let fields = next.formatCustomization.frontmatterConfig.fields
+        XCTAssertEqual(fields.first { $0.originalKey == "steps" }?.isEnabled, true)
+        XCTAssertEqual(fields.first { $0.originalKey == "workout_running_cadence" }?.isEnabled, false)
+    }
+
     /// #345: a full Sleep category must not hide the profile's quantity metrics.
     func testComposerFieldListShowsEverySelectedCategory() {
         let selected: Set<String> = Set(HealthMetrics.sleep.map(\.id)).union(["resting_heart_rate", "steps"])

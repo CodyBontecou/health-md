@@ -1076,6 +1076,35 @@ final class DailyNoteInjectorTests: XCTestCase {
         XCTAssertTrue(preview.content.contains("A paragraph the user wrote."))
     }
 
+    /// A filename pattern with folders ("/{year}/{month}/{date}") showed in Export Preview as
+    /// "Notes/01 - Daily/2026/11//2026/11/2026-11-17.md": the preview's folder already held
+    /// the date folders and the filename repeated them. The filename is the path's last part.
+    func testPreview_filenamePatternFoldersStayInThePathNotTheFilename() {
+        let settings = DailyNoteInjectionSettings()
+        settings.enabled = true
+        settings.createIfMissing = true
+        settings.folderPath = "Notes/01 - Daily/"
+        settings.filenamePattern = "/{year}/{month}/{date}"
+        var data = HealthData(date: Self.testDate)
+        data.activity.steps = 5_000
+
+        let result = DailyNoteInjector.preview(
+            healthData: data,
+            base: .emptyDocument,
+            settings: settings,
+            customization: Self.customization,
+            metricSelection: Self.stepsOnly
+        )
+
+        guard case .preview(let preview) = result else {
+            XCTFail("Expected preview, got \(result)")
+            return
+        }
+        XCTAssertEqual(preview.path, "Notes/01 - Daily/2026/03/2026-03-27.md")
+        XCTAssertEqual(preview.filename, "2026-03-27.md")
+        XCTAssertEqual(preview.path, settings.previewPath(for: Self.testDate))
+    }
+
     func testPreview_emptyDocumentMatchesCreateIfMissingOutput() throws {
         let tmpDir = makeTempDir()
         defer { cleanup(tmpDir) }

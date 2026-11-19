@@ -1401,6 +1401,28 @@
         "apps/apple/docs/features/folder-organization.md",
         "apps/android/docs/features/folder-organization.md"
       ]
+    },
+    {
+      "id": "automation.composer-field-checks",
+      "name": "Composer field checks match the daily note",
+      "classification": "shared",
+      "summary": "A row in the automation composer's \"Fields in this note\" list is checked only when the note writes it: the metric is selected and at least one of its frontmatter fields is on in Format → Custom. Selecting a metric, from the composer or the metrics page, turns its frontmatter fields on; fields trimmed on metrics that stay selected are unchanged. Both platforms read metric → frontmatter keys from the shared metric registry.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Models/ExportSettingsSnapshot.swift",
+        "apps/apple/HealthMd/iOS/NewExperience/Automations/AutomationsScreens.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/model/MetricSelectionFrontmatter.kt",
+        "apps/android/app/src/main/java/com/healthmd/presentation/schedule/AutomationFacts.kt",
+        "packages/healthmd-core-rust/scripts/generate-registry-adapters.py"
+      ]
     }
   ]
 }

@@ -46,6 +46,27 @@ final class AdvancedExportSettingsIndividualTrackingTests: XCTestCase {
         XCTAssertTrue(settings.metricSelection.isMetricEnabled("weight"))
     }
 
+    // MARK: - Profile activation
+
+    /// Discord report (v4.0 TestFlight): a Daily Note profile with three metrics wrote
+    /// workout fields. Its entries settings still tracked Workouts, so loading the profile
+    /// into the live settings must not select Workouts again behind the profile's back.
+    func testApplyingAProfileDoesNotSelectMetricsItLeftOut() {
+        let settings = makeSettings()
+        var snapshot = ExportSettingsSnapshot.from(settings)
+        snapshot.metricSelection.enabledMetricIDs = ["sleep_total", "steps", "resting_heart_rate"]
+        snapshot.individualTracking.globalEnabled = true
+        snapshot.individualTracking.metricConfigs["workouts", default: MetricTrackingConfig()].trackIndividually = true
+
+        settings.apply(snapshot: snapshot)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.6))
+
+        XCTAssertFalse(settings.metricSelection.isMetricEnabled("workouts"),
+            "A profile's metric selection is what its note writes")
+        XCTAssertEqual(ExportSettingsSnapshot.from(settings).metricSelection.enabledMetricIDs,
+            snapshot.metricSelection.enabledMetricIDs)
+    }
+
     // MARK: - Sync
 
     func testSyncAddsMissingTrackedMetricsToSelection() {

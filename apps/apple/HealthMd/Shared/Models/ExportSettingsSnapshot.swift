@@ -1241,3 +1241,39 @@ struct MetricSelectionSnapshot: Codable, Equatable {
         selection.nativeDetailMetricIDs = nativeDetailMetricIDs
     }
 }
+
+// MARK: - Metric selection and frontmatter fields
+
+extension ExportSettingsSnapshot {
+    /// Replaces the metric selection. A metric turned on also turns on its frontmatter fields:
+    /// a note writes a field only when its metric is selected *and* the field is on in
+    /// Format → Custom, so a field switched off there earlier silently dropped a metric the
+    /// user had just picked. Fields of metrics that stay on, or are turned off, are unchanged,
+    /// so Format → Custom still trims a metric's fields (for example Workouts' 16).
+    mutating func setMetricSelection(_ selection: MetricSelectionSnapshot) {
+        let newlyEnabled = selection.enabledMetricIDs.subtracting(metricSelection.enabledMetricIDs)
+        metricSelection = selection
+        enableFrontmatterFields(forMetrics: newlyEnabled)
+    }
+
+    /// Turns on every Format → Custom field of the given metrics.
+    mutating func enableFrontmatterFields<Metrics: Sequence>(forMetrics metricIDs: Metrics)
+        where Metrics.Element == String {
+        let keys = Set(metricIDs.flatMap { HealthMetricExportMapping.frontmatterKeys(for: $0) })
+        guard !keys.isEmpty else { return }
+        for index in formatCustomization.frontmatterConfig.fields.indices
+            where keys.contains(formatCustomization.frontmatterConfig.fields[index].originalKey) {
+            formatCustomization.frontmatterConfig.fields[index].isEnabled = true
+        }
+    }
+
+    /// Whether the metric reaches a daily note's frontmatter: it is selected and at least one
+    /// of its fields is on in Format → Custom (a field missing from the list counts as on).
+    func writesFrontmatter(forMetric metricID: String) -> Bool {
+        guard metricSelection.enabledMetricIDs.contains(metricID) else { return false }
+        let keys = HealthMetricExportMapping.frontmatterKeys(for: metricID)
+        guard !keys.isEmpty else { return true }
+        let fields = formatCustomization.frontmatterConfig.fields
+        return keys.contains { key in fields.first { $0.originalKey == key }?.isEnabled ?? true }
+    }
+}

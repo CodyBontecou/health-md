@@ -6,6 +6,9 @@ import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.FormatCustomization
+import com.healthmd.domain.model.withFrontmatterFieldsEnabled
+import com.healthmd.domain.model.withMetricSelection
+import com.healthmd.domain.model.writesFrontmatter
 import com.healthmd.presentation.archive.ArchiveCoverage
 import com.healthmd.presentation.archive.ArchiveProfile
 import com.healthmd.presentation.archive.CoverageStatus
@@ -148,15 +151,19 @@ data class ComposerDraft(
         fields.forEach { (id, enabled) ->
             if (selection.isEnabled(id) != enabled) selection = selection.toggle(id)
         }
-        return saved.copy(
-            metricSelection = selection,
+        // A metric already selected but with every field off in Format → Custom shows unchecked;
+        // checking it turns its fields on (withMetricSelection only does that for metrics it
+        // newly selects).
+        val withFields = saved.withMetricSelection(selection)
+            .withFrontmatterFieldsEnabled(fields.filterValues { it }.keys)
+        return withFields.copy(
             dailyNoteInjection = note?.let { saved.dailyNoteInjection.copy(enabled = it) } ?: saved.dailyNoteInjection,
         )
     }
 
     /** A second toggle back to the saved value unstages the choice. */
     fun toggleField(metricId: String, saved: ExportSettings): ComposerDraft {
-        val wasOn = saved.metricSelection.isEnabled(metricId)
+        val wasOn = saved.writesFrontmatter(metricId)
         val next = !(fields[metricId] ?: wasOn)
         return copy(fields = if (next == wasOn) fields - metricId else fields + (metricId to next))
     }
