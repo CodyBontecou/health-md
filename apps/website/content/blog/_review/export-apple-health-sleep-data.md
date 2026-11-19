@@ -26,3 +26,7 @@ Scope: website guidance, existing exported examples, and source/documentation tr
 ## Sleep-date clarification — 2026-10-27
 
 - [x] Supersedes earlier unconditional local-start-date shorthand. Daily compatibility sleep summaries use a local noon-to-noon journal window; after-midnight sleep can belong to the previous journal date. Raw/canonical ownership and typed session timestamps are separate. Evidence: Apple HealthKitManager sleepWindow/fetchSleepData and Apple export-schema Day ownership; Android SleepJournalSummary and android-sleep-journal-summary.md; the reusable sleep registry entry. Existing CSV/JSON fixtures, calculations, app behavior and other article validation are unchanged. This correction was source-traced, not a new device or third-party app execution.
+
+## Oura cross-link — 2026-11-19
+
+- [x] One sentence added to "Before you start" linking /blog/export-oura-data/ for ring or other wearable sources. It claims only that the wearable's app must write sleep to Apple Health and that the Oura guide lists what Oura shares; Oura's Apple Health Integration page (read 2026-11-19) lists Sleep as exported to Apple Health. No other body or frontmatter change.

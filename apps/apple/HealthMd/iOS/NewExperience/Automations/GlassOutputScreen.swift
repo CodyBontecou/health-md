@@ -38,6 +38,7 @@ struct GlassOutputScreen: View {
     @State private var driveAuthorizationRequestID: UUID?
     @State private var driveConnectionError: String?
     @State private var connectingDrive = false
+    @State private var showResetConfiguration = false
 
     /// Which endpoint the shared editor sheet is creating or editing.
     private struct EndpointEditorRequest: Identifiable {
@@ -128,6 +129,36 @@ struct GlassOutputScreen: View {
             if let invalidReason, driveInvalidReason == nil {
                 GlassBanner(title: invalidReason, systemImage: "exclamationmark.triangle", tone: .warning)
             }
+
+            // 3.5 parity: return this automation's export settings to their defaults.
+            GlassPanel {
+                Button(role: .destructive) {
+                    configurationProtection.performConfigurationChange { showResetConfiguration = true }
+                } label: {
+                    GlassRow(title: String(localized: "Reset Export Configuration")) {
+                        Image(systemName: "arrow.counterclockwise")
+                            .foregroundStyle(palette.coral)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("glass.output.resetConfiguration")
+            }
+        }
+        .confirmationDialog(
+            String(localized: "Reset export configuration?"),
+            isPresented: $showResetConfiguration,
+            titleVisibility: .visible
+        ) {
+            Button(String(localized: "Reset to Defaults"), role: .destructive) {
+                configurationProtection.performConfigurationChange {
+                    draft = draft.resettingExportConfiguration()
+                }
+            }
+            .accessibilityIdentifier("glass.output.resetConfiguration.confirm")
+            Button(String(localized: "Cancel"), role: .cancel) {}
+        } message: {
+            Text("Formats, metrics, file names, format customization, entries and daily notes return to their defaults for this automation. Its destination, subfolder and schedule stay the same.")
         }
         .glassAutosave(
             currentDraft,

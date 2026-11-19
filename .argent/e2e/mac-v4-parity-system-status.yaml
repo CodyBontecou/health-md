@@ -1,0 +1,73 @@
+# PR #359 (M-16): Mac destination System Status rows and Check Again.
+#
+# Prerequisites:
+#   - A Debug HealthMd-macOS build started by argent (boot-device with the built
+#     Health.md.app; a hardened-runtime build needs ENABLE_HARDENED_RUNTIME=NO).
+#   - English UI (sidebar and toolbar targets use fixed English text).
+#   - No iPhone connected to this Mac's receiver during the run: a live connection
+#     makes Last Check read "Just Now" instead of "Scanning".
+# Side effects:
+#   - Restarts the Mac app. Toggles Pause Receiving on, then Check Again resumes
+#     browsing. Both are in-memory view state; no settings or folders change.
+#   - The Permissions row value depends on the owner's folder access, so the test
+#     checks only that it reports a folder-access state ("Access").
+version: 1
+requires:
+  platform: macos
+steps:
+  - echo: Restart Health.md (Mac). Expect the Mac destination page with the System Status section
+  - launch:
+      macos: com.codybontecou.obsidianhealth
+  - await:
+      visible:
+        text: Mac destination
+      timeout: 15000
+  - tap:
+      text: Mac destination
+  - await:
+      visible:
+        id: mac.systemStatus.receiver
+      timeout: 10000
+  - await: { idle: true }
+  - assert:
+      text:
+        in:
+          id: mac.systemStatus.receiver
+        contains: Version
+  - assert:
+      visible:
+        id: mac.systemStatus.permissions
+  - echo: Pause receiving from the toolbar. Expect Last Check to read Paused
+  - tap:
+      text: Pause Receiving
+  - await:
+      text:
+        in:
+          id: mac.systemStatus.lastCheck
+        contains: Paused
+      timeout: 5000
+  - assert:
+      text:
+        in:
+          id: mac.systemStatus.receiver
+        contains: Paused
+  - echo: Tap Check Again. Expect Last Check to leave Paused (Scanning) and the receiver to read Listening
+  - tap:
+      id: mac.systemStatus.checkAgain
+  - await:
+      text:
+        in:
+          id: mac.systemStatus.lastCheck
+        contains: Scanning
+      timeout: 5000
+  - await:
+      text:
+        in:
+          id: mac.systemStatus.receiver
+        contains: Listening
+      timeout: 5000
+  - assert:
+      text:
+        in:
+          id: mac.systemStatus.permissions
+        contains: Access

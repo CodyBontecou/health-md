@@ -1940,6 +1940,14 @@ struct ContentView: View {
                 purchaseManager.recordExportUse(offerGuidance: result.isFullSuccess)
             }
 
+            // iPad "Auto-sync after export" (3.5 parity): push the written days to the connected Mac.
+            if AutoSyncAfterExportPolicy.shouldAutoSync(
+                successCount: result.successCount,
+                connectionState: syncService.connectionState
+            ) {
+                await autoSyncDates(dates)
+            }
+
             if result.wasCancelled {
                 if advancedSettings.dailyNotesOnlyModeEnabled {
                     exportStatusMessage = result.dailyNoteUpdateCount > 0

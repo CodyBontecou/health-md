@@ -30,6 +30,7 @@ struct SettingsScreen: View {
     private var showsClinicAccess: Bool { ClinicAccessFeature.isEnabled && clinicSponsorship.status.configured }
     @State private var path: [Route] = []
     @State private var showPaywall = false
+    @State private var showHealthPermissionsGuide = false
     @AppStorage("syncEnabled") private var syncEnabled = false
     @AppStorage(IPhoneDirectCLIService.enabledKey) private var directCLIEnabled = false
 
@@ -66,6 +67,15 @@ struct SettingsScreen: View {
         }
         .accessibilityIdentifier("glass.settings")
         .sheet(isPresented: $showPaywall) { PaywallView(context: .settings, profileCoordinator: profileCoordinator) }
+        .alert(String(localized: "Adjust Health Permissions"), isPresented: $showHealthPermissionsGuide) {
+            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(localized: "Open Health App")) {
+                if let url = URL(string: "x-apple-health://") { UIApplication.shared.open(url) }
+            }
+            .accessibilityIdentifier("glass.settings.healthPermissions.openHealth")
+        } message: {
+            Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off")
+        }
         .onAppear {
             #if DEBUG
             // Profile management lives in Automations; UI journeys still reach the legacy sheet.
@@ -145,13 +155,21 @@ struct SettingsScreen: View {
 
                     sectionTitle(usesTwoPanes ? String(localized: "Data & app") : String(localized: "Data"))
                     GlassPanel {
+                        // 3.5 parity: review or adjust Health access once authorized.
+                        GlassSettingsRow(
+                            title: String(localized: "Apple Health"),
+                            systemImage: "heart.text.square.fill", tile: .settingsTileRed,
+                            value: healthAccessValue
+                        ) { reviewHealthPermissions() }
+                        .accessibilityIdentifier("glass.settings.healthPermissions")
                         // iPadSettingsG has no Default metrics row: on iPad, metrics are edited
                         // per automation (MetricsG), one tap away in the Automations pane.
                         if !usesTwoPanes {
                             GlassSettingsRow(
                                 title: String(localized: "Default metrics"),
                                 systemImage: "heart.fill", tile: .settingsTileRed,
-                                value: "\(defaultMetricCount)"
+                                value: "\(defaultMetricCount)",
+                                showsDivider: true
                             ) {
                                 // MetricsG is a pushed page.
                                 if profileCoordinator?.profileStore.activeProfile != nil {
@@ -168,7 +186,7 @@ struct SettingsScreen: View {
                                 hint: String(localized: "Double tap to connect or disconnect third-party health providers"),
                                 systemImage: "plus", tile: .settingsTileOrange,
                                 value: connectedAppsValue,
-                                showsDivider: !usesTwoPanes
+                                showsDivider: true
                             ) { open(.connectedApps) }
                         }
                         if showsClinicAccess {
@@ -176,7 +194,7 @@ struct SettingsScreen: View {
                                 title: String(localized: "Clinic access"),
                                 subtitle: clinicSponsorship.status.clinicName,
                                 systemImage: "cross.case.fill", tile: .settingsTileGreen,
-                                showsDivider: !usesTwoPanes || ConnectedAppsFeature.isEnabled
+                                showsDivider: true
                             ) { open(.clinic) }
                             .accessibilityIdentifier("glass.settings.clinic")
                         }
@@ -184,8 +202,7 @@ struct SettingsScreen: View {
                             title: String(localized: "Clinician report"),
                             hint: ClinicianReportCopy().string(.accessibility_hint),
                             systemImage: "doc.text.fill", tile: .settingsTileGray,
-                            showsDivider: !usesTwoPanes || ConnectedAppsFeature.isEnabled
-                                || showsClinicAccess
+                            showsDivider: true
                         ) { open(.clinicianReport) }
                         if usesTwoPanes {
                             GlassSettingsRow(
@@ -261,6 +278,9 @@ struct SettingsScreen: View {
                         badge: .readiness(gatewaySettings.isConfigured))
                     .accessibilityIdentifier("glass.settings.gateway")
                 paneSection(String(localized: "Data & app"))
+                paneButton(title: String(localized: "Apple Health"), subtitle: healthAccessValue,
+                           isSelected: false) { reviewHealthPermissions() }
+                    .accessibilityIdentifier("glass.settings.healthPermissions")
                 if ConnectedAppsFeature.isEnabled {
                     paneRow(.connectedApps, title: String(localized: "Connected apps"), subtitle: connectedAppsValue)
                 }
@@ -293,7 +313,17 @@ struct SettingsScreen: View {
         subtitle: String? = nil,
         badge: GlassSettingsBadgeState? = nil
     ) -> some View {
-        Button { open(route) } label: {
+        paneButton(title: title, subtitle: subtitle, badge: badge, isSelected: paneRoute == route) { open(route) }
+    }
+
+    private func paneButton(
+        title: String,
+        subtitle: String? = nil,
+        badge: GlassSettingsBadgeState? = nil,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
@@ -319,7 +349,7 @@ struct SettingsScreen: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             .frame(maxWidth: .infinity, minHeight: GlassMetrics.touchTarget, alignment: .leading)
-            .modifier(GlassPaneRowBackground(isSelected: paneRoute == route))
+            .modifier(GlassPaneRowBackground(isSelected: isSelected))
         }
         .buttonStyle(.plain)
     }
@@ -383,7 +413,11 @@ struct SettingsScreen: View {
         case .cli:
             GlassCLIDestinationScreen()
         case .api:
-            GlassAPIDestinationSheet(settings: apiExportSettings, presentedAsSheet: false)
+            GlassAPIDestinationSheet(
+                settings: apiExportSettings,
+                presentedAsSheet: false,
+                sharedWithProfileNames: profileCoordinator?.otherProfileNamesSharingActiveAPIEndpoint() ?? []
+            )
         case .gateway:
             GlassGatewayDestinationSheet(
                 settings: gatewaySettings,
@@ -455,6 +489,19 @@ struct SettingsScreen: View {
         .accessibilityHint(String(localized: "Double tap to manage purchases and Family Sharing"))
         .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier("glass.settings.plan")
+    }
+
+    private var healthAccessValue: String {
+        healthKitManager.isAuthorized ? String(localized: "Connected") : String(localized: "Not Connected")
+    }
+
+    /// 3.5's Permissions action: ask Apple Health for anything undecided; when nothing
+    /// is left to ask, iOS shows no sheet, so explain where access is changed instead.
+    private func reviewHealthPermissions() {
+        Task {
+            let outcome = try? await healthKitManager.requestAuthorization()
+            if outcome == .unnecessary { showHealthPermissionsGuide = true }
+        }
     }
 
     private func followClinicianReportRequest(_ requested: Bool) {

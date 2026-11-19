@@ -12,6 +12,7 @@ struct GlassFolderDestinationScreen: View {
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @State private var editingSubfolder = false
     @State private var subfolderDraft = ""
+    @State private var showClearConfirmation = false
     @ObservedObject private var history = ExportHistoryManager.shared
     @AppStorage(NewAutomationDestinationPreference.key) private var newAutomationsUseDefaultFolder = false
 
@@ -127,6 +128,23 @@ struct GlassFolderDestinationScreen: View {
                     .accessibilityIdentifier("glass.folderDestination.activity")
                 }
 
+                // 3.5 parity: un-set the default folder. Nothing in the folder is deleted.
+                if vaultManager.hasVaultSelection {
+                    GlassPanel {
+                        Button(role: .destructive) {
+                            configurationProtection.performConfigurationChange { showClearConfirmation = true }
+                        } label: {
+                            GlassRow(title: String(localized: "Clear Folder Selection")) {
+                                Image(systemName: "xmark.circle")
+                                    .foregroundStyle(palette.coral)
+                                    .accessibilityHidden(true)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("glass.folderDestination.clearSelection")
+                    }
+                }
+
                 Text(HostDevice.current.pick(
                     iPhone: String(localized: "Works best with iCloud Drive, On My iPhone, or a synced app folder. Health.md writes directly — no account needed."),
                     iPad: String(localized: "Works best with iCloud Drive, On My iPad, or a synced app folder. Health.md writes directly — no account needed.")
@@ -144,6 +162,19 @@ struct GlassFolderDestinationScreen: View {
         .navigationTitle(HostDevice.current.vaultTitle)
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("glass.folderDestination")
+        .confirmationDialog(
+            String(localized: "Clear folder selection?"),
+            isPresented: $showClearConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(String(localized: "Clear Folder Selection"), role: .destructive) {
+                configurationProtection.performConfigurationChange { vaultManager.clearVaultFolder() }
+            }
+            .accessibilityIdentifier("glass.folderDestination.clearSelection.confirm")
+            Button(String(localized: "Cancel"), role: .cancel) {}
+        } message: {
+            Text("Health.md stops writing to this folder until you choose one again. Files already in the folder are not deleted.")
+        }
         .alert(String(localized: "Subfolder"), isPresented: $editingSubfolder) {
             TextField(String(localized: "Subfolder"), text: $subfolderDraft)
                 .autocorrectionDisabled()
