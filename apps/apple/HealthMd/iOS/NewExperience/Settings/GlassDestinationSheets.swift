@@ -173,6 +173,9 @@ struct GlassAPIDestinationSheet: View {
     @ObservedObject var settings: APIExportSettings
     /// False when pushed from Settings (APIDestG): Back instead of Cancel.
     var presentedAsSheet = true
+    /// Other automations bound to the active automation's saved endpoint. A new
+    /// URL here moves only the active automation; the token stays shared.
+    var sharedWithProfileNames: [String] = []
     @ObservedObject private var history = ExportHistoryManager.shared
 
     @Environment(\.glassPalette) private var palette
@@ -189,9 +192,10 @@ struct GlassAPIDestinationSheet: View {
 
     private let names = DestinationNameStore()
 
-    init(settings: APIExportSettings, presentedAsSheet: Bool = true) {
+    init(settings: APIExportSettings, presentedAsSheet: Bool = true, sharedWithProfileNames: [String] = []) {
         self.settings = settings
         self.presentedAsSheet = presentedAsSheet
+        self.sharedWithProfileNames = sharedWithProfileNames
         _name = State(initialValue: DestinationNameStore().apiEndpointName)
         _endpoint = State(initialValue: settings.endpointURLString)
         _token = State(initialValue: settings.bearerToken)
@@ -293,10 +297,31 @@ struct GlassAPIDestinationSheet: View {
                 showsDivider: true
             )
         } footer: {
-            EmptyView()
+            if !sharedWithProfileNames.isEmpty {
+                sharedEndpointNote
+            }
         }
         .onChange(of: endpoint) { _, _ in testState = .idle }
         .onChange(of: token) { _, _ in testState = .idle }
+    }
+
+    /// Says which other automations send to this endpoint, so a duplicated
+    /// automation's edit never changes its source without saying so.
+    private var sharedEndpointNote: some View {
+        let names = ListFormatter.localizedString(byJoining: sharedWithProfileNames)
+        return HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "person.2")
+                .foregroundStyle(palette.accent)
+                .accessibilityHidden(true)
+            Text("Also used by \(names). A new URL applies only to this automation. The token is shared by every automation that sends to this URL.")
+                .glassFont(.rowSubtitle)
+                .foregroundStyle(palette.sec)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 20)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("glass.api.sharedEndpointNote")
     }
 
     private var testSubtitle: String {
