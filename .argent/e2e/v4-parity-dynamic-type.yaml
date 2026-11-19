@@ -1,0 +1,144 @@
+version: 1
+requires:
+  platform: ios
+# X-16 (4.0 vs 3.5 parity): opens Archive, Settings, the paywall (plans slide), Automations
+# and onboarding Welcome at the largest accessibility text size (AX5) and checks that the
+# fixed layouts render (paywall purchase button, plan prices with their billing period,
+# stacked onboarding step tiles).
+#
+# Prerequisites: an iPhone simulator (recorded on a 6.3-inch iPhone, iOS 27) with a Debug
+# build of Health.md installed. AX5 and static prices come from launch arguments
+# (-UIPreferredContentSizeCategoryName, -StaticPurchasePrices), so the simulator's own
+# content size is left alone.
+# Side effects: none persisted. The first launch uses --uitesting, which resets UI-test
+# profile state; the second forces hasCompletedOnboarding NO in the argument domain only.
+#
+# Coordinate exception: the simulator runner tree carries none of this SwiftUI app's
+# accessibility ids or texts (probed with assert on glass.tab.archive, text "Archive",
+# glass.settings.plan, glass.settings.folder: all unmatched while the screen showed them),
+# so taps are points and every check is a raw await-ui-element on the accessibility tree.
+# Each point tap is followed by a hard check on its destination.
+steps:
+  - echo: Launch Health.md in UI-test mode at AX5 (accessibility XXXL) with static prices. Expect Archive
+  - launch:
+      native: com.codybontecou.obsidianhealth
+      ios:
+        app: com.codybontecou.obsidianhealth
+        args:
+          - --uitesting
+          - -StaticPurchasePrices
+          - "1"
+          - -UIPreferredContentSizeCategoryName
+          - UICTContentSizeCategoryAccessibilityXXXL
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.archive.attention
+      timeoutMs: 15000
+  - await: { idle: true }
+  - echo: On Archive. Point tap on the Settings tab (glass.tab.settings). Expect the plan row and an unbroken vault row title
+  - tap: { x: 0.613, y: 0.91 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.settings.plan
+  - await: { idle: true }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.settings.folder
+      expectedText: Vault on this iPhone
+  - echo: On Settings. Point tap on the plan row (glass.settings.plan). Expect the paywall with its purchase button
+  - tap: { x: 0.5, y: 0.331 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: paywall.purchaseButton
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: On the paywall. Point tap on the third step button (Plans). Expect plan prices that name their billing period
+  - tap: { x: 0.8, y: 0.556 }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: paywall-option-yearly
+      expectedText: $29.99/year
+      timeoutMs: 8000
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: paywall-option-weekly
+      expectedText: $0.99/week
+  - echo: Point tap on Close (paywall.dismissButton). Expect the paywall gone and Settings back
+  - tap: { x: 0.807, y: 0.113 }
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: paywall.purchaseButton
+      timeoutMs: 8000
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.settings.plan
+  - await: { idle: true }
+  - echo: Point tap on the Automations tab (glass.tab.automations). Expect the automation card
+  - tap: { x: 0.405, y: 0.895 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.card
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: Relaunch outside UI-test mode with hasCompletedOnboarding forced NO (argument domain only; nothing persisted) at AX5. Expect onboarding Welcome
+  - launch:
+      native: com.codybontecou.obsidianhealth
+      ios:
+        app: com.codybontecou.obsidianhealth
+        args:
+          - -hasCompletedOnboarding
+          - NO
+          - -StaticPurchasePrices
+          - "1"
+          - -UIPreferredContentSizeCategoryName
+          - UICTContentSizeCategoryAccessibilityXXXL
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: as notes you own
+      timeoutMs: 15000
+  - await: { idle: true }
+  - echo: "Scroll Welcome up (raw swipe: scroll-to cannot see SwiftUI text in the simulator runner tree). Expect stacked step tiles, then Get started"
+  - tool: gesture-swipe
+    args:
+      fromX: 0.5
+      fromY: 0.8
+      toX: 0.5
+      toY: 0.2
+      momentum: false
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: STEP 3, See your past week
+  - tool: gesture-swipe
+    args:
+      fromX: 0.5
+      fromY: 0.8
+      toX: 0.5
+      toY: 0.2
+      momentum: false
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Get started
