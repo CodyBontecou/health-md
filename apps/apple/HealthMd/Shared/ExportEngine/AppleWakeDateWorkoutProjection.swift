@@ -8,18 +8,18 @@ nonisolated struct AppleWakeDateWorkoutProjection: Sendable {
     let captureContext: AppleSleepCaptureContext
     let timeFormatIdentifier: String
     let hasSelectedOwner: Bool
-    /// The Format → Custom `workout_details` switch owns the Bases frontmatter block (#353).
+    /// The Bases block shows while any Workouts field is on in Format → Custom (#353).
     let includesFrontmatterBlock: Bool
     var hasRecords: Bool { !source.workouts.isEmpty }
     var writesFrontmatterBlock: Bool { hasRecords && includesFrontmatterBlock }
 
     init(data: HealthData, captureContext: AppleSleepCaptureContext, timeFormatIdentifier: String,
-        selectedOutputKeys: Set<String>, includesFrontmatterBlock: Bool = true) {
+        selectedOutputKeys: Set<String>, isFrontmatterFieldEnabled: (String) -> Bool = { _ in true }) {
         source = HealthData(date: data.date, timeContext: data.timeContext, workouts: data.workouts)
         self.captureContext = captureContext
         self.timeFormatIdentifier = timeFormatIdentifier
         hasSelectedOwner = selectedOutputKeys.contains { $0 == "workouts" || $0.hasPrefix("workout_") }
-        self.includesFrontmatterBlock = includesFrontmatterBlock
+        includesFrontmatterBlock = WakeDateNativeFrontmatterOwners.showsWorkouts(isFrontmatterFieldEnabled)
     }
 
     static func selectedOutputKeys(from semanticResult: Data) throws -> Set<String> {

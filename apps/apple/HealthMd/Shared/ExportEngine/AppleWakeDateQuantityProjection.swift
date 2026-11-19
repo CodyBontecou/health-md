@@ -14,9 +14,12 @@ nonisolated struct AppleWakeDateQuantityProjection: Sendable {
 
     enum ProjectionError: Error { case invalidSample, invalidAggregate }
     let series: [Series]
+    /// Series whose owning fields leave at least one switched on in Format → Custom (#353).
+    let frontmatterFields: Set<String>
     var hasRecords: Bool { !series.isEmpty }
+    var writesFrontmatterBlock: Bool { series.contains { frontmatterFields.contains($0.field) } }
 
-    init(data: HealthData) {
+    init(data: HealthData, isFrontmatterFieldEnabled: (String) -> Bool = { _ in true }) {
         series = [
             Series(category: "heart", field: "heartRateSamples", metric: "heart_rate", unit: "bpm", label: "Heart Rate", samples: data.heart.heartRateSamples),
             Series(category: "heart", field: "hrvSamples", metric: "hrv_sdnn", unit: "ms", label: "HRV SDNN", samples: data.heart.hrvSamples),
@@ -24,6 +27,9 @@ nonisolated struct AppleWakeDateQuantityProjection: Sendable {
             Series(category: "vitals", field: "bloodGlucoseSamples", metric: "blood_glucose", unit: "mg/dL", label: "Blood Glucose", samples: data.vitals.bloodGlucoseSamples),
             Series(category: "vitals", field: "respiratoryRateSamples", metric: "respiratory_rate", unit: "breaths/min", label: "Respiratory Rate", samples: data.vitals.respiratoryRateSamples),
         ].filter { !$0.samples.isEmpty }
+        frontmatterFields = Set(series.map(\.field).filter {
+            WakeDateNativeFrontmatterOwners.showsQuantity(field: $0, isFrontmatterFieldEnabled)
+        })
     }
 
     static func aggregateRecord(from data: HealthData) -> HealthData {
@@ -74,9 +80,9 @@ nonisolated struct AppleWakeDateQuantityProjection: Sendable {
     }
 
     func writeFrontmatterBlock(to sink: ExportByteSink) throws {
-        guard hasRecords else { return }
+        guard writesFrontmatterBlock else { return }
         try sink.write(Data("\nnative_quantity_details:\n".utf8))
-        for item in series {
+        for item in series where frontmatterFields.contains(item.field) {
             for sample in item.samples {
                 try sink.write(Data("  - ".utf8))
                 try HealthKitRecordArchiveSerializer.writeDailyJSONObject(Self.recordObject(sample, series: item),

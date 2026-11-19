@@ -4,9 +4,15 @@ import Foundation
 nonisolated struct AppleWakeDateCorrelationProjection: Sendable {
     enum ProjectionError: Error { case invalidSample, invalidAggregate }
     let samples: [BloodPressureSample]
+    /// A pair shows only while both of its fields are on in Format → Custom (#353).
+    let includesFrontmatterBlock: Bool
     var hasRecords: Bool { !samples.isEmpty }
+    var writesFrontmatterBlock: Bool { hasRecords && includesFrontmatterBlock }
 
-    init(data: HealthData) { samples = data.vitals.bloodPressureSamples }
+    init(data: HealthData, isFrontmatterFieldEnabled: (String) -> Bool = { _ in true }) {
+        samples = data.vitals.bloodPressureSamples
+        includesFrontmatterBlock = WakeDateNativeFrontmatterOwners.showsCorrelation(isFrontmatterFieldEnabled)
+    }
 
     static func aggregateRecord(from data: HealthData) -> HealthData {
         var aggregate = data
@@ -54,7 +60,7 @@ nonisolated struct AppleWakeDateCorrelationProjection: Sendable {
     }
 
     func writeFrontmatterBlock(to sink: ExportByteSink) throws {
-        guard hasRecords else { return }
+        guard writesFrontmatterBlock else { return }
         try sink.write(Data("\nnative_correlation_details:\n".utf8))
         for sample in samples {
             try sink.write(Data("  - ".utf8))

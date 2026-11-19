@@ -206,7 +206,7 @@ internal object AndroidWakeDateSourceProjection {
 
     /** Preserve already-captured Android records without extending shared quantity identities. */
     /** Format → Custom fields whose switches own each record family's Bases frontmatter lines (#353). */
-    private val remainingDetailOwners = mapOf(
+    internal val remainingDetailOwners = mapOf(
         "bodyTemperatureSamples" to listOf("body_temperature", "body_temperature_avg", "body_temperature_min", "body_temperature_max"),
         "basalBodyTemperatureSamples" to listOf("basal_body_temperature"),
         "skinTemperatureDeltas" to listOf("skin_temperature_delta"),
@@ -214,7 +214,7 @@ internal object AndroidWakeDateSourceProjection {
         "menstruationPeriods" to listOf("menstruation_period_count", "menstruation_period_days", "menstruation_period_hours"),
     )
 
-    private fun remainingNativeDetails(root: JsonObject, ownerDate: String,
+    internal fun remainingNativeDetails(root: JsonObject, ownerDate: String,
         frontmatter: (String) -> Boolean = { true }): JsonObject {
         val owner = runCatching { java.time.LocalDate.parse(ownerDate) }.getOrElse {
             throw HealthMdRenderInputAdapter.AdapterException("wake-date native detail owner is incompatible")

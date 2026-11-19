@@ -1844,9 +1844,13 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
     }
 
-    /// #353: the Format → Custom `workout_details` switch alone removes the Bases workout
-    /// block, as it does for Night begins; the Markdown body keeps its workout table.
-    func testWorkoutDetailsSwitchOffRemovesNativeWorkoutDetailsFromBasesFrontmatter() async throws {
+    /// #353: one rule on Apple and Android. The native workout block in "Morning ends" Bases
+    /// frontmatter belongs to the Workouts fields in Format → Custom: it shows while any of them is
+    /// on. The default configuration keeps it, so existing output is unchanged; switching off only
+    /// `workout_details` keeps it too, because the other Workouts fields still own it. (Every
+    /// Workouts field off fails closed on Apple: see
+    /// testNativeWorkoutsRequireAcceptedOutputOwnerAndIgnoreUnselectedInvalidSource.)
+    func testNativeWorkoutDetailsFollowTheWorkoutsFieldsInBasesFrontmatter() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
         let workout = WorkoutData(sourceUUID: UUID(uuidString: "00000000-0000-4000-8000-000000000139"),
@@ -1858,12 +1862,9 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         for detailsOn in [true, false] {
             var snapshot = try acceptedSnapshot(context: context, formats: [.markdown, .obsidianBases],
                 selectionIDs: ["workouts", "steps"])
-            if let index = snapshot.formatCustomization.frontmatterConfig.fields
-                .firstIndex(where: { $0.originalKey == "workout_details" }) {
-                snapshot.formatCustomization.frontmatterConfig.fields[index].isEnabled = detailsOn
-            } else {
-                XCTAssertTrue(detailsOn, "workout_details must be listed in Format → Custom")
-            }
+            let index = try XCTUnwrap(snapshot.formatCustomization.frontmatterConfig.fields
+                .firstIndex(where: { $0.originalKey == "workout_details" }), "workout_details is listed in Format → Custom")
+            snapshot.formatCustomization.frontmatterConfig.fields[index].isEnabled = detailsOn
             let resolution = try await AppleLooseDailyExportPlanner().plan(healthData: day,
                 settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects)
             guard case .planned(let operation) = resolution else { return XCTFail("Selected workouts must plan") }
@@ -1871,8 +1872,8 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
                 .artifact.inlineData, as: UTF8.self)
             let markdown = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .markdown })
                 .artifact.inlineData, as: UTF8.self)
-            XCTAssertEqual(bases.contains("native_workout_details:"), detailsOn, "workout_details on: \(detailsOn)")
-            XCTAssertTrue(bases.contains("workout_count"), "Other workout properties keep their own switches")
+            XCTAssertTrue(bases.contains("native_workout_details:"), "workout_details on: \(detailsOn)")
+            XCTAssertTrue(bases.contains("workout_count"))
             XCTAssertTrue(markdown.contains("Workout Details"), "The body table is not frontmatter")
         }
     }
