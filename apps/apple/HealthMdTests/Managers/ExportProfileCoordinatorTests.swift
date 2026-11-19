@@ -1143,4 +1143,114 @@ final class ExportProfileCoordinatorTests: XCTestCase {
             "editing the only automation never overlaps with itself"
         )
     }
+
+    // MARK: - Reset export configuration (v3.5 parity M-04)
+
+    /// The Output page's "Reset Export Configuration" saves a reset snapshot through
+    /// `updateProfile` with the stored bindings, as the page's autosave does. The
+    /// automation keeps its id, name, destination, subfolder and schedule.
+    func testResetExportConfigurationPreservesIdentityDestinationAndSchedule() throws {
+        let vaultManager = makeVaultManager()
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        selectVaultFolder(in: vaultManager, path: "/Users/x/ResetVault")
+        coordinator.vaultFolderWasSelected()
+        let defaultID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        let destinationID = try XCTUnwrap(coordinator.destinationStore.vaults.first?.id)
+        let created = try XCTUnwrap(coordinator.createProfile(
+            name: "Nightly",
+            target: .localIPhoneFolder,
+            folderVaultID: destinationID
+        ))
+        coordinator.activate(profileID: defaultID)
+
+        var customized = created.settings
+        customized.exportFormats = [.json, .csv]
+        customized.filenameFormat = "custom-{date}"
+        customized.folderStructure = "{year}"
+        customized.healthSubfolder = "Health/Daily"
+        customized.writeMode = .append
+        customized.archiveExportFiles = true
+        customized.generateRangeSummary = true
+        let customization = FormatCustomization()
+        customization.frontmatterConfig.setAllFieldsEnabled(false)
+        customization.unitPreference = .imperial
+        customized.formatCustomization = .from(customization)
+        let metrics = MetricSelectionState()
+        metrics.deselectAll()
+        customized.metricSelection = .from(metrics)
+        let stored = try XCTUnwrap(coordinator.updateProfile(
+            id: created.id, name: created.name, target: created.target,
+            folderVaultID: created.folderVaultID, apiEndpointID: created.apiEndpointID,
+            settings: customized
+        ))
+        XCTAssertEqual(stored.settings.exportFormats, [.json, .csv])
+
+        let schedule = ScheduledExportEntry(profileID: created.id, isEnabled: true)
+        XCTAssertTrue(coordinator.scheduledEntryStore.upsert(schedule))
+        let scheduleBefore = try XCTUnwrap(coordinator.scheduledEntryStore.entry(profileID: created.id))
+
+        let reset = try XCTUnwrap(coordinator.updateProfile(
+            id: stored.id, name: stored.name, target: stored.target,
+            folderVaultID: stored.folderVaultID, apiEndpointID: stored.apiEndpointID,
+            settings: stored.settings.resettingExportConfiguration()
+        ))
+
+        XCTAssertEqual(reset.id, created.id)
+        XCTAssertEqual(reset.name, "Nightly")
+        XCTAssertEqual(reset.target, .localIPhoneFolder)
+        XCTAssertEqual(reset.folderVaultID, destinationID)
+        XCTAssertEqual(reset.settings.healthSubfolder, "Health/Daily", "the destination subfolder is kept")
+        XCTAssertEqual(coordinator.scheduledEntryStore.entry(profileID: created.id), scheduleBefore)
+        XCTAssertEqual(coordinator.profileStore.activeProfileID, defaultID, "reset never changes activation")
+
+        XCTAssertEqual(reset.settings.exportFormats, [.markdown])
+        XCTAssertEqual(reset.settings.filenameFormat, AdvancedExportSettings.defaultFilenameFormat)
+        XCTAssertEqual(reset.settings.folderStructure, AdvancedExportSettings.defaultFolderStructure)
+        XCTAssertEqual(reset.settings.writeMode, .overwrite)
+        XCTAssertFalse(reset.settings.archiveExportFiles)
+        XCTAssertFalse(reset.settings.generateRangeSummary)
+        XCTAssertEqual(reset.settings.formatCustomization, .from(FormatCustomization()))
+        XCTAssertEqual(reset.settings.metricSelection, .from(MetricSelectionState()))
+    }
+
+    /// The per-automation reset uses the same defaults as the classic
+    /// `AdvancedExportSettings.reset()`, so the two cannot drift apart.
+    func testResetExportConfigurationMatchesClassicResetDefaults() {
+        let live = makeSettings()
+        live.exportFormats = [.csv]
+        live.filenameFormat = "x-{date}"
+        live.writeMode = .update
+        live.reset()
+        let classic = ExportSettingsSnapshot.from(live)
+
+        var customized = classic
+        customized.exportFormats = [.json]
+        customized.includeMetadata = false
+        customized.groupByCategory = false
+        customized.filenameFormat = "y-{date}"
+        customized.folderStructure = "{year}/{month}"
+        customized.organizeFormatsIntoFolders = true
+        customized.includeDataDictionary = false
+        customized.summaryOnlyExport = true
+        customized.writeMode = .append
+        customized.detailPolicy = .lossless
+        let reset = customized.resettingExportConfiguration()
+
+        XCTAssertEqual(reset.exportFormats, classic.exportFormats)
+        XCTAssertEqual(reset.includeMetadata, classic.includeMetadata)
+        XCTAssertEqual(reset.groupByCategory, classic.groupByCategory)
+        XCTAssertEqual(reset.filenameFormat, classic.filenameFormat)
+        XCTAssertEqual(reset.folderStructure, classic.folderStructure)
+        XCTAssertEqual(reset.organizeFormatsIntoFolders, classic.organizeFormatsIntoFolders)
+        XCTAssertEqual(reset.archiveExportFiles, classic.archiveExportFiles)
+        XCTAssertEqual(reset.includeDataDictionary, classic.includeDataDictionary)
+        XCTAssertEqual(reset.summaryOnlyExport, classic.summaryOnlyExport)
+        XCTAssertEqual(reset.writeMode, classic.writeMode)
+        XCTAssertEqual(reset.formatCustomization, classic.formatCustomization)
+        XCTAssertEqual(reset.individualTracking, classic.individualTracking)
+        XCTAssertEqual(reset.dailyNoteInjection, classic.dailyNoteInjection)
+        XCTAssertEqual(reset.detailPolicy, classic.detailPolicy)
+        XCTAssertEqual(reset.generateRangeSummary, classic.generateRangeSummary)
+        XCTAssertEqual(reset.metricSelection, classic.metricSelection)
+    }
 }
