@@ -7,6 +7,7 @@ struct MacCLIView: View {
     @EnvironmentObject var vaultManager: VaultManager
     @EnvironmentObject var controlServer: HealthMdControlServer
     @EnvironmentObject var encryptedHealthContextManager: MacEncryptedHealthContextManager
+    @Environment(\.openWindow) private var openWindow
 
     @State private var isInstallingSkills = false
     @State private var skillInstallMessage: String?
@@ -79,6 +80,19 @@ struct MacCLIView: View {
                 value: displayPairedIPhone ?? String(localized: "Not connected"),
                 tone: displayPairedIPhone != nil ? .muted : .warning
             )
+            MacGlassDivider()
+            // The install, host configuration and command snippets moved to Help ▸ CLI & MCP
+            // Reference in 4.0; this row keeps them one click away from the pane.
+            // `.contain` gives the Open button its own frame, so a click on it is not a click on the title.
+            MacGlassRow(title: String(localized: "CLI & MCP Reference"), accessibilityChildren: .contain) {
+                Button(String(localized: "Open")) {
+                    NSApp.activate(ignoringOtherApps: true)
+                    openWindow(id: MacCLIReferenceView.windowID)
+                }
+                .buttonStyle(MacGlassRowButtonStyle())
+                .accessibilityLabel(String(localized: "CLI & MCP Reference"))
+                .accessibilityIdentifier(AccessibilityID.Mac.cliReferenceLink)
+            }
         }
     }
 

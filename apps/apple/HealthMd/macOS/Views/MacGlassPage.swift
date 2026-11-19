@@ -109,6 +109,9 @@ struct MacGlassDivider: View {
 /// A 40 pt row: title on the left, any trailing view on the right.
 struct MacGlassRow<Trailing: View>: View {
     let title: String
+    /// `.combine` (default) reads the row as one element. Use `.contain` when a trailing
+    /// value and a control beside it must stay separately addressable.
+    var accessibilityChildren: AccessibilityChildBehavior = .combine
     @ViewBuilder var trailing: Trailing
 
     var body: some View {
@@ -120,7 +123,7 @@ struct MacGlassRow<Trailing: View>: View {
             trailing
         }
         .frame(minHeight: 40)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: accessibilityChildren)
     }
 }
 
