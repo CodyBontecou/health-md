@@ -694,7 +694,7 @@ struct OnboardingServices {
         return [
             String(localized: "Today · Start free trial"),
             String(localized: "Day 5 · Reminder before you're charged"),
-            price.map { String(localized: "Day 7 · Billed \($0) unless cancelled") }
+            price.map { String(localized: "Day 7 · Billed \($0) a year unless cancelled") }
                 ?? String(localized: "Day 7 · Billed yearly unless cancelled"),
         ]
     }

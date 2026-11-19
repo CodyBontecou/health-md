@@ -309,15 +309,18 @@ struct PaywallView: View {
     }
 
     private func optionSubtitle(for option: HealthMdPurchaseOption) -> String {
-        guard isTrialEligible(option),
-              let price = displayPrice(for: option) else { return option.displaySubtitle }
+        guard let price = displayPrice(for: option) else { return option.displaySubtitle }
+        guard isTrialEligible(option) else {
+            // No trial: still state the price and its renewal period beside the button.
+            return String(localized: "\(option.priceLabel(displayPrice: price)). Auto-renews; cancel anytime.")
+        }
         return option == .weekly || option == .familyWeekly
             ? String(localized: "7 days free, then \(price) per week. Auto-renews; cancel anytime.")
             : String(localized: "7 days free, then \(price) per year. Auto-renews; cancel anytime.")
     }
 
     private func purchaseButtonPriceLabel(for option: HealthMdPurchaseOption) -> String? {
-        if let price = displayPrice(for: option) { return price + option.priceSuffix }
+        if let price = displayPrice(for: option) { return option.priceLabel(displayPrice: price) }
         if TestMode.isUITesting { return displayPrice(for: option) }
         #if DEBUG
         if MarketingCapture.usesStaticPurchasePrices { return displayPrice(for: option) }

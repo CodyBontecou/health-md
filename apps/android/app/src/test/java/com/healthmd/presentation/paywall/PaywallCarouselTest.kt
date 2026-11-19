@@ -1,6 +1,7 @@
 package com.healthmd.presentation.paywall
 
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.R
 import com.healthmd.domain.repository.PurchaseOffer
 import com.healthmd.domain.repository.PurchasePlan
 import org.junit.Test
@@ -20,5 +21,13 @@ class PaywallCarouselTest {
         assertThat(paywallShowsTrialSlide(listOf(lifetime))).isFalse()
         assertThat(paywallShowsTrialSlide(listOf(lifetime, weekly))).isTrue()
         assertThat(paywallShowsTrialSlide(emptyList())).isFalse()
+    }
+
+    @Test
+    fun everyPlanPriceNamesItsOwnBillingPeriod() {
+        assertThat(periodPriceRes(PurchasePlan.WEEKLY)).isEqualTo(R.string.paywall_weekly_price)
+        assertThat(periodPriceRes(PurchasePlan.YEARLY)).isEqualTo(R.string.paywall_yearly_price)
+        assertThat(periodPriceRes(PurchasePlan.LIFETIME)).isEqualTo(R.string.paywall_lifetime_price)
+        assertThat(PurchasePlan.entries.map(::periodPriceRes).toSet()).hasSize(PurchasePlan.entries.size)
     }
 }
