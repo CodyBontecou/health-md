@@ -435,6 +435,9 @@
     <string name="output_write_mode_note">Suprascriere înlocuiește fișierul. Adăugare scrie la sfârșit. Actualizare îmbină valorile noi și păstrează modificările dvs.</string>
     <string name="output_writes_to">Scrie în</string>
     <string name="output_endpoint_invalid">Introduceți un URL http(s) valid. Modificările se salvează când acesta este valid.</string>
+    <string name="output_reset_configuration">Restabiliți configurația de export</string>
+    <string name="output_reset_configuration_title">Restabiliți configurația de export?</string>
+    <string name="output_reset_configuration_message">Formatele, valorile, numele fișierelor, personalizarea formatului, intrările individuale și notele zilnice ale acestei automatizări revin la valorile implicite. Destinația, subdosarul și programul rămân aceleași.</string>
     <string name="automation_summary_single">{when}, scrieți[ {metrics} din] {range}[ ca {formats}] în {where}[ și {note}].</string>
     <string name="automation_summary_multi">{when}, scrieți[ {metrics} din] {range}[ ca {formats}] în {where}[ și {note}].</string>
     <string name="automation_summary_send_single">{when}, trimiteți[ {metrics} din] {range}[ ca {formats}] către {where}[ și {note}].</string>
