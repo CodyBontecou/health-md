@@ -9,8 +9,14 @@ nonisolated struct AppleWakeDateCorrelationProjection: Sendable {
     var hasRecords: Bool { !samples.isEmpty }
     var writesFrontmatterBlock: Bool { hasRecords && includesFrontmatterBlock }
 
-    init(data: HealthData, isFrontmatterFieldEnabled: (String) -> Bool = { _ in true }) {
-        samples = data.vitals.bloodPressureSamples
+    /// `authorizedOutputKeys` are the accepted shared-core selected outputs; a pair is kept only
+    /// while both halves are among them (#353). `nil` keeps every captured pair.
+    init(data: HealthData, authorizedOutputKeys: Set<String>? = nil,
+         isFrontmatterFieldEnabled: (String) -> Bool = { _ in true }) {
+        let authorized = authorizedOutputKeys.map { keys in
+            WakeDateNativeFrontmatterOwners.correlation.allSatisfy(keys.contains)
+        } ?? true
+        samples = authorized ? data.vitals.bloodPressureSamples : []
         includesFrontmatterBlock = WakeDateNativeFrontmatterOwners.showsCorrelation(isFrontmatterFieldEnabled)
     }
 

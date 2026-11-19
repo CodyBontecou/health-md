@@ -12,9 +12,16 @@ nonisolated struct AppleWakeDateSleepStageProjection: Sendable {
     var hasRecords: Bool { !stages.isEmpty }
     var writesFrontmatterBlock: Bool { stages.contains { frontmatterStages.contains($0.stage) } }
 
-    init(data: HealthData, isFrontmatterFieldEnabled: (String) -> Bool = { _ in true }) {
-        stages = data.sleep.stages
-        frontmatterStages = Set(data.sleep.stages.map(\.stage).filter {
+    /// `authorizedOutputKeys` are the accepted shared-core selected outputs; a stage whose owner
+    /// is not among them is left out of every format (#353). `nil` keeps every captured stage.
+    init(data: HealthData, authorizedOutputKeys: Set<String>? = nil,
+         isFrontmatterFieldEnabled: (String) -> Bool = { _ in true }) {
+        stages = data.sleep.stages.filter { stage in
+            authorizedOutputKeys.map { authorized in
+                WakeDateNativeFrontmatterOwners.sleepStage[stage.stage].map(authorized.contains) ?? true
+            } ?? true
+        }
+        frontmatterStages = Set(stages.map(\.stage).filter {
             WakeDateNativeFrontmatterOwners.showsSleepStage($0, isFrontmatterFieldEnabled)
         })
         bounds = data.sleep.sourceSessionBounds ?? .init(start: data.sleep.sessionStart, end: data.sleep.sessionEnd)

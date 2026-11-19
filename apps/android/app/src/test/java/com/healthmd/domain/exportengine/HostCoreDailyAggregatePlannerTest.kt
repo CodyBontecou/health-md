@@ -1427,6 +1427,59 @@ class HostCoreDailyAggregatePlannerTest {
     }
 
     /**
+     * #353 migration pin: with the default Format → Custom configuration, "Morning ends" output in
+     * every format is byte-for-byte what the exporter wrote before this change. The fixtures were
+     * generated from the pre-#353 sources (run with HEALTHMD_WRITE_353_GOLDEN=1).
+     */
+    @Test
+    fun defaultConfigurationMorningEndsOutputIsUnchangedByFrontmatterOwnership() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val start = Instant.parse("2026-11-01T01:30:00Z")
+        val end = start.plusSeconds(1800)
+        fun exact(value: Instant) = com.healthmd.domain.model.ExactSourceTimestamp.from(value, ZoneOffset.UTC)
+        val workout = com.healthmd.domain.model.WorkoutData(
+            workoutType = com.healthmd.domain.model.WorkoutType.RUNNING,
+            startTime = start.atZone(context.zoneId).toLocalDateTime(),
+            endTime = end.atZone(context.zoneId).toLocalDateTime(), duration = 30.minutes,
+            averageHeartRate = 150.0, exactStartTime = exact(start), exactEndTime = exact(end),
+            identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "golden-workout"))
+        val heart = HeartData(averageHeartRate = 61.5, heartRateMin = 55.0, heartRateMax = 70.0, samples = listOf(
+            com.healthmd.domain.model.TimestampedSample(start.atZone(context.zoneId).toLocalDateTime(), 61.5, exactTime = exact(start))))
+        val selection = MetricSelectionState(enabledMetrics = setOf("workouts", "steps", "avg_hr", "min_hr", "max_hr"))
+        val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(), includeGranularData = true,
+            metricSelection = selection, executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+        val data = HealthData(LocalDate.of(2026, 11, 1), workouts = listOf(workout), heart = heart,
+            activity = ActivityData(steps = 4321)).filtered(selection, context)
+        val request = FrozenDailyAggregateExportRequest.capture(data, settings, AndroidExportProfile.android_sleep_v6,
+            ExportEngineMode.rust, DailyAggregateExportIds("golden-353", "golden-353-session"))
+        val plan = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("No ambient clock") }).plan(request).plan
+        assertThat(plan.items).hasSize(4)
+        var directory: File? = File(requireNotNull(System.getProperty("user.dir"))).absoluteFile
+        var resources: File? = null
+        while (directory != null && resources == null) {
+            resources = File(directory, "app/src/test/resources").takeIf { it.isDirectory }
+                ?: File(directory, "src/test/resources").takeIf { it.isDirectory }
+            directory = directory.parentFile
+        }
+        val golden = File(requireNotNull(resources), "issue353-morning-ends-default")
+        val write = System.getenv("HEALTHMD_WRITE_353_GOLDEN") == "1"
+        for (item in plan.items) {
+            val file = File(golden, item.relativePath.substringAfterLast('/'))
+            if (write) {
+                check(golden.mkdirs() || golden.isDirectory)
+                file.writeBytes(item.content)
+                continue
+            }
+            assertWithMessage(item.relativePath).that(item.content.decodeToString()).isEqualTo(file.readText())
+        }
+        if (!write) {
+            val bases = plan.items.single { it.relativePath.endsWith("-bases.md") }.content.decodeToString()
+            assertThat(bases).contains("\nnative_workout_details:")
+            assertThat(bases).contains("\nnative_quantity_details:")
+        }
+    }
+
+    /**
      * #353: Format → Custom owns frontmatter in "Morning ends" Bases notes too. With every workout
      * field switched off, the selected workout stays in JSON, CSV and the Markdown body, but no
      * workout property or native_workout_details block reaches any frontmatter.

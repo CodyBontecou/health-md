@@ -19,14 +19,21 @@ nonisolated struct AppleWakeDateQuantityProjection: Sendable {
     var hasRecords: Bool { !series.isEmpty }
     var writesFrontmatterBlock: Bool { series.contains { frontmatterFields.contains($0.field) } }
 
-    init(data: HealthData, isFrontmatterFieldEnabled: (String) -> Bool = { _ in true }) {
+    /// `authorizedOutputKeys` are the accepted shared-core selected outputs; a series without an
+    /// owner among them is left out of every format (#353). `nil` keeps every captured series.
+    init(data: HealthData, authorizedOutputKeys: Set<String>? = nil,
+         isFrontmatterFieldEnabled: (String) -> Bool = { _ in true }) {
         series = [
             Series(category: "heart", field: "heartRateSamples", metric: "heart_rate", unit: "bpm", label: "Heart Rate", samples: data.heart.heartRateSamples),
             Series(category: "heart", field: "hrvSamples", metric: "hrv_sdnn", unit: "ms", label: "HRV SDNN", samples: data.heart.hrvSamples),
             Series(category: "vitals", field: "bloodOxygenSamples", metric: "blood_oxygen", unit: "ratio_0_1", label: "Blood Oxygen", samples: data.vitals.bloodOxygenSamples),
             Series(category: "vitals", field: "bloodGlucoseSamples", metric: "blood_glucose", unit: "mg/dL", label: "Blood Glucose", samples: data.vitals.bloodGlucoseSamples),
             Series(category: "vitals", field: "respiratoryRateSamples", metric: "respiratory_rate", unit: "breaths/min", label: "Respiratory Rate", samples: data.vitals.respiratoryRateSamples),
-        ].filter { !$0.samples.isEmpty }
+        ].filter { item in
+            !item.samples.isEmpty && authorizedOutputKeys.map { authorized in
+                (WakeDateNativeFrontmatterOwners.quantity[item.field] ?? []).contains(where: authorized.contains)
+            } ?? true
+        }
         frontmatterFields = Set(series.map(\.field).filter {
             WakeDateNativeFrontmatterOwners.showsQuantity(field: $0, isFrontmatterFieldEnabled)
         })

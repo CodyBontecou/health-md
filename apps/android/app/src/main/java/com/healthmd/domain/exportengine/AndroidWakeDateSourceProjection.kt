@@ -4,6 +4,7 @@ import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.export.CsvExporter
 import com.healthmd.domain.model.*
 import com.healthmd.domain.render.HealthMdRenderInputAdapter
+import com.healthmd.domain.render.NativeFrontmatterOwners
 import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.json.*
 import kotlin.coroutines.coroutineContext
@@ -204,16 +205,10 @@ internal object AndroidWakeDateSourceProjection {
         return JsonObject(result)
     }
 
-    /** Preserve already-captured Android records without extending shared quantity identities. */
-    /** Format → Custom fields whose switches own each record family's Bases frontmatter lines (#353). */
-    internal val remainingDetailOwners = mapOf(
-        "bodyTemperatureSamples" to listOf("body_temperature", "body_temperature_avg", "body_temperature_min", "body_temperature_max"),
-        "basalBodyTemperatureSamples" to listOf("basal_body_temperature"),
-        "skinTemperatureDeltas" to listOf("skin_temperature_delta"),
-        "meals" to listOf("nutrition_meal_count", "dietary_calories", "protein_g", "carbohydrates_g", "fat_g", "energy_from_fat_kcal"),
-        "menstruationPeriods" to listOf("menstruation_period_count", "menstruation_period_days", "menstruation_period_hours"),
-    )
-
+    /**
+     * Preserve already-captured Android records without extending shared quantity identities.
+     * Their Bases frontmatter lines follow [NativeFrontmatterOwners.androidRecords] (#353).
+     */
     internal fun remainingNativeDetails(root: JsonObject, ownerDate: String,
         frontmatter: (String) -> Boolean = { true }): JsonObject {
         val owner = runCatching { java.time.LocalDate.parse(ownerDate) }.getOrElse {
@@ -272,7 +267,7 @@ internal object AndroidWakeDateSourceProjection {
                     put("value", record); put("unit", "json"); put("timestamp", timestamp); put("ordinal", rows.size)
                 }
                 lines += "| ${nativeJsonCodeCell(record)} |"
-                if (remainingDetailOwners.getValue(field).any(frontmatter)) yaml += "  - $record"
+                if (NativeFrontmatterOwners.androidRecords.getValue(field).any(frontmatter)) yaml += "  - $record"
             }
         }
         return buildJsonObject {

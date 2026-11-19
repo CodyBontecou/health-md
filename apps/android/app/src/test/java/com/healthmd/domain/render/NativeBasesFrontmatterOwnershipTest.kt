@@ -120,9 +120,46 @@ class NativeBasesFrontmatterOwnershipTest {
         assertThat(markdownBlocks(hidden)).isEqualTo(1)
     }
 
+    /** The Kotlin table and Apple's WakeDateNativeFrontmatterOwners.swift share one contract file. */
+    @Test
+    fun ownerTablesMatchTheSharedContractAndNameRealFields() {
+        var directory: java.io.File? = java.io.File(requireNotNull(System.getProperty("user.dir"))).absoluteFile
+        var contract: java.io.File? = null
+        while (directory != null && contract == null) {
+            contract = java.io.File(directory, "packages/contracts/sleep-attribution/v1/native-frontmatter-owners.json")
+                .takeIf { it.isFile }
+            directory = directory.parentFile
+        }
+        val json = Json.parseToJsonElement(requireNotNull(contract) { "contract file not found" }.readText()).jsonObject
+        fun list(element: kotlinx.serialization.json.JsonElement) = element.jsonArray.map { it.jsonPrimitive.content }
+        fun listMap(element: kotlinx.serialization.json.JsonElement) = element.jsonObject.mapValues { list(it.value) }
+        fun stringMap(element: kotlinx.serialization.json.JsonElement) = element.jsonObject.mapValues { it.value.jsonPrimitive.content }
+        val shared = json.getValue("shared").jsonObject
+        val android = json.getValue("android").jsonObject
+        assertThat(NativeFrontmatterOwners.quantity).isEqualTo(listMap(shared.getValue("quantity")))
+        assertThat(NativeFrontmatterOwners.correlation).isEqualTo(list(shared.getValue("correlation")))
+        assertThat(NativeFrontmatterOwners.sleepStage).isEqualTo(stringMap(android.getValue("sleep_stage")))
+        assertThat(NativeFrontmatterOwners.sleepSession).isEqualTo(list(android.getValue("sleep_session")))
+        assertThat(NativeFrontmatterOwners.mindfulness).isEqualTo(list(android.getValue("mindfulness")))
+        assertThat(NativeFrontmatterOwners.activity).isEqualTo(stringMap(android.getValue("activity")))
+        assertThat(NativeFrontmatterOwners.plannedWorkouts).isEqualTo(list(android.getValue("planned_workouts")))
+        assertThat(NativeFrontmatterOwners.medicalResources).isEqualTo(list(android.getValue("medical_resources")))
+        assertThat(NativeFrontmatterOwners.androidRecords).isEqualTo(listMap(android.getValue("android_records")))
+        assertThat(list(android.getValue("workouts"))).containsExactly("workouts", "workout_*")
+
+        // Every owner is a field Format → Custom lists, so its switch exists.
+        val owners = NativeFrontmatterOwners.quantity.values.flatten() + NativeFrontmatterOwners.correlation +
+            NativeFrontmatterOwners.sleepStage.values + NativeFrontmatterOwners.sleepSession +
+            NativeFrontmatterOwners.mindfulness + NativeFrontmatterOwners.activity.values +
+            NativeFrontmatterOwners.plannedWorkouts + NativeFrontmatterOwners.medicalResources +
+            NativeFrontmatterOwners.androidRecords.values.flatten()
+        assertThat(HealthDataFields.allKeys).containsAtLeastElementsIn(owners.toSet())
+        assertThat(HealthDataFields.allKeys.filter(NativeFrontmatterOwners::isWorkoutField)).isNotEmpty()
+    }
+
     @Test
     fun remainingRecordOwnersAreRealFieldsAndGateTheirLines() {
-        for ((field, owners) in AndroidWakeDateSourceProjection.remainingDetailOwners) {
+        for ((field, owners) in NativeFrontmatterOwners.androidRecords) {
             assertWithMessage(field).that(owners).isNotEmpty()
             assertWithMessage(field).that(HealthDataFields.allKeys).containsAtLeastElementsIn(owners)
         }
@@ -132,7 +169,7 @@ class NativeBasesFrontmatterOwnershipTest {
         val shown = AndroidWakeDateSourceProjection.remainingNativeDetails(source, date)
         assertThat(bases(shown).getValue("native_android_record_details")).hasSize(2)
         val mealsOff = AndroidWakeDateSourceProjection.remainingNativeDetails(source, date) {
-            it !in AndroidWakeDateSourceProjection.remainingDetailOwners.getValue("meals")
+            it !in NativeFrontmatterOwners.androidRecords.getValue("meals")
         }
         val lines = bases(mealsOff).getValue("native_android_record_details")
         assertThat(lines).hasSize(1)

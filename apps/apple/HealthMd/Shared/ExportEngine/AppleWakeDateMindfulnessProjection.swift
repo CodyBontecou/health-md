@@ -10,7 +10,8 @@ nonisolated struct AppleWakeDateMindfulnessProjection: Sendable {
     let hasSelectedOwner: Bool
     /// The Bases block shows while any mood field is on in Format → Custom (#353).
     let includesFrontmatterBlock: Bool
-    var hasRecords: Bool { !source.mindfulness.exportedStateOfMindEntries.isEmpty }
+    /// Records need an accepted mood owner; without one they are left out of every format (#353).
+    var hasRecords: Bool { hasSelectedOwner && !source.mindfulness.exportedStateOfMindEntries.isEmpty }
     var writesFrontmatterBlock: Bool { hasRecords && includesFrontmatterBlock }
 
     init(data: HealthData, captureContext: AppleSleepCaptureContext, timeFormatIdentifier: String,

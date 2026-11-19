@@ -46,11 +46,11 @@ nonisolated enum AppleWakeDateArchiveComposer {
             let frontmatter = settings.formatCustomization.frontmatterConfig
             let isFrontmatterFieldEnabled: (String) -> Bool = { frontmatter.isFieldEnabled($0) }
             let quantities = AppleWakeDateQuantityProjection(data: day.filteredData,
-                isFrontmatterFieldEnabled: isFrontmatterFieldEnabled)
+                authorizedOutputKeys: sourceOutputKeys, isFrontmatterFieldEnabled: isFrontmatterFieldEnabled)
             let sleepStages = AppleWakeDateSleepStageProjection(data: day.filteredData,
-                isFrontmatterFieldEnabled: isFrontmatterFieldEnabled)
+                authorizedOutputKeys: sourceOutputKeys, isFrontmatterFieldEnabled: isFrontmatterFieldEnabled)
             let correlations = AppleWakeDateCorrelationProjection(data: day.filteredData,
-                isFrontmatterFieldEnabled: isFrontmatterFieldEnabled)
+                authorizedOutputKeys: sourceOutputKeys, isFrontmatterFieldEnabled: isFrontmatterFieldEnabled)
             guard let workoutZone = TimeZone(identifier: pin.calendarTimeZoneIdentifier) else {
                 throw AppleLooseDailyExportPlannerError.rustPlanningFailed
             }

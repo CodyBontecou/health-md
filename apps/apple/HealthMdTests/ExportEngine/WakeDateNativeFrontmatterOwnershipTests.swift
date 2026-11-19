@@ -23,6 +23,29 @@ final class WakeDateNativeFrontmatterOwnershipTests: XCTestCase {
         XCTAssertTrue(FrontmatterConfiguration.defaultFields.map(\.originalKey).contains("workout_details"))
     }
 
+    /// Apple and Android tables share packages/contracts/sleep-attribution/v1/native-frontmatter-owners.json.
+    func testOwnerTablesMatchTheSharedContractAndNameRealFields() throws {
+        let contract = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("packages/contracts/sleep-attribution/v1/native-frontmatter-owners.json")
+        let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(contentsOf: contract)) as? [String: Any])
+        let shared = try XCTUnwrap(root["shared"] as? [String: Any])
+        let apple = try XCTUnwrap(root["apple"] as? [String: Any])
+        XCTAssertEqual(shared["quantity"] as? [String: [String]], WakeDateNativeFrontmatterOwners.quantity)
+        XCTAssertEqual(shared["correlation"] as? [String], WakeDateNativeFrontmatterOwners.correlation)
+        XCTAssertEqual(apple["sleep_stage"] as? [String: String], WakeDateNativeFrontmatterOwners.sleepStage)
+        XCTAssertEqual(apple["mindfulness"] as? [String], WakeDateNativeFrontmatterOwners.mindfulness)
+        XCTAssertEqual(apple["workouts"] as? [String], WakeDateNativeFrontmatterOwners.workouts)
+
+        // Every owner is a field Format → Custom lists, so its switch exists.
+        let listed = Set(FrontmatterConfiguration.defaultFields.map(\.originalKey))
+        let owners = WakeDateNativeFrontmatterOwners.quantity.values.flatMap { $0 } + WakeDateNativeFrontmatterOwners.correlation
+            + Array(WakeDateNativeFrontmatterOwners.sleepStage.values) + WakeDateNativeFrontmatterOwners.mindfulness
+            + WakeDateNativeFrontmatterOwners.workouts
+        XCTAssertEqual(Set(owners).subtracting(listed), [])
+    }
+
     func testQuantityLinesFollowEachSeriesOwners() throws {
         var data = HealthData(date: owner)
         data.heart.heartRateSamples = [TimeSample(timestamp: owner, value: 61.5)]
