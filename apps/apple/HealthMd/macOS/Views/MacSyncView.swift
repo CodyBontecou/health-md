@@ -49,6 +49,7 @@ struct MacSyncView: View {
                         }
 
                         readinessSection
+                        systemStatusSection
                         manualIPSection
                         activitySection
 
@@ -446,9 +447,26 @@ struct MacSyncView: View {
                 Button(String(localized: "Change destination folder")) {
                     chooseDestinationFolder()
                 }
+                if vaultManager.hasVaultSelection {
+                    Button(String(localized: "Clear Folder Selection"), role: .destructive) {
+                        vaultManager.clearVaultFolder()
+                    }
+                }
             }
             .accessibilityLabel("Destination folder")
             .accessibilityValue(folderAccessibilityValue)
+            if vaultManager.hasVaultSelection {
+                MacGlassDivider()
+                // 3.5 MacSettingsView offered "Clear Folder Selection"; 4.0 keeps it beside the folder.
+                MacGlassRow(title: String(localized: "Clear Folder Selection")) {
+                    Button(String(localized: "Clear")) {
+                        vaultManager.clearVaultFolder()
+                    }
+                    .buttonStyle(MacGlassRowButtonStyle(tone: .coral))
+                    .accessibilityLabel(String(localized: "Clear Folder Selection"))
+                    .accessibilityIdentifier(AccessibilityID.Mac.clearDestinationFolder)
+                }
+            }
             MacGlassDivider()
             MacGlassRow(
                 String(localized: "Storage"),
@@ -462,6 +480,37 @@ struct MacSyncView: View {
             }
         }
         .id("marketing-destination")
+    }
+
+    /// 3.5 System Status: receiver version and listening state, folder permission, and a
+    /// "Check Again" that restarts discovery and re-reads folder access.
+    private var systemStatusSection: some View {
+        let status = systemStatus
+        return MacGlassSection(title: String(localized: "System Status")) {
+            MacGlassRow(
+                String(localized: "Receiver"),
+                value: status.receiverValue,
+                tone: status.receiverIsHealthy ? .ok : .warning
+            )
+            .accessibilityIdentifier(AccessibilityID.Mac.systemStatusReceiver)
+            MacGlassDivider()
+            MacGlassRow(
+                String(localized: "Permissions"),
+                value: status.permissionsValue,
+                tone: status.permissionsGranted ? .ok : .warning
+            )
+            .accessibilityIdentifier(AccessibilityID.Mac.systemStatusPermissions)
+            MacGlassDivider()
+            MacGlassRow(title: String(localized: "Last Check")) {
+                MacGlassValue(status.lastCheckValue)
+                Button(String(localized: "Check Again")) {
+                    checkAgain()
+                }
+                .buttonStyle(MacGlassRowButtonStyle())
+                .disabled(displayConnectionState == .connecting)
+                .accessibilityIdentifier(AccessibilityID.Mac.checkAgain)
+            }
+        }
     }
 
     private var destinationFolderText: String {
@@ -890,20 +939,14 @@ struct MacSyncView: View {
         return capabilities.platform == .iOS && capabilities.isCompatibleWithMacExportJobs
     }
 
-    private var permissionValue: String {
-        folderAccessHealthy
-            ? String(localized: "Folder Access")
-            : String(localized: "Select Folder")
-    }
-
-    private var appVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-    }
-
-    private var lastCheckText: String {
-        if hasActiveExport { return String(localized: "In Progress") }
-        if displayConnectionState == .connected { return String(localized: "Just Now") }
-        return receivingPaused ? String(localized: "Paused") : String(localized: "Scanning")
+    private var systemStatus: MacDestinationSystemStatus {
+        MacDestinationSystemStatus(
+            appVersion: MacDestinationSystemStatus.bundleAppVersion,
+            receivingPaused: receivingPaused,
+            folderAccessHealthy: folderAccessHealthy,
+            hasActiveExport: hasActiveExport,
+            isConnected: displayConnectionState == .connected
+        )
     }
 
     private var legacyCacheText: String {
@@ -1017,6 +1060,16 @@ struct MacSyncView: View {
         } else {
             syncService.startBrowsing()
         }
+    }
+
+    /// Restarts Bonjour discovery like 3.5's "Check Again". It also clears the paused state,
+    /// because browsing again would otherwise contradict the Pause Receiving toolbar label,
+    /// and re-reads the folder's sandbox access so the Permissions row is current.
+    private func checkAgain() {
+        receivingPaused = false
+        syncService.stopBrowsing()
+        syncService.startBrowsing()
+        vaultManager.refreshVaultAccess()
     }
 
     private func chooseDestinationFolder() {
