@@ -1880,9 +1880,44 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
     }
 
     /// #353 migration pin: with the default Format → Custom configuration, "Morning ends" output in
-    /// every format is byte-for-byte what the exporter wrote before this change. The fixtures were
-    /// generated from the pre-#353 sources (run with TEST_RUNNER_HEALTHMD_WRITE_353_GOLDEN=1).
+    /// every format is byte-for-byte what the exporter wrote before this change.
+    /// Fixtures: HealthMdTests/Fixtures/Export/issue353-morning-ends-default/, generated from the
+    /// pre-#353 sources (commit cfdceb3b6) with TEST_RUNNER_HEALTHMD_WRITE_353_GOLDEN=default.
     func testDefaultConfigurationMorningEndsOutputIsUnchangedByFrontmatterOwnership() async throws {
+        let bases = try await assertMorningEndsGolden(fixture: "default", disabledFields: [])
+        for key in ["native_quantity_details", "sleep_stage_details", "native_correlation_details",
+                    "native_workout_details", "native_mindfulness_details"] {
+            XCTAssertTrue(bases?.contains("\n\(key):") ?? true, key)
+        }
+    }
+
+    /// #353 migration pin for existing users who had already switched some fields off in
+    /// Format → Custom while each native record family kept at least one owner on: their
+    /// "Morning ends" output in every format is byte-for-byte what the exporter wrote before.
+    /// (Before #353, switching off every owner of a record family failed the export, so there is
+    /// no earlier output to keep; the omission tests above cover that case.)
+    /// Fixtures: HealthMdTests/Fixtures/Export/issue353-morning-ends-partly-off/, generated from the
+    /// pre-#353 sources (commit cfdceb3b6) with TEST_RUNNER_HEALTHMD_WRITE_353_GOLDEN=partly-off.
+    func testPartlyDisabledConfigurationMorningEndsOutputIsUnchangedByFrontmatterOwnership() async throws {
+        let disabled = ["steps", "heart_rate_min", "heart_rate_max", "workout_details", "workout_calories",
+                        "mood_labels", "sleep_total_hours"]
+        let bases = try await assertMorningEndsGolden(fixture: "partly-off", disabledFields: disabled)
+        guard let bases else { return }
+        let frontmatter = bases.components(separatedBy: "\n---\n").first ?? bases
+        let keys = Set(frontmatter.components(separatedBy: "\n").filter { !($0.first?.isWhitespace ?? true) }
+            .compactMap { $0.components(separatedBy: ":").first })
+        for key in disabled { XCTAssertFalse(keys.contains(key), "switched-off \(key) stays out of frontmatter") }
+        for key in ["average_heart_rate", "workout_count", "native_quantity_details", "sleep_stage_details",
+                    "native_correlation_details", "native_workout_details", "native_mindfulness_details"] {
+            XCTAssertTrue(keys.contains(key), "\(key) keeps an owner that is on")
+        }
+    }
+
+    /// Plans one synthetic "Morning ends" day with every native record family and compares each
+    /// format with `Fixtures/Export/issue353-morning-ends-<fixture>/`. Returns the Bases text, or nil
+    /// while writing fixtures (TEST_RUNNER_HEALTHMD_WRITE_353_GOLDEN=<fixture>).
+    private func assertMorningEndsGolden(fixture: String, disabledFields: [String],
+                                         file: StaticString = #filePath, line: UInt = #line) async throws -> String? {
         let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
         let owner = ExportFixtures.referenceDate
         var day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds),
@@ -1911,21 +1946,31 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
             selectionIDs: ["steps", "heart_rate_avg", "heart_rate_min", "heart_rate_max", "blood_pressure_systolic",
                            "blood_pressure_diastolic", "sleep_total", "sleep_deep", "sleep_rem", "state_of_mind_entries", "workouts"])
         snapshot.detailPolicy = .detailedTimeSeries
+        for key in disabledFields {
+            let index = try XCTUnwrap(snapshot.formatCustomization.frontmatterConfig.fields.firstIndex { $0.originalKey == key },
+                                      "\(key) is listed in Format → Custom", file: file, line: line)
+            snapshot.formatCustomization.frontmatterConfig.fields[index].isEnabled = false
+        }
         guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
-            settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else { return XCTFail("Default configuration must plan") }
-        XCTAssertEqual(operation.artifacts.count, 4)
+            settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else {
+            XCTFail("The \(fixture) configuration must plan", file: file, line: line)
+            return nil
+        }
+        XCTAssertEqual(operation.artifacts.count, 4, file: file, line: line)
         let directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("Fixtures/Export/issue353-morning-ends-default", isDirectory: true)
-        let write = ProcessInfo.processInfo.environment["HEALTHMD_WRITE_353_GOLDEN"] == "1"
+            .appendingPathComponent("Fixtures/Export/issue353-morning-ends-\(fixture)", isDirectory: true)
+        let write = ProcessInfo.processInfo.environment["HEALTHMD_WRITE_353_GOLDEN"] == fixture
+        var bases: String?
         for artifact in operation.artifacts {
             let name: String
             switch artifact.format {
-            case .markdown: name = "default.md"
-            case .obsidianBases: name = "default-bases.md"
-            case .json: name = "default.json"
-            case .csv: name = "default.csv"
+            case .markdown: name = "\(fixture).md"
+            case .obsidianBases: name = "\(fixture)-bases.md"
+            case .json: name = "\(fixture).json"
+            case .csv: name = "\(fixture).csv"
             }
             let bytes = try artifact.artifact.content.materializedData()
+            if artifact.format == .obsidianBases { bases = String(decoding: bytes, as: UTF8.self) }
             let url = directory.appendingPathComponent(name)
             if write {
                 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -1933,16 +1978,10 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
                 continue
             }
             let expected = try Data(contentsOf: url)
-            assertGoldenMatch(String(decoding: bytes, as: UTF8.self), expected: String(decoding: expected, as: UTF8.self))
+            assertGoldenMatch(String(decoding: bytes, as: UTF8.self), expected: String(decoding: expected, as: UTF8.self),
+                              file: file, line: line)
         }
-        if !write {
-            let bases = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .obsidianBases })
-                .artifact.content.materializedData(), as: UTF8.self)
-            for key in ["native_quantity_details", "sleep_stage_details", "native_correlation_details",
-                        "native_workout_details", "native_mindfulness_details"] {
-                XCTAssertTrue(bases.contains("\n\(key):"), key)
-            }
-        }
+        return write ? nil : bases
     }
 
     /// #353: switching off every heart rate field in Format → Custom leaves the heart rate samples
