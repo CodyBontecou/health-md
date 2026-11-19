@@ -82,7 +82,7 @@ struct OnboardingPillButton: View {
                     Image(systemName: leadingSymbol).font(.system(size: 16, weight: .semibold)).accessibilityHidden(true)
                 }
                 Text(verbatim: title)
-                    .font(.system(size: 17, weight: .semibold))
+                    .glassScaledFont(17, weight: .semibold, relativeTo: .headline)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                 if let trailingSymbol {
@@ -124,8 +124,9 @@ struct OnboardingQuietButton: View {
     var body: some View {
         Button(action: action) {
             Text(verbatim: title)
-                .font(.system(size: 15, weight: .medium))
+                .glassScaledFont(15, weight: .medium, relativeTo: .subheadline)
                 .foregroundStyle(palette.sec)
+                .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity, minHeight: GlassMetrics.touchTarget)
                 .contentShape(Rectangle())
         }
@@ -141,7 +142,7 @@ private struct OnboardingTitle: View {
 
     var body: some View {
         (Text(verbatim: lead) + Text(verbatim: accent.map { " " + $0 } ?? "").foregroundColor(palette.accent))
-            .font(.system(size: size, weight: .bold))
+            .glassScaledFont(size, weight: .bold, relativeTo: .title)
             .tracking(-0.5)
             .foregroundStyle(palette.text)
             .fixedSize(horizontal: false, vertical: true)
@@ -209,6 +210,7 @@ private struct PackIconTile: View {
 
 struct OnboardingWelcomeStep: View {
     @Environment(\.glassPalette) private var palette
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -218,7 +220,7 @@ struct OnboardingWelcomeStep: View {
                 .accessibilityHidden(true)
 
             (Text("Your health,") + Text(verbatim: "\n") + Text("as notes you own.").foregroundColor(palette.accent))
-                .font(.system(size: 36, weight: .bold))
+                .glassScaledFont(36, weight: .bold, relativeTo: .largeTitle)
                 .tracking(-1)
                 .foregroundStyle(palette.text)
                 .fixedSize(horizontal: false, vertical: true)
@@ -229,7 +231,11 @@ struct OnboardingWelcomeStep: View {
                 .foregroundStyle(palette.sec)
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack(alignment: .top, spacing: 8) {
+            // Three tiles cannot share a row at accessibility sizes, so they stack.
+            let tiles = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                : AnyLayout(HStackLayout(alignment: .top, spacing: 8))
+            tiles {
                 stepTile(1, String(localized: "Pick what to track"))
                 stepTile(2, String(localized: "Choose a folder"))
                 stepTile(3, String(localized: "See your past week"))
@@ -241,11 +247,11 @@ struct OnboardingWelcomeStep: View {
     private func stepTile(_ number: Int, _ title: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("STEP \(number)")
-                .font(.system(size: 11, weight: .bold))
+                .glassScaledFont(11, weight: .bold, relativeTo: .caption2)
                 .tracking(0.6)
                 .foregroundStyle(palette.accent)
             Text(verbatim: title)
-                .font(.system(size: 13, weight: .semibold))
+                .glassScaledFont(13, weight: .semibold, relativeTo: .footnote)
                 .foregroundStyle(palette.text)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -1087,7 +1093,7 @@ struct OnboardingDailyStep: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Label(savedBanner, systemImage: "checkmark")
-                .font(.system(size: 14, weight: .medium))
+                .glassScaledFont(14, weight: .medium, relativeTo: .subheadline)
                 .foregroundStyle(palette.ok)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
@@ -1105,17 +1111,18 @@ struct OnboardingDailyStep: View {
             OnboardingCard(radius: 20, padding: 16) {
                 VStack(alignment: .leading, spacing: 12) {
                     (Text("Every morning at ") + Text("8:00").bold() + Text(", write ") + Text("yesterday's").bold()
-                     + Text(" note to ") + Text(verbatim: destinationLabel).font(.system(size: 14, design: .monospaced)))
-                        .font(.system(size: 16))
+                     + Text(" note to ") + Text(verbatim: destinationLabel).font(.system(.subheadline, design: .monospaced)))
+                        .glassScaledFont(16)
                         .foregroundStyle(palette.text)
                         .fixedSize(horizontal: false, vertical: true)
                     if !fullAccessIncluded {
                         VStack(alignment: .leading, spacing: 6) {
                             ForEach(trialTimeline, id: \.self) { line in
                                 Text(verbatim: line)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                         }
-                        .font(.system(size: 14))
+                        .glassScaledFont(14, relativeTo: .subheadline)
                         .foregroundStyle(palette.sec)
                     }
                 }

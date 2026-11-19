@@ -153,7 +153,10 @@ struct GlassFormatsScreen: View {
         GlassRow(
             title: String(localized: "Sleep day"),
             subtitle: healthKitManager.sleepDayAttribution.localizedDescription
-                + " " + String(localized: "Applies to every automation on this iPhone.")
+                + " " + HostDevice.current.pick(
+                    iPhone: String(localized: "Applies to every automation on this iPhone."),
+                    iPad: String(localized: "Applies to every automation on this iPad.")
+                )
         ) {
             Picker(String(localized: "Sleep day"), selection: Binding(
                 get: { healthKitManager.sleepDayAttribution },
