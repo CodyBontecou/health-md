@@ -17,10 +17,24 @@ final class WakeDateNativeFrontmatterOwnershipTests: XCTestCase {
     private func allOn(_: String) -> Bool { true }
     private func off(_ keys: [String]) -> (String) -> Bool { { !keys.contains($0) } }
 
-    func testWorkoutOwnersMatchTheWorkoutsMetricMapping() {
-        XCTAssertEqual(Set(WakeDateNativeFrontmatterOwners.workouts),
-                       Set(HealthMetricExportMapping.frontmatterKeys(for: "workouts") + ["workout_details"]))
-        XCTAssertTrue(FrontmatterConfiguration.defaultFields.map(\.originalKey).contains("workout_details"))
+    private var workoutKeys: [String] {
+        FrontmatterConfiguration.defaultFields.map(\.originalKey).filter(WakeDateNativeFrontmatterOwners.isWorkoutField)
+    }
+
+    /// The workout rule picks exactly the Workouts group: the "workouts" metric's keys plus
+    /// `workout_details`, and no field from another group.
+    func testWorkoutRuleMatchesTheWorkoutsGroup() {
+        XCTAssertEqual(Set(workoutKeys), Set(HealthMetricExportMapping.frontmatterKeys(for: "workouts") + ["workout_details"]))
+        XCTAssertEqual(Set(workoutKeys.map(FrontmatterFieldGroup.group(for:))), [.workouts])
+    }
+
+    /// A workout field added later owns the block without an edit to the owner table.
+    func testANewWorkoutFieldOwnsTheBlockAutomatically() {
+        let keys = workoutKeys + ["workout_future_metric"]
+        XCTAssertTrue(WakeDateNativeFrontmatterOwners.showsWorkouts(fieldKeys: keys) { $0 == "workout_future_metric" })
+        XCTAssertFalse(WakeDateNativeFrontmatterOwners.showsWorkouts(fieldKeys: keys) { _ in false })
+        // Keys from other groups never own it.
+        XCTAssertFalse(WakeDateNativeFrontmatterOwners.showsWorkouts(fieldKeys: ["steps", "active_calories"]) { _ in true })
     }
 
     /// Apple and Android tables share packages/contracts/sleep-attribution/v1/native-frontmatter-owners.json.
@@ -36,13 +50,13 @@ final class WakeDateNativeFrontmatterOwnershipTests: XCTestCase {
         XCTAssertEqual(shared["correlation"] as? [String], WakeDateNativeFrontmatterOwners.correlation)
         XCTAssertEqual(apple["sleep_stage"] as? [String: String], WakeDateNativeFrontmatterOwners.sleepStage)
         XCTAssertEqual(apple["mindfulness"] as? [String], WakeDateNativeFrontmatterOwners.mindfulness)
-        XCTAssertEqual(apple["workouts"] as? [String], WakeDateNativeFrontmatterOwners.workouts)
+        XCTAssertEqual(apple["workouts"] as? [String], ["workouts", "workout_*"])
 
         // Every owner is a field Format → Custom lists, so its switch exists.
         let listed = Set(FrontmatterConfiguration.defaultFields.map(\.originalKey))
         let owners = WakeDateNativeFrontmatterOwners.quantity.values.flatMap { $0 } + WakeDateNativeFrontmatterOwners.correlation
             + Array(WakeDateNativeFrontmatterOwners.sleepStage.values) + WakeDateNativeFrontmatterOwners.mindfulness
-            + WakeDateNativeFrontmatterOwners.workouts
+            + workoutKeys
         XCTAssertEqual(Set(owners).subtracting(listed), [])
     }
 
@@ -121,7 +135,7 @@ final class WakeDateNativeFrontmatterOwnershipTests: XCTestCase {
         let selected: Set<String> = ["workout_count", "mood_entries"]
         func workouts(_ enabled: @escaping (String) -> Bool) -> AppleWakeDateWorkoutProjection {
             AppleWakeDateWorkoutProjection(data: data, captureContext: context, timeFormatIdentifier: TimeFormatPreference.hour24.rawValue,
-                selectedOutputKeys: selected, isFrontmatterFieldEnabled: enabled)
+                selectedOutputKeys: selected, frontmatterFieldKeys: workoutKeys, isFrontmatterFieldEnabled: enabled)
         }
         func mood(_ enabled: @escaping (String) -> Bool) -> AppleWakeDateMindfulnessProjection {
             AppleWakeDateMindfulnessProjection(data: data, captureContext: context, timeFormatIdentifier: TimeFormatPreference.hour24.rawValue,
@@ -130,9 +144,9 @@ final class WakeDateNativeFrontmatterOwnershipTests: XCTestCase {
         // One rule on both platforms: any Workouts field on keeps the block; all off drops it.
         XCTAssertTrue(workouts(allOn).writesFrontmatterBlock)
         XCTAssertTrue(workouts(off(["workout_details"])).writesFrontmatterBlock)
-        XCTAssertTrue(workouts(off(WakeDateNativeFrontmatterOwners.workouts.filter { $0 != "workout_count" })).writesFrontmatterBlock)
-        XCTAssertFalse(workouts(off(WakeDateNativeFrontmatterOwners.workouts)).writesFrontmatterBlock)
-        XCTAssertTrue(workouts(off(WakeDateNativeFrontmatterOwners.workouts)).hasRecords)
+        XCTAssertTrue(workouts(off(workoutKeys.filter { $0 != "workout_count" })).writesFrontmatterBlock)
+        XCTAssertFalse(workouts(off(workoutKeys)).writesFrontmatterBlock)
+        XCTAssertTrue(workouts(off(workoutKeys)).hasRecords)
 
         XCTAssertTrue(mood(allOn).writesFrontmatterBlock)
         XCTAssertTrue(mood(off(["mood_entries", "mood_labels"])).writesFrontmatterBlock)

@@ -19,13 +19,7 @@
       "awake": "sleep_awake_hours", "inBed": "sleep_in_bed_hours", "unspecified": "sleep_total_hours"
     },
     "mindfulness": ["mood_entries", "mood_labels", "mood_associations"],
-    "workouts": [
-      "workout_count", "workout_minutes", "workout_calories", "workout_distance_km", "workout_distance_mi",
-      "workouts", "workout_avg_heart_rate", "workout_max_heart_rate", "workout_min_heart_rate",
-      "workout_running_cadence", "workout_running_stride_length", "workout_running_ground_contact",
-      "workout_running_vertical_oscillation", "workout_cycling_cadence", "workout_avg_power", "workout_max_power",
-      "workout_details"
-    ]
+    "workouts": ["workouts", "workout_*"]
   },
   "android": {
     "sleep_stage": {

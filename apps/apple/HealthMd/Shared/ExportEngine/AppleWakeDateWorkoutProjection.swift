@@ -15,12 +15,16 @@ nonisolated struct AppleWakeDateWorkoutProjection: Sendable {
     var writesFrontmatterBlock: Bool { hasRecords && includesFrontmatterBlock }
 
     init(data: HealthData, captureContext: AppleSleepCaptureContext, timeFormatIdentifier: String,
-        selectedOutputKeys: Set<String>, isFrontmatterFieldEnabled: (String) -> Bool = { _ in true }) {
+        selectedOutputKeys: Set<String>, frontmatterFieldKeys: [String]? = nil,
+        isFrontmatterFieldEnabled: (String) -> Bool = { _ in true }) {
         source = HealthData(date: data.date, timeContext: data.timeContext, workouts: data.workouts)
         self.captureContext = captureContext
         self.timeFormatIdentifier = timeFormatIdentifier
         hasSelectedOwner = selectedOutputKeys.contains { $0 == "workouts" || $0.hasPrefix("workout_") }
-        includesFrontmatterBlock = WakeDateNativeFrontmatterOwners.showsWorkouts(isFrontmatterFieldEnabled)
+        // nil keeps the block (callers without a Format → Custom configuration, such as the API).
+        includesFrontmatterBlock = frontmatterFieldKeys.map {
+            WakeDateNativeFrontmatterOwners.showsWorkouts(fieldKeys: $0, isFrontmatterFieldEnabled)
+        } ?? true
     }
 
     static func selectedOutputKeys(from semanticResult: Data) throws -> Set<String> {

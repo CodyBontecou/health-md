@@ -1428,11 +1428,40 @@ class HostCoreDailyAggregatePlannerTest {
 
     /**
      * #353 migration pin: with the default Format → Custom configuration, "Morning ends" output in
-     * every format is byte-for-byte what the exporter wrote before this change. The fixtures were
-     * generated from the pre-#353 sources (run with HEALTHMD_WRITE_353_GOLDEN=1).
+     * every format is byte-for-byte what the exporter wrote before this change.
+     * Fixtures: src/test/resources/issue353-morning-ends-default/, generated from the pre-#353
+     * sources (commit cfdceb3b6) with HEALTHMD_WRITE_353_GOLDEN=default.
      */
     @Test
     fun defaultConfigurationMorningEndsOutputIsUnchangedByFrontmatterOwnership() = runTest {
+        val bases = assertMorningEndsGolden("default", disabledFields = emptyList()) ?: return@runTest
+        assertThat(bases).contains("\nnative_workout_details:")
+        assertThat(bases).contains("\nnative_quantity_details:")
+    }
+
+    /**
+     * #353 migration pin for existing users who had already switched some Format → Custom fields
+     * off while each native record family kept an owner on: "Morning ends" output in every format
+     * is byte-for-byte what the exporter wrote before this change.
+     * Fixtures: src/test/resources/issue353-morning-ends-partly-off/, generated from the pre-#353
+     * sources (commit cfdceb3b6) with HEALTHMD_WRITE_353_GOLDEN=partly-off.
+     */
+    @Test
+    fun partlyDisabledConfigurationMorningEndsOutputIsUnchangedByFrontmatterOwnership() = runTest {
+        val disabled = listOf("steps", "heart_rate_min", "heart_rate_max", "workout_calories", "workout_avg_heart_rate")
+        val bases = assertMorningEndsGolden("partly-off", disabled) ?: return@runTest
+        val frontmatter = bases.substringBefore("\n---\n")
+        val keys = frontmatter.lines().filter { it.isNotEmpty() && !it.first().isWhitespace() }.map { it.substringBefore(':') }
+        for (key in disabled) assertWithMessage("switched-off $key stays out of frontmatter").that(keys).doesNotContain(key)
+        assertThat(keys).containsAtLeast("average_heart_rate", "workout_count", "native_workout_details", "native_quantity_details")
+    }
+
+    /**
+     * Plans one synthetic "Morning ends" day (a workout, heart rate samples, steps) and compares every
+     * format with src/test/resources/issue353-morning-ends-<fixture>/. Returns the Bases text, or null
+     * while writing fixtures (HEALTHMD_WRITE_353_GOLDEN=<fixture>).
+     */
+    private suspend fun assertMorningEndsGolden(fixture: String, disabledFields: List<String>): String? {
         val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
         val start = Instant.parse("2026-11-01T01:30:00Z")
         val end = start.plusSeconds(1800)
@@ -1447,7 +1476,9 @@ class HostCoreDailyAggregatePlannerTest {
             com.healthmd.domain.model.TimestampedSample(start.atZone(context.zoneId).toLocalDateTime(), 61.5, exactTime = exact(start))))
         val selection = MetricSelectionState(enabledMetrics = setOf("workouts", "steps", "avg_hr", "min_hr", "max_hr"))
         val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(), includeGranularData = true,
-            metricSelection = selection, executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+            metricSelection = selection, executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true,
+            formatCustomization = FormatCustomization(frontmatterConfig = com.healthmd.domain.model.FrontmatterConfiguration(
+                fields = disabledFields.map { com.healthmd.domain.model.CustomFrontmatterField(it, isEnabled = false) })))
         val data = HealthData(LocalDate.of(2026, 11, 1), workouts = listOf(workout), heart = heart,
             activity = ActivityData(steps = 4321)).filtered(selection, context)
         val request = FrozenDailyAggregateExportRequest.capture(data, settings, AndroidExportProfile.android_sleep_v6,
@@ -1461,8 +1492,8 @@ class HostCoreDailyAggregatePlannerTest {
                 ?: File(directory, "src/test/resources").takeIf { it.isDirectory }
             directory = directory.parentFile
         }
-        val golden = File(requireNotNull(resources), "issue353-morning-ends-default")
-        val write = System.getenv("HEALTHMD_WRITE_353_GOLDEN") == "1"
+        val golden = File(requireNotNull(resources), "issue353-morning-ends-$fixture")
+        val write = System.getenv("HEALTHMD_WRITE_353_GOLDEN") == fixture
         for (item in plan.items) {
             val file = File(golden, item.relativePath.substringAfterLast('/'))
             if (write) {
@@ -1470,13 +1501,9 @@ class HostCoreDailyAggregatePlannerTest {
                 file.writeBytes(item.content)
                 continue
             }
-            assertWithMessage(item.relativePath).that(item.content.decodeToString()).isEqualTo(file.readText())
+            assertWithMessage("$fixture ${item.relativePath}").that(item.content.decodeToString()).isEqualTo(file.readText())
         }
-        if (!write) {
-            val bases = plan.items.single { it.relativePath.endsWith("-bases.md") }.content.decodeToString()
-            assertThat(bases).contains("\nnative_workout_details:")
-            assertThat(bases).contains("\nnative_quantity_details:")
-        }
+        return if (write) null else plan.items.single { it.relativePath.endsWith("-bases.md") }.content.decodeToString()
     }
 
     /**

@@ -57,6 +57,7 @@ nonisolated enum AppleWakeDateArchiveComposer {
             let workoutContext = AppleSleepCaptureContext(timeZone: workoutZone, sleepDayAttribution: .morningEnds)
             let workouts = AppleWakeDateWorkoutProjection(data: day.filteredData, captureContext: workoutContext,
                 timeFormatIdentifier: settings.formatCustomization.timeFormat.rawValue, selectedOutputKeys: sourceOutputKeys,
+                frontmatterFieldKeys: frontmatter.nativeOwnerCandidateKeys,
                 isFrontmatterFieldEnabled: isFrontmatterFieldEnabled)
             let mindfulness = AppleWakeDateMindfulnessProjection(data: day.filteredData, captureContext: workoutContext,
                 timeFormatIdentifier: settings.formatCustomization.timeFormat.rawValue, selectedOutputKeys: sourceOutputKeys,

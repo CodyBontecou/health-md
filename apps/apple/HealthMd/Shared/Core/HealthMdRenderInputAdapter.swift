@@ -587,7 +587,7 @@ enum HealthMdRenderInputAdapter {
                 details = mergeDetails(sleepDetails, details)
             }
             details = mergeDetails(details, try workoutDetails(root, ownerDate: ownerDate, selectedOutputKeys: selected,
-                frontmatter: frontmatter))
+                frontmatterFieldKeys: frontmatterConfig.nativeOwnerCandidateKeys, frontmatter: frontmatter))
             details = mergeDetails(details, try mindfulnessDetails(root, ownerDate: ownerDate, selectedOutputKeys: selected,
                 frontmatter: frontmatter))
             if !(details["output_keys"] as? [String] ?? []).isEmpty { renderedDay["native_details"] = details }
@@ -687,6 +687,7 @@ enum HealthMdRenderInputAdapter {
     /// the Markdown table and CSV rows are body content.
     private static func workoutDetails(_ root: [String: Any], ownerDate: String,
                                        selectedOutputKeys: [String],
+                                       frontmatterFieldKeys: [String],
                                        frontmatter: (String) -> Bool) throws -> [String: Any] {
         let workouts = root["workouts"] as? [[String: Any]] ?? []
         var rows: [[String: Any]] = []
@@ -712,7 +713,8 @@ enum HealthMdRenderInputAdapter {
         }
         return ["output_keys": workouts.isEmpty ? [] : [try requireNativeDetailOwner(owner)], "csv_rows": rows,
             "markdown_blocks": workouts.isEmpty ? [] : [["heading": "Workout Details", "lines": lines, "ordinal": 0]],
-            "bases_frontmatter_blocks": yaml.isEmpty || !WakeDateNativeFrontmatterOwners.showsWorkouts(frontmatter)
+            "bases_frontmatter_blocks": yaml.isEmpty
+                || !WakeDateNativeFrontmatterOwners.showsWorkouts(fieldKeys: frontmatterFieldKeys, frontmatter)
                 ? [] : [["key": "native_workout_details", "lines": yaml, "ordinal": 0]]]
     }
 

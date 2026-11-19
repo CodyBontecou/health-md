@@ -26,15 +26,10 @@ nonisolated enum WakeDateNativeFrontmatterOwners {
 
     static let mindfulness = ["mood_entries", "mood_labels", "mood_associations"]
 
-    /// Every field in the Workouts group: the "workouts" metric's mapped keys (pinned to
-    /// `HealthMetricExportMapping` by a test) plus the structured `workout_details` block.
-    static let workouts: [String] = [
-        "workout_count", "workout_minutes", "workout_calories", "workout_distance_km", "workout_distance_mi",
-        "workouts", "workout_avg_heart_rate", "workout_max_heart_rate", "workout_min_heart_rate",
-        "workout_running_cadence", "workout_running_stride_length", "workout_running_ground_contact",
-        "workout_running_vertical_oscillation", "workout_cycling_cadence", "workout_avg_power", "workout_max_power",
-        "workout_details",
-    ]
+    /// The Workouts group owns the workout block: `workouts` and every `workout_*` key, which
+    /// includes the structured `workout_details` block. A rule rather than a list, as on Android, so
+    /// a new workout field joins it without an edit here.
+    static func isWorkoutField(_ key: String) -> Bool { key == "workouts" || key.hasPrefix("workout_") }
 
     static func showsQuantity(field: String, _ isEnabled: (String) -> Bool) -> Bool {
         (quantity[field] ?? []).contains(where: isEnabled)
@@ -46,5 +41,16 @@ nonisolated enum WakeDateNativeFrontmatterOwners {
 
     static func showsCorrelation(_ isEnabled: (String) -> Bool) -> Bool { correlation.allSatisfy(isEnabled) }
     static func showsMindfulness(_ isEnabled: (String) -> Bool) -> Bool { mindfulness.contains(where: isEnabled) }
-    static func showsWorkouts(_ isEnabled: (String) -> Bool) -> Bool { workouts.contains(where: isEnabled) }
+    /// `fieldKeys` are the keys Format → Custom lists (see `FrontmatterConfiguration.nativeOwnerCandidateKeys`).
+    static func showsWorkouts(fieldKeys: [String], _ isEnabled: (String) -> Bool) -> Bool {
+        fieldKeys.contains { isWorkoutField($0) && isEnabled($0) }
+    }
+}
+
+extension FrontmatterConfiguration {
+    /// Every key Format → Custom lists for this configuration, including defaults an older saved
+    /// configuration lacks (those read as switched on).
+    var nativeOwnerCandidateKeys: [String] {
+        fields.map(\.originalKey) + Self.defaultFields.map(\.originalKey)
+    }
 }
