@@ -24,7 +24,7 @@ struct AutomationFacts {
         )
         switch summary {
         // A profile without its own folder writes to the Settings folder, so name that one.
-        case .localFolder(let name): return name ?? coordinator.sharedFolderName ?? String(localized: "iPhone folder")
+        case .localFolder(let name): return name ?? coordinator.sharedFolderName ?? HostDevice.current.folderName
         case .googleDrive(let label): return label ?? "Google Drive"
         case .connectedMac: return String(localized: "Connected Mac")
         case .apiEndpoint(let url), .agentDataGateway(let url):
@@ -425,7 +425,7 @@ struct AutomationsScreen: View {
         let command = "healthmd export --profile"
         var text = AttributedString(String(localized: "Saved exports you can schedule, run from Shortcuts, or call with \(command)."))
         if let range = text.range(of: command) {
-            text[range].font = .system(size: 13, design: .monospaced)
+            text[range].font = .system(.footnote, design: .monospaced)
         }
         return text
     }
@@ -438,6 +438,7 @@ struct AutomationsScreen: View {
                             GlassPaneHeading(title: String(localized: "Automations"))
                         } else {
                             Text("Automations").glassFont(.largeTitle).foregroundStyle(palette.text)
+                                .lineLimit(1).minimumScaleFactor(0.5)
                         }
                         Spacer()
                         Button {
@@ -605,12 +606,12 @@ struct AutomationsScreen: View {
         let index = profileStore.profiles.firstIndex { $0.id == profile.id } ?? 0
         var line = AttributedString(sentence.values[.when] ?? "")
         line.foregroundColor = palette.sec
-        line.font = .system(size: 13)
+        line.font = .footnote
         var arrow = AttributedString(" → ")
         arrow.foregroundColor = palette.sec
         var destination = AttributedString(sentence.values[.where] ?? "")
         destination.foregroundColor = palette.text
-        destination.font = .system(size: 14, weight: .medium, design: .monospaced)
+        destination.font = .system(.subheadline, design: .monospaced).weight(.medium)
         line.append(arrow)
         line.append(destination)
         return VStack(alignment: .leading, spacing: 6) {

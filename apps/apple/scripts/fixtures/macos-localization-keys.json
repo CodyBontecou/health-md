@@ -126,6 +126,7 @@
     "Body Temperature",
     "Breast Pain",
     "Building preview…",
+    "Bundled helpers are sandboxed. Use the Mac app's saved folder or stream JSON to stdout. For direct exports to arbitrary paths, install the standalone CLI.",
     "Bundled path",
     "CDA Documents",
     "CLI",

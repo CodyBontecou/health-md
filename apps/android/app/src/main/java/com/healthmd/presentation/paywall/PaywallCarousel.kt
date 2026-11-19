@@ -1,5 +1,6 @@
 package com.healthmd.presentation.paywall
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -494,12 +495,17 @@ private fun planName(plan: PurchasePlan): String = stringResource(
     },
 )
 
-@Composable
-private fun periodPrice(offer: PurchaseOffer): String = when (offer.plan) {
-    PurchasePlan.WEEKLY -> stringResource(R.string.paywall_weekly_price, offer.localizedPriceText)
-    PurchasePlan.YEARLY -> stringResource(R.string.paywall_yearly_price, offer.localizedPriceText)
-    PurchasePlan.LIFETIME -> stringResource(R.string.paywall_lifetime_price, offer.localizedPriceText)
+/** The string that states [plan]'s billing period beside its price: "/ week", "/ year" or "once". */
+@StringRes
+internal fun periodPriceRes(plan: PurchasePlan): Int = when (plan) {
+    PurchasePlan.WEEKLY -> R.string.paywall_weekly_price
+    PurchasePlan.YEARLY -> R.string.paywall_yearly_price
+    PurchasePlan.LIFETIME -> R.string.paywall_lifetime_price
 }
+
+/** A Play price with its billing period, e.g. "$29.99 / year", for every surface that quotes a price. */
+@Composable
+internal fun periodPrice(offer: PurchaseOffer): String = stringResource(periodPriceRes(offer.plan), offer.localizedPriceText)
 
 @Composable
 private fun planTerms(offer: PurchaseOffer): String = when {

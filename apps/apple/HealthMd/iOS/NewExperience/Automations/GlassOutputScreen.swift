@@ -371,7 +371,7 @@ struct GlassOutputScreen: View {
 
     private static func targetTitle(_ target: ExportTargetSelection) -> String {
         switch target {
-        case .localIPhoneFolder: return String(localized: "Vault on this iPhone")
+        case .localIPhoneFolder: return HostDevice.current.vaultTitle
         case .connectedMac: return String(localized: "Connected Mac")
         case .googleDrive: return "Google Drive"
         case .apiEndpoint: return String(localized: "API Endpoint")

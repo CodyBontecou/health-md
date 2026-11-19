@@ -154123,6 +154123,331 @@
         "pt-BR": {"stringUnit":{"state":"translated","value":"Exportando meses ou anos? Séries temporais detalhadas mantém amostras com data e hora sem o arquivo de origem e é muito mais rápida e leve para períodos longos."}},
         "zh-Hans": {"stringUnit":{"state":"translated","value":"要导出数月或数年的数据？“详细时间序列”保留带时间戳的样本，但不包含源归档，在长时间范围内速度更快、文件更小。"}}
       }
+    },
+    " one-time" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":" einmalig"}},
+        "es": {"stringUnit":{"state":"translated","value":" pago único"}},
+        "fr": {"stringUnit":{"state":"translated","value":" paiement unique"}},
+        "it": {"stringUnit":{"state":"translated","value":" una tantum"}},
+        "ja": {"stringUnit":{"state":"translated","value":"（買い切り）"}},
+        "ko": {"stringUnit":{"state":"translated","value":" (1회 결제)"}},
+        "nl": {"stringUnit":{"state":"translated","value":" eenmalig"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":" pagamento único"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"（一次性）"}}
+      }
+    },
+    "%@. Auto-renews; cancel anytime." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"%@. Automatische Verlängerung; jederzeit kündbar."}},
+        "es": {"stringUnit":{"state":"translated","value":"%@. Renovación automática; cancela cuando quieras."}},
+        "fr": {"stringUnit":{"state":"translated","value":"%@. Renouvellement automatique ; résiliable à tout moment."}},
+        "it": {"stringUnit":{"state":"translated","value":"%@. Rinnovo automatico; annulla quando vuoi."}},
+        "ja": {"stringUnit":{"state":"translated","value":"%@。自動更新。いつでも解約できます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"%@. 자동 갱신되며 언제든 해지할 수 있습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"%@. Automatische verlenging; altijd opzegbaar."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"%@. Renovação automática; cancele quando quiser."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"%@。自动续订，可随时取消。"}}
+      }
+    },
+    "Advertise this iPad on your local network" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Dieses iPad im lokalen Netzwerk anzeigen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Anunciar este iPad en tu red local"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Annoncer cet iPad sur votre réseau local"}},
+        "it": {"stringUnit":{"state":"translated","value":"Rendi visibile questo iPad sulla rete locale"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ローカルネットワークでこのiPadを公開"}},
+        "ko": {"stringUnit":{"state":"translated","value":"로컬 네트워크에 이 iPad 표시"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Deze iPad aankondigen op je lokale netwerk"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Anunciar este iPad na sua rede local"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"在本地网络上广播此 iPad"}}
+      }
+    },
+    "Applies to every automation on this iPad." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Gilt für alle Automationen auf diesem iPad."}},
+        "es": {"stringUnit":{"state":"translated","value":"Se aplica a todas las automatizaciones de este iPad."}},
+        "fr": {"stringUnit":{"state":"translated","value":"S’applique à toutes les automatisations de cet iPad."}},
+        "it": {"stringUnit":{"state":"translated","value":"Vale per tutte le automazioni su questo iPad."}},
+        "ja": {"stringUnit":{"state":"translated","value":"このiPadのすべてのオートメーションに適用されます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이 iPad의 모든 자동화에 적용됩니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Geldt voor alle automatiseringen op deze iPad."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Vale para todas as automações deste iPad."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"适用于此 iPad 上的所有自动化。"}}
+      }
+    },
+    "Billed %@ a year. Cancel anytime." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"%@ pro Jahr. Jederzeit kündbar."}},
+        "es": {"stringUnit":{"state":"translated","value":"%@ al año. Cancela cuando quieras."}},
+        "fr": {"stringUnit":{"state":"translated","value":"%@ par an. Résiliable à tout moment."}},
+        "it": {"stringUnit":{"state":"translated","value":"%@ all’anno. Annulla quando vuoi."}},
+        "ja": {"stringUnit":{"state":"translated","value":"年額%@。いつでも解約できます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"연 %@. 언제든 해지할 수 있습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"%@ per jaar. Altijd opzegbaar."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"%@ por ano. Cancele quando quiser."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"每年 %@。可随时取消。"}}
+      }
+    },
+    "Billed yearly. Cancel anytime." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Jährliche Abrechnung. Jederzeit kündbar."}},
+        "es": {"stringUnit":{"state":"translated","value":"Cobro anual. Cancela cuando quieras."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Facturation annuelle. Résiliable à tout moment."}},
+        "it": {"stringUnit":{"state":"translated","value":"Addebito annuale. Annulla quando vuoi."}},
+        "ja": {"stringUnit":{"state":"translated","value":"年額で請求。いつでも解約できます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"연간 결제. 언제든 해지할 수 있습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Jaarlijkse betaling. Altijd opzegbaar."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Cobrança anual. Cancele quando quiser."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"按年扣费。可随时取消。"}}
+      }
+    },
+    "Day 5 · Reminder before you're charged" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Tag 5 · Erinnerung vor der Abbuchung"}},
+        "es": {"stringUnit":{"state":"translated","value":"Día 5 · Recordatorio antes del cobro"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Jour 5 · Rappel avant le prélèvement"}},
+        "it": {"stringUnit":{"state":"translated","value":"Giorno 5 · Promemoria prima dell’addebito"}},
+        "ja": {"stringUnit":{"state":"translated","value":"5日目 · 請求前にリマインダー"}},
+        "ko": {"stringUnit":{"state":"translated","value":"5일차 · 결제 전 알림"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dag 5 · Herinnering voordat je betaalt"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Dia 5 · Lembrete antes da cobrança"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"第 5 天 · 扣费前提醒"}}
+      }
+    },
+    "Day 7 · Billed %@ a year unless cancelled" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Tag 7 · %@ pro Jahr, sofern nicht gekündigt"}},
+        "es": {"stringUnit":{"state":"translated","value":"Día 7 · Se cobran %@ al año salvo que canceles"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Jour 7 · %@ par an facturés sauf résiliation"}},
+        "it": {"stringUnit":{"state":"translated","value":"Giorno 7 · Addebito di %@ all’anno, salvo annullamento"}},
+        "ja": {"stringUnit":{"state":"translated","value":"7日目 · 解約しない限り年額%@を請求"}},
+        "ko": {"stringUnit":{"state":"translated","value":"7일차 · 해지하지 않으면 연 %@ 청구"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dag 7 · %@ per jaar, tenzij je opzegt"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Dia 7 · Cobrança de %@ por ano, a menos que cancele"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"第 7 天 · 除非取消，否则按每年 %@ 扣费"}}
+      }
+    },
+    "Day 7 · Billed yearly unless cancelled" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Tag 7 · Jährliche Abbuchung, sofern nicht gekündigt"}},
+        "es": {"stringUnit":{"state":"translated","value":"Día 7 · Cobro anual salvo que canceles"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Jour 7 · Facturation annuelle sauf résiliation"}},
+        "it": {"stringUnit":{"state":"translated","value":"Giorno 7 · Addebito annuale, salvo annullamento"}},
+        "ja": {"stringUnit":{"state":"translated","value":"7日目 · 解約しない限り年額で請求"}},
+        "ko": {"stringUnit":{"state":"translated","value":"7일차 · 해지하지 않으면 연간 결제"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dag 7 · Jaarlijkse betaling, tenzij je opzegt"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Dia 7 · Cobrança anual, a menos que cancele"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"第 7 天 · 除非取消，否则按年扣费"}}
+      }
+    },
+    "Double tap to choose an Obsidian vault folder" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Doppeltippen, um einen Obsidian-Vault-Ordner auszuwählen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Toca dos veces para elegir una carpeta de bóveda de Obsidian"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Touchez deux fois pour choisir un dossier de coffre Obsidian"}},
+        "it": {"stringUnit":{"state":"translated","value":"Tocca due volte per scegliere una cartella vault di Obsidian"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ダブルタップしてObsidianのVaultフォルダを選択"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이중 탭하여 Obsidian 보관함 폴더 선택"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dubbeltik om een Obsidian-vaultmap te kiezen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Toque duas vezes para escolher uma pasta de cofre do Obsidian"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"双击以选择 Obsidian 仓库文件夹"}}
+      }
+    },
+    "Double tap to connect or disconnect third-party health providers" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Doppeltippen, um Gesundheitsanbieter von Drittanbietern zu verbinden oder zu trennen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Toca dos veces para conectar o desconectar proveedores de salud de terceros"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Touchez deux fois pour connecter ou déconnecter des fournisseurs de santé tiers"}},
+        "it": {"stringUnit":{"state":"translated","value":"Tocca due volte per collegare o scollegare fornitori di salute di terze parti"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ダブルタップして他社のヘルスケアサービスを接続または接続解除"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이중 탭하여 타사 건강 서비스 연결 또는 연결 해제"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dubbeltik om gezondheidsdiensten van derden te koppelen of te ontkoppelen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Toque duas vezes para conectar ou desconectar provedores de saúde de terceiros"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"双击以连接或断开第三方健康服务"}}
+      }
+    },
+    "Double tap to manage purchases and Family Sharing" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Doppeltippen, um Käufe und Familienfreigabe zu verwalten"}},
+        "es": {"stringUnit":{"state":"translated","value":"Toca dos veces para gestionar las compras y En familia"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Touchez deux fois pour gérer les achats et le partage familial"}},
+        "it": {"stringUnit":{"state":"translated","value":"Tocca due volte per gestire gli acquisti e In famiglia"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ダブルタップして購入とファミリー共有を管理"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이중 탭하여 구입 항목 및 가족 공유 관리"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dubbeltik om aankopen en Delen met gezin te beheren"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Toque duas vezes para gerenciar compras e o Compartilhamento Familiar"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"双击以管理购买项目和家人共享"}}
+      }
+    },
+    "Double tap to open Diagnostics" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Doppeltippen, um die Diagnose zu öffnen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Toca dos veces para abrir Diagnóstico"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Touchez deux fois pour ouvrir Diagnostic"}},
+        "it": {"stringUnit":{"state":"translated","value":"Tocca due volte per aprire Diagnostica"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ダブルタップして診断を開く"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이중 탭하여 진단 열기"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dubbeltik om Diagnostiek te openen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Toque duas vezes para abrir Diagnóstico"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"双击以打开诊断"}}
+      }
+    },
+    "Double tap to open Discord" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Doppeltippen, um Discord zu öffnen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Toca dos veces para abrir Discord"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Touchez deux fois pour ouvrir Discord"}},
+        "it": {"stringUnit":{"state":"translated","value":"Tocca due volte per aprire Discord"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ダブルタップしてDiscordを開く"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이중 탭하여 Discord 열기"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dubbeltik om Discord te openen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Toque duas vezes para abrir o Discord"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"双击以打开 Discord"}}
+      }
+    },
+    "Double tap to open GitHub Issues" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Doppeltippen, um GitHub Issues zu öffnen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Toca dos veces para abrir GitHub Issues"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Touchez deux fois pour ouvrir GitHub Issues"}},
+        "it": {"stringUnit":{"state":"translated","value":"Tocca due volte per aprire GitHub Issues"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ダブルタップしてGitHub Issuesを開く"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이중 탭하여 GitHub Issues 열기"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dubbeltik om GitHub Issues te openen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Toque duas vezes para abrir o GitHub Issues"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"双击以打开 GitHub Issues"}}
+      }
+    },
+    "Double tap to open the Health.md privacy policy" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Doppeltippen, um die Datenschutzrichtlinie von Health.md zu öffnen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Toca dos veces para abrir la política de privacidad de Health.md"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Touchez deux fois pour ouvrir la politique de confidentialité de Health.md"}},
+        "it": {"stringUnit":{"state":"translated","value":"Tocca due volte per aprire l’informativa sulla privacy di Health.md"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ダブルタップしてHealth.mdのプライバシーポリシーを開く"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이중 탭하여 Health.md 개인정보 처리방침 열기"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dubbeltik om het privacybeleid van Health.md te openen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Toque duas vezes para abrir a política de privacidade do Health.md"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"双击以打开 Health.md 隐私政策"}}
+      }
+    },
+    "Double tap to review purchase verification for myself.md" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Doppeltippen, um die Kaufbestätigung für myself.md zu prüfen"}},
+        "es": {"stringUnit":{"state":"translated","value":"Toca dos veces para revisar la verificación de compra de myself.md"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Touchez deux fois pour vérifier l’achat myself.md"}},
+        "it": {"stringUnit":{"state":"translated","value":"Tocca due volte per controllare la verifica dell’acquisto di myself.md"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ダブルタップしてmyself.mdの購入確認を表示"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이중 탭하여 myself.md 구입 확인 검토"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dubbeltik om de aankoopverificatie voor myself.md te bekijken"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Toque duas vezes para revisar a verificação de compra do myself.md"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"双击以查看 myself.md 的购买验证"}}
+      }
+    },
+    "Double tap to send feedback by email" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Doppeltippen, um Feedback per E-Mail zu senden"}},
+        "es": {"stringUnit":{"state":"translated","value":"Toca dos veces para enviar comentarios por correo electrónico"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Touchez deux fois pour envoyer vos commentaires par e-mail"}},
+        "it": {"stringUnit":{"state":"translated","value":"Tocca due volte per inviare un feedback via email"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ダブルタップしてメールでフィードバックを送信"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이중 탭하여 이메일로 피드백 보내기"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Dubbeltik om feedback per e-mail te sturen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Toque duas vezes para enviar feedback por e-mail"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"双击以通过电子邮件发送反馈"}}
+      }
+    },
+    "Stored in the iPad Keychain, never in your notes." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Im iPad-Schlüsselbund gespeichert, nie in deinen Notizen."}},
+        "es": {"stringUnit":{"state":"translated","value":"Se guarda en el llavero del iPad, nunca en tus notas."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Stocké dans le trousseau de l’iPad, jamais dans vos notes."}},
+        "it": {"stringUnit":{"state":"translated","value":"Salvato nel portachiavi dell’iPad, mai nelle tue note."}},
+        "ja": {"stringUnit":{"state":"translated","value":"iPadのキーチェーンに保存され、メモには保存されません。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"iPad 키체인에 저장되며 메모에는 저장되지 않습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Opgeslagen in de iPad-sleutelhanger, nooit in je notities."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Armazenado nas Chaves do iPad, nunca nas suas notas."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"存储在 iPad 钥匙串中，绝不会写入你的笔记。"}}
+      }
+    },
+    "Stored in the iPhone Keychain, never in your notes." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Im iPhone-Schlüsselbund gespeichert, nie in deinen Notizen."}},
+        "es": {"stringUnit":{"state":"translated","value":"Se guarda en el llavero del iPhone, nunca en tus notas."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Stocké dans le trousseau de l’iPhone, jamais dans vos notes."}},
+        "it": {"stringUnit":{"state":"translated","value":"Salvato nel portachiavi dell’iPhone, mai nelle tue note."}},
+        "ja": {"stringUnit":{"state":"translated","value":"iPhoneのキーチェーンに保存され、メモには保存されません。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"iPhone 키체인에 저장되며 메모에는 저장되지 않습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Opgeslagen in de iPhone-sleutelhanger, nooit in je notities."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Armazenado nas Chaves do iPhone, nunca nas suas notas."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"存储在 iPhone 钥匙串中，绝不会写入你的笔记。"}}
+      }
+    },
+    "The Mac writes files using the setup you choose on iPad." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Der Mac schreibt Dateien mit den Einstellungen, die du auf dem iPad auswählst."}},
+        "es": {"stringUnit":{"state":"translated","value":"El Mac escribe los archivos con la configuración que elijas en el iPad."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Le Mac écrit les fichiers selon la configuration choisie sur l’iPad."}},
+        "it": {"stringUnit":{"state":"translated","value":"Il Mac scrive i file usando la configurazione che scegli su iPad."}},
+        "ja": {"stringUnit":{"state":"translated","value":"MacはiPadで選択した設定に従ってファイルを書き込みます。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"Mac은 iPad에서 선택한 설정에 따라 파일을 저장합니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"De Mac schrijft bestanden met de instellingen die je op je iPad kiest."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"O Mac grava os arquivos usando a configuração que você escolhe no iPad."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"Mac 会按照你在 iPad 上选择的设置写入文件。"}}
+      }
+    },
+    "This automation writes somewhere this iPad can’t read, so the file isn’t shown here." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Diese Automation schreibt an einen Ort, den dieses iPad nicht lesen kann, daher wird die Datei hier nicht angezeigt."}},
+        "es": {"stringUnit":{"state":"translated","value":"Esta automatización escribe en un lugar que este iPad no puede leer, así que el archivo no se muestra aquí."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Cette automatisation écrit à un endroit que cet iPad ne peut pas lire ; le fichier n’est donc pas affiché ici."}},
+        "it": {"stringUnit":{"state":"translated","value":"Questa automazione scrive in un luogo che questo iPad non può leggere, quindi il file non viene mostrato qui."}},
+        "ja": {"stringUnit":{"state":"translated","value":"このオートメーションはこのiPadから読めない場所に書き出すため、ここにはファイルを表示できません。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"이 자동화는 이 iPad이 읽을 수 없는 위치에 기록하므로 여기에서 파일을 표시할 수 없습니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Deze automatisering schrijft naar een plek die deze iPad niet kan lezen, dus het bestand wordt hier niet getoond."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Esta automação grava em um local que este iPad não consegue ler, então o arquivo não é mostrado aqui."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"此自动化写入的位置这台 iPad 无法读取，因此这里不显示文件。"}}
+      }
+    },
+    "Today · Start free trial" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Heute · Kostenlose Testphase starten"}},
+        "es": {"stringUnit":{"state":"translated","value":"Hoy · Inicia la prueba gratuita"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Aujourd’hui · Début de l’essai gratuit"}},
+        "it": {"stringUnit":{"state":"translated","value":"Oggi · Inizia la prova gratuita"}},
+        "ja": {"stringUnit":{"state":"translated","value":"今日 · 無料トライアル開始"}},
+        "ko": {"stringUnit":{"state":"translated","value":"오늘 · 무료 체험 시작"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Vandaag · Start gratis proefperiode"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Hoje · Comece o teste grátis"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"今天 · 开始免费试用"}}
+      }
+    },
+    "Update Health.md on Mac to receive iPad-configured export jobs." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Aktualisiere Health.md auf dem Mac, um auf dem iPad konfigurierte Exportaufträge zu empfangen."}},
+        "es": {"stringUnit":{"state":"translated","value":"Actualiza Health.md en el Mac para recibir tareas de exportación configuradas en el iPad."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Mettez à jour Health.md sur Mac pour recevoir les tâches d’export configurées sur l’iPad."}},
+        "it": {"stringUnit":{"state":"translated","value":"Aggiorna Health.md sul Mac per ricevere le attività di esportazione configurate su iPad."}},
+        "ja": {"stringUnit":{"state":"translated","value":"iPadで設定したエクスポートジョブを受信するには、MacのHealth.mdをアップデートしてください。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"iPad에서 설정한 내보내기 작업을 받으려면 Mac의 Health.md를 업데이트하세요."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Werk Health.md op de Mac bij om exporttaken te ontvangen die op de iPad zijn geconfigureerd."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Atualize o Health.md no Mac para receber tarefas de exportação configuradas no iPad."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"更新 Mac 上的 Health.md 以接收在 iPad 上配置的导出任务。"}}
+      }
+    },
+    "iPad folder" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"iPad-Ordner"}},
+        "es": {"stringUnit":{"state":"translated","value":"Carpeta del iPad"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Dossier de l’iPad"}},
+        "it": {"stringUnit":{"state":"translated","value":"Cartella iPad"}},
+        "ja": {"stringUnit":{"state":"translated","value":"iPadのフォルダ"}},
+        "ko": {"stringUnit":{"state":"translated","value":"iPad 폴더"}},
+        "nl": {"stringUnit":{"state":"translated","value":"iPad-map"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Pasta do iPad"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"iPad 文件夹"}}
+      }
     }
   },
   "version" : "1.0"

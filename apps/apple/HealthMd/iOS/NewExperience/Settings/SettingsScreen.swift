@@ -104,6 +104,7 @@ struct SettingsScreen: View {
                     // iPadSettingsG: the sidebar already names the app, so the pane has no title.
                     if !usesTwoPanes {
                         Text("Settings").glassFont(.largeTitle).foregroundStyle(palette.text)
+                            .lineLimit(1).minimumScaleFactor(0.5)
                     }
 
                     planRow
@@ -113,6 +114,7 @@ struct SettingsScreen: View {
                         GlassSettingsRow(
                             title: folderTitle,
                             subtitle: folderSubtitle,
+                            hint: String(localized: "Double tap to choose an Obsidian vault folder"),
                             systemImage: "folder.fill", tile: .settingsTileViolet,
                             badge: folderBadge
                         ) { open(.folder) }
@@ -181,6 +183,7 @@ struct SettingsScreen: View {
                         if ConnectedAppsFeature.isEnabled {
                             GlassSettingsRow(
                                 title: String(localized: "Connected apps"),
+                                hint: String(localized: "Double tap to connect or disconnect third-party health providers"),
                                 systemImage: "plus", tile: .settingsTileOrange,
                                 value: connectedAppsValue,
                                 showsDivider: true
@@ -197,6 +200,7 @@ struct SettingsScreen: View {
                         }
                         GlassSettingsRow(
                             title: String(localized: "Clinician report"),
+                            hint: ClinicianReportCopy().string(.accessibility_hint),
                             systemImage: "doc.text.fill", tile: .settingsTileGray,
                             showsDivider: true
                         ) { open(.clinicianReport) }
@@ -459,10 +463,11 @@ struct SettingsScreen: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: compact ? 0 : 3) {
                     Text(verbatim: "Health.md")
-                        .font(.system(size: compact ? 16 : 19, weight: .bold))
+                        .glassScaledFont(compact ? 16 : 19, weight: .bold, relativeTo: .headline)
+                        .lineLimit(1).minimumScaleFactor(0.6)
                         .foregroundStyle(palette.text)
                     Text(planSubtitle)
-                        .font(.system(size: compact ? 12 : 14))
+                        .glassScaledFont(compact ? 12 : 14, relativeTo: .subheadline)
                         .foregroundStyle(palette.muted)
                 }
                 Spacer(minLength: 8)
@@ -481,6 +486,7 @@ struct SettingsScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
+        .accessibilityHint(String(localized: "Double tap to manage purchases and Family Sharing"))
         .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier("glass.settings.plan")
     }
@@ -517,11 +523,7 @@ struct SettingsScreen: View {
             : String(localized: "\(purchaseManager.activePlanTitle) · restore or manage")
     }
 
-    private var folderTitle: String {
-        UIDevice.current.userInterfaceIdiom == .pad
-            ? String(localized: "Vault on this iPad")
-            : String(localized: "Vault on this iPhone")
-    }
+    private var folderTitle: String { HostDevice.current.vaultTitle }
 
     /// Folder automations can each write to their own folder, so summarise how many are in use.
     private var folderSubtitle: String? {

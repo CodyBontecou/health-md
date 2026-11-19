@@ -118,7 +118,10 @@ struct GlassAPIEndpointEditorSheet: View {
                     }
 
                     field(String(localized: "Bearer token (optional)"),
-                          hint: String(localized: "Stored in the iPhone Keychain, never in your notes.")) {
+                          hint: HostDevice.current.pick(
+                              iPhone: String(localized: "Stored in the iPhone Keychain, never in your notes."),
+                              iPad: String(localized: "Stored in the iPad Keychain, never in your notes.")
+                          )) {
                         HStack(spacing: 0) {
                             Group {
                                 if showsToken {

@@ -185,7 +185,10 @@ struct ArchiveDayPage: View {
     private func emptyMessage(_ profile: ArchiveProfile, day: CoverageDay) -> String {
         if isLoading && currentKey != nil { return String(localized: "Reading the file…") }
         if !profile.writesFilesOnDevice {
-            return String(localized: "This automation writes somewhere this iPhone can’t read, so the file isn’t shown here.")
+            return HostDevice.current.pick(
+                iPhone: String(localized: "This automation writes somewhere this iPhone can’t read, so the file isn’t shown here."),
+                iPad: String(localized: "This automation writes somewhere this iPad can’t read, so the file isn’t shown here.")
+            )
         }
         switch day.status {
         case .inProgress where day.record == nil:
