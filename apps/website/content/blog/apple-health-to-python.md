@@ -22,7 +22,7 @@ tags:
 
 To analyze Apple Health data with Python, first export the metrics you need as CSV, then read those files locally. This walkthrough uses Health.md’s daily Summary CSV format and Python’s built in `csv` module. You do not need pandas, a notebook service, or a cloud upload for the example.
 
-Apple’s built in Export All Health Data produces an XML archive. The code below reads fresh Health.md CSV exports; it does not parse `export.xml`, convert an existing archive, or read Apple Health directly from your computer. Start with the [XML export guide](/blog/apple-health-xml-export/) if you already have an Apple archive.
+Apple’s built in Export All Health Data produces an XML archive. The code below reads fresh Health.md CSV exports; it does not parse `export.xml`, convert an existing archive, or read Apple Health directly from your computer. Start with the [XML export guide](/blog/apple-health-xml-export/) if you already have an Apple archive, or use the [workout distance parser for export.xml](/blog/apple-health-export-xml-workout-distance/) if you only need each workout's distance.
 
 ## 1. Export daily summaries for the metric you want
 

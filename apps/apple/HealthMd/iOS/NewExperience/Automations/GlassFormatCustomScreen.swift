@@ -142,6 +142,12 @@ struct GlassFormatCustomScreen: View {
             .glassFont(.rowSubtitle)
             .foregroundStyle(palette.muted)
             .padding(.horizontal, 20)
+        // These switches alone decide frontmatter properties, for every category (#353).
+        Text(String(localized: "Only fields switched on here go into frontmatter. A field also needs its metric switched on to have data."))
+            .glassFont(.rowSubtitle)
+            .foregroundStyle(palette.muted)
+            .padding(.horizontal, 20)
+            .accessibilityIdentifier("glass.formatCustom.frontmatterOwnership")
 
         // 3.5 parity: bulk field actions from the classic Frontmatter Fields menu.
         GlassPanel {

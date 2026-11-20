@@ -4,6 +4,7 @@ import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.export.CsvExporter
 import com.healthmd.domain.model.*
 import com.healthmd.domain.render.HealthMdRenderInputAdapter
+import com.healthmd.domain.render.NativeFrontmatterOwners
 import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.json.*
 import kotlin.coroutines.coroutineContext
@@ -153,19 +154,21 @@ internal object AndroidWakeDateSourceProjection {
         val keys = Json.parseToJsonElement(semanticResult.decodeToString()).jsonObject.getValue("selected_output_keys").jsonArray
             .map { it.jsonPrimitive.content }
         require(keys.distinct().size == keys.size)
-        // Source authority follows the frozen metric selection. Hiding summary frontmatter
-        // changes presentation without revoking the selected native records.
+        // Source authority follows the frozen metric selection: hiding summary frontmatter keeps
+        // the selected native records in JSON, CSV and the Markdown body. Their Bases frontmatter
+        // blocks follow the Format → Custom switches of the fields that own them (#353).
+        val frontmatter = customization.frontmatterConfig::isFieldEnabled
         val sleep = root["sleep"]?.jsonObject
         val details = listOf(
-            HealthMdRenderInputAdapter.quantityDetails(root, source.date.toString(), keys),
+            HealthMdRenderInputAdapter.quantityDetails(root, source.date.toString(), keys, frontmatter),
             HealthMdRenderInputAdapter.sleepDetails(sleep?.get("sleepStages")?.jsonArray ?: JsonArray(emptyList()),
-                sleep?.get("sleepSessions")?.jsonArray ?: JsonArray(emptyList()), source.date.toString(), keys),
-            HealthMdRenderInputAdapter.workoutDetails(root, source.date.toString(), keys),
-            HealthMdRenderInputAdapter.bloodPressureDetails(root, source.date.toString(), keys),
-            HealthMdRenderInputAdapter.activityDetails(root, source.date.toString(), keys),
-            HealthMdRenderInputAdapter.mindfulnessDetails(root, source.date.toString(), keys),
-            remainingNativeDetails(root, source.date.toString()),
-            HealthMdRenderInputAdapter.plannedAndMedicalDetails(root, source.date.toString(), keys),
+                sleep?.get("sleepSessions")?.jsonArray ?: JsonArray(emptyList()), source.date.toString(), keys, frontmatter),
+            HealthMdRenderInputAdapter.workoutDetails(root, source.date.toString(), keys, frontmatter),
+            HealthMdRenderInputAdapter.bloodPressureDetails(root, source.date.toString(), keys, frontmatter),
+            HealthMdRenderInputAdapter.activityDetails(root, source.date.toString(), keys, frontmatter),
+            HealthMdRenderInputAdapter.mindfulnessDetails(root, source.date.toString(), keys, frontmatter),
+            remainingNativeDetails(root, source.date.toString(), frontmatter),
+            HealthMdRenderInputAdapter.plannedAndMedicalDetails(root, source.date.toString(), keys, frontmatter),
             provenanceDetails(root, source.date.toString()),
         ).reduce(HealthMdRenderInputAdapter::mergeDetails)
         return root to details
@@ -202,8 +205,12 @@ internal object AndroidWakeDateSourceProjection {
         return JsonObject(result)
     }
 
-    /** Preserve already-captured Android records without extending shared quantity identities. */
-    private fun remainingNativeDetails(root: JsonObject, ownerDate: String): JsonObject {
+    /**
+     * Preserve already-captured Android records without extending shared quantity identities.
+     * Their Bases frontmatter lines follow [NativeFrontmatterOwners.androidRecords] (#353).
+     */
+    internal fun remainingNativeDetails(root: JsonObject, ownerDate: String,
+        frontmatter: (String) -> Boolean = { true }): JsonObject {
         val owner = runCatching { java.time.LocalDate.parse(ownerDate) }.getOrElse {
             throw HealthMdRenderInputAdapter.AdapterException("wake-date native detail owner is incompatible")
         }
@@ -260,7 +267,7 @@ internal object AndroidWakeDateSourceProjection {
                     put("value", record); put("unit", "json"); put("timestamp", timestamp); put("ordinal", rows.size)
                 }
                 lines += "| ${nativeJsonCodeCell(record)} |"
-                yaml += "  - $record"
+                if (NativeFrontmatterOwners.androidRecords.getValue(field).any(frontmatter)) yaml += "  - $record"
             }
         }
         return buildJsonObject {
