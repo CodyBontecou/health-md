@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="automation_output_path_invalid">Introduce una carpeta dentro de tu bóveda y un nombre de archivo sin barras, signos de porcentaje ni referencias al directorio superior.</string>
+</resources>
