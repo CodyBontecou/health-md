@@ -1,6 +1,7 @@
 package com.healthmd.presentation.onboarding
 
 import android.text.format.DateFormat
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -969,8 +970,10 @@ internal fun DailyStep(
     trialOffer: PurchaseOffer?,
     purchasesAvailable: Boolean,
     isBusy: Boolean,
-    purchaseFailed: Boolean,
+    isRestoring: Boolean,
+    @StringRes errorMessage: Int?,
     onStartTrial: () -> Unit,
+    onRestore: () -> Unit,
     onEnable: () -> Unit,
     onNotNow: () -> Unit,
 ) {
@@ -981,7 +984,9 @@ internal fun DailyStep(
         step = OnboardingStep.DAILY,
         onBack = null,
         footer = {
-            if (purchaseFailed) Text(stringResource(R.string.onboarding_daily_purchase_error), style = GeistType.copy13, color = colors.error)
+            errorMessage?.let {
+                Text(stringResource(it), style = GeistType.copy13, color = colors.error, modifier = Modifier.testTag(OnboardingTestTags.DAILY_ERROR))
+            }
             when (offer) {
                 DailyOffer.TRIAL -> OnboardingPrimaryButton(
                     text = stringResource(R.string.onboarding_daily_start_trial),
@@ -997,6 +1002,21 @@ internal fun DailyStep(
                 )
             }
             OnboardingSecondaryButton(stringResource(R.string.onboarding_daily_not_now), onNotNow, enabled = !isBusy)
+            if (OnboardingFlow.showsRestore(offer, purchasesAvailable)) {
+                // A returning user who reinstalled restores the earlier store purchase here.
+                TextButton(
+                    onClick = onRestore,
+                    enabled = !isBusy,
+                    modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = GeistSizes.minimumTouchTarget)
+                        .testTag(OnboardingTestTags.RESTORE),
+                ) {
+                    Text(
+                        stringResource(if (isRestoring) R.string.paywall_restoring else R.string.paywall_restore),
+                        style = GeistType.button14,
+                        color = colors.brandPrimary,
+                    )
+                }
+            }
             if (offer == DailyOffer.TRIAL) {
                 Text(stringResource(R.string.onboarding_daily_cancel_anytime), style = GeistType.copy13, color = colors.secondary)
             }

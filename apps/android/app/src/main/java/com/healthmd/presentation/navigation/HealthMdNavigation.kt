@@ -552,7 +552,15 @@ fun HealthMdNavigation(
                                     navController.navigate(SubRoutes.SETTINGS_SUBSCRIPTION) { launchSingleTop = true }
                                 }
                             },
-                            onNavigateToClinicianReport = { open(SubRoutes.CLINICIAN_REPORT) },
+                            // Locked users get the paywall, as on Apple (ClinicianReportView shows
+                            // PaywallView): the report route itself only has a dead-end message.
+                            onNavigateToClinicianReport = {
+                                if (!personalAccess && settingsViewModel.distributionPolicy.purchasesAvailable) {
+                                    navController.navigate(PaywallEntryPoint.UPGRADE.route) { launchSingleTop = true }
+                                } else {
+                                    open(SubRoutes.CLINICIAN_REPORT)
+                                }
+                            },
                             onNavigateToDirectCli = { open(SubRoutes.DIRECT_CLI) },
                             onNavigateToFolderDestination = { open(SubRoutes.FOLDER_DESTINATION) },
                             onNavigateToApiEndpoint = { open(SubRoutes.SETTINGS_API_ENDPOINT) },
@@ -688,6 +696,8 @@ fun HealthMdNavigation(
                     onOpenPage = { id, page -> navController.navigate(AutomationRoutes.page(id, page)) { launchSingleTop = true } },
                     onOpenSchedule = { id -> navController.navigate(AutomationRoutes.schedule(id)) { launchSingleTop = true } },
                     onDeleted = { navController.popBackStack() },
+                    // The copy opens over its source, so Back returns to the automation it came from.
+                    onOpenAutomation = { id -> navController.navigate(SubRoutes.automationDetail(id)) },
                     profilesViewModel = profiles,
                 )
             }

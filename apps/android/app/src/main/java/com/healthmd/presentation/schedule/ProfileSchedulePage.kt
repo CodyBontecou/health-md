@@ -175,6 +175,14 @@ fun ProfileSchedulePage(
                 )
             }
 
+            AutomationScheduleWarningCards(
+                scheduleEnabled = draft.isEnabled,
+                exactTimingAvailable = schedules.exactTimingAvailable,
+                requiresHealthConnectBackgroundAccess = schedules.requiresHealthConnectBackgroundAccess,
+                onRefreshSchedulingState = schedulesViewModel::refreshSchedulingState,
+                modifier = Modifier.padding(top = GeistSpacing.space4),
+            )
+
             val uriHandler = LocalUriHandler.current
             BackgroundTimingRow(onClick = { uriHandler.openUri(BACKGROUND_TIMING_URL) })
             if (showsAccessNote) Footnote(stringResource(R.string.schedule_access_note))

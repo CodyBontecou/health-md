@@ -1,0 +1,94 @@
+version: 1
+requires:
+  platform: android
+# android-automation-crud (Android ledger A-PRF-02/03/04/05, 3.5.0 → main parity): 3.5.0 managed
+# export profiles under Settings › Export Profiles (new / duplicate / delete). Main does it from the
+# Automations tab. This creates "QA Temp", duplicates it to "QA Temp 2", deletes both, and checks
+# the delete confirmation keeps the 3.5 wording about the last remaining profile.
+#
+# Prerequisite (fragment): the isolated QA app com.healthmd.android.e2e (playE2e build), started
+# UNLOCKED in UI test mode just before the run (Argent cannot pass Android launch extras):
+#   adb shell am force-stop com.healthmd.android.e2e  # an install -r can leave a non-test process
+#   adb shell am start -S -n com.healthmd.android.e2e/com.healthmd.presentation.MainActivity \
+#     --ez uitesting true --es UITEST_HEALTH_AUTHORIZED true --es UITEST_PURCHASE_UNLOCKED true
+# and no automation whose name starts with "QA Temp".
+# Side effects: none left behind (both automations it creates are deleted). Leaves the app on
+# Automations.
+#
+# Selector notes: the name field's text is the generated default ("Profile N"), so it is tapped as
+# the sheet's only TextField. After a scroll, Argent's describe tree on the Pixel 7 goes stale
+# (argent 0.33), so the delete steps were driven live by point and are written here as runner
+# `scroll-to` + text taps; the replay below is their proof.
+executionPrerequisite: QA app com.healthmd.android.e2e just started UNLOCKED in UI test mode with
+  the adb command in the header; Archive showing, possibly under the "Recover missed scheduled
+  exports?" dialog; no automation named "QA Temp…".
+steps:
+  - echo: Unlocked QA app on Archive. Dismiss the recovery prompt if shown, then open Automations
+  - when: { visible: { text: Not now } }
+    steps:
+      - tap: { text: Not now }
+  - await: { visible: { text: See this day }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { text: Automations }
+  - await: { visible: { text: New automation }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: "Create an automation named QA Temp (3.5: Export Profiles › New). Expect its detail page"
+  - tap: { text: New automation }
+  - await: { visible: { text: Starts from the current export settings. }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { role: TextField }
+  - tool: run-sequence
+    args:
+      steps:
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { text: QA Temp } }
+  - await: { visible: { text: QA Temp, role: TextField }, timeout: 3000 }
+  - tap: { text: Create }
+  - await: { visible: { text: Duplicate }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: "Duplicate it (3.5: Duplicate profile), go back. Expect QA Temp 2 on the list"
+  - tap: { text: Duplicate }
+  - tap: { text: Back }
+  - await: { visible: { text: New automation }, timeout: 5000 }
+  - await: { idle: true }
+  - scroll-to: { target: { text: QA Temp 2 } }
+  - await: { visible: { text: QA Temp 2 }, timeout: 5000 }
+
+  - echo: "Delete QA Temp 2 (3.5: Delete profile). Expect the last-profile wording, then it is gone"
+  - tap: { text: QA Temp 2 }
+  - await: { visible: { text: Edit sentence }, timeout: 5000 }
+  - await: { idle: true }
+  - scroll-to: { target: { text: Delete automation } }
+  - tap: { text: Delete automation }
+  - await: { visible: { text: The last remaining profile cannot be deleted. }, timeout: 5000 }
+  - tap: { text: { matches: '^Delete$' } }
+  - await: { hidden: { text: Delete automation }, timeout: 5000 }
+  - scroll-to: { target: { text: New automation }, direction: up }
+  - await: { hidden: { text: QA Temp 2 }, timeout: 5000 }
+  - await: { idle: true }
+
+  - echo: Delete QA Temp the same way. Expect it gone and the list as it started
+  - scroll-to: { target: { text: QA Temp } }
+  - tap: { text: QA Temp }
+  - await: { visible: { text: Edit sentence }, timeout: 5000 }
+  - await: { idle: true }
+  - scroll-to: { target: { text: Delete automation } }
+  - tap: { text: Delete automation }
+  - await: { visible: { text: The last remaining profile cannot be deleted. }, timeout: 5000 }
+  - tap: { text: { matches: '^Delete$' } }
+  - await: { hidden: { text: Delete automation }, timeout: 5000 }
+  - scroll-to: { target: { text: New automation }, direction: up }
+  - await: { hidden: { text: QA Temp }, timeout: 5000 }

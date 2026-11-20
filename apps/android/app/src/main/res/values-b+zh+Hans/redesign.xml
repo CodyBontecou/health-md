@@ -208,6 +208,7 @@
     <string name="settings_status_off">关闭</string>
     <string name="settings_status_allowed">已允许</string>
     <string name="settings_status_not_allowed">未允许</string>
+    <string name="settings_status_partly_allowed">部分允许</string>
     <string name="settings_status_paired">已配对</string>
     <string name="settings_health_connect_subtitle">权限和历史数据访问</string>
     <string name="settings_default_metrics">默认指标</string>
@@ -289,6 +290,8 @@
     <string name="automations_no_schedule">无计划</string>
     <string name="automation_section_automation">自动化</string>
     <string name="automation_duplicate">创建副本</string>
+    <string name="automation_duplicated_snackbar">已创建副本“%1$s”</string>
+    <string name="automation_duplicated_open">打开</string>
     <string name="automation_pause">暂停</string>
     <string name="automation_resume">恢复</string>
     <string name="automation_row_name">名称</string>
@@ -375,6 +378,9 @@
     <string name="output_write_mode_note">覆盖会替换文件。追加会添加到末尾。更新会合并新值，并保留你的编辑。</string>
     <string name="output_writes_to">写入位置</string>
     <string name="output_endpoint_invalid">请输入有效的 http(s) URL。有效后会保存更改。</string>
+    <string name="output_reset_configuration">重置导出配置</string>
+    <string name="output_reset_configuration_title">要重置导出配置吗？</string>
+    <string name="output_reset_configuration_message">此自动化的格式、指标、文件名、格式自定义、单独条目和每日笔记将恢复为默认值。其目标位置、子文件夹和计划保持不变。</string>
     <string name="automation_summary_single">{when}，将{range}[的{metrics}][以 {formats} 格式]写入{where}[，并{note}]。</string>
     <string name="automation_summary_multi">{when}，将{range}[的{metrics}][以 {formats} 格式]写入{where}[，并{note}]。</string>
     <string name="automation_summary_send_single">{when}，将{range}[的{metrics}][以 {formats} 格式]发送到{where}[，并{note}]。</string>
@@ -463,6 +469,7 @@
     <string name="export_result_retry_note_one">已完成的日期不受影响。重试仅写入 %1$s。</string>
     <string name="export_result_retry_note">已完成的日期不受影响。重试会写入 %1$s。</string>
     <string name="export_result_show_in_files">在“文件”中显示</string>
+    <string name="export_result_open_in_obsidian">在 Obsidian 中打开</string>
     <string name="composer_fields_frontmatter_note">选择此笔记收集的数据。Frontmatter 属性在“全部设置”→“格式”中设置。</string>
     <string name="frontmatter_fields_ownership_note">只有在此开启的字段才会写入 Frontmatter。字段还需要开启对应的指标才会有数据。</string>
 </resources>

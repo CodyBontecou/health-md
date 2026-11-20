@@ -20,15 +20,19 @@ import com.healthmd.domain.model.ExportProfileRules
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportSettingsSnapshotView
 import com.healthmd.domain.model.ExportTarget
+import com.healthmd.domain.model.resettingExportConfiguration
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.rawexport.ExportMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -55,7 +59,7 @@ data class ExportProfileRow(
 data class ExportProfileEditorDraft(
     val name: String,
     val target: ExportTarget,
-    /** Bound SAF tree URI for DEVICE_FOLDER targets; null follows the live Export-tab folder. */
+    /** Bound SAF tree URI for DEVICE_FOLDER targets; null follows the default folder (Settings › Vault on this device). */
     val folderUri: String? = null,
     val folderDisplayName: String? = null,
     /** Local Google Drive destination reference; authority remains in destination storage. */
@@ -69,6 +73,13 @@ data class ExportProfileEditorDraft(
     /** Raw snapshots have their own required JSON/NDJSON format, independent of daily formats. */
     val hasOutputFormat: Boolean
         get() = settings.exportMode == ExportMode.RAW_SNAPSHOT || settings.exportFormats.isNotEmpty()
+
+    /**
+     * 3.5 Reset to Defaults for this automation: its export settings return to their defaults
+     * while its name, target and destination bindings (folder, Drive, endpoint, gateway) stay.
+     */
+    fun resettingExportConfiguration(): ExportProfileEditorDraft =
+        copy(settings = settings.resettingExportConfiguration())
 }
 
 data class ExportProfilesUiState(
@@ -87,6 +98,9 @@ data class ExportProfilesUiState(
     val currentSettings: ExportSettings = ExportSettings(),
     val connectedGoogleDriveDestinationId: String? = null,
 )
+
+/** The copy a Duplicate just created: its id (to open it) and the name it was given. */
+data class DuplicatedProfile(val id: String, val name: String)
 
 /** Inputs the draft overlap preview resolves against, refreshed with the row stream. */
 private data class OverlapPreviewContext(
@@ -119,6 +133,11 @@ class ExportProfilesViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ExportProfilesUiState())
+
+    private val duplicatedEvents = Channel<DuplicatedProfile>(Channel.BUFFERED)
+
+    /** One event per finished Duplicate, so the source page can confirm it (snackbar + haptic). */
+    val duplicated: Flow<DuplicatedProfile> = duplicatedEvents.receiveAsFlow()
     val uiState: StateFlow<ExportProfilesUiState> = _uiState.asStateFlow()
 
     private var overlapContext = OverlapPreviewContext()
@@ -388,6 +407,7 @@ class ExportProfilesViewModel @Inject constructor(
                     derivedFromProfileId = source.id,
                 )
                 openDetail(copy.id)
+                duplicatedEvents.trySend(DuplicatedProfile(id = copy.id, name = copy.name))
             }.onFailure { Timber.e(it, "Could not duplicate profile") }
         }
     }

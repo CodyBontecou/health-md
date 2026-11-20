@@ -71,7 +71,7 @@ class ClinicianReportLocalCaptureTest {
         coEvery { settings.getSleepDayAttribution() } returns attribution
         val manager = mockk<HealthConnectManager>()
         coEvery { manager.isAvailable() } returns true
-        coEvery { manager.hasAllPermissions() } returns true
+        coEvery { manager.hasAnyReadPermission() } returns true
         coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
             localFailure?.let { throw it }
             firstArg<List<LocalDate>>().map { HealthData(it, heart = HeartData(restingHeartRate = 61.0)) }

@@ -26,6 +26,7 @@ object TestMode {
     const val EXTRA_ENABLED = "uitesting"
 
     const val KEY_HEALTH_AUTHORIZED = "UITEST_HEALTH_AUTHORIZED"
+    const val KEY_HEALTH_PARTIAL = "UITEST_HEALTH_PARTIAL"
     const val KEY_SHOW_ONBOARDING = "UITEST_SHOW_ONBOARDING"
     const val KEY_HAS_COMPLETED_ONBOARDING = "UITEST_HAS_COMPLETED_ONBOARDING"
     const val KEY_PURCHASE_UNLOCKED = "UITEST_PURCHASE_UNLOCKED"
@@ -35,6 +36,8 @@ object TestMode {
     /** One launch's deterministic configuration. Unset optional values leave stored state alone. */
     data class Scenario(
         val healthAuthorized: Boolean = false,
+        /** Only [PARTIAL_GRANT_PERMISSIONS] are granted; exports still run on that partial access. */
+        val healthPartiallyAuthorized: Boolean = false,
         val showsOnboarding: Boolean = false,
         val hasCompletedOnboarding: Boolean = true,
         val purchaseUnlocked: Boolean? = null,
@@ -51,7 +54,21 @@ object TestMode {
 
     val isActive: Boolean get() = scenario != null
 
-    val healthAuthorized: Boolean get() = scenario?.healthAuthorized == true
+    /** Any read access is granted: full, or the partial scenario's subset. */
+    val healthAuthorized: Boolean
+        get() = scenario?.let { it.healthAuthorized || it.healthPartiallyAuthorized } == true
+
+    /** Only a fixed subset of the requested read permissions is granted. */
+    val healthPartiallyAuthorized: Boolean get() = scenario?.healthPartiallyAuthorized == true
+
+    /** Record types granted by the partial scenario; every other requested type stays denied. */
+    val PARTIAL_GRANT_PERMISSIONS: Set<String> = setOf(
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_HEART_RATE",
+    )
+
+    /** The partial scenario's grants within [requested], deterministic across devices. */
+    fun partialGrant(requested: Set<String>): Set<String> = requested intersect PARTIAL_GRANT_PERMISSIONS
 
     /**
      * Activates test mode from a launch intent's extras. Returns the scenario only when this call
@@ -69,6 +86,7 @@ object TestMode {
         if (!available || values[EXTRA_ENABLED].asFlag() != true) return null
         return Scenario(
             healthAuthorized = values[KEY_HEALTH_AUTHORIZED].asFlag() == true,
+            healthPartiallyAuthorized = values[KEY_HEALTH_PARTIAL].asFlag() == true,
             showsOnboarding = values[KEY_SHOW_ONBOARDING].asFlag() == true,
             hasCompletedOnboarding = values[KEY_HAS_COMPLETED_ONBOARDING].asFlag() != false,
             purchaseUnlocked = values[KEY_PURCHASE_UNLOCKED].asFlag(),
