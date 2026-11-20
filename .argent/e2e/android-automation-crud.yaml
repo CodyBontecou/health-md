@@ -8,6 +8,7 @@ requires:
 #
 # Prerequisite (fragment): the isolated QA app com.healthmd.android.e2e (playE2e build), started
 # UNLOCKED in UI test mode just before the run (Argent cannot pass Android launch extras):
+#   adb shell am force-stop com.healthmd.android.e2e  # an install -r can leave a non-test process
 #   adb shell am start -S -n com.healthmd.android.e2e/com.healthmd.presentation.MainActivity \
 #     --ez uitesting true --es UITEST_HEALTH_AUTHORIZED true --es UITEST_PURCHASE_UNLOCKED true
 # and no automation whose name starts with "QA Temp".
@@ -74,7 +75,8 @@ steps:
   - tap: { text: Delete automation }
   - await: { visible: { text: The last remaining profile cannot be deleted. }, timeout: 5000 }
   - tap: { text: { matches: '^Delete$' } }
-  - await: { visible: { text: New automation }, timeout: 5000 }
+  - await: { hidden: { text: Delete automation }, timeout: 5000 }
+  - scroll-to: { target: { text: New automation }, direction: up }
   - await: { hidden: { text: QA Temp 2 }, timeout: 5000 }
   - await: { idle: true }
 
@@ -87,5 +89,6 @@ steps:
   - tap: { text: Delete automation }
   - await: { visible: { text: The last remaining profile cannot be deleted. }, timeout: 5000 }
   - tap: { text: { matches: '^Delete$' } }
-  - await: { visible: { text: New automation }, timeout: 5000 }
+  - await: { hidden: { text: Delete automation }, timeout: 5000 }
+  - scroll-to: { target: { text: New automation }, direction: up }
   - await: { hidden: { text: QA Temp }, timeout: 5000 }
