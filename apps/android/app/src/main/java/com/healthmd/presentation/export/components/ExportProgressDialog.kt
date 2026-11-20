@@ -6,6 +6,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.animation.core.Animatable
@@ -25,6 +27,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -32,6 +35,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -65,13 +69,21 @@ fun ExportProgressDialog(
     onCancel: () -> Unit,
     /**
      * Set once a run finished with every day written: the moment holds its full heart and
-     * offers "See in archive" and Close before the sheet shows the detailed result.
+     * offers "See in archive", Replay and Close, plus the folder actions below, before the
+     * sheet shows the detailed result.
      */
     isDone: Boolean = false,
     onSeeInArchive: (() -> Unit)? = null,
     onClose: () -> Unit = {},
     /** The done line, as on iOS: "Oct 24 – 30 · 14 files". */
     doneSubtitle: String? = null,
+    /**
+     * Folder actions after a run that wrote files to a device folder, as Android 3.5 offered
+     * after a successful export and iOS's done card offers beside "See in archive". Each is
+     * null when it does not apply; Open in Obsidian only when Obsidian is installed.
+     */
+    onShowInFiles: (() -> Unit)? = null,
+    onOpenInObsidian: (() -> Unit)? = null,
 ) {
     val colors = LocalGeistColors.current
     val locale = LocalConfiguration.current.locales[0]
@@ -234,6 +246,53 @@ fun ExportProgressDialog(
                                 contentColor = colors.onSecondaryContainer,
                             ),
                         ) { Text(stringResource(R.string.close), style = GeistType.button14) }
+                    }
+                    if (onShowInFiles != null || onOpenInObsidian != null) {
+                        // iOS puts a folder button beside "See in archive"; Replay and Close
+                        // already fill that row here, so the folder actions get their own
+                        // secondary row below the primary one.
+                        Row(horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2)) {
+                            val folderButtonColors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = colors.secondaryContainer,
+                                contentColor = colors.onSecondaryContainer,
+                            )
+                            if (onShowInFiles != null) {
+                                FilledTonalButton(
+                                    onClick = onShowInFiles,
+                                    modifier = Modifier.weight(1f).heightIn(min = GeistSizes.controlLarge)
+                                        .testTag("export.done.showInFiles"),
+                                    shape = RoundedCornerShape(GeistRadii.full),
+                                    colors = folderButtonColors,
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.Folder,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(GeistSizes.iconSmall),
+                                    )
+                                    Spacer(Modifier.width(GeistSpacing.space2))
+                                    Text(
+                                        stringResource(R.string.export_result_show_in_files),
+                                        style = GeistType.button14,
+                                        textAlign = TextAlign.Center,
+                                    )
+                                }
+                            }
+                            if (onOpenInObsidian != null) {
+                                FilledTonalButton(
+                                    onClick = onOpenInObsidian,
+                                    modifier = Modifier.weight(1f).heightIn(min = GeistSizes.controlLarge)
+                                        .testTag("export.done.openInObsidian"),
+                                    shape = RoundedCornerShape(GeistRadii.full),
+                                    colors = folderButtonColors,
+                                ) {
+                                    Text(
+                                        stringResource(R.string.export_result_open_in_obsidian),
+                                        style = GeistType.button14,
+                                        textAlign = TextAlign.Center,
+                                    )
+                                }
+                            }
+                        }
                     }
                 } else {
                     OutlinedButton(

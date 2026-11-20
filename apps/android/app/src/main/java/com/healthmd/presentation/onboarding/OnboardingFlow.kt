@@ -1,5 +1,8 @@
 package com.healthmd.presentation.onboarding
 
+import androidx.annotation.StringRes
+import com.healthmd.R
+import com.healthmd.domain.billing.BillingError
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.PurchaseOffer
@@ -62,6 +65,20 @@ object OnboardingFlow {
     fun trialOffer(offers: List<PurchaseOffer>): PurchaseOffer? =
         offers.firstOrNull { it.plan == PurchasePlan.YEARLY && it.hasSevenDayTrial }
             ?: offers.firstOrNull { it.hasSevenDayTrial }
+
+    /** Restore sits beside the trial only where this channel can restore a store purchase. */
+    fun showsRestore(offer: DailyOffer, purchasesAvailable: Boolean): Boolean =
+        offer == DailyOffer.TRIAL && purchasesAvailable
+
+    /** The Make it daily error line: the restore's own billing error after Restore, else the trial error. */
+    @StringRes
+    fun dailyErrorMessage(error: BillingError?, afterRestore: Boolean): Int? = when {
+        error == null -> null
+        !afterRestore -> R.string.onboarding_daily_purchase_error
+        error == BillingError.NO_PREVIOUS_PURCHASE -> R.string.billing_error_no_previous_purchase
+        error == BillingError.SERVICE_UNAVAILABLE -> R.string.billing_error_service_unavailable
+        else -> R.string.billing_error_restore_failed
+    }
 
     fun canContinueFromPacks(selected: Int): Boolean = selected > 0
 

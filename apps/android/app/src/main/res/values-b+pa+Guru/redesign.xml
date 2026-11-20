@@ -388,6 +388,9 @@
 <string name="output_write_mode_note">ਓਵਰਲਿਖੋ ਫ਼ਾਈਲ ਬਦਲਦਾ ਹੈ। ਅੰਤ ਵਿੱਚ ਜੋੜੋ ਅਖੀਰ ਤੇ ਜੋੜਦਾ ਹੈ। ਅੱਪਡੇਟ ਨਵੇਂ ਮੁੱਲ ਮਿਲਾਉਂਦਾ ਅਤੇ ਤੁਹਾਡੀਆਂ ਸੋਧਾਂ ਰੱਖਦਾ ਹੈ।</string>
 <string name="output_writes_to">ਇੱਥੇ ਲਿਖਦਾ ਹੈ</string>
 <string name="output_endpoint_invalid">ਵੈਧ http(s) URL ਦਾਖਲ ਕਰੋ। ਵੈਧ ਹੋਣ ਤੇ ਬਦਲਾਅ ਸੰਭਾਲੇ ਜਾਂਦੇ ਹਨ।</string>
+<string name="output_reset_configuration">ਨਿਰਯਾਤ ਸੰਰਚਨਾ ਰੀਸੈਟ ਕਰੋ</string>
+<string name="output_reset_configuration_title">ਕੀ ਨਿਰਯਾਤ ਸੰਰਚਨਾ ਰੀਸੈਟ ਕਰਨੀ ਹੈ?</string>
+<string name="output_reset_configuration_message">ਇਸ ਆਟੋਮੇਸ਼ਨ ਦੇ ਫਾਰਮੈਟ, ਮੈਟ੍ਰਿਕਸ, ਫ਼ਾਈਲ ਨਾਮ, ਫਾਰਮੇਟ ਕਸਟਮਾਈਜੇਸ਼ਨ, ਵਿਅਕਤੀਗਤ ਐਂਟਰੀਆਂ ਅਤੇ ਰੋਜ਼ਾਨਾ ਨੋਟ ਆਪਣੇ ਮੂਲ ਮੁੱਲਾਂ \'ਤੇ ਵਾਪਸ ਆ ਜਾਣਗੇ। ਇਸਦੀ ਮੰਜ਼ਿਲ, ਸਬਫੋਲਡਰ ਅਤੇ ਸਮਾਂ-ਸੂਚੀ ਉਹੀ ਰਹਿਣਗੇ।</string>
 <string name="automation_summary_single">{when}, {range}[ ਦੇ {metrics}][ ਨੂੰ {formats} ਵਜੋਂ] {where} ਵਿੱਚ ਲਿਖੋ[ ਅਤੇ {note}]।</string>
 <string name="automation_summary_multi">{when}, {range}[ ਦੇ {metrics}][ ਨੂੰ {formats} ਵਜੋਂ] {where} ਵਿੱਚ ਲਿਖੋ[ ਅਤੇ {note}]।</string>
 <string name="automation_summary_send_single">{when}, {range}[ ਦੇ {metrics}][ ਨੂੰ {formats} ਵਜੋਂ] {where} ਨੂੰ ਭੇਜੋ[ ਅਤੇ {note}]।</string>
@@ -476,6 +479,7 @@
 <string name="export_result_retry_note_one">ਪੂਰੀਆਂ ਤਾਰੀਖਾਂ ਪੂਰੀਆਂ ਹੀ ਰਹਿੰਦੀਆਂ ਹਨ। ਮੁੜ ਕੋਸ਼ਿਸ਼ ਸਿਰਫ਼ %1$s ਲਿਖਦੀ ਹੈ।</string>
 <string name="export_result_retry_note">ਪੂਰੀਆਂ ਤਾਰੀਖਾਂ ਪੂਰੀਆਂ ਹੀ ਰਹਿੰਦੀਆਂ ਹਨ। ਮੁੜ ਕੋਸ਼ਿਸ਼ %1$s ਲਿਖਦੀ ਹੈ।</string>
 <string name="export_result_show_in_files">ਫਾਈਲਾਂ ਵਿੱਚ ਦਿਖਾਓ</string>
+<string name="export_result_open_in_obsidian">Obsidian ਵਿੱਚ ਖੋਲ੍ਹੋ</string>
     <string name="composer_fields_frontmatter_note">ਇਹ ਚੁਣਦਾ ਹੈ ਕਿ ਇਹ ਨੋਟ ਕਿਹੜਾ ਡਾਟਾ ਇਕੱਠਾ ਕਰੇ। ਫਰੰਟਮੈਟਰ ਗੁਣ ਸਾਰੀਆਂ ਸੈਟਿੰਗਾਂ → ਫਾਰਮੈਟ ਵਿੱਚ ਸੈੱਟ ਹੁੰਦੇ ਹਨ।</string>
     <string name="frontmatter_fields_ownership_note">ਸਿਰਫ਼ ਇੱਥੇ ਚਾਲੂ ਕੀਤੇ ਫੀਲਡ ਹੀ ਫਰੰਟਮੈਟਰ ਵਿੱਚ ਜਾਂਦੇ ਹਨ। ਡਾਟਾ ਹੋਣ ਲਈ ਫੀਲਡ ਦਾ ਮੈਟ੍ਰਿਕ ਵੀ ਚਾਲੂ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ।</string>
 </resources>

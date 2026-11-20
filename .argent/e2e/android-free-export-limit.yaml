@@ -1,0 +1,47 @@
+version: 1
+requires:
+  platform: android
+# android-free-export-limit (Android ledger A-BIL-07..11, 3.5.0 → main parity): in 3.5.0 a locked
+# Play user always reached the paywall from Export (FREE_EXPORT_LIMIT 0). Main allows one free
+# export (limit 1). With it used up, the Export now button must read "Unlock Health.md" and open
+# the paywall (Restore Purchase reachable, as in 3.5). Nothing is exported or purchased.
+#
+# Prerequisite (fragment): the isolated QA app com.healthmd.android.e2e (playE2e), started LOCKED
+# with the free export already used, just before the run:
+#   adb shell am start -S -n com.healthmd.android.e2e/com.healthmd.presentation.MainActivity \
+#     --ez uitesting true --es UITEST_HEALTH_AUTHORIZED true --es UITEST_PURCHASE_UNLOCKED false \
+#     --es UITEST_FREE_EXPORTS_USED 1 --es UITEST_STATIC_PURCHASE_PRICES true
+# Needs the behaviour of PR #389 (fix/android-unlock-without-destination): Unlock Health.md is
+# enabled even when the automation has no ready destination. The QA app after a pm clear has only
+# the "Default" automation and no picked folder, so without #389 the button stays disabled.
+# Side effects: none. Leaves the app on the Default automation page.
+# Authored from the app's strings and proved by full runner replays (Argent's describe tree is
+# stale on this Pixel; argent 0.33). The sheet is opened from Automations › Profile › Run now
+# because the floating Export now button has no text or id in the runner tree.
+executionPrerequisite: "QA app com.healthmd.android.e2e (a build with PR #389) just started LOCKED with UITEST_FREE_EXPORTS_USED 1 (adb command in the header); a Default automation exists; Archive showing, possibly under the Recover missed scheduled exports dialog."
+steps:
+  - echo: Locked QA app, free export used. Dismiss the recovery prompt if shown, open Automations
+  - when: { visible: { text: Not now } }
+    steps:
+      - tap: { text: Not now }
+  - await: { visible: { text: { matches: '^Archive$' } }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { text: Automations }
+  - await: { visible: { text: New automation }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: Default (no folder picked) › Run now. Expect the Export now sheet with the Unlock Health.md button
+  - tap: { text: { matches: '^Default$' } }
+  - await: { visible: { text: Run now }, timeout: 5000 }
+  - await: { idle: true }
+  - tap: { text: Run now }
+  - await: { visible: { text: Dates }, timeout: 8000 }
+  - await: { idle: true }
+  - await: { visible: { text: Unlock Health.md }, timeout: 5000 }
+
+  - echo: Tap Unlock Health.md. Expect the paywall with Restore Purchase, then close it
+  - tap: { text: Unlock Health.md }
+  - await: { visible: { text: Restore Purchase }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { text: Close }
+  - await: { hidden: { text: Restore Purchase }, timeout: 5000 }

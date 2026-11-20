@@ -427,6 +427,9 @@
     <string name="output_write_mode_note">Remplacer remplace le fichier. Ajouter complète la fin du fichier. Mettre à jour fusionne les nouvelles valeurs et conserve vos modifications.</string>
     <string name="output_writes_to">Écrit dans</string>
     <string name="output_endpoint_invalid">Saisissez une URL http(s) valide. Les modifications sont enregistrées dès qu’elle est valide.</string>
+    <string name="output_reset_configuration">Réinitialiser la configuration d’export</string>
+    <string name="output_reset_configuration_title">Réinitialiser la configuration d’export ?</string>
+    <string name="output_reset_configuration_message">Les formats, les mesures, les noms de fichier, la personnalisation du format, les entrées individuelles et les notes quotidiennes de cette automatisation reprennent leurs valeurs par défaut. Sa destination, son sous-dossier et sa planification restent inchangés.</string>
     <string name="automation_summary_single">{when}, écrire les données d’{range}[ pour {metrics}][ en {formats}] dans {where}[ et {note}].</string>
     <string name="automation_summary_multi">{when}, écrire les données[ pour {metrics}] des {range}[ en {formats}] dans {where}[ et {note}].</string>
     <string name="automation_summary_send_single">{when}, envoyer les données d’{range}[ pour {metrics}][ en {formats}] vers {where}[ et {note}].</string>
@@ -536,6 +539,7 @@
     <string name="export_result_retry_note_one">Les dates terminées le restent. La nouvelle tentative écrit uniquement %1$s.</string>
     <string name="export_result_retry_note">Les dates terminées le restent. La nouvelle tentative écrit %1$s.</string>
     <string name="export_result_show_in_files">Afficher dans Fichiers</string>
+    <string name="export_result_open_in_obsidian">Ouvrir dans Obsidian</string>
     <string name="composer_fields_frontmatter_note">Choisit les données que cette note collecte. Les propriétés du frontmatter se règlent dans Tous les réglages → Format.</string>
     <string name="frontmatter_fields_ownership_note">Seuls les champs activés ici vont dans le frontmatter. Un champ n’a de données que si sa métrique est aussi activée.</string>
 </resources>
