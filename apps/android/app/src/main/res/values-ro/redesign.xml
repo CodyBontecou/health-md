@@ -230,6 +230,7 @@
     <string name="settings_status_off">Oprit</string>
     <string name="settings_status_allowed">Permis</string>
     <string name="settings_status_not_allowed">Nepermis</string>
+    <string name="settings_status_partly_allowed">Permis parțial</string>
     <string name="settings_status_paired">Asociat</string>
     <string name="settings_health_connect_subtitle">Permisiuni și acces la istoric</string>
     <string name="settings_default_metrics">Valori implicite</string>

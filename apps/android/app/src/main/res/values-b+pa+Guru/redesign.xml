@@ -219,6 +219,7 @@
     <string name="settings_status_off">ਬੰਦ</string>
     <string name="settings_status_allowed">ਮਨਜ਼ੂਰ</string>
     <string name="settings_status_not_allowed">ਮਨਜ਼ੂਰ ਨਹੀਂ</string>
+    <string name="settings_status_partly_allowed">ਅੰਸ਼ਕ ਤੌਰ ’ਤੇ ਮਨਜ਼ੂਰ</string>
     <string name="settings_status_paired">ਜੋੜਿਆ ਗਿਆ</string>
     <string name="settings_health_connect_subtitle">ਇਜਾਜ਼ਤਾਂ ਅਤੇ ਇਤਿਹਾਸ ਪਹੁੰਚ</string>
     <string name="settings_default_metrics">ਡਿਫਾਲਟ ਮੈਟ੍ਰਿਕਸ</string>
