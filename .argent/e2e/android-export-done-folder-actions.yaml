@@ -1,0 +1,44 @@
+version: 1
+requires:
+  platform: android
+# android-export-done-folder-actions (Android ledger A-EXP-12, 3.5.0 → main parity): 3.5.0 offered
+# opening the export folder in Files or Obsidian after a successful export. 4.0's done screen had
+# neither (PR #383 restores both). This exports yesterday for the Default automation to a QA folder
+# and checks the done screen offers Show in Files and, with Obsidian installed, Open in Obsidian.
+#
+# Prerequisites (fragment):
+# - Isolated QA app com.healthmd.android.e2e (playE2e with #383) whose Default automation writes to
+#   a device folder picked once by hand (Settings › Vault on this device › Folder; recorded with a
+#   new empty "HealthMD-E2E-QA" folder) and Obsidian (md.obsidian) installed.
+# - Started UNLOCKED in UI test mode just before the run (synthetic Health Connect data):
+#     adb shell am force-stop com.healthmd.android.e2e
+#     adb shell am start -S -n com.healthmd.android.e2e/com.healthmd.presentation.MainActivity \
+#       --ez uitesting true --es UITEST_HEALTH_AUTHORIZED true --es UITEST_PURCHASE_UNLOCKED true
+# Side effects: writes yesterday's synthetic export into that QA folder (overwritten each run).
+# Does not open Files or Obsidian.
+executionPrerequisite: "QA app com.healthmd.android.e2e (with PR 383) with a picked device folder for Default and Obsidian installed, just started UNLOCKED in UI test mode (adb commands in the header); Archive showing, possibly under the Recover missed scheduled exports dialog."
+steps:
+  - echo: Unlocked QA app on Archive. Dismiss the recovery prompt if shown, then open Automations
+  - when: { visible: { text: Not now } }
+    steps:
+      - tap: { text: Not now }
+  - await: { visible: { text: See this day }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { text: Automations }
+  - await: { visible: { text: New automation }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: Default › Run now › Export yesterday. Expect the done screen
+  - tap: { text: { matches: '^Default$' } }
+  - await: { visible: { text: Run now }, timeout: 5000 }
+  - await: { idle: true }
+  - tap: { text: Run now }
+  - await: { visible: { text: Export yesterday }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { text: Export yesterday }
+  - await: { visible: { text: See in archive }, timeout: 60000 }
+  - await: { idle: true }
+
+  - echo: Expect the 3.5 folder actions on the done screen
+  - assert: { visible: { text: Show in Files } }
+  - assert: { visible: { text: Open in Obsidian } }

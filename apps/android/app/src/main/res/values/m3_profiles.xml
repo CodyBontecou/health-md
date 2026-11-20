@@ -41,8 +41,8 @@
     <string name="m3_profiles_editor_clinic_destination">Clinic destination</string>
     <string name="m3_profiles_editor_clinic_body">Your clinic manages this destination. Use Clinic access to select it or manage sharing. Other destinations require your own Health.md access.</string>
     <string name="m3_profiles_editor_folder">Folder</string>
-    <string name="m3_profiles_editor_folder_current">Current folder (from Export tab)</string>
-    <string name="m3_profiles_editor_folder_reset">Use Export-tab folder</string>
+    <string name="m3_profiles_editor_folder_current">Default folder (Settings › Vault on this device)</string>
+    <string name="m3_profiles_editor_folder_reset">Use default folder</string>
     <string name="m3_profiles_editor_endpoint_invalid">Enter a valid http(s) endpoint URL before saving.</string>
     <string name="m3_profiles_editor_gateway_invalid">Enter a valid http(s) gateway URL before saving.</string>
     <string name="m3_profiles_editor_output">Output</string>
@@ -61,7 +61,7 @@
     <string name="m3_profiles_editor_entries_folder">Entries folder</string>
     <string name="m3_profiles_editor_category_folders">Category folders</string>
     <string name="m3_profiles_editor_entry_filename">Entry filename template</string>
-    <string name="m3_profiles_editor_entry_rules_note">Per-metric entry rules are edited from the Export tab while this profile is active.</string>
+    <string name="m3_profiles_editor_entry_rules_note">Edit per-metric entry rules on this automation\'s Individual entries page.</string>
     <string name="m3_profiles_editor_overlap">Overlaps %1$s: later runs overwrite earlier ones. Choose a different folder or filename template to keep them separate.</string>
     <string name="m3_profiles_editor_create">Create</string>
     <plurals name="m3_profiles_metrics_count">

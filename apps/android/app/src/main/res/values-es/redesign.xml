@@ -426,6 +426,9 @@
     <string name="output_write_mode_note">Sobrescribir reemplaza el archivo. Añadir agrega al final. Actualizar combina los valores nuevos y conserva tus cambios.</string>
     <string name="output_writes_to">Escribe en</string>
     <string name="output_endpoint_invalid">Introduce una URL http(s) válida. Los cambios se guardan cuando sea válida.</string>
+    <string name="output_reset_configuration">Restablecer la configuración de exportación</string>
+    <string name="output_reset_configuration_title">¿Restablecer la configuración de exportación?</string>
+    <string name="output_reset_configuration_message">Los formatos, las métricas, los nombres de archivo, la personalización de formato, las entradas individuales y las notas diarias de esta automatización vuelven a sus valores predeterminados. Su destino, subcarpeta y programación no cambian.</string>
     <string name="automation_summary_single">{when}, escribir[ {metrics} de] {range}[ como {formats}] en {where}[ y {note}].</string>
     <string name="automation_summary_multi">{when}, escribir[ {metrics} de] {range}[ como {formats}] en {where}[ y {note}].</string>
     <string name="automation_summary_send_single">{when}, enviar[ {metrics} de] {range}[ como {formats}] a {where}[ y {note}].</string>
@@ -535,6 +538,7 @@
     <string name="export_result_retry_note_one">Las fechas completadas se conservan. El reintento solo escribe %1$s.</string>
     <string name="export_result_retry_note">Las fechas completadas se conservan. El reintento escribe %1$s.</string>
     <string name="export_result_show_in_files">Mostrar en Archivos</string>
+    <string name="export_result_open_in_obsidian">Abrir en Obsidian</string>
     <string name="composer_fields_frontmatter_note">Elige los datos que recoge esta nota. Las propiedades del frontmatter se configuran en Todos los ajustes → Formato.</string>
     <string name="frontmatter_fields_ownership_note">Solo los campos activados aquí se incluyen en el frontmatter. Un campo también necesita su métrica activada para tener datos.</string>
 </resources>

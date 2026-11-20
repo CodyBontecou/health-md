@@ -583,13 +583,18 @@ fun ExportScreen(
     // cancelled runs go straight to the result below, which explains them.
     var sawExport by remember { mutableStateOf(false) }
     var finishedRun by remember { mutableStateOf<ExportResult?>(null) }
+    // Held with the run: the view model clears its folder URI when the success badge
+    // auto-dismisses, while the done moment stays up until it is closed.
+    var finishedFolderUri by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(uiState.isExporting, uiState.lastResult) {
         if (uiState.isExporting) {
             sawExport = true
             finishedRun = null
+            finishedFolderUri = null
         } else if (sawExport) {
             sawExport = false
             finishedRun = uiState.lastResult?.takeIf(::momentShowsDone)
+            finishedFolderUri = uiState.exportedFolderUri.takeIf { finishedRun != null }
         }
     }
     val doneRun = finishedRun
@@ -606,6 +611,12 @@ fun ExportScreen(
             onSeeInArchive = onSeeInArchive?.let { open -> { finishedRun = null; open() } },
             onClose = { finishedRun = null },
             doneSubtitle = doneRun?.let { momentDoneSubtitle(it, uiState.startDate, uiState.endDate) },
+            onShowInFiles = finishedFolderUri?.takeIf { uri ->
+                doneRun != null && ExportNowFlow.opensResultFolder(doneRun, uri)
+            }?.let { uri -> { openInFiles(uri) } },
+            onOpenInObsidian = finishedFolderUri?.takeIf { uri ->
+                doneRun != null && ExportNowFlow.opensResultInObsidian(doneRun, uri, obsidianInstalled)
+            }?.let { { openInObsidian(uiState.folderName) } },
         )
     }
 
@@ -680,8 +691,11 @@ fun ExportScreen(
                 viewModel.setDateRange(start, end)
             },
             onShowInFiles = folderUri?.takeIf {
-                sheetResult.target == ExportTarget.DEVICE_FOLDER && sheetResult.artifactCount > 0
+                ExportNowFlow.opensResultFolder(sheetResult, it)
             }?.let { uri -> { openInFiles(uri) } },
+            onOpenInObsidian = folderUri?.takeIf {
+                ExportNowFlow.opensResultInObsidian(sheetResult, it, obsidianInstalled)
+            }?.let { { openInObsidian(uiState.folderName) } },
             onDone = {
                 viewModel.dismissResult()
                 onBack?.invoke()

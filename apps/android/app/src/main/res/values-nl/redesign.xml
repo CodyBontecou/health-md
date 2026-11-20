@@ -414,6 +414,9 @@
     <string name="output_write_mode_note">Overschrijven vervangt het bestand. Toevoegen voegt achteraan toe. Bijwerken voegt nieuwe waarden samen en behoudt je wijzigingen.</string>
     <string name="output_writes_to">Schrijft naar</string>
     <string name="output_endpoint_invalid">Voer een geldige http(s)-URL in. Wijzigingen worden opgeslagen zodra deze geldig is.</string>
+    <string name="output_reset_configuration">Exportconfiguratie herstellen</string>
+    <string name="output_reset_configuration_title">Exportconfiguratie herstellen?</string>
+    <string name="output_reset_configuration_message">Formaten, metingen, bestandsnamen, opmaakaanpassingen, afzonderlijke registraties en dagnotities van deze automatisering keren terug naar hun standaardwaarden. De bestemming, submap en planning blijven hetzelfde.</string>
     <string name="automation_summary_single">{when} gegevens van {range}[ voor {metrics}][ als {formats}] naar {where} schrijven[ en {note}].</string>
     <string name="automation_summary_multi">{when} gegevens[ voor {metrics}] van {range}[ als {formats}] naar {where} schrijven[ en {note}].</string>
     <string name="automation_summary_send_single">{when} gegevens van {range}[ voor {metrics}][ als {formats}] naar {where} verzenden[ en {note}].</string>
@@ -523,6 +526,7 @@
     <string name="export_result_retry_note_one">Voltooide datums blijven voltooid. Opnieuw proberen schrijft alleen %1$s.</string>
     <string name="export_result_retry_note">Voltooide datums blijven voltooid. Opnieuw proberen schrijft %1$s.</string>
     <string name="export_result_show_in_files">Tonen in Bestanden</string>
+    <string name="export_result_open_in_obsidian">Openen in Obsidian</string>
     <string name="composer_fields_frontmatter_note">Kiest de gegevens die deze notitie verzamelt. Frontmatter-eigenschappen stel je in bij Alle instellingen → Formaat.</string>
     <string name="frontmatter_fields_ownership_note">Alleen velden die hier aanstaan komen in de frontmatter. Een veld bevat alleen gegevens als de bijbehorende meting ook aanstaat.</string>
 </resources>
