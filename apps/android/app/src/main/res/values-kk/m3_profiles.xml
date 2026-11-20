@@ -41,8 +41,8 @@
     <string name="m3_profiles_editor_clinic_destination">Клиника мақсаты</string>
     <string name="m3_profiles_editor_clinic_body">Бұл мақсатты клиникаңыз басқарады. Оны таңдау немесе бөлісуді басқару үшін «Клиника қолжетімділігін» пайдаланыңыз. Басқа мақсаттар үшін өзіңіздің Health.md қолжетімділігіңіз қажет.</string>
     <string name="m3_profiles_editor_folder">Қалта</string>
-    <string name="m3_profiles_editor_folder_current">Ағымдағы қалта («Экспорт» қойындысынан)</string>
-    <string name="m3_profiles_editor_folder_reset">«Экспорт» қойындысындағы қалтаны пайдалану</string>
+    <string name="m3_profiles_editor_folder_current">Әдепкі қалта (Параметрлер › Осы құрылғыдағы қойма)</string>
+    <string name="m3_profiles_editor_folder_reset">Әдепкі қалтаны пайдалану</string>
     <string name="m3_profiles_editor_endpoint_invalid">Сақтау алдында жарамды http(s) соңғы нүкте URL мекенжайын енгізіңіз.</string>
     <string name="m3_profiles_editor_gateway_invalid">Сақтау алдында жарамды http(s) шлюз URL мекенжайын енгізіңіз.</string>
     <string name="m3_profiles_editor_output">Шығыс</string>
@@ -61,7 +61,7 @@
     <string name="m3_profiles_editor_entries_folder">Жазбалар қалтасы</string>
     <string name="m3_profiles_editor_category_folders">Санат қалталары</string>
     <string name="m3_profiles_editor_entry_filename">Жазба файл атауының үлгісі</string>
-    <string name="m3_profiles_editor_entry_rules_note">Бұл профиль белсенді кезде әр көрсеткіштің жазба ережелері «Экспорт» қойындысында өңделеді.</string>
+    <string name="m3_profiles_editor_entry_rules_note">Әр көрсеткіштің жазба ережелерін осы автоматтандырудың «Жеке жазбалар» бетінде өңдеңіз.</string>
     <string name="m3_profiles_editor_overlap">%1$s профилімен қабаттасады: кейінгі іске қосулар алдыңғыларын қайта жазады. Оларды бөлек ұстау үшін басқа қалтаны немесе файл атауы үлгісін таңдаңыз.</string>
     <string name="m3_profiles_editor_create">Жасау</string>
     <plurals name="m3_profiles_metrics_count">
