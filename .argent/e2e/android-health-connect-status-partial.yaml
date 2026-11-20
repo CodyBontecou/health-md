@@ -13,13 +13,13 @@ requires:
 # Side effects: none. Reads Settings only; the row is not tapped (it opens Health Connect).
 # Authored from the app's strings and proved by full runner replays (Argent's describe tree is
 # stale on this Pixel). No coordinate steps.
-executionPrerequisite: "QA app com.healthmd.android.e2e just started in UI test mode with --es UITEST_HEALTH_PARTIAL true (adb command in the header); Archive showing, possibly under the Recover missed scheduled exports dialog."
+executionPrerequisite: "QA app com.healthmd.android.e2e just started in UI test mode with --es UITEST_HEALTH_PARTIAL true (adb command in the header); Archive showing (with or without exported days), possibly under the Recover missed scheduled exports dialog."
 steps:
   - echo: QA app in test mode. Dismiss the recovery prompt if shown, then open Settings
   - when: { visible: { text: Not now } }
     steps:
       - tap: { text: Not now }
-  - await: { visible: { text: See this day }, timeout: 8000 }
+  - await: { visible: { text: { matches: '^Archive$' } }, timeout: 8000 }
   - await: { idle: true }
   - tap: { text: Settings }
   - await: { visible: { text: Destinations }, timeout: 8000 }
