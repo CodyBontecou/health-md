@@ -1,0 +1,54 @@
+version: 1
+requires:
+  platform: android
+# android-scheduled-automation-fired: a per-automation daily schedule fires at its time while
+# Health.md's process is dead, writes the file, re-arms for the next day, and shows up in
+# History as one successful "Scheduled" run (not a duplicate).
+#
+# Prerequisites (state this test reads; it cannot wait for wall-clock time itself):
+#   QA app com.healthmd.android.e2e with full access (fdroidE2e build, or playE2e with access),
+#   NOT in UI test mode, Health Connect read access granted, a folder chosen for Default.
+#   Default › Schedule: "Run on a schedule" on, Daily, Preferred time a few minutes ahead,
+#   Look back 1 day. Allow exact timing:
+#     adb shell appops set com.healthmd.android.e2e SCHEDULE_EXACT_ALARM allow
+#   Check the alarm: adb shell dumpsys alarm | grep -A2 PROFILE_SCHEDULE_ALARM  (origWhen = time)
+#   Then: adb shell input keyevent HOME; adb shell am kill com.healthmd.android.e2e
+#   Wait past the preferred time. Expect <folder>/health/<yesterday>.md rewritten at that minute.
+#   Run this test the same day (it checks "tomorrow at").
+# Side effects: the launch step force-stops and restarts the QA app. Read-only otherwise.
+#
+# Selector notes: the History row is tapped by its status-line regex because the timestamp
+# changes per run; the first match in reading order is the newest run.
+steps:
+  - echo: Restart the QA app; expect Archive
+  - launch: com.healthmd.android.e2e
+  - await: { visible: { text: Next run }, timeout: 10000 }
+  - await: { idle: true }
+
+  - echo: On Archive. After today's run fired, Next run names Default tomorrow (the alarm re-armed)
+  - assert: { visible: { text: Default · tomorrow at } }
+
+  - echo: Open Automations; expect New automation
+  - tap: { text: Automations }
+  - await: { visible: { text: New automation }, timeout: 8000 }
+  - await: { idle: true }
+  - assert: { visible: { text: Every evening at } }
+
+  - echo: Default reads 'Every evening at ...'. Open History; expect a Scheduled run
+  - tap: { text: History }
+  - await: { visible: { text: { matches: '^Success · ' } }, timeout: 8000 }
+  - await: { idle: true }
+  - await: { text: { in: { text: Success }, contains: Scheduled }, timeout: 5000 }
+
+  - echo: The newest run is Scheduled and successful. Open it; expect Export details
+  - tap: { text: { matches: '^Success · .* · Scheduled$' } }
+  - await: { visible: { text: Export details }, timeout: 8000 }
+  - await: { idle: true }
+  - assert: { text: { in: { text: Scheduled }, equals: Scheduled } }
+  - assert: { visible: { text: 1/1 day } }
+  - assert: { visible: { text: 1 file } }
+
+  - echo: Close the details; expect History again
+  - tap: { text: Close }
+  - await: { visible: { text: { matches: '^Success · ' } }, timeout: 8000 }
+  - await: { idle: true }
