@@ -34,6 +34,9 @@ data class ProfileSchedulesUiState(
     val editingProfileId: String? = null,
     val discardingRecoveryProfileId: String? = null,
     val recoveryDiscardFailed: Boolean = false,
+    /** Whether Alarms & reminders (SCHEDULE_EXACT_ALARM) lets schedules fire on time. */
+    val exactTimingAvailable: Boolean = true,
+    val requiresHealthConnectBackgroundAccess: Boolean = false,
 )
 
 /**
@@ -70,8 +73,24 @@ class ProfileSchedulesViewModel @Inject constructor(
                 }
             }
         }
+        viewModelScope.launch {
+            combine(
+                settingsRepository.selectedHealthProviderId,
+                settingsRepository.connectedHealthProviderIds,
+            ) { selectedProviderId, connectedProviderIds ->
+                requiresHealthConnectBackgroundAccess(selectedProviderId, connectedProviderIds)
+            }.collect { required ->
+                _uiState.update { it.copy(requiresHealthConnectBackgroundAccess = required) }
+            }
+        }
+        refreshSchedulingState()
         // Bootstrap migration + initial arming.
         viewModelScope.launch { runCatching { profileScheduler.reconcile() } }
+    }
+
+    /** Re-reads exact-alarm access; called on resume after the user returns from settings. */
+    fun refreshSchedulingState() {
+        _uiState.update { it.copy(exactTimingAvailable = profileScheduler.canScheduleExactAlarms()) }
     }
 
     /** Creates a profile duplicating current settings, bound to the current target/endpoint. */
