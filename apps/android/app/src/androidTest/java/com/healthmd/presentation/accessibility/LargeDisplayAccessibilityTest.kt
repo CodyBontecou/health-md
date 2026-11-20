@@ -256,8 +256,10 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
                         trialOffer = null,
                         purchasesAvailable = false,
                         isBusy = false,
-                        purchaseFailed = false,
+                        isRestoring = false,
+                        errorMessage = null,
                         onStartTrial = {},
+                        onRestore = {},
                         onEnable = { actions += "daily" },
                         onNotNow = { actions += "manual" },
                     )

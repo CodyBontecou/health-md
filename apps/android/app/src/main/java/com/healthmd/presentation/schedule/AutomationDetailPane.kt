@@ -26,9 +26,14 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -38,7 +43,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -74,6 +81,7 @@ import com.healthmd.presentation.theme.GeistSizes
 import com.healthmd.presentation.theme.GeistSpacing
 import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.LocalGeistColors
+import android.view.HapticFeedbackConstants
 import java.time.DayOfWeek
 import java.time.format.TextStyle
 
@@ -83,6 +91,7 @@ internal object AutomationDetailTags {
     const val PAUSE = "automation.detail.pause"
     const val EDIT_SENTENCE = "automation.detail.editSentence"
     const val DELETE = "automation.detail.delete"
+    const val DUPLICATED_SNACKBAR = "automation.detail.duplicatedSnackbar"
 }
 
 /** Android's automation-app documentation: explicit broadcasts that accept a PROFILE extra. */
@@ -105,17 +114,46 @@ fun AutomationDetailPane(
     onBack: (() -> Unit)? = null,
     /** Called once the automation is deleted, so a phone screen can close. */
     onDeleted: (() -> Unit)? = null,
+    /** Opens another automation's detail; offered as the Duplicate confirmation's Open action. */
+    onOpenAutomation: ((String) -> Unit)? = null,
     profilesViewModel: ExportProfilesViewModel = hiltViewModel(),
     schedulesViewModel: ProfileSchedulesViewModel = hiltViewModel(),
 ) {
     val profiles by profilesViewModel.uiState.collectAsStateWithLifecycle()
     val colors = LocalGeistColors.current
     val row = profiles.rows.firstOrNull { it.profile.id == profileId }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    val view = LocalView.current
+    val openAutomation by rememberUpdatedState(onOpenAutomation)
+    // Duplicate stays on the source page, so confirm it: a light tick and a brief snackbar.
+    LaunchedEffect(profilesViewModel) {
+        profilesViewModel.duplicated.collect { copy ->
+            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            val result = snackbarHostState.showSnackbar(
+                message = context.getString(R.string.automation_duplicated_snackbar, copy.name),
+                actionLabel = openAutomation?.let { context.getString(R.string.automation_duplicated_open) },
+            )
+            if (result == SnackbarResult.ActionPerformed) openAutomation?.invoke(copy.id)
+        }
+    }
     val frame: @Composable (String, @Composable () -> Unit) -> Unit = { title, content ->
+        val withSnackbar: @Composable () -> Unit = {
+            Box(Modifier.fillMaxSize()) {
+                content()
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(GeistSpacing.space4)
+                        .testTag(AutomationDetailTags.DUPLICATED_SNACKBAR),
+                )
+            }
+        }
         if (onBack != null) {
-            SubScreen(title = title, onBack = onBack, modifier = modifier) { content() }
+            SubScreen(title = title, onBack = onBack, modifier = modifier) { withSnackbar() }
         } else {
-            Box(modifier) { content() }
+            Box(modifier) { withSnackbar() }
         }
     }
     if (profileId == null || row == null) {

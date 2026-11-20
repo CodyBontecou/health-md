@@ -31,6 +31,8 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -56,12 +58,15 @@ internal object OnboardingTestTags {
     const val SAMPLE_NOTICE = "onboarding.sampleNotice"
     const val DRIVE_CHANGE = "onboarding.driveChange"
     const val DRIVE_ERROR = "onboarding.driveError"
+    const val RESTORE = "onboarding.restore"
+    const val DAILY_ERROR = "onboarding.dailyError"
 }
 
 /**
  * One onboarding step: a header (Back, progress, optional Skip), a body that scrolls on its own,
  * and footer actions that always stay visible (DESIGN.md text-scaling rules).
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 internal fun OnboardingStepScaffold(
     step: OnboardingStep,
@@ -70,7 +75,11 @@ internal fun OnboardingStepScaffold(
     footer: @Composable ColumnScope.() -> Unit,
     body: @Composable ColumnScope.() -> Unit,
 ) {
-    BoxWithConstraints(Modifier.fillMaxSize().background(AppColors.bgPrimary).safeDrawingPadding()) {
+    // Test tags double as resource ids so device automation can target onboarding controls.
+    BoxWithConstraints(
+        Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }
+            .background(AppColors.bgPrimary).safeDrawingPadding(),
+    ) {
         val reading = GeistAdaptiveLayout.readingFirst(maxWidth.value, maxHeight.value, LocalDensity.current.fontScale)
         CompositionLocalProvider(LocalOnboardingReadingLayout provides reading) {
             Column(Modifier.fillMaxSize()) {

@@ -624,7 +624,7 @@
     <string name="toggle_android_native_fields">Android-native Gesundheitsfelder einbeziehen</string>
     <string name="toggle_legacy_android_aliases">Veraltete Android-Schlüssel und -Bezeichnungen duplizieren</string>
     <string name="schedule_enable_scheduled_exports">Geplante Exporte aktivieren</string>
-    <string name="schedule_automatic_export_body">Geplante Exporte werden in Ihren ausgewählten Android-Exportordner geschrieben. Manuelle Exporte bleiben über den Tab „Export“ verfügbar.</string>
+    <string name="schedule_automatic_export_body">Geplante Exporte werden in Ihren ausgewählten Android-Exportordner geschrieben. Manuelle Exporte bleiben über „Jetzt exportieren“ verfügbar.</string>
     <string name="schedule_frequency">Häufigkeit</string>
     <string name="schedule_time">Uhrzeit</string>
     <string name="schedule_date_window">Datumsbereich</string>
