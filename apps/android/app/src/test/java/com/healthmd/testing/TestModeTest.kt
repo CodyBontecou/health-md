@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.health.HealthConnectManager
+import com.healthmd.data.health.HealthConnectReadAccessState
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.export.FakeBillingRepository
 import com.healthmd.export.FakeSettingsRepository
@@ -73,7 +74,7 @@ class TestModeTest {
 
         TestMode.activateForTesting(TestMode.Scenario(healthAuthorized = true))
         assertThat(manager.isAvailable()).isTrue()
-        assertThat(manager.hasAllPermissions()).isTrue()
+        assertThat(manager.hasAnyReadPermission()).isTrue()
         assertThat(manager.hasBackgroundReadPermission()).isTrue()
         assertThat(manager.getEarliestDataDate()).isEqualTo(TestModeHealthFixtures.earliestDate(today))
         assertThat(manager.fetchHealthData(today).hasAnyData).isTrue()
@@ -85,9 +86,30 @@ class TestModeTest {
         assertThat(range.map { it.hasAnyData }).containsExactly(true, false).inOrder()
 
         TestMode.activateForTesting(TestMode.Scenario(healthAuthorized = false))
-        assertThat(manager.hasAllPermissions()).isFalse()
+        assertThat(manager.hasAnyReadPermission()).isFalse()
         assertThat(manager.getGrantedPermissions()).isEmpty()
         assertThat(manager.fetchHealthData(today).hasAnyData).isFalse()
+    }
+
+    @Test
+    fun `partial scenario grants a fixed subset that still allows exports`() = runTest {
+        assertThat(
+            TestMode.parse(mapOf(TestMode.EXTRA_ENABLED to "true", TestMode.KEY_HEALTH_PARTIAL to "true"))
+                ?.healthPartiallyAuthorized,
+        ).isTrue()
+        val manager = HealthConnectManager(mockk<Context>(relaxed = true), mockk<HealthConnectClient>())
+
+        TestMode.activateForTesting(TestMode.Scenario(healthPartiallyAuthorized = true))
+        assertThat(manager.hasAnyReadPermission()).isTrue()
+        val partial = manager.readAccess()
+        assertThat(partial.state).isEqualTo(HealthConnectReadAccessState.PARTIAL)
+        assertThat(partial.granted).containsExactlyElementsIn(TestMode.PARTIAL_GRANT_PERMISSIONS)
+
+        TestMode.activateForTesting(TestMode.Scenario(healthAuthorized = true))
+        assertThat(manager.readAccess().state).isEqualTo(HealthConnectReadAccessState.ALL)
+
+        TestMode.activateForTesting(TestMode.Scenario())
+        assertThat(manager.readAccess().state).isEqualTo(HealthConnectReadAccessState.NONE)
     }
 
     @Test

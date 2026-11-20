@@ -312,7 +312,7 @@ class OnboardingViewModel @Inject constructor(
         }
         val unavailable = runCatching { HealthPackPermissions.unavailablePacks(healthConnectManager.permissionPlan()) }
             .getOrDefault(emptySet())
-        runCatchingCancellable { healthConnectManager.hasAllPermissions() }
+        runCatchingCancellable { healthConnectManager.hasAnyReadPermission() }
             .onSuccess { hasPermissions ->
                 _uiState.update {
                     it.copy(

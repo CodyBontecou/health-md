@@ -219,6 +219,7 @@
     <string name="settings_status_off">Aus</string>
     <string name="settings_status_allowed">Erlaubt</string>
     <string name="settings_status_not_allowed">Nicht erlaubt</string>
+    <string name="settings_status_partly_allowed">Teilweise erlaubt</string>
     <string name="settings_status_paired">Gekoppelt</string>
     <string name="settings_health_connect_subtitle">Berechtigungen und Verlaufszugriff</string>
     <string name="settings_default_metrics">Standard-Messwerte</string>
