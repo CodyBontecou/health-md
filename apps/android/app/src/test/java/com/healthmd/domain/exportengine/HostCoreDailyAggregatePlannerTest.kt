@@ -319,6 +319,14 @@ class HostCoreDailyAggregatePlannerTest {
             }
             for (item in result.plan.items) {
                 val text = item.content.decodeToString()
+                // #353: with planned_workout_count and medical_resource_count switched off in Format → Custom
+                // (metadata = false), Bases frontmatter leaves their native records out; body formats keep them.
+                if (!metadata && item.relativePath.endsWith("-bases.md")) {
+                    assertWithMessage(item.relativePath).that(text).doesNotContain("native_planned_workout_details")
+                    assertWithMessage(item.relativePath).that(text).doesNotContain("native_medical_resource_details")
+                    assertWithMessage(item.relativePath).that(text).doesNotContain("Synthetic planned run")
+                    continue
+                }
                 assertWithMessage(item.relativePath).that(text).contains("Synthetic planned run")
                 assertWithMessage(item.relativePath).that(text).contains("synthetic-observation")
                 assertWithMessage(item.relativePath).that(text).contains("Retain the complete planned block")
@@ -343,7 +351,8 @@ class HostCoreDailyAggregatePlannerTest {
                         .replace("`", "\\u0060").replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
                     else -> medical.toString()
                 }
-                // JSON is pretty printed; its decoded document was checked above.
+                // JSON is pretty printed; its decoded document was checked above. Hidden Bases blocks are checked above.
+                if (!metadata && item.relativePath.endsWith("-bases.md")) continue
                 if (!item.relativePath.endsWith(".json")) assertWithMessage(item.relativePath)
                     .that(item.content.decodeToString()).contains(expected)
             }
@@ -1415,6 +1424,169 @@ class HostCoreDailyAggregatePlannerTest {
                 }
             }
         }
+    }
+
+    /**
+     * #353 migration pin: with the default Format → Custom configuration, "Morning ends" output in
+     * every format is byte-for-byte what the exporter wrote before this change.
+     * Fixtures: src/test/resources/issue353-morning-ends-default/, generated from the pre-#353
+     * sources (commit cfdceb3b6) with HEALTHMD_WRITE_353_GOLDEN=default.
+     */
+    @Test
+    fun defaultConfigurationMorningEndsOutputIsUnchangedByFrontmatterOwnership() = runTest {
+        val bases = assertMorningEndsGolden("default", disabledFields = emptyList()) ?: return@runTest
+        assertThat(bases).contains("\nnative_workout_details:")
+        assertThat(bases).contains("\nnative_quantity_details:")
+    }
+
+    /**
+     * #353 migration pin for existing users who had already switched some Format → Custom fields
+     * off while each native record family kept an owner on: "Morning ends" output in every format
+     * is byte-for-byte what the exporter wrote before this change.
+     * Fixtures: src/test/resources/issue353-morning-ends-partly-off/, generated from the pre-#353
+     * sources (commit cfdceb3b6) with HEALTHMD_WRITE_353_GOLDEN=partly-off.
+     */
+    @Test
+    fun partlyDisabledConfigurationMorningEndsOutputIsUnchangedByFrontmatterOwnership() = runTest {
+        val disabled = listOf("steps", "heart_rate_min", "heart_rate_max", "workout_calories", "workout_avg_heart_rate")
+        val bases = assertMorningEndsGolden("partly-off", disabled) ?: return@runTest
+        val frontmatter = bases.substringBefore("\n---\n")
+        val keys = frontmatter.lines().filter { it.isNotEmpty() && !it.first().isWhitespace() }.map { it.substringBefore(':') }
+        for (key in disabled) assertWithMessage("switched-off $key stays out of frontmatter").that(keys).doesNotContain(key)
+        assertThat(keys).containsAtLeast("average_heart_rate", "workout_count", "native_workout_details", "native_quantity_details")
+    }
+
+    /**
+     * Plans one synthetic "Morning ends" day (a workout, heart rate samples, steps) and compares every
+     * format with src/test/resources/issue353-morning-ends-<fixture>/. Returns the Bases text, or null
+     * while writing fixtures (HEALTHMD_WRITE_353_GOLDEN=<fixture>).
+     */
+    private suspend fun assertMorningEndsGolden(fixture: String, disabledFields: List<String>): String? {
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val start = Instant.parse("2026-11-01T01:30:00Z")
+        val end = start.plusSeconds(1800)
+        fun exact(value: Instant) = com.healthmd.domain.model.ExactSourceTimestamp.from(value, ZoneOffset.UTC)
+        val workout = com.healthmd.domain.model.WorkoutData(
+            workoutType = com.healthmd.domain.model.WorkoutType.RUNNING,
+            startTime = start.atZone(context.zoneId).toLocalDateTime(),
+            endTime = end.atZone(context.zoneId).toLocalDateTime(), duration = 30.minutes,
+            averageHeartRate = 150.0, exactStartTime = exact(start), exactEndTime = exact(end),
+            identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "golden-workout"))
+        val heart = HeartData(averageHeartRate = 61.5, heartRateMin = 55.0, heartRateMax = 70.0, samples = listOf(
+            com.healthmd.domain.model.TimestampedSample(start.atZone(context.zoneId).toLocalDateTime(), 61.5, exactTime = exact(start))))
+        val selection = MetricSelectionState(enabledMetrics = setOf("workouts", "steps", "avg_hr", "min_hr", "max_hr"))
+        val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(), includeGranularData = true,
+            metricSelection = selection, executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true,
+            formatCustomization = FormatCustomization(frontmatterConfig = com.healthmd.domain.model.FrontmatterConfiguration(
+                fields = disabledFields.map { com.healthmd.domain.model.CustomFrontmatterField(it, isEnabled = false) })))
+        val data = HealthData(LocalDate.of(2026, 11, 1), workouts = listOf(workout), heart = heart,
+            activity = ActivityData(steps = 4321)).filtered(selection, context)
+        val request = FrozenDailyAggregateExportRequest.capture(data, settings, AndroidExportProfile.android_sleep_v6,
+            ExportEngineMode.rust, DailyAggregateExportIds("golden-353", "golden-353-session"))
+        val plan = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("No ambient clock") }).plan(request).plan
+        assertThat(plan.items).hasSize(4)
+        var directory: File? = File(requireNotNull(System.getProperty("user.dir"))).absoluteFile
+        var resources: File? = null
+        while (directory != null && resources == null) {
+            resources = File(directory, "app/src/test/resources").takeIf { it.isDirectory }
+                ?: File(directory, "src/test/resources").takeIf { it.isDirectory }
+            directory = directory.parentFile
+        }
+        val golden = File(requireNotNull(resources), "issue353-morning-ends-$fixture")
+        val write = System.getenv("HEALTHMD_WRITE_353_GOLDEN") == fixture
+        for (item in plan.items) {
+            val file = File(golden, item.relativePath.substringAfterLast('/'))
+            if (write) {
+                check(golden.mkdirs() || golden.isDirectory)
+                file.writeBytes(item.content)
+                continue
+            }
+            assertWithMessage("$fixture ${item.relativePath}").that(item.content.decodeToString()).isEqualTo(file.readText())
+        }
+        return if (write) null else plan.items.single { it.relativePath.endsWith("-bases.md") }.content.decodeToString()
+    }
+
+    /**
+     * #353: Format → Custom owns frontmatter in "Morning ends" Bases notes too. With every workout
+     * field switched off, the selected workout stays in JSON, CSV and the Markdown body, but no
+     * workout property or native_workout_details block reaches any frontmatter.
+     */
+    @Test
+    fun workoutFieldsOffInFormatCustomLeaveNoWorkoutFrontmatterInWakeDateBases() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val start = Instant.parse("2026-11-01T01:30:00Z")
+        val end = start.plusSeconds(1800)
+        val workout = com.healthmd.domain.model.WorkoutData(
+            workoutType = com.healthmd.domain.model.WorkoutType.RUNNING,
+            startTime = start.atZone(context.zoneId).toLocalDateTime(),
+            endTime = end.atZone(context.zoneId).toLocalDateTime(), duration = 30.minutes,
+            averageHeartRate = 160.125,
+            exactStartTime = com.healthmd.domain.model.ExactSourceTimestamp.from(start, ZoneOffset.UTC),
+            exactEndTime = com.healthmd.domain.model.ExactSourceTimestamp.from(end, ZoneOffset.UTC),
+            identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-hidden-workout"))
+        val registry = HealthMdCoreService().getMetricRegistry(com.healthmd.core.CoreMetricRegistryProfile.ANDROID_SLEEP_V6, 2u)
+        val workoutKeys = registry.outputs.filter { it.key == "workouts" || it.key.startsWith("workout_") }.map { it.key }
+        suspend fun plan(disabled: List<String>): ExportArtifactPlan {
+            val selection = MetricSelectionState(enabledMetrics = setOf("workouts", "steps"))
+            val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(),
+                formatCustomization = FormatCustomization(frontmatterConfig = com.healthmd.domain.model.FrontmatterConfiguration(
+                    fields = disabled.map { com.healthmd.domain.model.CustomFrontmatterField(it, isEnabled = false) })),
+                metricSelection = selection, executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+            val data = HealthData(LocalDate.of(2026, 11, 1), workouts = listOf(workout), activity = ActivityData(steps = 42))
+                .filtered(selection, context)
+            val request = FrozenDailyAggregateExportRequest.capture(data, settings, AndroidExportProfile.android_sleep_v6,
+                ExportEngineMode.rust, DailyAggregateExportIds("hidden-workout-${disabled.size}", "hidden-workout-session-${disabled.size}"))
+            return HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("No ambient clock") }).plan(request).plan
+        }
+        fun frontmatterKeys(text: String): List<String> {
+            val lines = text.lines()
+            check(lines.first() == "---")
+            return lines.drop(1).takeWhile { it != "---" }
+                .filter { it.isNotEmpty() && !it.first().isWhitespace() && ':' in it }.map { it.substringBefore(':') }
+        }
+        fun isWorkoutProperty(key: String) = key == "workouts" || key.startsWith("workout_") || key.contains("workout_details")
+
+        val shown = plan(emptyList())
+        assertThat(shown.items.single { it.relativePath.endsWith("-bases.md") }.content.decodeToString())
+            .contains("native_workout_details:")
+
+        val hidden = plan(workoutKeys)
+        assertThat(hidden.items).hasSize(4)
+        for (item in hidden.items.filter { it.relativePath.endsWith(".md") }) {
+            val keys = frontmatterKeys(item.content.decodeToString())
+            assertWithMessage("frontmatter of ${item.relativePath}").that(keys.filter(::isWorkoutProperty)).isEmpty()
+            assertWithMessage("frontmatter of ${item.relativePath}").that(keys).contains("steps")
+        }
+        // Body formats keep the collected workout.
+        assertThat(hidden.items.single { it.relativePath.endsWith(".json") }.content.decodeToString()).contains("synthetic-hidden-workout")
+        assertThat(hidden.items.single { it.relativePath.endsWith(".csv") }.content.decodeToString()).contains(",Native Detail,Workout,")
+        assertThat(hidden.items.single { it.relativePath.endsWith(".md") && !it.relativePath.endsWith("-bases.md") }
+            .content.decodeToString()).contains("Workout Details")
+    }
+
+    /** #353: each native Bases block follows the Format → Custom switches of the fields that own it. */
+    @Test
+    fun nativeBasesBlocksFollowTheirOwningFrontmatterSwitches() {
+        val root = Json.parseToJsonElement("""{"plannedWorkouts":[{"startTimeISO":"2026-11-01T01:30:00Z"}],
+            "mindfulness":{"sessions":[{"startTimeISO":"2026-11-01T01:30:00Z","endTimeISO":"2026-11-01T01:40:00Z"}]}}""").jsonObject
+        val selected = listOf("planned_workout_count", "mindful_minutes")
+        fun blocks(details: kotlinx.serialization.json.JsonObject) =
+            details.getValue("bases_frontmatter_blocks").jsonArray.map { it.jsonObject.getValue("key").jsonPrimitive.content }
+        fun rows(details: kotlinx.serialization.json.JsonObject) = details.getValue("csv_rows").jsonArray.size
+
+        val planned = com.healthmd.domain.render.HealthMdRenderInputAdapter.plannedAndMedicalDetails(root, "2026-11-01", selected)
+        assertThat(blocks(planned)).containsExactly("native_planned_workout_details")
+        val plannedHidden = com.healthmd.domain.render.HealthMdRenderInputAdapter.plannedAndMedicalDetails(
+            root, "2026-11-01", selected) { it != "planned_workout_count" }
+        assertThat(blocks(plannedHidden)).isEmpty()
+        assertThat(rows(plannedHidden)).isEqualTo(rows(planned))
+
+        val mindful = com.healthmd.domain.render.HealthMdRenderInputAdapter.mindfulnessDetails(root, "2026-11-01", selected)
+        assertThat(blocks(mindful)).containsExactly("native_mindfulness_details")
+        val mindfulHidden = com.healthmd.domain.render.HealthMdRenderInputAdapter.mindfulnessDetails(
+            root, "2026-11-01", selected) { it != "mindful_minutes" }
+        assertThat(blocks(mindfulHidden)).isEmpty()
+        assertThat(rows(mindfulHidden)).isEqualTo(rows(mindful))
     }
 
     @Test

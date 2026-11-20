@@ -532,4 +532,6 @@
     <string name="export_result_retry_note_one">Completed dates stay completed. Retry writes only %1$s.</string>
     <string name="export_result_retry_note">Completed dates stay completed. Retry writes %1$s.</string>
     <string name="export_result_show_in_files">Show in Files</string>
+    <string name="composer_fields_frontmatter_note">Picks the data this note collects. Frontmatter properties are set in All settings → Format.</string>
+    <string name="frontmatter_fields_ownership_note">Only fields switched on here go into frontmatter. A field also needs its metric switched on to have data.</string>
 </resources>

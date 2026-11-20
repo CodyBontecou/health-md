@@ -1,0 +1,38 @@
+Date,Category,Metric,Value,Unit,Timestamp
+2026-03-15,Metadata,schema,healthmd.health_data,,
+2026-03-15,Metadata,schema_version,11,,
+2026-03-15,Metadata,schema_profile,apple-v11,,
+2026-03-15,Metadata,unit_system,metric,,
+2026-03-15,Metadata,time_context.calendar_timezone,GMT,,
+2026-03-15,Metadata,time_context.timestamp_timezone,UTC,,
+2026-03-15,Metadata,time_context.sleep_day_attribution,morning_ends,,
+2026-03-15,Metadata,time_context.sleep_owner_day_rule,session_end_date,,
+2026-03-15,Metadata,time_context.sleep_interval_clipping,none,,
+2026-03-15,Raw HealthKit,Raw Capture Status,not_requested,status,
+2026-03-15,Sleep,Total Sleep,0.3333333333333333,hours,
+2026-03-15,Sleep,Deep Sleep,0.1666666666666667,hours,
+2026-03-15,Sleep,REM Sleep,0.1666666666666667,hours,
+2026-03-15,Activity,Steps,4321,steps,
+2026-03-15,Heart,Average Heart Rate,61.5,bpm,
+2026-03-15,Heart,Minimum Heart Rate,55,bpm,
+2026-03-15,Heart,Maximum Heart Rate,70,bpm,
+2026-03-15,Vitals,Blood Pressure (Systolic),118,mmHg,
+2026-03-15,Vitals,Blood Pressure (Systolic),118,mmHg,
+2026-03-15,Vitals,Blood Pressure (Diastolic),76,mmHg,
+2026-03-15,Vitals,Blood Pressure (Diastolic),76,mmHg,
+2026-03-15,Mindfulness,Mood Entries,1,entries,
+2026-03-15,Mindfulness,Mood Entries,[calm],,
+2026-03-15,Mindfulness,Mood Entries,[health],,
+2026-03-15,Workouts,Workout Count,1,count,
+2026-03-15,Workouts,Workout Minutes,30,min,
+2026-03-15,Workouts,Workout Calories,300,kcal,
+2026-03-15,Workouts,Workout Distance Km,5,km,
+2026-03-15,Workouts,Workout Distance Mi,3.10685596118667,mi,
+2026-03-15,Workouts,Workouts,[running],,
+2026-03-15,Workouts,Workout Avg Heart Rate,150,bpm,
+2026-03-15,Native Detail,Quantity Sample,"{""metric"":""heart_rate"",""sample"":{""metadata"":{""synthetic"":""golden-heart""},""timestamp"":""2026-03-14T23:55:00.000000000Z"",""value"":61.5},""unit"":""bpm""}",json,2026-03-14T23:55:00.000000000Z
+2026-03-15,Sleep Detail,Sleep Stage,"{""durationSeconds"":600,""endDate"":""2026-03-14T23:50:00.000000000Z"",""stage"":""deep"",""startDate"":""2026-03-14T23:40:00.000000000Z""}",seconds,2026-03-14T23:40:00.000000000Z
+2026-03-15,Sleep Detail,Sleep Stage,"{""durationSeconds"":600,""endDate"":""2026-03-15T00:00:00.000000000Z"",""stage"":""rem"",""startDate"":""2026-03-14T23:50:00.000000000Z""}",seconds,2026-03-14T23:50:00.000000000Z
+2026-03-15,Native Detail,Blood Pressure Correlation,"{""metric"":""blood_pressure"",""sample"":{""diastolic"":76,""endDate"":""2026-03-14T23:56:40.000000000Z"",""systolic"":118,""timestamp"":""2026-03-14T23:56:40.000000000Z"",""unit"":""mmHg""},""unit"":""mmHg""}",json,2026-03-14T23:56:40.000000000Z
+2026-03-15,Native Detail,Workout,"{""metric"":""workout"",""sample"":{""avgHeartRate"":150,""avgPaceFormatted"":""6:00 \/km"",""avgPacePerKmFormatted"":""6:00 \/km"",""avgPacePerMiFormatted"":""9:39 \/mi"",""calories"":300,""distance"":5000,""distanceFormatted"":""5.00 km"",""distanceKm"":5,""distanceMi"":3.1068559611866697,""duration"":1800,""durationFormatted"":""30m"",""elapsedDuration"":1800,""endTimeISO"":""2026-03-14T23:30:00.000000000Z"",""id"":""00000000-0000-4000-8000-000000000354"",""speedKmh"":10,""speedMph"":6.2137119223733395,""sport"":""running"",""startTime"":""23:00"",""startTimeISO"":""2026-03-14T23:00:00.000000000Z"",""type"":""Running""}}",json,2026-03-14T23:00:00.000000000Z
+2026-03-15,Native Detail,Mindfulness Record,"{""metric"":""state_of_mind"",""sample"":{""associations"":[""Health""],""displayTime"":""23:58"",""endDate"":""2026-03-14T23:58:20.000000000Z"",""id"":""00000000-0000-4000-8000-000000000353"",""kind"":""Daily Mood"",""labels"":[""Calm""],""timestamp"":""2026-03-14T23:58:20.000000000Z"",""valence"":0.5,""valenceDescription"":""Pleasant"",""valencePercent"":75}}",json,2026-03-14T23:58:20.000000000Z

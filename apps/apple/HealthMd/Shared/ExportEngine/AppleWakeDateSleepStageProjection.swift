@@ -7,10 +7,23 @@ nonisolated struct AppleWakeDateSleepStageProjection: Sendable {
     enum ProjectionError: Error { case invalidStage, invalidAggregate }
     let stages: [SleepStageSample]
     let bounds: SleepData.SourceSessionBounds
+    /// Stage names whose owning field is switched on in Format → Custom (#353).
+    let frontmatterStages: Set<String>
     var hasRecords: Bool { !stages.isEmpty }
+    var writesFrontmatterBlock: Bool { stages.contains { frontmatterStages.contains($0.stage) } }
 
-    init(data: HealthData) {
-        stages = data.sleep.stages
+    /// `authorizedOutputKeys` are the accepted shared-core selected outputs; a stage whose owner
+    /// is not among them is left out of every format (#353). `nil` keeps every captured stage.
+    init(data: HealthData, authorizedOutputKeys: Set<String>? = nil,
+         isFrontmatterFieldEnabled: (String) -> Bool = { _ in true }) {
+        stages = data.sleep.stages.filter { stage in
+            authorizedOutputKeys.map { authorized in
+                WakeDateNativeFrontmatterOwners.sleepStage[stage.stage].map(authorized.contains) ?? true
+            } ?? true
+        }
+        frontmatterStages = Set(stages.map(\.stage).filter {
+            WakeDateNativeFrontmatterOwners.showsSleepStage($0, isFrontmatterFieldEnabled)
+        })
         bounds = data.sleep.sourceSessionBounds ?? .init(start: data.sleep.sessionStart, end: data.sleep.sessionEnd)
     }
 
@@ -62,9 +75,9 @@ nonisolated struct AppleWakeDateSleepStageProjection: Sendable {
     }
 
     func writeFrontmatterBlock(to sink: ExportByteSink) throws {
-        guard hasRecords else { return }
+        guard writesFrontmatterBlock else { return }
         try sink.write(Data("\nsleep_stage_details:\n".utf8))
-        for stage in stages {
+        for stage in stages where frontmatterStages.contains(stage.stage) {
             try sink.write(Data("  - ".utf8))
             try HealthKitRecordArchiveSerializer.writeDailyJSONObject(object(stage), archive: nil, to: sink,
                 outputFormatting: [.sortedKeys, .withoutEscapingSlashes])

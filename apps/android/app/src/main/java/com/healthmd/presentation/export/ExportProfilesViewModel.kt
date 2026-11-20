@@ -56,7 +56,7 @@ data class ExportProfileRow(
 data class ExportProfileEditorDraft(
     val name: String,
     val target: ExportTarget,
-    /** Bound SAF tree URI for DEVICE_FOLDER targets; null follows the live Export-tab folder. */
+    /** Bound SAF tree URI for DEVICE_FOLDER targets; null follows the default folder (Settings › Vault on this device). */
     val folderUri: String? = null,
     val folderDisplayName: String? = null,
     /** Local Google Drive destination reference; authority remains in destination storage. */

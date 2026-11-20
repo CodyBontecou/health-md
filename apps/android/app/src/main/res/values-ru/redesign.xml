@@ -582,4 +582,6 @@
     <string name="export_result_retry_note_one">Готовые даты останутся готовыми. Повторная попытка запишет только %1$s.</string>
     <string name="export_result_retry_note">Готовые даты останутся готовыми. Повторная попытка запишет %1$s.</string>
     <string name="export_result_show_in_files">Показать в «Файлах»</string>
+    <string name="composer_fields_frontmatter_note">Выбирает данные, которые собирает эта заметка. Свойства Frontmatter задаются в разделе Все настройки → Формат.</string>
+    <string name="frontmatter_fields_ownership_note">В Frontmatter попадают только поля, включённые здесь. Чтобы у поля были данные, должна быть включена и его метрика.</string>
 </resources>

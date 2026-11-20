@@ -485,12 +485,17 @@ object HealthMdRenderInputAdapter {
                     throw AdapterException("wake-date native sleep details are incompatible")
                 }
                 val selected = frozenSelectedOutputKeys ?: selectedOutputKeys
+                // Native records stay in every body format; their Bases frontmatter blocks follow
+                // the Format → Custom switches of the fields that own them (#353).
+                val frontmatter = presentationCustomization.frontmatterConfig::isFieldEnabled
                 val quantities = mergeDetails(mergeDetails(
-                    mergeDetails(quantityDetails(native, ownerDate, selected), bloodPressureDetails(native, ownerDate, selected)),
-                    activityDetails(native, ownerDate, selected)), mergeDetails(workoutDetails(native, ownerDate, selected),
-                        mindfulnessDetails(native, ownerDate, selected)))
+                    mergeDetails(quantityDetails(native, ownerDate, selected, frontmatter),
+                        bloodPressureDetails(native, ownerDate, selected, frontmatter)),
+                    activityDetails(native, ownerDate, selected, frontmatter)),
+                    mergeDetails(workoutDetails(native, ownerDate, selected, frontmatter),
+                        mindfulnessDetails(native, ownerDate, selected, frontmatter)))
                 val details = if (stages.isNotEmpty() || sessions.isNotEmpty()) {
-                    mergeDetails(sleepDetails(stages, sessions, ownerDate, selected), quantities)
+                    mergeDetails(sleepDetails(stages, sessions, ownerDate, selected, frontmatter), quantities)
                 } else quantities
                 if (details.getValue("output_keys").jsonArray.isNotEmpty()) put("native_details", details)
             }
@@ -528,7 +533,8 @@ object HealthMdRenderInputAdapter {
             .replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026") + "`"
 
     /** Native-only records keep their own identities and opaque FHIR, without shared-metric aliases. */
-    internal fun plannedAndMedicalDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
+    internal fun plannedAndMedicalDetails(root: JsonObject, ownerDate: String, selected: List<String>,
+        frontmatter: (String) -> Boolean = { true }): JsonObject {
         val planned = root["plannedWorkouts"]?.jsonArray.orEmpty()
         val medical = root["medicalResources"]?.jsonObject
         val rows = mutableListOf<JsonObject>()
@@ -553,7 +559,9 @@ object HealthMdRenderInputAdapter {
                 }).map(::JsonPrimitive)))
                 put("ordinal", markdown.size)
             }
-            bases += buildJsonObject {
+            val owners = if (outputKey == "planned_workout_count") NativeFrontmatterOwners.plannedWorkouts
+                else NativeFrontmatterOwners.medicalResources
+            if (owners.any(frontmatter)) bases += buildJsonObject {
                 put("key", key); put("lines", JsonArray(records.map { JsonPrimitive("  - $it") }))
                 put("ordinal", bases.size)
             }
@@ -566,9 +574,11 @@ object HealthMdRenderInputAdapter {
         }
     }
 
-    internal fun mindfulnessDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
+    internal fun mindfulnessDetails(root: JsonObject, ownerDate: String, selected: List<String>,
+        frontmatter: (String) -> Boolean = { true }): JsonObject {
         val samples = root["mindfulness"]?.jsonObject?.get("sessions")?.jsonArray ?: JsonArray(emptyList())
         val owner = listOf("mindful_minutes", "mindful_sessions").firstOrNull(selected::contains)
+        val inFrontmatter = NativeFrontmatterOwners.mindfulness.any { it in selected && frontmatter(it) }
         val rows = mutableListOf<JsonObject>()
         val records = mutableListOf<String>()
         for (element in samples) {
@@ -601,7 +611,7 @@ object HealthMdRenderInputAdapter {
                 })
             })
             put("bases_frontmatter_blocks", buildJsonArray {
-                if (records.isNotEmpty()) add(buildJsonObject {
+                if (records.isNotEmpty() && inFrontmatter) add(buildJsonObject {
                     put("key", "native_mindfulness_details"); put("lines", JsonArray(records.map { JsonPrimitive("  - $it") })); put("ordinal", 0)
                 })
             })
@@ -618,10 +628,13 @@ object HealthMdRenderInputAdapter {
         }
     }
 
-    internal fun workoutDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
+    internal fun workoutDetails(root: JsonObject, ownerDate: String, selected: List<String>,
+        frontmatter: (String) -> Boolean = { true }): JsonObject {
         val workouts = root["workouts"]?.jsonArray ?: JsonArray(emptyList())
         val owner = listOf("workout_count", "workouts", "workout_minutes").firstOrNull(selected::contains)
             ?: selected.sorted().firstOrNull { it.startsWith("workout_") }
+        // The Bases block shows with any workout field still on in Format → Custom (#353).
+        val inFrontmatter = selected.any { NativeFrontmatterOwners.isWorkoutField(it) && frontmatter(it) }
         if (workouts.isNotEmpty() && owner == null) throw AdapterException("wake-date native workout selection is incompatible")
         val rows = mutableListOf<JsonObject>()
         val lines = mutableListOf("| Native Record (JSON) |", "|---|")
@@ -646,7 +659,7 @@ object HealthMdRenderInputAdapter {
             put("markdown_blocks", JsonArray(if (workouts.isEmpty()) emptyList() else listOf(buildJsonObject {
                 put("heading", "Workout Details"); put("lines", JsonArray(lines.map(::JsonPrimitive))); put("ordinal", 0)
             })))
-            put("bases_frontmatter_blocks", JsonArray(if (yaml.isEmpty()) emptyList() else listOf(buildJsonObject {
+            put("bases_frontmatter_blocks", JsonArray(if (yaml.isEmpty() || !inFrontmatter) emptyList() else listOf(buildJsonObject {
                 put("key", "native_workout_details"); put("lines", JsonArray(yaml.map(::JsonPrimitive))); put("ordinal", 0)
             })))
         }
@@ -655,7 +668,8 @@ object HealthMdRenderInputAdapter {
     private data class QuantityDetail(val category: String, val field: String, val identity: String,
         val unit: String, val owners: List<String>, val label: String)
 
-    internal fun quantityDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
+    internal fun quantityDetails(root: JsonObject, ownerDate: String, selected: List<String>,
+        frontmatter: (String) -> Boolean = { true }): JsonObject {
         val definitions = listOf(
             QuantityDetail("heart", "heartRateSamples", "heart_rate", "bpm", listOf("average_heart_rate", "heart_rate_min", "heart_rate_max"), "Heart Rate"),
             QuantityDetail("heart", "hrvSamples", "hrv_rmssd", "ms", listOf("hrv_ms"), "HRV RMSSD"),
@@ -673,6 +687,7 @@ object HealthMdRenderInputAdapter {
             val owner = definition.owners.firstOrNull { it in selected }
                 ?: throw AdapterException("wake-date native quantity selection is incompatible")
             keys += owner
+            val inFrontmatter = NativeFrontmatterOwners.quantity.getValue(definition.field).any { it in selected && frontmatter(it) }
             val lines = mutableListOf("| Timestamp (UTC) | Value | Unit |", "|---|---|---|")
             for (element in samples) {
                 val sample = element.jsonObject
@@ -687,7 +702,7 @@ object HealthMdRenderInputAdapter {
                     put("value", record); put("unit", "json"); put("timestamp", timestamp); put("ordinal", rows.size)
                 }
                 lines += "| $timestamp | $value | ${definition.unit} |"
-                yaml += "  - $record"
+                if (inFrontmatter) yaml += "  - $record"
             }
             blocks += buildJsonObject {
                 put("heading", "${definition.label} Sample Details"); put("lines", JsonArray(lines.map(::JsonPrimitive))); put("ordinal", blocks.size)
@@ -702,10 +717,12 @@ object HealthMdRenderInputAdapter {
     }
 
     /** Existing Android-native interval records; never reinterpret intensity as Apple exercise time. */
-    internal fun activityDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
+    internal fun activityDetails(root: JsonObject, ownerDate: String, selected: List<String>,
+        frontmatter: (String) -> Boolean = { true }): JsonObject {
         val activity = root["activity"]?.jsonObject
         val rows = mutableListOf<JsonObject>()
         val records = mutableListOf<String>()
+        val basesRecords = mutableListOf<String>()
         val keys = mutableSetOf<String>()
         fun incompatible(): Nothing = throw AdapterException("wake-date native activity interval is incompatible")
         fun exactInstant(value: JsonElement?): java.time.Instant {
@@ -746,6 +763,7 @@ object HealthMdRenderInputAdapter {
                 }
                 val record = buildJsonObject { put("metric", metric); put("unit", unit); put("sample", sample) }.toString()
                 records += record
+                if (frontmatter(NativeFrontmatterOwners.activity.getValue(field))) basesRecords += record
                 rows += buildJsonObject {
                     put("date", ownerDate); put("category", "Native Detail"); put("metric", "Activity Record")
                     put("value", record); put("unit", "json"); put("timestamp", timestamp); put("ordinal", rows.size)
@@ -766,14 +784,15 @@ object HealthMdRenderInputAdapter {
                 })
             })
             put("bases_frontmatter_blocks", buildJsonArray {
-                if (records.isNotEmpty()) add(buildJsonObject {
-                    put("key", "native_activity_details"); put("lines", JsonArray(records.map { JsonPrimitive("  - $it") })); put("ordinal", 0)
+                if (basesRecords.isNotEmpty()) add(buildJsonObject {
+                    put("key", "native_activity_details"); put("lines", JsonArray(basesRecords.map { JsonPrimitive("  - $it") })); put("ordinal", 0)
                 })
             })
         }
     }
 
-    internal fun bloodPressureDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
+    internal fun bloodPressureDetails(root: JsonObject, ownerDate: String, selected: List<String>,
+        frontmatter: (String) -> Boolean = { true }): JsonObject {
         val samples = root["vitals"]?.jsonObject?.get("bloodPressureSamples")?.jsonArray ?: JsonArray(emptyList())
         val keys = listOf("blood_pressure_systolic", "blood_pressure_diastolic")
         val rows = mutableListOf<JsonObject>()
@@ -804,12 +823,14 @@ object HealthMdRenderInputAdapter {
                 if (samples.isNotEmpty()) add(buildJsonObject { put("heading", "Blood Pressure Correlation Details"); put("lines", JsonArray(lines.map(::JsonPrimitive))); put("ordinal", 0) })
             })
             put("bases_frontmatter_blocks", buildJsonArray {
-                if (samples.isNotEmpty()) add(buildJsonObject { put("key", "native_correlation_details"); put("lines", JsonArray(yaml.map(::JsonPrimitive))); put("ordinal", 0) })
+                // A paired record shows only while both of its fields are on in Format → Custom.
+                if (samples.isNotEmpty() && NativeFrontmatterOwners.correlation.all(frontmatter)) add(buildJsonObject { put("key", "native_correlation_details"); put("lines", JsonArray(yaml.map(::JsonPrimitive))); put("ordinal", 0) })
             })
         }
     }
 
-    internal fun sleepDetails(stages: JsonArray, sessions: JsonArray, ownerDate: String, selectedOutputKeys: List<String>): JsonObject {
+    internal fun sleepDetails(stages: JsonArray, sessions: JsonArray, ownerDate: String, selectedOutputKeys: List<String>,
+        frontmatter: (String) -> Boolean = { true }): JsonObject {
         val keysByStage = mapOf("deep" to "sleep_deep_hours", "rem" to "sleep_rem_hours",
             "light" to "sleep_light_hours", "awake" to "sleep_awake_hours",
             "wake" to "sleep_awake_hours", "sleeping" to "sleep_total_hours",
@@ -833,7 +854,7 @@ object HealthMdRenderInputAdapter {
                 put("value", value); put("unit", "seconds"); put("timestamp", start); put("ordinal", ordinal)
             }
             lines += "| $start | $end | $name | ${nativeJsonCodeCell(value)} |"
-            yaml += "  - $value"
+            if (frontmatter(NativeFrontmatterOwners.sleepStage.getValue(name))) yaml += "  - $value"
         }
         val markdownBlocks = mutableListOf<JsonObject>()
         val basesBlocks = mutableListOf<JsonObject>()
@@ -843,7 +864,7 @@ object HealthMdRenderInputAdapter {
                 put("lines", JsonArray(text.map(::JsonPrimitive)))
                 put("ordinal", ordinal)
             }
-            basesBlocks += buildJsonObject {
+            if (records.isNotEmpty()) basesBlocks += buildJsonObject {
                 put("key", key)
                 put("lines", JsonArray(records.map(::JsonPrimitive)))
                 put("ordinal", ordinal)
@@ -854,6 +875,8 @@ object HealthMdRenderInputAdapter {
             val key = listOf("sleep_total_hours", "sleep_in_bed_hours").firstOrNull { it in selectedOutputKeys }
                 ?: throw AdapterException("wake-date native session selection is incompatible")
             keys += key
+            val sessionsInFrontmatter = NativeFrontmatterOwners.sleepSession
+                .any { it in selectedOutputKeys && frontmatter(it) }
             val sessionLines = mutableListOf("| Start (UTC) | End (UTC) | Native Record (JSON) |", "|---|---|---|")
             val sessionYaml = mutableListOf<String>()
             for (element in sessions) {
@@ -874,7 +897,7 @@ object HealthMdRenderInputAdapter {
                     put("ordinal", ordinal)
                 }
                 sessionLines += "| $start | $end | ${nativeJsonCodeCell(value)} |"
-                sessionYaml += "  - $value"
+                if (sessionsInFrontmatter) sessionYaml += "  - $value"
             }
             addBlocks("Sleep Session Details", "sleep_session_details", sessionLines, sessionYaml, 1)
         }

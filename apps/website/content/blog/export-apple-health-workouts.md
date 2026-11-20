@@ -89,7 +89,7 @@ JSON uses nested fields and arrays rather than CSV columns. Inspect the `units` 
 
 ## Routes, laps, and detailed records
 
-A workout total, a route, and a stream of heart-rate samples are different data. Apple's [workout route documentation](https://developer.apple.com/documentation/healthkit/hkworkoutroute) describes route data as location samples associated with a workout. A distance total is not enough to rebuild those coordinates.
+A workout total, a route, and a stream of heart-rate samples are different data. Apple's [workout route documentation](https://developer.apple.com/documentation/healthkit/hkworkoutroute) describes route data as location samples associated with a workout. A distance total is not enough to rebuild those coordinates. Parsing distance out of Apple's own `export.xml` instead? See [where workout distance lives in export.xml](/blog/apple-health-export-xml-workout-distance/).
 
 Health.md's JSON renderer can include route and time-series data when the workout read returns them. **Inspect even a Summary JSON export before sharing it:** selecting Summary is not a guarantee that workout objects contain no detailed fields or coordinates. The synthetic JSON intentionally exercises optional fields; it is not a promise that every real workout includes them.
 

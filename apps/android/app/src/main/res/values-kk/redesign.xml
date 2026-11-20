@@ -526,4 +526,6 @@
     <string name="export_result_retry_note_one">Аяқталған күндер аяқталған күйде қалады. Қайталау тек %1$s жазады.</string>
     <string name="export_result_retry_note">Аяқталған күндер аяқталған күйде қалады. Қайталау %1$s жазады.</string>
     <string name="export_result_show_in_files">«Файлдар» ішінде көрсету</string>
+    <string name="composer_fields_frontmatter_note">Бұл жазба жинайтын деректерді таңдайды. Frontmatter қасиеттері Барлық параметрлер → Пішім бөлімінде орнатылады.</string>
+    <string name="frontmatter_fields_ownership_note">Мұнда қосылған өрістер ғана Frontmatter-ге жазылады. Деректер болуы үшін өрістің көрсеткіші де қосулы болуы керек.</string>
 </resources>

@@ -41,8 +41,8 @@
     <string name="m3_profiles_editor_clinic_destination">诊所目标</string>
     <string name="m3_profiles_editor_clinic_body">此目标由你的诊所管理。请使用“诊所访问”选择它或管理共享。其他目标需要你自己的 Health.md 访问权限。</string>
     <string name="m3_profiles_editor_folder">文件夹</string>
-    <string name="m3_profiles_editor_folder_current">当前文件夹（来自“导出”标签页）</string>
-    <string name="m3_profiles_editor_folder_reset">使用“导出”标签页中的文件夹</string>
+    <string name="m3_profiles_editor_folder_current">默认文件夹（设置 › 此设备上的文件库）</string>
+    <string name="m3_profiles_editor_folder_reset">使用默认文件夹</string>
     <string name="m3_profiles_editor_endpoint_invalid">保存前请输入有效的 http(s) 端点 URL。</string>
     <string name="m3_profiles_editor_gateway_invalid">保存前请输入有效的 http(s) 网关 URL。</string>
     <string name="m3_profiles_editor_output">输出</string>
@@ -61,7 +61,7 @@
     <string name="m3_profiles_editor_entries_folder">记录文件夹</string>
     <string name="m3_profiles_editor_category_folders">按类别分文件夹</string>
     <string name="m3_profiles_editor_entry_filename">记录文件名模板</string>
-    <string name="m3_profiles_editor_entry_rules_note">在此配置文件启用期间，可在“导出”标签页中编辑各指标的记录规则。</string>
+    <string name="m3_profiles_editor_entry_rules_note">请在此自动化的“单独条目”页面中编辑各指标的记录规则。</string>
     <string name="m3_profiles_editor_overlap">与 %1$s 重叠：后续运行会覆盖之前的结果。请选择不同的文件夹或文件名模板，将它们分开。</string>
     <string name="m3_profiles_editor_create">创建</string>
     <plurals name="m3_profiles_metrics_count">

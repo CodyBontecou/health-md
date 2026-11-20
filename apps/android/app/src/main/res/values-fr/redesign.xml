@@ -538,4 +538,6 @@
     <string name="export_result_retry_note_one">Les dates terminées le restent. La nouvelle tentative écrit uniquement %1$s.</string>
     <string name="export_result_retry_note">Les dates terminées le restent. La nouvelle tentative écrit %1$s.</string>
     <string name="export_result_show_in_files">Afficher dans Fichiers</string>
+    <string name="composer_fields_frontmatter_note">Choisit les données que cette note collecte. Les propriétés du frontmatter se règlent dans Tous les réglages → Format.</string>
+    <string name="frontmatter_fields_ownership_note">Seuls les champs activés ici vont dans le frontmatter. Un champ n’a de données que si sa métrique est aussi activée.</string>
 </resources>

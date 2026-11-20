@@ -478,4 +478,6 @@
 <string name="export_result_retry_note_one">সম্পূর্ণ তারিখগুলো সম্পূর্ণই থাকবে। আবার চেষ্টা করলে শুধু %1$s লেখা হবে।</string>
 <string name="export_result_retry_note">সম্পূর্ণ তারিখগুলো সম্পূর্ণই থাকবে। আবার চেষ্টা করলে %1$s লেখা হবে।</string>
 <string name="export_result_show_in_files">ফাইলসমূহে দেখুন</string>
+    <string name="composer_fields_frontmatter_note">এই নোট কোন ডেটা সংগ্রহ করবে তা বেছে নেয়। ফ্রন্টম্যাটার বৈশিষ্ট্যগুলো সব সেটিংস → ফরম্যাট-এ সেট করা হয়।</string>
+    <string name="frontmatter_fields_ownership_note">শুধু এখানে চালু করা ফিল্ডগুলোই ফ্রন্টম্যাটারে যায়। ডেটা পেতে ফিল্ডটির মেট্রিকও চালু থাকতে হবে।</string>
 </resources>

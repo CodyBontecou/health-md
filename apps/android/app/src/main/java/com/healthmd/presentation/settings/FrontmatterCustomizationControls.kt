@@ -62,6 +62,7 @@ internal object FrontmatterCustomizationTags {
     const val CUSTOM_ADD = "frontmatter.custom.add"
     const val PLACEHOLDER_KEY = "frontmatter.placeholder.key"
     const val PLACEHOLDER_ADD = "frontmatter.placeholder.add"
+    const val OWNERSHIP_NOTE = "frontmatter.ownershipNote"
     const val SEARCH = "frontmatter.search"
     fun style(style: FrontmatterKeyStyle) = "frontmatter.style.${style.name}"
     fun metric(key: String) = "frontmatter.metric.$key"

@@ -8,10 +8,15 @@ nonisolated struct AppleWakeDateMindfulnessProjection: Sendable {
     let captureContext: AppleSleepCaptureContext
     let timeFormatIdentifier: String
     let hasSelectedOwner: Bool
-    var hasRecords: Bool { !source.mindfulness.exportedStateOfMindEntries.isEmpty }
+    /// The Bases block shows while any mood field is on in Format → Custom (#353).
+    let includesFrontmatterBlock: Bool
+    /// Records need an accepted mood owner; without one they are left out of every format (#353).
+    var hasRecords: Bool { hasSelectedOwner && !source.mindfulness.exportedStateOfMindEntries.isEmpty }
+    var writesFrontmatterBlock: Bool { hasRecords && includesFrontmatterBlock }
 
     init(data: HealthData, captureContext: AppleSleepCaptureContext, timeFormatIdentifier: String,
-        selectedOutputKeys: Set<String>) {
+        selectedOutputKeys: Set<String>, isFrontmatterFieldEnabled: (String) -> Bool = { _ in true }) {
+        includesFrontmatterBlock = WakeDateNativeFrontmatterOwners.showsMindfulness(isFrontmatterFieldEnabled)
         source = HealthData(date: data.date, timeContext: data.timeContext, mindfulness: MindfulnessData(stateOfMind: data.mindfulness.exportedStateOfMindEntries))
         self.captureContext = captureContext
         self.timeFormatIdentifier = timeFormatIdentifier
@@ -69,7 +74,7 @@ nonisolated struct AppleWakeDateMindfulnessProjection: Sendable {
     }
 
     func writeFrontmatterBlock(to sink: ExportByteSink) throws {
-        guard hasRecords else { return }
+        guard writesFrontmatterBlock else { return }
         try sink.write(Data("\nnative_mindfulness_details:\n".utf8))
         try records().forEach { value in
             try Task.checkCancellation()
