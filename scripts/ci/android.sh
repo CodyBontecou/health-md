@@ -43,7 +43,14 @@ for _ in {1..450}; do
 done
 rg -q "ANDROID_LIVE_LISTENER_READY:$HEALTHMD_LIVE_DIRECT_PORT" "$log"
 cd apps/android
-common=(-Phealthmd.ciAbi="$abi" -PhealthmdInstrumentedTestBuildType=e2e --max-workers=2 --console=plain)
+# A reused Gradle daemon keeps the sandbox of whoever started it, which may not
+# be allowed to write this checkout's .gradle cache. Start a fresh one per run.
+# The same applies to ~/.android, where AGP creates the debug keystore.
+if ! { mkdir -p "$HOME/.android" && touch "$HOME/.android/.healthmd-ci-write-probe" && rm -f "$HOME/.android/.healthmd-ci-write-probe"; } 2>/dev/null; then
+    export ANDROID_USER_HOME="${ANDROID_USER_HOME:-$repo_root/apps/android/build/ci-android-user-home}"
+    mkdir -p "$ANDROID_USER_HOME"
+fi
+common=(-Phealthmd.ciAbi="$abi" -PhealthmdInstrumentedTestBuildType=e2e --max-workers=2 --console=plain --no-daemon)
 ./scripts/run-ci-gradle.sh "${common[@]}" :app:testPlayE2eUnitTest \
     --tests com.healthmd.data.health.HealthConnectPinnedZoneRangeTest \
     --tests com.healthmd.domain.exportengine.ExportRepositoryEngineSeamTest \
