@@ -526,6 +526,7 @@
     <string name="export_result_retry_note_one">Abgeschlossene Tage bleiben abgeschlossen. Beim erneuten Versuch wird nur %1$s geschrieben.</string>
     <string name="export_result_retry_note">Abgeschlossene Tage bleiben abgeschlossen. Beim erneuten Versuch wird %1$s geschrieben.</string>
     <string name="export_result_show_in_files">In Dateien anzeigen</string>
+    <string name="export_result_open_in_obsidian">In Obsidian öffnen</string>
     <string name="composer_fields_frontmatter_note">Wählt die Daten, die diese Notiz sammelt. Frontmatter-Eigenschaften legst du unter Alle Einstellungen → Format fest.</string>
     <string name="frontmatter_fields_ownership_note">Nur hier eingeschaltete Felder kommen ins Frontmatter. Ein Feld hat außerdem nur Daten, wenn seine Metrik eingeschaltet ist.</string>
 </resources>

@@ -538,6 +538,7 @@
     <string name="export_result_retry_note_one">As datas concluídas permanecem concluídas. A nova tentativa grava apenas %1$s.</string>
     <string name="export_result_retry_note">As datas concluídas permanecem concluídas. A nova tentativa grava %1$s.</string>
     <string name="export_result_show_in_files">Mostrar em Arquivos</string>
+    <string name="export_result_open_in_obsidian">Abrir no Obsidian</string>
     <string name="composer_fields_frontmatter_note">Escolhe os dados que esta nota coleta. As propriedades do frontmatter são definidas em Todas as configurações → Formato.</string>
     <string name="frontmatter_fields_ownership_note">Só os campos ativados aqui entram no frontmatter. Um campo também precisa da sua métrica ativada para ter dados.</string>
 </resources>

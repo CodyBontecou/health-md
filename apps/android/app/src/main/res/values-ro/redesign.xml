@@ -554,6 +554,7 @@
     <string name="export_result_retry_note_one">Datele finalizate rămân finalizate. Reîncercarea scrie doar %1$s.</string>
     <string name="export_result_retry_note">Datele finalizate rămân finalizate. Reîncercarea scrie %1$s.</string>
     <string name="export_result_show_in_files">Afișați în Fișiere</string>
+    <string name="export_result_open_in_obsidian">Deschideți în Obsidian</string>
     <string name="composer_fields_frontmatter_note">Alege datele pe care le colectează această notă. Proprietățile Frontmatter se setează în Toate setările → Format.</string>
     <string name="frontmatter_fields_ownership_note">Doar câmpurile activate aici ajung în Frontmatter. Un câmp are nevoie și de metrica sa activată pentru a avea date.</string>
 </resources>
