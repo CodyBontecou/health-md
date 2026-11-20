@@ -77,7 +77,7 @@ steps:
   - echo: "M-10: tap Disable All Fields (glass.formatCustom.disableAllFields; point
       tap). Expect categories at 0 fields"
   # Point = centre of glass.formatCustom.disableAllFields from describe.
-  - tap: { x: 0.777, y: 0.7155 }
+  - tap: { x: 0.777, y: 0.7485 }
   - tool: await-ui-element
     args:
       condition: visible
@@ -86,7 +86,7 @@ steps:
   - echo: "M-10: tap Enable All Fields (glass.formatCustom.enableAllFields; point
       tap). Expect every category back to all fields"
   # Point = centre of glass.formatCustom.enableAllFields from describe.
-  - tap: { x: 0.777, y: 0.6805 }
+  - tap: { x: 0.777, y: 0.7135 }
   - tool: await-ui-element
     args:
       condition: visible
@@ -130,7 +130,7 @@ steps:
   - echo: "M-10: tap Reset Names (glass.formatCustom.resetFieldNames; point tap),
       then reopen Sleep. Expect sleep_wake back and sleep_wake_qa gone"
   # Point = centre of glass.formatCustom.resetFieldNames from describe.
-  - tap: { x: 0.777, y: 0.7505 }
+  - tap: { x: 0.777, y: 0.7835 }
   - tap: { x: 0.777, y: 0.2165 }
   - tool: await-ui-element
     args:
@@ -171,7 +171,7 @@ steps:
       selector:
         identifier: glass.formatCustom.disableAllFields
   - await: { idle: true }
-  - tap: { x: 0.777, y: 0.7155 }
+  - tap: { x: 0.777, y: 0.7485 }
   - tool: await-ui-element
     args:
       condition: visible
