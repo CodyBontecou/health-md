@@ -83,11 +83,19 @@ internal fun ArchiveViewModeButton(text: String, onClick: () -> Unit) {
     ) { Text(text, style = GeistType.button14) }
 }
 
-/** iOS `nextRunCard`: when the next export runs, with the month's gaps beside it. */
+/**
+ * iOS `nextRunCard`: when the next export runs, with the month's gaps beside it. Without
+ * schedule access a saved schedule never runs, so the card says so and opens the paywall.
+ */
 @Composable
-internal fun ArchiveNextRunCard(state: ArchiveUiState, onShowGap: () -> Unit) {
+internal fun ArchiveNextRunCard(
+    state: ArchiveUiState,
+    hasScheduleAccess: Boolean,
+    onShowGap: () -> Unit,
+    onOpenPaywall: () -> Unit,
+) {
     val colors = LocalGeistColors.current
-    val next = state.nextRun
+    val line = ArchiveNextRunLine.of(state.nextRun, hasScheduleAccess)
     GeistCard(padding = GeistSpacing.space4) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3)) {
             Box(
@@ -96,19 +104,30 @@ internal fun ArchiveNextRunCard(state: ArchiveUiState, onShowGap: () -> Unit) {
             ) {
                 Icon(Icons.Outlined.Schedule, contentDescription = null, tint = colors.brandPrimary)
             }
-            Column(Modifier.weight(1f).semantics(mergeDescendants = true) {}) {
+            Column(
+                Modifier
+                    .weight(1f)
+                    .then(
+                        if (line is ArchiveNextRunLine.NeedsSubscription) {
+                            Modifier.clickable(role = Role.Button, onClick = onOpenPaywall)
+                        } else {
+                            Modifier
+                        },
+                    )
+                    .semantics(mergeDescendants = true) {},
+            ) {
                 Text(stringResource(R.string.archive_next_run), style = GeistType.label13, color = colors.secondary)
                 Text(
-                    text = if (next == null) {
-                        stringResource(R.string.archive_nothing_scheduled)
-                    } else {
-                        stringResource(
+                    text = when (line) {
+                        ArchiveNextRunLine.NothingScheduled -> stringResource(R.string.archive_nothing_scheduled)
+                        ArchiveNextRunLine.NeedsSubscription -> stringResource(R.string.automations_needs_subscription)
+                        is ArchiveNextRunLine.Scheduled -> stringResource(
                             R.string.archive_next_run_value,
-                            next.profileName ?: profileLabel(ArchiveProfile(null)),
-                            whenText(next.atMillis, state.today),
+                            line.run.profileName ?: profileLabel(ArchiveProfile(null)),
+                            whenText(line.run.atMillis, state.today),
                         )
                     },
-                    style = MaterialTheme.typography.titleMedium,
+                    style = if (line is ArchiveNextRunLine.NeedsSubscription) GeistType.copy14 else MaterialTheme.typography.titleMedium,
                     color = colors.primary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,

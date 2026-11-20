@@ -76,6 +76,7 @@ import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.common.LocalFloatingActionClearance
 import com.healthmd.presentation.common.LocalUsesNavigationRail
 import com.healthmd.presentation.common.PrimaryButton
+import com.healthmd.presentation.schedule.ScheduleViewModel
 import com.healthmd.presentation.theme.GeistBreakpoints
 import com.healthmd.presentation.theme.GeistColors
 import com.healthmd.presentation.theme.GeistRadii
@@ -116,9 +117,14 @@ fun ArchiveScreen(
     onEditAutomation: (String) -> Unit = {},
     /** Opens the export folder destination: setup step two. */
     onChooseFolder: () -> Unit = {},
+    /** Opens the schedule paywall: the next-run card when schedules need a subscription. */
+    onOpenPaywall: () -> Unit = {},
     viewModel: ArchiveViewModel = hiltViewModel(),
+    scheduleViewModel: ScheduleViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // The same access decision the Automations cards use: no next run without it.
+    val hasScheduleAccess = scheduleViewModel.uiState.collectAsStateWithLifecycle().value.hasScheduleAccess
     val healthConnectConnected by viewModel.healthConnectConnected.collectAsStateWithLifecycle()
     val leadFile by viewModel.leadFile.collectAsStateWithLifecycle()
     val attention by viewModel.attention.collectAsStateWithLifecycle()
@@ -157,6 +163,9 @@ fun ArchiveScreen(
             },
         )
     }
+    val nextRunCard: @Composable () -> Unit = {
+        ArchiveNextRunCard(state, hasScheduleAccess, onShowGap = viewModel::jumpToGap, onOpenPaywall = onOpenPaywall)
+    }
     CompositionLocalProvider(LocalCurrentSettingsName provides state.currentSettingsName) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         // From `md` the rail narrows the content below 601dp on an unfolded foldable, so the
@@ -178,6 +187,7 @@ fun ArchiveScreen(
                 onOpenAutomations = onOpenAutomations,
                 onEditAutomation = onEditAutomation,
                 header = header,
+                nextRunCard = nextRunCard,
             )
             return@BoxWithConstraints
         }
@@ -194,6 +204,7 @@ fun ArchiveScreen(
             onChooseFolder = onChooseFolder,
             healthConnected = healthConnectConnected == true,
             header = header,
+            nextRunCard = nextRunCard,
         )
     }
     }
@@ -236,6 +247,7 @@ private fun ArchiveLargeLayout(
     onOpenAutomations: () -> Unit,
     onEditAutomation: (String) -> Unit,
     header: @Composable (Modifier) -> Unit,
+    nextRunCard: @Composable () -> Unit,
 ) {
     val colors = LocalGeistColors.current
     Row(
@@ -275,7 +287,7 @@ private fun ArchiveLargeLayout(
             state.filteredAutomation?.takeIf { it.isPaused }?.let { automation ->
                 ArchivePausedNote(automation, onResume = { viewModel.resume(automation.profile.id) })
             }
-            ArchiveNextRunCard(state, onShowGap = viewModel::jumpToGap)
+            nextRunCard()
             ArchiveDayCard(state = state, onBackfill = onBackfill, onOpenDay = onOpenDay)
             ArchiveSentenceCard(state, onManage = onOpenAutomations, onEdit = onEditAutomation)
         }
@@ -300,6 +312,7 @@ private fun ArchiveCompactLayout(
     onChooseFolder: () -> Unit,
     healthConnected: Boolean,
     header: @Composable (Modifier) -> Unit,
+    nextRunCard: @Composable () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -345,7 +358,7 @@ private fun ArchiveCompactLayout(
             }
             else -> {
                 if (state.month.profiles.size > 1) chips()
-                ArchiveNextRunCard(state, onShowGap = viewModel::jumpToGap)
+                nextRunCard()
                 pausedNote()
                 ArchiveWeekPanel(
                     state = state,
