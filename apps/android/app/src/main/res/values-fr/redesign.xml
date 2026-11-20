@@ -323,6 +323,8 @@
     <string name="automations_no_schedule">Aucune planification</string>
     <string name="automation_section_automation">Automatisation</string>
     <string name="automation_duplicate">Dupliquer</string>
+    <string name="automation_duplicated_snackbar">Dupliquée sous « %1$s »</string>
+    <string name="automation_duplicated_open">Ouvrir</string>
     <string name="automation_pause">Mettre en pause</string>
     <string name="automation_resume">Reprendre</string>
     <string name="automation_row_name">Nom</string>

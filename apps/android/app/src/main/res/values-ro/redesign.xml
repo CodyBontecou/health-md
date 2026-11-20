@@ -326,6 +326,8 @@
     <string name="automations_no_schedule">Fără program</string>
     <string name="automation_section_automation">Automatizare</string>
     <string name="automation_duplicate">Duplicați</string>
+    <string name="automation_duplicated_snackbar">Duplicată ca „%1$s”</string>
+    <string name="automation_duplicated_open">Deschideți</string>
     <string name="automation_pause">Întrerupeți</string>
     <string name="automation_resume">Reluați</string>
     <string name="automation_row_name">Nume</string>

@@ -26,10 +26,13 @@ import com.healthmd.rawexport.ExportMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -96,6 +99,9 @@ data class ExportProfilesUiState(
     val connectedGoogleDriveDestinationId: String? = null,
 )
 
+/** The copy a Duplicate just created: its id (to open it) and the name it was given. */
+data class DuplicatedProfile(val id: String, val name: String)
+
 /** Inputs the draft overlap preview resolves against, refreshed with the row stream. */
 private data class OverlapPreviewContext(
     val identities: List<ExportProfileOverlapDetector.ProfilePathIdentity> = emptyList(),
@@ -127,6 +133,11 @@ class ExportProfilesViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ExportProfilesUiState())
+
+    private val duplicatedEvents = Channel<DuplicatedProfile>(Channel.BUFFERED)
+
+    /** One event per finished Duplicate, so the source page can confirm it (snackbar + haptic). */
+    val duplicated: Flow<DuplicatedProfile> = duplicatedEvents.receiveAsFlow()
     val uiState: StateFlow<ExportProfilesUiState> = _uiState.asStateFlow()
 
     private var overlapContext = OverlapPreviewContext()
@@ -396,6 +407,7 @@ class ExportProfilesViewModel @Inject constructor(
                     derivedFromProfileId = source.id,
                 )
                 openDetail(copy.id)
+                duplicatedEvents.trySend(DuplicatedProfile(id = copy.id, name = copy.name))
             }.onFailure { Timber.e(it, "Could not duplicate profile") }
         }
     }

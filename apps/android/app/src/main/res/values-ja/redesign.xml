@@ -290,6 +290,8 @@
     <string name="automations_no_schedule">スケジュールなし</string>
     <string name="automation_section_automation">オートメーション</string>
     <string name="automation_duplicate">複製</string>
+    <string name="automation_duplicated_snackbar">「%1$s」として複製しました</string>
+    <string name="automation_duplicated_open">開く</string>
     <string name="automation_pause">一時停止</string>
     <string name="automation_resume">再開</string>
     <string name="automation_row_name">名前</string>

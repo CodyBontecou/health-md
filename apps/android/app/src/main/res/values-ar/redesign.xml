@@ -371,6 +371,8 @@
 <string name="automations_no_schedule">بلا جدول</string>
 <string name="automation_section_automation">الأتمتة</string>
 <string name="automation_duplicate">إنشاء نسخة</string>
+<string name="automation_duplicated_snackbar">تم إنشاء نسخة باسم “%1$s”</string>
+<string name="automation_duplicated_open">فتح</string>
 <string name="automation_pause">إيقاف مؤقت</string>
 <string name="automation_resume">استئناف</string>
 <string name="automation_row_name">الاسم</string>

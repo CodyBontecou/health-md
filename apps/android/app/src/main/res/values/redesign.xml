@@ -316,6 +316,8 @@
     <string name="automations_no_schedule">No schedule</string>
     <string name="automation_section_automation">Automation</string>
     <string name="automation_duplicate">Duplicate</string>
+    <string name="automation_duplicated_snackbar">Duplicated as “%1$s”</string>
+    <string name="automation_duplicated_open">Open</string>
     <string name="automation_pause">Pause</string>
     <string name="automation_resume">Resume</string>
     <string name="automation_row_name">Name</string>

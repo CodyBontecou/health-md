@@ -302,6 +302,8 @@
 <string name="automations_no_schedule">সময়সূচি নেই</string>
 <string name="automation_section_automation">অটোমেশন</string>
 <string name="automation_duplicate">নকল তৈরি করুন</string>
+<string name="automation_duplicated_snackbar">“%1$s” নামে নকল তৈরি হয়েছে</string>
+<string name="automation_duplicated_open">খুলুন</string>
 <string name="automation_pause">বিরতি দিন</string>
 <string name="automation_resume">আবার চালু করুন</string>
 <string name="automation_row_name">নাম</string>

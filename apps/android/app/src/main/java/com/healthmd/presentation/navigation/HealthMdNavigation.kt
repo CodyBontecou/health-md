@@ -696,6 +696,8 @@ fun HealthMdNavigation(
                     onOpenPage = { id, page -> navController.navigate(AutomationRoutes.page(id, page)) { launchSingleTop = true } },
                     onOpenSchedule = { id -> navController.navigate(AutomationRoutes.schedule(id)) { launchSingleTop = true } },
                     onDeleted = { navController.popBackStack() },
+                    // The copy opens over its source, so Back returns to the automation it came from.
+                    onOpenAutomation = { id -> navController.navigate(SubRoutes.automationDetail(id)) },
                     profilesViewModel = profiles,
                 )
             }

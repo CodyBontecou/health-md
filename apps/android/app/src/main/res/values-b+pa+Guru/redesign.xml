@@ -302,6 +302,8 @@
 <string name="automations_no_schedule">ਕੋਈ ਸਮਾਂ-ਸੂਚੀ ਨਹੀਂ</string>
 <string name="automation_section_automation">ਆਟੋਮੇਸ਼ਨ</string>
 <string name="automation_duplicate">ਨਕਲ ਬਣਾਓ</string>
+<string name="automation_duplicated_snackbar">“%1$s” ਵਜੋਂ ਨਕਲ ਬਣਾਈ ਗਈ</string>
+<string name="automation_duplicated_open">ਖੋਲ੍ਹੋ</string>
 <string name="automation_pause">ਰੋਕੋ</string>
 <string name="automation_resume">ਮੁੜ ਚਾਲੂ ਕਰੋ</string>
 <string name="automation_row_name">ਨਾਮ</string>

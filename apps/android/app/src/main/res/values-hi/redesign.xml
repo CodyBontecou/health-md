@@ -311,6 +311,8 @@
     <string name="automations_no_schedule">कोई शेड्यूल नहीं</string>
     <string name="automation_section_automation">ऑटोमेशन</string>
     <string name="automation_duplicate">प्रतिलिपि बनाएँ</string>
+    <string name="automation_duplicated_snackbar">“%1$s” के रूप में प्रतिलिपि बनाई गई</string>
+    <string name="automation_duplicated_open">खोलें</string>
     <string name="automation_pause">रोकें</string>
     <string name="automation_resume">फिर शुरू करें</string>
     <string name="automation_row_name">नाम</string>

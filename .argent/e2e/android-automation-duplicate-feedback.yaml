@@ -1,0 +1,60 @@
+version: 1
+requires:
+  platform: android
+# android-automation-duplicate-feedback: tapping Duplicate on an automation's detail page used to
+# give no feedback (the copy only appeared in the list). It now ticks a light haptic and shows a
+# "Duplicated as “<name>”" snackbar with an Open action. This duplicates Default, checks the
+# snackbar on the source page, opens the copy from it, and deletes the copy.
+#
+# Prerequisite (fragment): the isolated QA app com.healthmd.android.e2e (playE2e build), started
+# UNLOCKED in UI test mode just before the run (Argent cannot pass Android launch extras):
+#   adb shell am force-stop com.healthmd.android.e2e  # an install -r can leave a non-test process
+#   adb shell am start -S -n com.healthmd.android.e2e/com.healthmd.presentation.MainActivity \
+#     --ez uitesting true --es UITEST_HEALTH_AUTHORIZED true --es UITEST_PURCHASE_UNLOCKED true
+# with an automation named Default and none named "Default 2".
+# Side effects: none left behind (the copy it creates is deleted). Leaves the app on Automations.
+#
+# Selector notes: Default is opened by its card title text. Compose testTags are not exposed as
+# resource ids in this build, so detail-page identity uses the fixed "Edit sentence" text. Argent's
+# describe tree on the Pixel 7 goes stale after the first in-page change (argent 0.33), so the
+# snackbar, Open and delete steps were driven live by point and are written here as runner text
+# taps; the two full CLI replays are their proof.
+executionPrerequisite: QA app com.healthmd.android.e2e just started UNLOCKED in UI test mode with
+  the adb command in the header; Archive showing, possibly under the "Recover missed scheduled
+  exports?" dialog; an automation named Default and none named "Default 2".
+steps:
+  - echo: Unlocked QA app on Archive. Dismiss the recovery prompt if shown, then open Automations
+  - when: { visible: { text: Not now } }
+    steps:
+      - tap: { text: Not now }
+  - await: { visible: { text: { matches: '^Archive$' } }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { text: Automations }
+  - await: { visible: { text: New automation }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: "Open Default and tap Duplicate. Expect the Duplicated as “Default 2” snackbar on the source page"
+  - tap: { text: { matches: '^Default$' } }
+  - await: { visible: { text: Edit sentence }, timeout: 5000 }
+  - await: { idle: true }
+  - tap: { text: { matches: '^Duplicate$' } }
+  - await: { visible: { text: Duplicated as “Default 2” }, timeout: 5000 }
+  - assert: { visible: { text: Edit sentence } }
+
+  - echo: Tap the snackbar's Open. Expect the copy's detail page
+  - tap: { text: { matches: '^Open$' } }
+  - await: { visible: { text: { matches: '^Default 2$' } }, timeout: 5000 }
+  - await: { idle: true }
+
+  - echo: Delete the copy. Expect to land back on Default (the copy opened over it), then the list without Default 2
+  - scroll-to: { target: { text: Delete automation } }
+  - tap: { text: Delete automation }
+  - tap: { text: { matches: '^Delete$' } }
+  - await: { hidden: { text: Delete automation }, timeout: 5000 }
+  - await: { visible: { text: Edit sentence }, timeout: 5000 }
+  - await: { hidden: { text: { matches: '^Default 2$' } }, timeout: 5000 }
+  - await: { idle: true }
+  - tap: { text: Back }
+  - await: { visible: { text: New automation }, timeout: 5000 }
+  - await: { idle: true }
+  - assert: { hidden: { text: Default 2 } }
