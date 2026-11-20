@@ -112,4 +112,4 @@ Workout exports can contain exact times, identifiers or locations. Inspect the a
 
 Core folder exports require no Health.md account and create no Health.md server copy by default. Synced folders and downstream services have their own storage rules. The separate optional, single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it, has no public signup and no automatic device sync, and is not generally available. This folder workflow does not upload to that pilot.
 
-Read the [retention policy](/privacy-policy.html#retention) and [local destination guide](/blog/export-health-data-without-the-cloud/) for storage and backup checks. For another watch ecosystem, use the [Garmin export guide](/blog/export-garmin-connect-data/) and its distinct sharing requirements.
+Read the [retention policy](/privacy-policy.html#retention) and [local destination guide](/blog/export-health-data-without-the-cloud/) for storage and backup checks. For Strava activities, see the [Strava export guide](/blog/export-strava-data/). For another watch ecosystem, use the [Garmin export guide](/blog/export-garmin-connect-data/) and its distinct sharing requirements.

@@ -89,4 +89,4 @@ Detailed activity files can contain exact times and locations. Inspect their con
 
 Core folder exports require no Health.md account and create no Health.md server copy by default. A synced destination or downstream service has separate storage rules. The optional, single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it; it has no public signup, no automatic device sync and is not generally available. This folder workflow does not upload to that pilot.
 
-Use the [local destination guide](/blog/export-health-data-without-the-cloud/) and [retention policy](/privacy-policy.html#retention) when choosing storage. Keep original COROS files until you have checked the representation and coverage of any derived daily files.
+Use the [local destination guide](/blog/export-health-data-without-the-cloud/) and [retention policy](/privacy-policy.html#retention) when choosing storage. For Strava activities, see the [Strava export guide](/blog/export-strava-data/). Keep original COROS files until you have checked the representation and coverage of any derived daily files.
