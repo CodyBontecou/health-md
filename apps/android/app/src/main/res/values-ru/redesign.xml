@@ -456,6 +456,9 @@
     <string name="output_write_mode_note">Перезапись заменяет файл. Добавление дописывает в конец. Обновление объединяет новые значения, сохраняя ваши правки.</string>
     <string name="output_writes_to">Записывает в</string>
     <string name="output_endpoint_invalid">Введите допустимый URL http(s). Изменения сохранятся, когда адрес станет допустимым.</string>
+    <string name="output_reset_configuration">Сбросить конфигурацию экспорта</string>
+    <string name="output_reset_configuration_title">Сбросить конфигурацию экспорта?</string>
+    <string name="output_reset_configuration_message">Форматы, показатели, имена файлов, настройка формата, отдельные записи и ежедневные заметки этой автоматизации вернутся к значениям по умолчанию. Назначение, подпапка и расписание останутся прежними.</string>
     <string name="automation_summary_single">{when}, записывать данные за {range}[ — {metrics}][ в формате {formats}] в {where}[ и {note}].</string>
     <string name="automation_summary_multi">{when}, записывать данные за {range}[ — {metrics}][ в формате {formats}] в {where}[ и {note}].</string>
     <string name="automation_summary_send_single">{when}, отправлять данные за {range}[ — {metrics}][ в формате {formats}] в {where}[ и {note}].</string>

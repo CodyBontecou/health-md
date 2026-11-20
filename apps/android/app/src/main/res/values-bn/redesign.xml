@@ -387,6 +387,9 @@
 <string name="output_write_mode_note">অধিলিখন ফাইলটি প্রতিস্থাপন করে। যোগ করুন শেষে যোগ করে। আপডেট নতুন মান মার্জ করে এবং আপনার সম্পাদনা রাখে।</string>
 <string name="output_writes_to">যেখানে লেখে</string>
 <string name="output_endpoint_invalid">একটি বৈধ http(s) URL লিখুন। বৈধ হলে পরিবর্তন সংরক্ষিত হবে।</string>
+<string name="output_reset_configuration">রপ্তানি কনফিগারেশন রিসেট করুন</string>
+<string name="output_reset_configuration_title">রপ্তানি কনফিগারেশন রিসেট করবেন?</string>
+<string name="output_reset_configuration_message">এই অটোমেশনের ফরম্যাট, মেট্রিক্স, ফাইলের নাম, ফরম্যাট কাস্টমাইজেশন, পৃথক এন্ট্রি ও দৈনিক নোট ডিফল্টে ফিরে যাবে। এর গন্তব্য, সাবফোল্ডার ও সময়সূচি একই থাকবে।</string>
 <string name="automation_summary_single">{when}, {range}[-এর {metrics}][ {formats} হিসেবে] {where}-এ লিখুন[ এবং {note}]।</string>
 <string name="automation_summary_multi">{when}, {range}[-এর {metrics}][ {formats} হিসেবে] {where}-এ লিখুন[ এবং {note}]।</string>
 <string name="automation_summary_send_single">{when}, {range}[-এর {metrics}][ {formats} হিসেবে] {where}-এ পাঠান[ এবং {note}]।</string>

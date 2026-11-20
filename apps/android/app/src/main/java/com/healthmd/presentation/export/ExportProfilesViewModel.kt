@@ -20,6 +20,7 @@ import com.healthmd.domain.model.ExportProfileRules
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportSettingsSnapshotView
 import com.healthmd.domain.model.ExportTarget
+import com.healthmd.domain.model.resettingExportConfiguration
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.rawexport.ExportMode
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -69,6 +70,13 @@ data class ExportProfileEditorDraft(
     /** Raw snapshots have their own required JSON/NDJSON format, independent of daily formats. */
     val hasOutputFormat: Boolean
         get() = settings.exportMode == ExportMode.RAW_SNAPSHOT || settings.exportFormats.isNotEmpty()
+
+    /**
+     * 3.5 Reset to Defaults for this automation: its export settings return to their defaults
+     * while its name, target and destination bindings (folder, Drive, endpoint, gateway) stay.
+     */
+    fun resettingExportConfiguration(): ExportProfileEditorDraft =
+        copy(settings = settings.resettingExportConfiguration())
 }
 
 data class ExportProfilesUiState(

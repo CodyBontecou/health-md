@@ -414,6 +414,9 @@
     <string name="output_write_mode_note">ओवरराइट फ़ाइल को बदल देता है। अंत में जोड़ें सामग्री को आखिर में जोड़ता है। अपडेट नए मान मिलाता है और आपके संपादन बनाए रखता है।</string>
     <string name="output_writes_to">लिखने की जगह</string>
     <string name="output_endpoint_invalid">मान्य http(s) URL दर्ज करें। मान्य होते ही बदलाव सहेज दिए जाएँगे।</string>
+    <string name="output_reset_configuration">निर्यात कॉन्फ़िगरेशन रीसेट करें</string>
+    <string name="output_reset_configuration_title">निर्यात कॉन्फ़िगरेशन रीसेट करें?</string>
+    <string name="output_reset_configuration_message">इस ऑटोमेशन के फ़ॉर्मैट, मेट्रिक्स, फ़ाइल नाम, फ़ॉर्मैट कस्टमाइज़ेशन, अलग-अलग प्रविष्टियाँ और डेली नोट्स अपने डिफ़ॉल्ट पर लौट आएँगे। इसका गंतव्य, उपफ़ोल्डर और शेड्यूल वही रहेंगे।</string>
     <string name="automation_summary_single">{when}, {range}[ के {metrics}] को[ {formats} के रूप में] {where} में लिखें[ और {note}]।</string>
     <string name="automation_summary_multi">{when}, {range}[ के {metrics}] को[ {formats} के रूप में] {where} में लिखें[ और {note}]।</string>
     <string name="automation_summary_send_single">{when}, {range}[ के {metrics}] को[ {formats} के रूप में] {where} पर भेजें[ और {note}]।</string>

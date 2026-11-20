@@ -5,6 +5,8 @@ import androidx.compose.runtime.setValue
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +19,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -33,6 +36,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -76,6 +82,7 @@ import com.healthmd.presentation.settings.SettingsToggleRow
 import com.healthmd.presentation.settings.groupRowShape
 import com.healthmd.presentation.settings.settingsTextFieldColors
 import com.healthmd.presentation.settings.settingsTextFieldShape
+import com.healthmd.presentation.theme.GeistRadii
 import com.healthmd.presentation.theme.GeistSpacing
 import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.LocalGeistColors
@@ -613,10 +620,16 @@ private data class OutputDraft(
     }
 }
 
+/** Test tags of the Output page (iOS `glass.output.*`). */
+internal object AutomationOutputTags {
+    const val RESET_CONFIGURATION = "automation.output.resetConfiguration"
+    const val RESET_CONFIGURATION_CONFIRM = "automation.output.resetConfiguration.confirm"
+}
+
 /** Output (iOS `GlassOutputScreen`): where an automation writes, how files are named, and overwrites. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ProfileOutputPage(
+internal fun ProfileOutputPage(
     key: String,
     stored: ExportProfileEditorDraft,
     onSave: ((ExportProfileEditorDraft) -> ExportProfileEditorDraft) -> Unit,
@@ -625,8 +638,22 @@ private fun ProfileOutputPage(
 ) {
     val colors = LocalGeistColors.current
     val context = LocalContext.current
+    val protection = LocalConfigurationProtection.current
     val state = rememberProfileAutosave(key, OutputDraft.of(stored), isValid = { it.isValid }) { value ->
         onSave { value.applyTo(it) }
+    }
+    var confirmReset by remember { mutableStateOf(false) }
+    // The rest of the profile as this page last saw it, so the path preview follows a reset.
+    var base by remember(key) { mutableStateOf(stored) }
+    // 3.5 parity: return this automation's export settings to their defaults. The page's own
+    // destination, folder and subfolder stay; an invalid unsaved edit is dropped, never saved.
+    val resetConfiguration = {
+        val current = if (state.value.isValid) state.value else state.saved
+        base = current.applyTo(base).resettingExportConfiguration()
+        val reset = OutputDraft.of(base)
+        state.value = reset
+        state.saved = reset
+        onSave { reset.applyTo(it).resettingExportConfiguration() }
     }
     val draft = state.value
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -644,7 +671,7 @@ private fun ProfileOutputPage(
         onDiscard = state::discard,
         onBack = onBack,
     )
-    val preview = draft.applyTo(stored)
+    val preview = draft.applyTo(base)
     SubScreen(title = stringResource(R.string.output_page_title), onBack = back) {
         PageColumn(Modifier.imePadding()) {
             SettingsGroupHeading(stringResource(R.string.output_where))
@@ -790,7 +817,43 @@ private fun ProfileOutputPage(
                     modifier = Modifier.padding(start = GeistSpacing.space4, end = GeistSpacing.space4, top = GeistSpacing.space4),
                 )
             }
+
+            Box(
+                Modifier
+                    .padding(top = GeistSpacing.space8)
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp)
+                    .clip(RoundedCornerShape(GeistRadii.listGroup))
+                    .background(colors.background200)
+                    .clickable(role = Role.Button) {
+                        if (protection.enabled) protection.onBlockedChange() else confirmReset = true
+                    }
+                    .testTag(AutomationOutputTags.RESET_CONFIGURATION),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(stringResource(R.string.output_reset_configuration), style = GeistType.label16, color = colors.error)
+            }
         }
+    }
+
+    if (confirmReset) {
+        AlertDialog(
+            onDismissRequest = { confirmReset = false },
+            title = { Text(stringResource(R.string.output_reset_configuration_title)) },
+            text = { Text(stringResource(R.string.output_reset_configuration_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmReset = false
+                        if (protection.enabled) protection.onBlockedChange() else resetConfiguration()
+                    },
+                    modifier = Modifier.testTag(AutomationOutputTags.RESET_CONFIGURATION_CONFIRM),
+                ) { Text(stringResource(R.string.reset_to_defaults), color = colors.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmReset = false }) { Text(stringResource(R.string.cancel)) }
+            },
+        )
     }
 }
 
