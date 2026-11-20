@@ -502,7 +502,11 @@ fun ExportScreen(
             !uiState.isExporting &&
             !uiState.isPreviewing
     val canRunExportAction = canUseExportControls && hasSelectedFormat
-    val canExportAction = canRunExportAction || (hitExportLimit && canUseExportControls)
+    val canExportAction = exportPrimaryActionEnabled(
+        hitExportLimit = hitExportLimit,
+        canRunExport = canRunExportAction,
+        isBusy = uiState.isExporting || uiState.isPreviewing,
+    )
     val canPreview = uiState.previewEnabled &&
             uiState.healthConnectAvailable &&
             !uiState.healthConnectNeedsSetup &&
@@ -3124,6 +3128,17 @@ private fun ExportPreviewSideEffectAction.localizedAction(): String = stringReso
         ExportPreviewSideEffectAction.WRITE_INDIVIDUAL_ENTRY -> R.string.export_preview_action_write_individual_entry
     }
 )
+
+/**
+ * The sheet's primary action. Once the free exports are used it becomes Unlock, which only opens
+ * the paywall, so it must not wait on a destination, permissions, or a format: a locked user with
+ * nothing set up still needs a way to buy. Export itself keeps every readiness requirement.
+ */
+internal fun exportPrimaryActionEnabled(
+    hitExportLimit: Boolean,
+    canRunExport: Boolean,
+    isBusy: Boolean,
+): Boolean = if (hitExportLimit) !isBusy else canRunExport
 
 /** Ranges longer than this ask before exporting; raw snapshots are one artifact and do not. */
 internal const val LARGE_EXPORT_DAY_THRESHOLD = 90

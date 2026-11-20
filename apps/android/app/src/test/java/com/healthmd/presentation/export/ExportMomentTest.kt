@@ -24,3 +24,18 @@ class LargeExportThresholdTest {
         assertThat(com.healthmd.presentation.export.isLargeExport(365, com.healthmd.rawexport.ExportMode.RAW_SNAPSHOT)).isFalse()
     }
 }
+
+class ExportPrimaryActionEnabledTest {
+    @Test
+    fun unlockStaysTappableWithoutADestinationOrReadyExport() {
+        // A locked user past the free allowance with nothing set up must still reach the paywall.
+        assertThat(exportPrimaryActionEnabled(hitExportLimit = true, canRunExport = false, isBusy = false)).isTrue()
+        assertThat(exportPrimaryActionEnabled(hitExportLimit = true, canRunExport = false, isBusy = true)).isFalse()
+    }
+
+    @Test
+    fun exportStillNeedsEveryReadinessRequirement() {
+        assertThat(exportPrimaryActionEnabled(hitExportLimit = false, canRunExport = false, isBusy = false)).isFalse()
+        assertThat(exportPrimaryActionEnabled(hitExportLimit = false, canRunExport = true, isBusy = false)).isTrue()
+    }
+}
