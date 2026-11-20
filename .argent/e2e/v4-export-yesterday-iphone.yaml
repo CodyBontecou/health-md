@@ -1,0 +1,33 @@
+version: 1
+requires:
+  platform: ios
+# v4-export-yesterday-iphone: Export now › Yesterday on a physical iPhone with real Health data
+# (3.5 parity: manual export of a 1-day range; #347 fixed a 4.0 invalidBounds failure here).
+# Unlike v4-fixes-iphone it does not require an empty Needs attention list, so it runs on
+# any configured phone (recorded on an iPhone 17 Pro whose list held real gateway/Mac items).
+#
+# Prerequisites: Health.md (glass UI) installed with Apple Health access, at least one
+# automation whose destination is writable now (recorded with "Daily note" writing to a
+# local iPhone folder), and that automation preselected in Export now.
+# Side effects: re-exports yesterday for the preselected automation, overwriting yesterday's
+# file(s) and daily note with the same data. Nothing else changes.
+steps:
+  - echo: Start Health.md from main on a physical iPhone with real history. Expect Archive
+  - launch: com.codybontecou.obsidianhealth
+  - await: { visible: { id: glass.archive }, timeout: 15000 }
+  - await: { idle: true }
+  - echo: Open Export now. Expect the export sheet with Yesterday as the first range
+  - tap: { id: glass.exportNow }
+  - await: { visible: { id: glass.exportNow.confirm }, timeout: 10000 }
+  - await: { idle: true }
+  - assert: { text: { in: { id: glass.exportNow.range.0 }, contains: Yesterday } }
+  - echo: Export yesterday for the selected automation (the 1-day range that hit
+      invalidBounds before #347). Expect 1 day written
+  - tap: { id: glass.exportNow.confirm }
+  - await: { text: { in: { id: status.exportBadge }, contains: 1 day written }, timeout: 60000 }
+  - echo: Dismiss the result. Expect Archive again
+  - await: { visible: { id: glass.exportMoment.dismiss }, timeout: 5000 }
+  - tap: { id: glass.exportMoment.dismiss }
+  - await: { hidden: { id: glass.exportMoment.dismiss }, timeout: 5000 }
+  - await: { visible: { id: glass.archive }, timeout: 5000 }
+  - await: { idle: true }
