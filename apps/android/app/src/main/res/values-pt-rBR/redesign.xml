@@ -426,6 +426,9 @@
     <string name="output_write_mode_note">Sobrescrever substitui o arquivo. Acrescentar adiciona ao final. Atualizar mescla novos valores e mantém suas edições.</string>
     <string name="output_writes_to">Grava em</string>
     <string name="output_endpoint_invalid">Insira uma URL http(s) válida. As alterações são salvas quando ela for válida.</string>
+    <string name="output_reset_configuration">Restaurar a configuração de exportação</string>
+    <string name="output_reset_configuration_title">Restaurar a configuração de exportação?</string>
+    <string name="output_reset_configuration_message">Formatos, métricas, nomes de arquivo, personalização de formato, entradas individuais e notas diárias desta automação voltam aos padrões. O destino, a subpasta e o agendamento continuam os mesmos.</string>
     <string name="automation_summary_single">{when}, gravar[ {metrics} de] {range}[ como {formats}] em {where}[ e {note}].</string>
     <string name="automation_summary_multi">{when}, gravar[ {metrics} de] {range}[ como {formats}] em {where}[ e {note}].</string>
     <string name="automation_summary_send_single">{when}, enviar[ {metrics} de] {range}[ como {formats}] para {where}[ e {note}].</string>
@@ -535,4 +538,7 @@
     <string name="export_result_retry_note_one">As datas concluídas permanecem concluídas. A nova tentativa grava apenas %1$s.</string>
     <string name="export_result_retry_note">As datas concluídas permanecem concluídas. A nova tentativa grava %1$s.</string>
     <string name="export_result_show_in_files">Mostrar em Arquivos</string>
+    <string name="export_result_open_in_obsidian">Abrir no Obsidian</string>
+    <string name="composer_fields_frontmatter_note">Escolhe os dados que esta nota coleta. As propriedades do frontmatter são definidas em Todas as configurações → Formato.</string>
+    <string name="frontmatter_fields_ownership_note">Só os campos ativados aqui entram no frontmatter. Um campo também precisa da sua métrica ativada para ter dados.</string>
 </resources>

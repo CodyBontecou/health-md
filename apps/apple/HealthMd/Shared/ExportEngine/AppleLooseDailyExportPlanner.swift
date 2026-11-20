@@ -532,7 +532,13 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         )
         let preparedExports = try orderedRecords.map { record in
             guard wakeDateContext != nil else { return record.preparedExport(settings: frozenSettings) }
-            let selected = record.filtered(by: frozenSettings.metricSelection)
+            var selected = record.filtered(by: frozenSettings.metricSelection)
+            // With every mood field off in Format → Custom the entries are not authorized: leave the
+            // entry view out of every format rather than failing (#353). Summaries keep their source.
+            let frontmatter = frozenSettings.formatCustomization.frontmatterConfig
+            if !WakeDateNativeFrontmatterOwners.showsMindfulness({ frontmatter.isFieldEnabled($0) }) {
+                selected.mindfulness.removeStateOfMindEntriesView()
+            }
             do { try AppleWakeDateMindfulnessProjection.validateCapture(selected) }
             catch is AppleWakeDateMindfulnessProjection.ProjectionError {
                 throw AppleLooseDailyExportPlannerError.rustPlanningFailed
@@ -594,12 +600,9 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 requestedRange: requestedRange,
                 captureContext: wakeDateContext
             )
-            if wakeDateContext != nil, preparedExports.contains(where: { !$0.filteredData.vitals.bloodPressureSamples.isEmpty }),
-               !["blood_pressure_systolic", "blood_pressure_diastolic"].allSatisfy({ frozenSettings.formatCustomization.frontmatterConfig.isFieldEnabled($0) }) {
-                // A paired source cannot bypass the same disabled-output authority
-                // previously enforced by the bounded native-detail adapter.
-                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
-            }
+            // A paired blood pressure source whose fields are not both on is not authorized: the
+            // native-detail adapter and composer leave it out of every format (#353) rather than
+            // failing the export.
             let semanticBatches = try HealthMdSemanticInputAdapter.boundedBatches(
                 sessionID: identity.sessionID,
                 healthData: (wakeDateContext == nil ? orderedRecords : preparedExports.map(\.filteredData)).map { record in

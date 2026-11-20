@@ -94,11 +94,18 @@ final class APIEndpointExportEngineTests: XCTestCase {
             let key = settings.formatCustomization.frontmatterConfig.fields[index].originalKey
             if key == "workouts" || key.hasPrefix("workout_") { settings.formatCustomization.frontmatterConfig.fields[index].isEnabled = false }
         }
-        do {
-            _ = try await APIEndpointExportRunner.prepare(dates: [date], settings: settings,
-                destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false, fetchHealthData: { _, _, _ in day })
-            XCTFail("All disabled workout outputs must not acquire native source authority")
-        } catch { XCTAssertEqual(error as? APIEndpointExportRunner.EngineError, .rustPlanningFailed) }
+        // #353: all disabled workout outputs still do not acquire native source authority; the
+        // records are left out and the export succeeds instead of failing.
+        let hidden = try await APIEndpointExportRunner.prepare(dates: [date], settings: settings,
+            destination: destination, calendarTimeZone: zone, connectedAppsEnabled: false, fetchHealthData: { _, _, _ in day })
+        if case .prepared(let hiddenOperation) = hidden {
+            for hiddenBatch in hiddenOperation.batches {
+                let hiddenRoot = try XCTUnwrap(try JSONSerialization.jsonObject(with: hiddenBatch.body) as? [String: Any])
+                for hiddenRecord in hiddenRoot["records"] as? [[String: Any]] ?? [] {
+                    XCTAssertNil(hiddenRecord["workouts"], "Disabled workout outputs must not export native records")
+                }
+            }
+        }
     }
 
     func testDenseBloodPressurePairsStayOutsideAPIHandoffWithoutFabricatingSummaries() async throws {

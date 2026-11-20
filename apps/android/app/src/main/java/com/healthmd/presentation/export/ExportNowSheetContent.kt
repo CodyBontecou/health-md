@@ -200,7 +200,8 @@ internal fun momentDoneSubtitle(result: ExportResult, start: LocalDate, end: Loc
 
 /**
  * ExportResultG, inside the sheet, for a run that did not write every day: which days were
- * written, failed or left unwritten, with Retry for exactly those days and the folder to open.
+ * written, failed or left unwritten, with Retry for exactly those days and the folder to open
+ * (in Files, and in Obsidian when it is installed).
  */
 @Composable
 internal fun ExportResultContent(
@@ -211,6 +212,7 @@ internal fun ExportResultContent(
     onRetry: (LocalDate, LocalDate) -> Unit,
     onShowInFiles: (() -> Unit)?,
     onDone: () -> Unit,
+    onOpenInObsidian: (() -> Unit)? = null,
 ) {
     val colors = LocalGeistColors.current
     val context = LocalContext.current
@@ -296,7 +298,14 @@ internal fun ExportResultContent(
                 SecondaryButton(
                     text = stringResource(R.string.export_result_show_in_files),
                     onClick = onShowInFiles,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag("export.result.showInFiles"),
+                )
+            }
+            if (onOpenInObsidian != null) {
+                SecondaryButton(
+                    text = stringResource(R.string.export_result_open_in_obsidian),
+                    onClick = onOpenInObsidian,
+                    modifier = Modifier.fillMaxWidth().testTag("export.result.openInObsidian"),
                 )
             }
             TextButton(onClick = onDone, modifier = Modifier.testTag("export.result.done")) {

@@ -18,3 +18,7 @@ This is a documentation-traced explainer. No device export, archive extraction, 
 One new English blog URL owns the existing-archive/open-export.xml intent. The existing export hub still owns the broad Apple Health export workflow; the CSV hub owns fresh selected CSV. Both hubs and the guide directory link contextually to this page. The fixed `xml_export` acquisition ID reuses existing page-view, CSV sample and store events, with no raw URLs, health values, visitor IDs or new event type. Deploy the updated campaign Worker from committed source before pushing main to publish the page. No D1 migration is required.
 
 This is the next documented acquisition experiment, not a claim of verified search volume, rankings or conversion lift. Publication evidence and measurement notes belong in the primary checkout's ignored `.pi/seo-xml-export-oct27/`, not the deployed site.
+
+## Workout distance inbound link — 2026-11-19
+
+- [x] One contextual sentence links to /blog/apple-health-export-xml-workout-distance/ from "3. Understand what an XML record means". The linked tutorial's format claims are traced in its own ledger (`_review/apple-health-export-xml-workout-distance.md`). This page's existing claims are unchanged; `updated` not bumped. The first `related` recommendation changes from apple-health-to-excel (still a related recommendation on 11 other guides) to the workout distance tutorial, which needs an inbound related link.

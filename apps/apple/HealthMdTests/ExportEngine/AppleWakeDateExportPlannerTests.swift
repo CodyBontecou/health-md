@@ -73,18 +73,30 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
         let owner = ExportFixtures.referenceDate
         let day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 12),
             mindfulness: MindfulnessData(stateOfMind: [StateOfMindEntry(timestamp: owner, kind: .dailyMood, valence: 0.5,
                 labels: ["synthetic-private-label"], associations: [], metadata: ["synthetic": "private-entry-marker"])]))
-        var disabled = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["state_of_mind_entries"])
+        // Steps keep the day non-empty once the unauthorized entries are left out.
+        var disabled = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
+            selectionIDs: ["state_of_mind_entries", "steps"])
         for index in disabled.formatCustomization.frontmatterConfig.fields.indices {
             if ["mood_entries", "mood_labels", "mood_associations"].contains(disabled.formatCustomization.frontmatterConfig.fields[index].originalKey) {
                 disabled.formatCustomization.frontmatterConfig.fields[index].isEnabled = false
             }
         }
-        do {
-            _ = try await AppleLooseDailyExportPlanner().plan(healthData: day, settingsSnapshot: disabled, surface: .localVaultWithoutSideEffects)
-            XCTFail("Disabled mood owners must not authorize source records")
-        } catch { XCTAssertEqual(error as? AppleLooseDailyExportPlannerError, .rustPlanningFailed) }
+        // #353: disabled mood owners still do not authorize source records, and the export succeeds
+        // without them instead of failing.
+        guard case .planned(let disabledOperation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+            settingsSnapshot: disabled, surface: .localVaultWithoutSideEffects) else {
+            return XCTFail("Disabled mood owners must leave records out, not fail the export")
+        }
+        for artifact in disabledOperation.artifacts {
+            let text = String(decoding: try artifact.artifact.content.materializedData(), as: UTF8.self)
+            XCTAssertFalse(text.contains("private-entry-marker"), "\(artifact.format)")
+            XCTAssertFalse(text.contains("synthetic-private-label"), "\(artifact.format)")
+            XCTAssertFalse(text.contains("native_mindfulness_details"), "\(artifact.format)")
+            XCTAssertFalse(text.contains("State of Mind Details"), "\(artifact.format)")
+        }
         let summary = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["average_valence"])
         guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day, settingsSnapshot: summary,
             surface: .localVaultWithoutSideEffects) else { return XCTFail("Selected mood summaries must remain independent of source record export") }
@@ -157,7 +169,7 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
     }
 
-    func testNativeWorkoutsRequireAcceptedOutputOwnerAndIgnoreUnselectedInvalidSource() async throws {
+    func testNativeWorkoutsWithoutAcceptedOwnerAreOmittedAndUnselectedInvalidSourceIgnored() async throws {
         let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
         let owner = ExportFixtures.referenceDate
         let workout = WorkoutData(workoutType: .running, startTime: owner, duration: 1800, calories: nil, distance: nil)
@@ -167,10 +179,27 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
             let key = snapshot.formatCustomization.frontmatterConfig.fields[index].originalKey
             if key == "workouts" || key.hasPrefix("workout_") { snapshot.formatCustomization.frontmatterConfig.fields[index].isEnabled = false }
         }
-        do {
-            _ = try await AppleLooseDailyExportPlanner().plan(healthData: day, settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects)
-            XCTFail("Disabled workout owners must not authorize native records")
-        } catch { XCTAssertEqual(error as? AppleLooseDailyExportPlannerError, .rustPlanningFailed) }
+        // #353: with every Workouts field off in Format → Custom the records are still not authorized,
+        // and the export succeeds with no workout properties, blocks or records instead of failing.
+        guard case .planned(let hiddenOperation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+            settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else {
+            return XCTFail("Disabled workout owners must leave records out, not fail the export")
+        }
+        XCTAssertEqual(hiddenOperation.artifacts.count, 4)
+        for artifact in hiddenOperation.artifacts {
+            let text = String(decoding: try artifact.artifact.content.materializedData(), as: UTF8.self)
+            if artifact.format == .markdown || artifact.format == .obsidianBases {
+                let frontmatter = text.components(separatedBy: "\n---\n").first ?? text
+                for line in frontmatter.components(separatedBy: "\n") where !(line.first?.isWhitespace ?? true) {
+                    let key = line.components(separatedBy: ":").first ?? ""
+                    XCTAssertFalse(key == "workouts" || key.hasPrefix("workout_") || key.contains("workout_details"),
+                                   "\(artifact.format) frontmatter key \(key)")
+                }
+            }
+            XCTAssertFalse(text.contains("native_workout_details"), "\(artifact.format)")
+            XCTAssertFalse(text.contains("Workout Details"), "\(artifact.format)")
+            XCTAssertFalse(text.contains(",Native Detail,Workout,"), "\(artifact.format)")
+        }
         snapshot.metricSelection.enabledMetricIDs = ["steps"]
         var unselected = day
         unselected.workouts = [WorkoutData(workoutType: .running, startTime: owner, duration: -1, calories: nil, distance: nil)]
@@ -280,11 +309,17 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
             snapshot.detailPolicy = .detailedTimeSeries
             let index = try XCTUnwrap(snapshot.formatCustomization.frontmatterConfig.fields.firstIndex { $0.originalKey == disabled })
             snapshot.formatCustomization.frontmatterConfig.fields[index].isEnabled = false
-            do {
-                _ = try await AppleLooseDailyExportPlanner().plan(healthData: day, settingsSnapshot: snapshot,
-                    surface: .localVaultWithoutSideEffects)
-                XCTFail("Native pairing cannot export an explicitly disabled output")
-            } catch { XCTAssertEqual(error as? AppleLooseDailyExportPlannerError, .rustPlanningFailed) }
+            // #353: a pair with one half off is still not authorized; the export succeeds without it.
+            guard case .planned(let hiddenOperation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+                settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else {
+                return XCTFail("Native pairing must leave an explicitly disabled output out, not fail the export")
+            }
+            for artifact in hiddenOperation.artifacts {
+                let text = String(decoding: try artifact.artifact.content.materializedData(), as: UTF8.self)
+                XCTAssertFalse(text.contains("bloodPressureSamples"), "\(artifact.format)")
+                XCTAssertFalse(text.contains("Blood Pressure Correlation"), "\(artifact.format)")
+                XCTAssertFalse(text.contains("native_correlation_details"), "\(artifact.format)")
+            }
             snapshot.metricSelection.enabledMetricIDs = ["steps"]
             guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
                 settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else { return XCTFail("Unselected pairs must not block selected steps") }
@@ -1841,6 +1876,211 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
             XCTAssertFalse(text.contains("native_workout_details"))
             XCTAssertFalse(text.contains("workout_count"))
             XCTAssertFalse(text.contains("160.125"))
+        }
+    }
+
+    /// #353 migration pin: with the default Format → Custom configuration, "Morning ends" output in
+    /// every format is byte-for-byte what the exporter wrote before this change.
+    /// Fixtures: HealthMdTests/Fixtures/Export/issue353-morning-ends-default/, generated from the
+    /// pre-#353 sources (commit cfdceb3b6) with TEST_RUNNER_HEALTHMD_WRITE_353_GOLDEN=default.
+    func testDefaultConfigurationMorningEndsOutputIsUnchangedByFrontmatterOwnership() async throws {
+        let bases = try await assertMorningEndsGolden(fixture: "default", disabledFields: [])
+        for key in ["native_quantity_details", "sleep_stage_details", "native_correlation_details",
+                    "native_workout_details", "native_mindfulness_details"] {
+            XCTAssertTrue(bases?.contains("\n\(key):") ?? true, key)
+        }
+    }
+
+    /// #353 migration pin for existing users who had already switched some fields off in
+    /// Format → Custom while each native record family kept at least one owner on: their
+    /// "Morning ends" output in every format is byte-for-byte what the exporter wrote before.
+    /// (Before #353, switching off every owner of a record family failed the export, so there is
+    /// no earlier output to keep; the omission tests above cover that case.)
+    /// Fixtures: HealthMdTests/Fixtures/Export/issue353-morning-ends-partly-off/, generated from the
+    /// pre-#353 sources (commit cfdceb3b6) with TEST_RUNNER_HEALTHMD_WRITE_353_GOLDEN=partly-off.
+    func testPartlyDisabledConfigurationMorningEndsOutputIsUnchangedByFrontmatterOwnership() async throws {
+        let disabled = ["steps", "heart_rate_min", "heart_rate_max", "workout_details", "workout_calories",
+                        "mood_labels", "sleep_total_hours"]
+        let bases = try await assertMorningEndsGolden(fixture: "partly-off", disabledFields: disabled)
+        guard let bases else { return }
+        let frontmatter = bases.components(separatedBy: "\n---\n").first ?? bases
+        let keys = Set(frontmatter.components(separatedBy: "\n").filter { !($0.first?.isWhitespace ?? true) }
+            .compactMap { $0.components(separatedBy: ":").first })
+        for key in disabled { XCTAssertFalse(keys.contains(key), "switched-off \(key) stays out of frontmatter") }
+        for key in ["average_heart_rate", "workout_count", "native_quantity_details", "sleep_stage_details",
+                    "native_correlation_details", "native_workout_details", "native_mindfulness_details"] {
+            XCTAssertTrue(keys.contains(key), "\(key) keeps an owner that is on")
+        }
+    }
+
+    /// Plans one synthetic "Morning ends" day with every native record family and compares each
+    /// format with `Fixtures/Export/issue353-morning-ends-<fixture>/`. Returns the Bases text, or nil
+    /// while writing fixtures (TEST_RUNNER_HEALTHMD_WRITE_353_GOLDEN=<fixture>).
+    private func assertMorningEndsGolden(fixture: String, disabledFields: [String],
+                                         file: StaticString = #filePath, line: UInt = #line) async throws -> String? {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        let owner = ExportFixtures.referenceDate
+        var day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 4321))
+        day.heart.averageHeartRate = 61.5
+        day.heart.heartRateMin = 55
+        day.heart.heartRateMax = 70
+        day.heart.heartRateSamples = [TimeSample(timestamp: owner.addingTimeInterval(-300), value: 61.5, metadata: ["synthetic": "golden-heart"])]
+        day.vitals.bloodPressureSystolicAvg = 118
+        day.vitals.bloodPressureDiastolicAvg = 76
+        day.vitals.bloodPressureSamples = [BloodPressureSample(systolic: 118, diastolic: 76,
+            startDate: owner.addingTimeInterval(-200), endDate: owner.addingTimeInterval(-200))]
+        day.sleep.totalDuration = 1200
+        day.sleep.deepSleep = 600
+        day.sleep.remSleep = 600
+        day.sleep.sessionStart = owner.addingTimeInterval(-1200)
+        day.sleep.sessionEnd = owner
+        day.sleep.stages = [SleepStageSample(stage: "deep", startDate: owner.addingTimeInterval(-1200), endDate: owner.addingTimeInterval(-600)),
+                            SleepStageSample(stage: "rem", startDate: owner.addingTimeInterval(-600), endDate: owner)]
+        day.mindfulness.stateOfMind = [StateOfMindEntry(id: UUID(uuidString: "00000000-0000-4000-8000-000000000353")!,
+            timestamp: owner.addingTimeInterval(-100), kind: .dailyMood, valence: 0.5, labels: ["Calm"], associations: ["Health"])]
+        day.workouts = [WorkoutData(sourceUUID: UUID(uuidString: "00000000-0000-4000-8000-000000000354"),
+            workoutType: .running, startTime: owner.addingTimeInterval(-3600), duration: 1800, calories: 300, distance: 5000,
+            avgHeartRate: 150)]
+        var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
+            selectionIDs: ["steps", "heart_rate_avg", "heart_rate_min", "heart_rate_max", "blood_pressure_systolic",
+                           "blood_pressure_diastolic", "sleep_total", "sleep_deep", "sleep_rem", "state_of_mind_entries", "workouts"])
+        snapshot.detailPolicy = .detailedTimeSeries
+        for key in disabledFields {
+            let index = try XCTUnwrap(snapshot.formatCustomization.frontmatterConfig.fields.firstIndex { $0.originalKey == key },
+                                      "\(key) is listed in Format → Custom", file: file, line: line)
+            snapshot.formatCustomization.frontmatterConfig.fields[index].isEnabled = false
+        }
+        guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+            settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else {
+            XCTFail("The \(fixture) configuration must plan", file: file, line: line)
+            return nil
+        }
+        XCTAssertEqual(operation.artifacts.count, 4, file: file, line: line)
+        let directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/Export/issue353-morning-ends-\(fixture)", isDirectory: true)
+        let write = ProcessInfo.processInfo.environment["HEALTHMD_WRITE_353_GOLDEN"] == fixture
+        var bases: String?
+        for artifact in operation.artifacts {
+            let name: String
+            switch artifact.format {
+            case .markdown: name = "\(fixture).md"
+            case .obsidianBases: name = "\(fixture)-bases.md"
+            case .json: name = "\(fixture).json"
+            case .csv: name = "\(fixture).csv"
+            }
+            let bytes = try artifact.artifact.content.materializedData()
+            if artifact.format == .obsidianBases { bases = String(decoding: bytes, as: UTF8.self) }
+            let url = directory.appendingPathComponent(name)
+            if write {
+                try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                try bytes.write(to: url)
+                continue
+            }
+            let expected = try Data(contentsOf: url)
+            assertGoldenMatch(String(decoding: bytes, as: UTF8.self), expected: String(decoding: expected, as: UTF8.self),
+                              file: file, line: line)
+        }
+        return write ? nil : bases
+    }
+
+    /// #353: switching off every heart rate field in Format → Custom leaves the heart rate samples
+    /// out of every file and keeps the export, including other selected samples.
+    func testQuantityFieldsOffOmitTheirSamplesWithoutFailingTheExport() async throws {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        let owner = ExportFixtures.referenceDate
+        var day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 12))
+        day.heart.averageHeartRate = 61.5
+        day.heart.heartRateSamples = [TimeSample(timestamp: owner, value: 61.5, metadata: ["synthetic": "hidden-heart-sample"])]
+        day.vitals.bloodOxygenAvg = 0.75
+        day.vitals.bloodOxygenSamples = [TimeSample(timestamp: owner, value: 0.75, metadata: ["synthetic": "shown-oxygen-sample"])]
+        var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
+            selectionIDs: ["heart_rate_avg", "heart_rate_min", "heart_rate_max", "blood_oxygen", "steps"])
+        snapshot.detailPolicy = .detailedTimeSeries
+        for index in snapshot.formatCustomization.frontmatterConfig.fields.indices
+            where WakeDateNativeFrontmatterOwners.quantity["heartRateSamples"]!
+                .contains(snapshot.formatCustomization.frontmatterConfig.fields[index].originalKey) {
+            snapshot.formatCustomization.frontmatterConfig.fields[index].isEnabled = false
+        }
+        guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+            settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else {
+            return XCTFail("Heart rate fields off must leave their samples out, not fail the export")
+        }
+        XCTAssertEqual(operation.artifacts.count, 4)
+        for artifact in operation.artifacts {
+            let text = String(decoding: try artifact.artifact.content.materializedData(), as: UTF8.self)
+            XCTAssertFalse(text.contains("hidden-heart-sample"), "\(artifact.format)")
+            if artifact.format == .markdown {
+                // The Markdown sample table carries timestamp, value and unit, not metadata.
+                XCTAssertFalse(text.contains("Heart Rate Sample Details"))
+                XCTAssertTrue(text.contains("Blood Oxygen Sample Details"))
+            } else {
+                XCTAssertTrue(text.contains("shown-oxygen-sample"), "\(artifact.format)")
+            }
+        }
+    }
+
+    /// #353: a sleep stage whose field is off in Format → Custom is left out; other stages stay.
+    func testSleepStageFieldOffOmitsThatStageWithoutFailingTheExport() async throws {
+        let context = AppleSleepCaptureContext(timeZone: .gmt, sleepDayAttribution: .morningEnds)
+        let owner = ExportFixtures.referenceDate
+        var day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: .gmt, sleepDayAttribution: .morningEnds))
+        day.sleep.totalDuration = 1200
+        day.sleep.deepSleep = 600
+        day.sleep.remSleep = 600
+        day.sleep.sessionStart = owner.addingTimeInterval(-1200)
+        day.sleep.sessionEnd = owner
+        day.sleep.stages = [SleepStageSample(stage: "deep", startDate: owner.addingTimeInterval(-1200), endDate: owner.addingTimeInterval(-600),
+                                      metadata: ["synthetic": "hidden-deep-stage"]),
+                     SleepStageSample(stage: "rem", startDate: owner.addingTimeInterval(-600), endDate: owner,
+                                      metadata: ["synthetic": "shown-rem-stage"])]
+        var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
+            selectionIDs: ["sleep_total", "sleep_deep", "sleep_rem"])
+        snapshot.detailPolicy = .detailedTimeSeries
+        let index = try XCTUnwrap(snapshot.formatCustomization.frontmatterConfig.fields.firstIndex { $0.originalKey == "sleep_deep_hours" })
+        snapshot.formatCustomization.frontmatterConfig.fields[index].isEnabled = false
+        guard case .planned(let operation) = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+            settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects) else {
+            return XCTFail("A sleep stage field off must leave that stage out, not fail the export")
+        }
+        for artifact in operation.artifacts {
+            let text = String(decoding: try artifact.artifact.content.materializedData(), as: UTF8.self)
+            XCTAssertFalse(text.contains("hidden-deep-stage"), "\(artifact.format)")
+            XCTAssertTrue(text.contains("shown-rem-stage"), "\(artifact.format)")
+        }
+    }
+
+    /// #353: one rule on Apple and Android. The native workout block in "Morning ends" Bases
+    /// frontmatter belongs to the Workouts fields in Format → Custom: it shows while any of them is
+    /// on. The default configuration keeps it, so existing output is unchanged; switching off only
+    /// `workout_details` keeps it too, because the other Workouts fields still own it. (Every
+    /// Workouts field off: see testNativeWorkoutsWithoutAcceptedOwnerAreOmittedAndUnselectedInvalidSourceIgnored.)
+    func testNativeWorkoutDetailsFollowTheWorkoutsFieldsInBasesFrontmatter() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let workout = WorkoutData(sourceUUID: UUID(uuidString: "00000000-0000-4000-8000-000000000139"),
+            workoutType: .running, startTime: ExportFixtures.referenceDate, duration: 1800.5,
+            calories: 320.125, distance: 5000.875, avgHeartRate: 160.125)
+        let day = HealthData(date: ExportFixtures.referenceDate,
+            timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 0), workouts: [workout])
+        for detailsOn in [true, false] {
+            var snapshot = try acceptedSnapshot(context: context, formats: [.markdown, .obsidianBases],
+                selectionIDs: ["workouts", "steps"])
+            let index = try XCTUnwrap(snapshot.formatCustomization.frontmatterConfig.fields
+                .firstIndex(where: { $0.originalKey == "workout_details" }), "workout_details is listed in Format → Custom")
+            snapshot.formatCustomization.frontmatterConfig.fields[index].isEnabled = detailsOn
+            let resolution = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+                settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects)
+            guard case .planned(let operation) = resolution else { return XCTFail("Selected workouts must plan") }
+            let bases = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .obsidianBases })
+                .artifact.inlineData, as: UTF8.self)
+            let markdown = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .markdown })
+                .artifact.inlineData, as: UTF8.self)
+            XCTAssertTrue(bases.contains("native_workout_details:"), "workout_details on: \(detailsOn)")
+            XCTAssertTrue(bases.contains("workout_count"))
+            XCTAssertTrue(markdown.contains("Workout Details"), "The body table is not frontmatter")
         }
     }
 

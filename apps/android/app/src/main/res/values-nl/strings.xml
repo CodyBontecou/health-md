@@ -624,7 +624,7 @@
     <string name="toggle_android_native_fields">Android-native gezondheidsvelden opnemen</string>
     <string name="toggle_legacy_android_aliases">Verouderde Android-sleutels en labels dupliceren</string>
     <string name="schedule_enable_scheduled_exports">Geplande exports inschakelen</string>
-    <string name="schedule_automatic_export_body">Geplande exports worden naar je geselecteerde Android-exportmap geschreven. Handmatige exports blijven beschikbaar op het tabblad Exporteren.</string>
+    <string name="schedule_automatic_export_body">Geplande exports worden naar je geselecteerde Android-exportmap geschreven. Handmatige exports blijven beschikbaar via Nu exporteren.</string>
     <string name="schedule_frequency">Frequentie</string>
     <string name="schedule_time">Tijd</string>
     <string name="schedule_date_window">Datums</string>

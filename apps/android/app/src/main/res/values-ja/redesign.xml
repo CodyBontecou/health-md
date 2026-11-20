@@ -375,6 +375,9 @@
     <string name="output_write_mode_note">上書きはファイルを置き換えます。追記は末尾に追加します。更新は新しい値を統合し、編集した内容を保持します。</string>
     <string name="output_writes_to">書き込み先</string>
     <string name="output_endpoint_invalid">有効な http(s) URL を入力してください。有効になると変更が保存されます。</string>
+    <string name="output_reset_configuration">エクスポート設定をリセット</string>
+    <string name="output_reset_configuration_title">エクスポート設定をリセットしますか？</string>
+    <string name="output_reset_configuration_message">このオートメーションの形式、指標、ファイル名、形式のカスタマイズ、個別エントリ、デイリーノートがデフォルトに戻ります。保存先、サブフォルダー、スケジュールは変わりません。</string>
     <string name="automation_summary_single">{when}、{range}[の{metrics}]を[ {formats} 形式で]{where}に書き込みます[。{note}]。</string>
     <string name="automation_summary_multi">{when}、{range}[の{metrics}]を[ {formats} 形式で]{where}に書き込みます[。{note}]。</string>
     <string name="automation_summary_send_single">{when}、{range}[の{metrics}]を[ {formats} 形式で]{where}に送信します[。{note}]。</string>
@@ -463,4 +466,7 @@
     <string name="export_result_retry_note_one">完了した日付はそのまま保持されます。再試行では %1$s のみを書き込みます。</string>
     <string name="export_result_retry_note">完了した日付はそのまま保持されます。再試行では %1$s を書き込みます。</string>
     <string name="export_result_show_in_files">「ファイル」で表示</string>
+    <string name="export_result_open_in_obsidian">Obsidianで開く</string>
+    <string name="composer_fields_frontmatter_note">このノートが収集するデータを選びます。フロントマターのプロパティは「すべての設定」→「形式」で設定します。</string>
+    <string name="frontmatter_fields_ownership_note">ここでオンにしたフィールドだけがフロントマターに入ります。データを含めるには、その指標もオンにする必要があります。</string>
 </resources>

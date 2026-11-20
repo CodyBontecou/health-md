@@ -414,6 +414,9 @@
     <string name="output_write_mode_note">ओवरराइट फ़ाइल को बदल देता है। अंत में जोड़ें सामग्री को आखिर में जोड़ता है। अपडेट नए मान मिलाता है और आपके संपादन बनाए रखता है।</string>
     <string name="output_writes_to">लिखने की जगह</string>
     <string name="output_endpoint_invalid">मान्य http(s) URL दर्ज करें। मान्य होते ही बदलाव सहेज दिए जाएँगे।</string>
+    <string name="output_reset_configuration">निर्यात कॉन्फ़िगरेशन रीसेट करें</string>
+    <string name="output_reset_configuration_title">निर्यात कॉन्फ़िगरेशन रीसेट करें?</string>
+    <string name="output_reset_configuration_message">इस ऑटोमेशन के फ़ॉर्मैट, मेट्रिक्स, फ़ाइल नाम, फ़ॉर्मैट कस्टमाइज़ेशन, अलग-अलग प्रविष्टियाँ और डेली नोट्स अपने डिफ़ॉल्ट पर लौट आएँगे। इसका गंतव्य, उपफ़ोल्डर और शेड्यूल वही रहेंगे।</string>
     <string name="automation_summary_single">{when}, {range}[ के {metrics}] को[ {formats} के रूप में] {where} में लिखें[ और {note}]।</string>
     <string name="automation_summary_multi">{when}, {range}[ के {metrics}] को[ {formats} के रूप में] {where} में लिखें[ और {note}]।</string>
     <string name="automation_summary_send_single">{when}, {range}[ के {metrics}] को[ {formats} के रूप में] {where} पर भेजें[ और {note}]।</string>
@@ -523,4 +526,7 @@
     <string name="export_result_retry_note_one">पूरी हो चुकी तारीखें पूरी ही रहती हैं। दोबारा कोशिश करने पर केवल %1$s लिखा जाता है।</string>
     <string name="export_result_retry_note">पूरी हो चुकी तारीखें पूरी ही रहती हैं। दोबारा कोशिश करने पर %1$s लिखा जाता है।</string>
     <string name="export_result_show_in_files">फ़ाइलें में दिखाएँ</string>
+    <string name="export_result_open_in_obsidian">Obsidian में खोलें</string>
+    <string name="composer_fields_frontmatter_note">यह चुनता है कि यह नोट कौन-सा डेटा इकट्ठा करे। फ्रंटमैटर प्रॉपर्टी सभी सेटिंग्स → फ़ॉर्मैट में सेट होती हैं।</string>
+    <string name="frontmatter_fields_ownership_note">केवल यहाँ चालू किए गए फ़ील्ड ही फ्रंटमैटर में जाते हैं। डेटा के लिए फ़ील्ड का मेट्रिक भी चालू होना चाहिए।</string>
 </resources>
