@@ -41,8 +41,8 @@
     <string name="m3_profiles_editor_clinic_destination">ক্লিনিকের গন্তব্য</string>
     <string name="m3_profiles_editor_clinic_body">এই গন্তব্যটি আপনার ক্লিনিক পরিচালনা করে। এটি বেছে নিতে বা শেয়ারিং পরিচালনা করতে ক্লিনিক অ্যাক্সেস ব্যবহার করুন। অন্য গন্তব্যের জন্য আপনার নিজের Health.md অ্যাক্সেস লাগবে।</string>
     <string name="m3_profiles_editor_folder">ফোল্ডার</string>
-    <string name="m3_profiles_editor_folder_current">বর্তমান ফোল্ডার (Export ট্যাব থেকে)</string>
-    <string name="m3_profiles_editor_folder_reset">Export ট্যাবের ফোল্ডার ব্যবহার করুন</string>
+    <string name="m3_profiles_editor_folder_current">ডিফল্ট ফোল্ডার (সেটিংস › এই ডিভাইসের ভল্ট)</string>
+    <string name="m3_profiles_editor_folder_reset">ডিফল্ট ফোল্ডার ব্যবহার করুন</string>
     <string name="m3_profiles_editor_endpoint_invalid">সংরক্ষণের আগে একটি বৈধ http(s) এন্ডপয়েন্ট URL লিখুন।</string>
     <string name="m3_profiles_editor_gateway_invalid">সংরক্ষণের আগে একটি বৈধ http(s) গেটওয়ে URL লিখুন।</string>
     <string name="m3_profiles_editor_output">আউটপুট</string>
@@ -61,7 +61,7 @@
     <string name="m3_profiles_editor_entries_folder">এন্ট্রি ফোল্ডার</string>
     <string name="m3_profiles_editor_category_folders">বিভাগ অনুযায়ী ফোল্ডার</string>
     <string name="m3_profiles_editor_entry_filename">এন্ট্রির ফাইলের নামের টেমপ্লেট</string>
-    <string name="m3_profiles_editor_entry_rules_note">এই প্রোফাইল সক্রিয় থাকাকালীন প্রতি-মেট্রিক এন্ট্রির নিয়ম Export ট্যাব থেকে সম্পাদনা করা হয়।</string>
+    <string name="m3_profiles_editor_entry_rules_note">প্রতি-মেট্রিক এন্ট্রির নিয়ম এই অটোমেশনের “পৃথক এন্ট্রি” পৃষ্ঠা থেকে সম্পাদনা করুন।</string>
     <string name="m3_profiles_editor_overlap">%1$s-এর সাথে ওভারল্যাপ করে: পরের রানগুলো আগেরগুলো ওভাররাইট করে। আলাদা রাখতে অন্য ফোল্ডার বা ফাইলের নামের টেমপ্লেট বেছে নিন।</string>
     <string name="m3_profiles_editor_create">তৈরি করুন</string>
     <plurals name="m3_profiles_metrics_count">

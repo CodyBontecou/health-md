@@ -414,6 +414,9 @@
     <string name="output_write_mode_note">Überschreiben ersetzt die Datei. Anfügen ergänzt sie am Ende. Aktualisieren führt neue Werte zusammen und behält Ihre Änderungen bei.</string>
     <string name="output_writes_to">Schreibt nach</string>
     <string name="output_endpoint_invalid">Geben Sie eine gültige http(s)-URL ein. Änderungen werden gespeichert, sobald sie gültig ist.</string>
+    <string name="output_reset_configuration">Exportkonfiguration zurücksetzen</string>
+    <string name="output_reset_configuration_title">Exportkonfiguration zurücksetzen?</string>
+    <string name="output_reset_configuration_message">Formate, Messwerte, Dateinamen, Formatanpassung, Einzeleinträge und Tagesnotizen dieser Automation werden auf ihre Standardwerte zurückgesetzt. Ziel, Unterordner und Zeitplan bleiben unverändert.</string>
     <string name="automation_summary_single">{when} die Daten von {range}[ für {metrics}][ als {formats}] in {where} schreiben[ und {note}].</string>
     <string name="automation_summary_multi">{when} die Daten[ für {metrics}] {range}[ als {formats}] in {where} schreiben[ und {note}].</string>
     <string name="automation_summary_send_single">{when} die Daten von {range}[ für {metrics}][ als {formats}] an {where} senden[ und {note}].</string>
@@ -523,6 +526,7 @@
     <string name="export_result_retry_note_one">Abgeschlossene Tage bleiben abgeschlossen. Beim erneuten Versuch wird nur %1$s geschrieben.</string>
     <string name="export_result_retry_note">Abgeschlossene Tage bleiben abgeschlossen. Beim erneuten Versuch wird %1$s geschrieben.</string>
     <string name="export_result_show_in_files">In Dateien anzeigen</string>
+    <string name="export_result_open_in_obsidian">In Obsidian öffnen</string>
     <string name="composer_fields_frontmatter_note">Wählt die Daten, die diese Notiz sammelt. Frontmatter-Eigenschaften legst du unter Alle Einstellungen → Format fest.</string>
     <string name="frontmatter_fields_ownership_note">Nur hier eingeschaltete Felder kommen ins Frontmatter. Ein Feld hat außerdem nur Daten, wenn seine Metrik eingeschaltet ist.</string>
 </resources>

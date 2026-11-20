@@ -1,0 +1,39 @@
+version: 1
+requires:
+  platform: android
+# android-clinician-report-locked (Android ledger A-SET-07, 3.5.0 → main parity): Android 3.5.0
+# opened the Clinician Report for everyone. The Material 3 redesign gates it on personal access,
+# but a locked user got a bare text page with no title, back button or way to unlock. Like
+# Apple 4.0 (ClinicianReportView shows PaywallView), the Settings row now opens the paywall.
+#
+# Prerequisite (fragment): the isolated QA app com.healthmd.android.e2e (playE2e build), started
+# LOCKED in UI test mode just before the run (Argent cannot pass Android launch extras):
+#   adb shell am start -S -n com.healthmd.android.e2e/com.healthmd.presentation.MainActivity \
+#     --ez uitesting true --es UITEST_HEALTH_AUTHORIZED true \
+#     --es UITEST_PURCHASE_UNLOCKED false --es UITEST_STATIC_PURCHASE_PRICES true
+# Side effects: none (no purchase, no export). Leaves the app on Settings.
+#
+executionPrerequisite: QA app com.healthmd.android.e2e just started LOCKED in UI test mode with
+  the adb command in the header; Archive showing, possibly under the "Recover missed
+  scheduled exports?" dialog.
+steps:
+  - echo: Locked QA app on Archive. Dismiss the missed-exports recovery prompt if it shows
+  - when: { visible: { text: Not now } }
+    steps:
+      - tap: { text: Not now }
+  - await: { visible: { text: See this day }, timeout: 8000 }
+  - await: { idle: true }
+  - echo: Open Settings. Expect the Free plan card
+  - tap: { text: Settings }
+  - await: { visible: { text: Free plan }, timeout: 8000 }
+  - await: { idle: true }
+  - echo: Scroll to Clinician Report and open it while locked. Expect the paywall, not the
+      dead-end "access is required" page
+  - scroll-to: { target: { text: Clinician Report } }
+  - tap: { text: Clinician Report }
+  - await: { visible: { text: Restore Purchase }, timeout: 8000 }
+  - await: { idle: true }
+  - echo: Close the paywall. Expect Settings again
+  - tap: { text: Close }
+  - await: { hidden: { text: Restore Purchase }, timeout: 5000 }
+  - await: { visible: { text: Settings }, timeout: 5000 }
