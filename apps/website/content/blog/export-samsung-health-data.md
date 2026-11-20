@@ -44,6 +44,8 @@ Open Samsung Health, then **⋮ More options → Settings → Download personal 
 
 That button is for daily CSV, JSON or Markdown files from Health Connect records you have confirmed are shared. You do not need it for Samsung's own download.
 
+<div id="whats-in-samsungs-download-and-how-to-open-it"></div>
+
 ## What's in Samsung's download, and how to open it
 
 Samsung's page covers the steps and location only; it does not document the file format. The following is **commonly reported by users and not verified in a Health.md test export**, and details vary by version:
@@ -65,6 +67,8 @@ These are things to check, not confirmed causes for every device:
 - **The type you need is in a different file.** Each data type has its own file, so a file for one type will not show another. Search the folder for the type you need.
 - **The CSV opened as one column or looks blank.** See the import steps above; a metadata line or missing column split can make a file look empty or unlike the app.
 - **Numbers differ from the app.** The app shows summaries from several sources; a raw file holds records. Compare a known day.
+
+<div id="get-clean-daily-csv-through-health-connect"></div>
 
 ## Get clean daily CSV through Health Connect
 
