@@ -65,7 +65,7 @@ internal class SleepAttributionCaptureFixture(allConnected: Boolean = false) {
         coEvery { settings.getConnectedHealthProviderIds() } returns setOf("health_connect")
         coEvery { settings.getSleepDayAttribution() } answers { storedAttribution }
         coEvery { manager.isAvailable() } returns true
-        coEvery { manager.hasAllPermissions() } returns true
+        coEvery { manager.hasAnyReadPermission() } returns true
         every { manager.isBeforeFirstUnlock() } returns false
         // Deliberately retain the stale provider-native behavior as a trap for
         // consumers that reintroduce a second read after an empty range result.

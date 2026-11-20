@@ -553,7 +553,7 @@
     <string name="automatic_export_title">Automatic Export</string>
     <string name="automatic_export_subtitle">Export your health data automatically</string>
     <string name="schedule_enable_scheduled_exports">Enable Scheduled Exports</string>
-    <string name="schedule_automatic_export_body">Scheduled exports write to your selected Android export folder. Manual exports stay available from the Export tab.</string>
+    <string name="schedule_automatic_export_body">Scheduled exports write to your selected Android export folder. Manual exports stay available from Export now.</string>
     <string name="schedule_exact_background_note">Exact timing uses Android’s Alarms &amp; reminders access. Health Connect background access is still required, and unavailable networks or a powered-off phone can delay completion.</string>
     <string name="exact_timing_needed_title">Exact Timing Is Off</string>
     <string name="exact_timing_needed_body">Allow Alarms &amp; reminders to trigger exports at the selected time. Without this access, Android uses a delayed WorkManager fallback.</string>

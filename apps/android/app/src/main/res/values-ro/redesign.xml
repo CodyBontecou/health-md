@@ -230,6 +230,7 @@
     <string name="settings_status_off">Oprit</string>
     <string name="settings_status_allowed">Permis</string>
     <string name="settings_status_not_allowed">Nepermis</string>
+    <string name="settings_status_partly_allowed">Permis parțial</string>
     <string name="settings_status_paired">Asociat</string>
     <string name="settings_health_connect_subtitle">Permisiuni și acces la istoric</string>
     <string name="settings_default_metrics">Valori implicite</string>
@@ -437,6 +438,9 @@
     <string name="output_write_mode_note">Suprascriere înlocuiește fișierul. Adăugare scrie la sfârșit. Actualizare îmbină valorile noi și păstrează modificările dvs.</string>
     <string name="output_writes_to">Scrie în</string>
     <string name="output_endpoint_invalid">Introduceți un URL http(s) valid. Modificările se salvează când acesta este valid.</string>
+    <string name="output_reset_configuration">Restabiliți configurația de export</string>
+    <string name="output_reset_configuration_title">Restabiliți configurația de export?</string>
+    <string name="output_reset_configuration_message">Formatele, valorile, numele fișierelor, personalizarea formatului, intrările individuale și notele zilnice ale acestei automatizări revin la valorile implicite. Destinația, subdosarul și programul rămân aceleași.</string>
     <string name="automation_summary_single">{when}, scrieți[ {metrics} din] {range}[ ca {formats}] în {where}[ și {note}].</string>
     <string name="automation_summary_multi">{when}, scrieți[ {metrics} din] {range}[ ca {formats}] în {where}[ și {note}].</string>
     <string name="automation_summary_send_single">{when}, trimiteți[ {metrics} din] {range}[ ca {formats}] către {where}[ și {note}].</string>
@@ -553,6 +557,7 @@
     <string name="export_result_retry_note_one">Datele finalizate rămân finalizate. Reîncercarea scrie doar %1$s.</string>
     <string name="export_result_retry_note">Datele finalizate rămân finalizate. Reîncercarea scrie %1$s.</string>
     <string name="export_result_show_in_files">Afișați în Fișiere</string>
+    <string name="export_result_open_in_obsidian">Deschideți în Obsidian</string>
     <string name="composer_fields_frontmatter_note">Alege datele pe care le colectează această notă. Proprietățile Frontmatter se setează în Toate setările → Format.</string>
     <string name="frontmatter_fields_ownership_note">Doar câmpurile activate aici ajung în Frontmatter. Un câmp are nevoie și de metrica sa activată pentru a avea date.</string>
 </resources>

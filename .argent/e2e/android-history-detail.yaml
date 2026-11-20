@@ -1,0 +1,51 @@
+version: 1
+requires:
+  platform: android
+# android-history-detail (Android ledger A-HIS-01/02/04, 3.5.0 → main parity): 3.5.0 had a History
+# list with a per-run detail and Retry. Main moved it to Automations › History. This opens the
+# newest run and checks the detail rows 3.5 showed (source, when, range, days, destination type,
+# target) and the Retry Export action. It does not retry or clear anything.
+#
+# Prerequisite (fragment): the isolated QA app com.healthmd.android.e2e (playE2e) with at least
+# one history entry, started UNLOCKED in UI test mode just before the run:
+#   adb shell am start -S -n com.healthmd.android.e2e/com.healthmd.presentation.MainActivity \
+#     --ez uitesting true --es UITEST_HEALTH_AUTHORIZED true --es UITEST_PURCHASE_UNLOCKED true
+# Side effects: none. Leaves the app on History.
+# Coordinate exception: history rows have no id and their text is dates and times, so the newest
+# row is tapped at the first row's centre under the month heading; the detail wait right after
+# it fails the run if the tap misses. Authored from the app's strings and proved by full runner
+# replays (Argent's describe tree is stale on this Pixel; argent 0.33).
+executionPrerequisite: "QA app com.healthmd.android.e2e with at least one export history entry, just started UNLOCKED in UI test mode with the adb command in the header; Archive showing, possibly under the Recover missed scheduled exports dialog."
+steps:
+  - echo: Unlocked QA app on Archive. Dismiss the recovery prompt if shown, then open Automations
+  - when: { visible: { text: Not now } }
+    steps:
+      - tap: { text: Not now }
+  - await: { visible: { text: See this day }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { text: Automations }
+  - await: { visible: { text: New automation }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: Open History. Expect the run list
+  - scroll-to: { target: { text: { matches: '^History$' } } }
+  - tap: { text: { matches: '^History$' } }
+  - await: { hidden: { text: New automation }, timeout: 5000 }
+  - await: { idle: true }
+
+  - echo: Open the newest run. Expect Export details with the 3.5 fields and Retry Export
+  - tap: { x: 0.5, y: 0.245 } # newest history row (see header)
+  - await: { visible: { text: Export details }, timeout: 5000 }
+  - await: { idle: true }
+  - assert: { visible: { text: Source } }
+  - assert: { visible: { text: When } }
+  - assert: { visible: { text: Range } }
+  - assert: { visible: { text: Days } }
+  - assert: { visible: { text: Destination type } }
+  - assert: { visible: { text: Target } }
+  - scroll-to: { target: { text: Retry Export } }
+  - await: { visible: { text: Retry Export }, timeout: 3000 }
+
+  - echo: Close the detail. Expect History again
+  - tap: { text: Close }
+  - await: { hidden: { text: Export details }, timeout: 5000 }

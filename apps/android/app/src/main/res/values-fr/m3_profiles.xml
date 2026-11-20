@@ -41,8 +41,8 @@
     <string name="m3_profiles_editor_clinic_destination">Destination de la clinique</string>
     <string name="m3_profiles_editor_clinic_body">Votre clinique gère cette destination. Utilisez Accès clinique pour la sélectionner ou gérer le partage. Les autres destinations nécessitent votre propre accès Health.md.</string>
     <string name="m3_profiles_editor_folder">Dossier</string>
-    <string name="m3_profiles_editor_folder_current">Dossier actuel (de l\'onglet Export)</string>
-    <string name="m3_profiles_editor_folder_reset">Utiliser le dossier de l\'onglet Export</string>
+    <string name="m3_profiles_editor_folder_current">Dossier par défaut (Paramètres › Coffre sur cet appareil)</string>
+    <string name="m3_profiles_editor_folder_reset">Utiliser le dossier par défaut</string>
     <string name="m3_profiles_editor_endpoint_invalid">Saisissez une URL de point de terminaison http(s) valide avant d\'enregistrer.</string>
     <string name="m3_profiles_editor_gateway_invalid">Saisissez une URL de passerelle http(s) valide avant d\'enregistrer.</string>
     <string name="m3_profiles_editor_output">Sortie</string>
@@ -61,7 +61,7 @@
     <string name="m3_profiles_editor_entries_folder">Dossier des entrées</string>
     <string name="m3_profiles_editor_category_folders">Dossiers par catégorie</string>
     <string name="m3_profiles_editor_entry_filename">Modèle de nom de fichier des entrées</string>
-    <string name="m3_profiles_editor_entry_rules_note">Les règles d\'entrée par mesure se modifient dans l\'onglet Export tant que ce profil est actif.</string>
+    <string name="m3_profiles_editor_entry_rules_note">Modifiez les règles d\'entrée par mesure sur la page Entrées individuelles de cette automatisation.</string>
     <string name="m3_profiles_editor_overlap">Chevauche %1$s : les exécutions ultérieures écrasent les précédentes. Choisissez un autre dossier ou modèle de nom de fichier pour les séparer.</string>
     <string name="m3_profiles_editor_create">Créer</string>
     <plurals name="m3_profiles_metrics_count">

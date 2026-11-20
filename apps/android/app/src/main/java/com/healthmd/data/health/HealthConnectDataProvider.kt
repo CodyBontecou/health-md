@@ -62,7 +62,7 @@ class HealthConnectDataProvider(
         healthConnectManager.isAvailable()
 
     override suspend fun hasPermissions(): Boolean =
-        healthConnectManager.hasAllPermissions()
+        healthConnectManager.hasAnyReadPermission()
 
     override suspend fun blockedReadCategories(): Set<com.healthmd.domain.model.HealthAccessCategory> =
         healthConnectManager.blockedReadCategories()

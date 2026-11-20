@@ -1,0 +1,60 @@
+version: 1
+requires:
+  platform: android
+# android-onboarding-daily-restore (owner decision "add restore to paywall"): in 3.5.0 the
+# onboarding access page was the full paywall with Restore. In 4.0 the "Make it daily?" step is
+# the onboarding paywall, so a returning user who reinstalls must be able to restore there.
+# Walks onboarding without granting anything, then checks the daily step shows the Restore
+# Purchase button (testTag onboarding.restore) and that tapping it gives restore feedback
+# (testTag onboarding.dailyError). Against Play in the QA package there is nothing to restore, so
+# the expected feedback is the existing "no previous purchase"/restore-failed billing message.
+#
+# Prerequisite (fragment): the isolated QA app com.healthmd.android.e2e (playE2e), started LOCKED
+# in onboarding just before the run:
+#   adb shell am force-stop com.healthmd.android.e2e
+#   adb shell am start -S -n com.healthmd.android.e2e/com.healthmd.presentation.MainActivity \
+#     --ez uitesting true --es UITEST_HEALTH_AUTHORIZED true --es UITEST_PURCHASE_UNLOCKED false \
+#     --es UITEST_SHOW_ONBOARDING true --es UITEST_STATIC_PURCHASE_PRICES true \
+#     --es UITEST_FREE_EXPORTS_USED 1
+# The used free export makes the First note step's primary action a plain Continue (no export,
+# no folder picker), whatever earlier runs left behind.
+# Side effects: a Play purchase query (read-only); nothing is purchased, exported or scheduled.
+# Leaves the app on the Make it daily step. Authored from the app's strings and test tags and
+# proved by full runner replays (Argent's live describe tree is stale on this Pixel; argent 0.33).
+executionPrerequisite: "QA app com.healthmd.android.e2e just started LOCKED in onboarding (UITEST_SHOW_ONBOARDING true, UITEST_PURCHASE_UNLOCKED false, UITEST_FREE_EXPORTS_USED 1; adb command in the header); Welcome step with Get started showing."
+steps:
+  - echo: Welcome. Get started, expect the packs step
+  - await: { visible: { text: Get started }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { text: Get started }
+  - await: { visible: { text: Health Connect asks next }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: Packs. Continue with the default packs, expect the Health Connect step
+  - tap: { text: { matches: '^Continue$' } }
+  - await: { visible: { text: Continue to Health Connect }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: Health Connect. Skip for now, expect the folder step
+  - tap: { text: Skip for now }
+  - await: { visible: { text: Local folder }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: Folder. Skip choosing a folder, expect the first note step
+  - tap: { text: { matches: '^Skip$' } }
+  - await: { visible: { text: Your free export has already been used. }, timeout: 15000 }
+  - await: { idle: true }
+
+  - echo: First note (free export used). Continue, expect Make it daily with Restore Purchase
+  - tap: { id: onboarding.primaryAction }
+  - await: { visible: { text: Make it daily? }, timeout: 8000 }
+  - await: { idle: true }
+  - assert: { visible: { id: onboarding.restore } }
+  - assert: { visible: { text: Restore Purchase } }
+
+  - echo: Tap Restore Purchase. Expect the restore feedback and the step stays on the trial offer
+  - tap: { id: onboarding.restore }
+  - await: { visible: { id: onboarding.dailyError }, timeout: 20000 }
+  - assert: { visible: { text: { matches: '^(No previous purchase found\.|Could not restore purchases\. Please try again\.|Billing service unavailable\. Please try again\.)$' } } }
+  - assert: { visible: { text: Make it daily? } }
+  - assert: { visible: { id: onboarding.restore } }

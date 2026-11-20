@@ -195,7 +195,7 @@ class HealthRepositoryGrantBindingTest {
         allConnected: Boolean = false, selectedId: String = "whoop"): HealthRepositoryImpl {
         val sdk = mockk<HealthConnectManager>()
         coEvery { sdk.isAvailable() } returns true
-        coEvery { sdk.hasAllPermissions() } returns true
+        coEvery { sdk.hasAnyReadPermission() } returns true
         coEvery { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
             firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 10)) }
         }

@@ -339,6 +339,8 @@
     <!-- Declare Health Connect usage -->
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
+        <!-- Package visibility (Android 11+) for the "Open in Obsidian" export action. -->
+        <package android:name="md.obsidian" />
         <intent>
             <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
         </intent>

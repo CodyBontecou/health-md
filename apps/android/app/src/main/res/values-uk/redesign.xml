@@ -241,6 +241,7 @@
     <string name="settings_status_off">Вимк.</string>
     <string name="settings_status_allowed">Дозволено</string>
     <string name="settings_status_not_allowed">Не дозволено</string>
+    <string name="settings_status_partly_allowed">Дозволено частково</string>
     <string name="settings_status_paired">Пару створено</string>
     <string name="settings_health_connect_subtitle">Дозволи й доступ до історії</string>
     <string name="settings_default_metrics">Типові показники</string>
@@ -458,6 +459,9 @@
     <string name="output_write_mode_note">Перезапис замінює файл. Додавання дописує в кінець. Оновлення об’єднує нові значення, зберігаючи ваші правки.</string>
     <string name="output_writes_to">Записує до</string>
     <string name="output_endpoint_invalid">Введіть дійсну URL-адресу http(s). Зміни збережуться, коли адреса стане дійсною.</string>
+    <string name="output_reset_configuration">Скинути конфігурацію експорту</string>
+    <string name="output_reset_configuration_title">Скинути конфігурацію експорту?</string>
+    <string name="output_reset_configuration_message">Формати, показники, імена файлів, налаштування формату, окремі записи й щоденні нотатки цієї автоматизації повернуться до стандартних значень. Призначення, підпапка й розклад залишаться без змін.</string>
     <string name="automation_summary_single">{when}, записувати дані за {range}[ — {metrics}][ у форматі {formats}] до {where}[ і {note}].</string>
     <string name="automation_summary_multi">{when}, записувати дані за {range}[ — {metrics}][ у форматі {formats}] до {where}[ і {note}].</string>
     <string name="automation_summary_send_single">{when}, надсилати дані за {range}[ — {metrics}][ у форматі {formats}] до {where}[ і {note}].</string>
@@ -581,6 +585,7 @@
     <string name="export_result_retry_note_one">Готові дати залишаться готовими. Повторна спроба запише лише %1$s.</string>
     <string name="export_result_retry_note">Готові дати залишаться готовими. Повторна спроба запише %1$s.</string>
     <string name="export_result_show_in_files">Показати у «Файлах»</string>
+    <string name="export_result_open_in_obsidian">Відкрити в Obsidian</string>
     <string name="composer_fields_frontmatter_note">Вибирає дані, які збирає ця нотатка. Властивості Frontmatter задаються в Усі налаштування → Формат.</string>
     <string name="frontmatter_fields_ownership_note">До Frontmatter потрапляють лише поля, увімкнені тут. Щоб поле мало дані, має бути ввімкнена і його метрика.</string>
 </resources>

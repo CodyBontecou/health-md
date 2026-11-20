@@ -25,7 +25,7 @@ class HealthRepositorySleepAttributionTest {
         var permission = true
         val manager = mockk<HealthConnectManager>()
         coEvery { manager.isAvailable() } returns true
-        coEvery { manager.hasAllPermissions() } answers { permission }
+        coEvery { manager.hasAnyReadPermission() } answers { permission }
         coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
             firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 10)) }
         }

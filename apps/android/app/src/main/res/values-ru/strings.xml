@@ -644,7 +644,7 @@
     <string name="toggle_android_native_fields">Включить нативные поля здоровья Android</string>
     <string name="toggle_legacy_android_aliases">Дублировать устаревшие ключи и метки Android</string>
     <string name="schedule_enable_scheduled_exports">Включить запланированный экспорт</string>
-    <string name="schedule_automatic_export_body">Запланированный экспорт записывается в выбранную вами папку экспорта Android. Ручной экспорт остается доступным на вкладке «Экспорт».</string>
+    <string name="schedule_automatic_export_body">Запланированный экспорт записывается в выбранную вами папку экспорта Android. Ручной экспорт остается доступным через «Экспортировать».</string>
     <string name="schedule_frequency">Частота</string>
     <string name="schedule_time">Время</string>
     <string name="schedule_date_window">Даты</string>
