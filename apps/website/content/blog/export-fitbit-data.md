@@ -173,4 +173,4 @@ Google stopped supporting the Fitbit Web API on October 30, 2026. Tools that log
 
 Not as a full history transfer. Export the workouts you want as TCX and check what Garmin Connect accepts. Keep a Takeout archive as your record, and let the new device write new data from then on.
 
-For daily notes instead of spreadsheets, continue with [Health Connect to Obsidian](/blog/export-health-connect-to-obsidian/). If you used Google Fit rather than a Fitbit device, see the [Google Fit export guide](/blog/export-google-fit-data/).
+For daily notes instead of spreadsheets, continue with [Health Connect to Obsidian](/blog/export-health-connect-to-obsidian/). If you used Google Fit rather than a Fitbit device, Fit history is a separate Takeout product: see the [Google Fit export guide](/blog/export-google-fit-data/) for the Takeout steps and the Google Health migration Google has announced.

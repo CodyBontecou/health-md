@@ -81,6 +81,8 @@ Health Connect and Apple Health overlap, but they are not identical databases. H
 
 Daily sleep summaries use a local noon-to-noon journal window. On Tuesday morning, Monday night belongs to Monday's file even if bedtime was after midnight on Tuesday. Export **Yesterday**, or Monday and Tuesday for both sleep and activity. See the [sleep-date examples](/docs/sleep-date-attribution/#sleep-date-examples).
 
+Coming from Google Fit? Download a Takeout archive first, then see the [Google Fit export guide](/blog/export-google-fit-data/) before relying on Health Connect for history.
+
 ## Automate carefully
 
 Android schedules use an exact alarm when you grant Alarms & reminders access, with durable WorkManager work as a fallback. Without exact-alarm access, the chosen time is a target rather than a guarantee. Health.md records history and can recover missed dates.
