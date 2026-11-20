@@ -7,6 +7,15 @@
 | [Paid access, trials, and subscriptions](../../apps/apple/docs/experiments/subscription-pricing-rollout.md) | Pre-launch | Apple subscriptions READY_TO_SUBMIT with review screenshots complete; Apple 3.5.0 manual-release draft prepared with the four subscriptions and the reused group staged in an unsubmitted review. Processed-build attachment and device/sandbox purchase QA remain pending. Android 3.5.0/code 44 is available on Internal Testing with normal Play delivery and core license-test trial, purchase, restore, cancellation and expiry checks passed. Weekly/yearly plans and trials are Active; remaining production qualification is recorded in the Android billing guide. Apple Lifetime moved to the $49.99/$89.99/$39.99 launch prices by 2026-11-03; Android 3.5.0/code 45 promoted to production and in Google review on 2026-11-03; Google Play Lifetime held at $19.99 until approval |
 | [Apple export competitor review brief](./2026-10-19-apple-export-competitors.md) | 2026-10-19 | Complete — public-source Treg trial; $0 spent |
 
+## Checkpoints and research
+
+- [October 3 pricing checkpoint](./2026-10-03-pricing-checkpoint.md): $19.99 lifetime read with complete commerce through October 1. Proceeds per activated install were between the revert and keep thresholds, so the price continued unchanged at that time.
+- [October 3 acquisition investigation](./2026-10-03-acquisition-investigation.md): recent downloads softened modestly; search held up, referrals declined, and YouTube delivery needed an audit.
+
+## Proposals
+
+- [Business-model options: free manual exports and paid automation](./2026-10-03-business-model-options.md): research and proposed test design; not deployed as written. Superseded by the five-free-exports change and the subscription rollout.
+
 ## Operational sources
 
 Notes record deployed price evidence, decision rules, and results at decision time.
