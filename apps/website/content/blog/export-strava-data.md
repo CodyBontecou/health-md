@@ -37,11 +37,11 @@ Steps from [Strava's export article](https://support.strava.com/en-us/articles/1
 
 ## What's in the Strava archive
 
-Strava's article says the request creates an archive of your account but does not list its contents. A typical archive, as described by users and third-party tools, looks like this; **check your own download**, because contents can differ:
+Strava's article doesn't list the archive's contents. Tools that parse real archives describe a common layout, for example [geo-activity-playground's Strava notes](https://github.com/martin-ueding/geo-activity-playground/blob/main/docs/moving-from-strava.md) and [Redback's export description](https://redback-operations.github.io/redback-documentation/docs/project-3/research/strava-bulk-export-data-description). **Check your own download**, because contents can change:
 
-- `activities.csv`: usually one row per activity.
-- An `activities/` folder of per-activity files, commonly `.fit.gz`, `.gpx` or `.tcx` depending on how each activity was uploaded.
-- Other account CSV files.
+- `activities.csv`: one row per activity, with an `Activity ID` and a `Filename` column pointing to that activity's file. Manually entered activities may have no file.
+- `activities/`: per-activity files named by ID, often `.fit.gz` (gzip-compressed FIT), or `.gpx`/`.tcx` (sometimes also `.gz`). Unzip `.gz` files before opening them.
+- `media/` (uploaded photos and videos, listed in `media.csv`), `routes/` (routes you created in Strava, not activity tracks), and dozens of other account CSVs such as `profile.csv` and `comments.csv`.
 
 Some values in `activities.csv` may be Strava estimates rather than sensor measurements.
 
@@ -55,13 +55,13 @@ Per Strava's article (checked November 20, 2026), on the website:
 
 ## Can I export from the Strava app?
 
-No. Strava says exporting your data is only available on the Strava website. We could not verify that a phone browser's desktop mode works, so try it yourself or use a computer.
+No. Strava says exporting your data is only available on the Strava website. Use a browser on a computer.
 
 ## Open Strava activities in Excel or Google Sheets
 
 1. Unzip the archive and find `activities.csv`.
 2. Use the spreadsheet's CSV import rather than double-clicking: Excel's **Data → From Text/CSV**, Numbers' **File → Open**, or Google Sheets' **File → Import**. Set the delimiter and locale so dates and decimal separators parse correctly.
-3. Read the header row and check units before calculating. Distance, time and elevation columns may use different units; don't assume.
+3. Read the header row and check units before calculating. Distance, time and elevation columns may use different units; don't assume. Column headers follow your Strava account language (for example German headers and day-first dates), and Strava changes the column set over time ([source](https://github.com/martin-ueding/geo-activity-playground/blob/main/src/geo_activity_playground/features/strava/checkout_importer.py)).
 
 Our [Apple Health to Excel](/blog/apple-health-to-excel/) and [Apple Health to Google Sheets](/blog/apple-health-to-google-sheets/) guides cover Health.md files, not Strava's CSV columns, but the import and cleanup habits carry over.
 
@@ -142,7 +142,7 @@ Strava says the download link may take a few hours to arrive by email. Strava's 
 
 ### Does the export include routes and photos?
 
-Strava's article says GPX files record GPS points and TCX export needs GPS data, so a single-activity GPX or TCX file can carry a route only for GPS activities. It doesn't say what the bulk archive contains for routes or photos, so check your own download.
+Strava's article says GPX files record GPS points and TCX export needs GPS data, so a single-activity GPX or TCX file can carry a route only for GPS activities. Third-party descriptions of the archive show a `media/` folder for uploaded photos and videos, and per-activity files that carry GPS tracks when one was recorded. Strava doesn't document this, so check your download.
 
 ### Can I export another athlete's activity?
 
