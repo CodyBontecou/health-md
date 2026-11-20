@@ -138,11 +138,11 @@ See the [retention policy](/privacy-policy.html#retention) and [local destinatio
 
 ### How long does the Strava export take?
 
-Strava says the download link may take a few hours to arrive by email. Single-activity downloads are immediate from the activity page.
+Strava says the download link may take a few hours to arrive by email. Strava's article gives no timing for single-activity downloads.
 
 ### Does the export include routes and photos?
 
-Routes are in the per-activity GPX, TCX or FIT files when the activity had GPS. Strava's article does not say whether photos are in the archive, so check your own download.
+Strava's article says GPX files record GPS points and TCX export needs GPS data, so a single-activity GPX or TCX file can carry a route only for GPS activities. It doesn't say what the bulk archive contains for routes or photos, so check your own download.
 
 ### Can I export another athlete's activity?
 
