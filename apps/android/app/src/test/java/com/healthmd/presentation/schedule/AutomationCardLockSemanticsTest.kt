@@ -5,7 +5,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -16,6 +18,7 @@ import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.presentation.common.ConfigurationProtectedRegion
+import com.healthmd.presentation.common.ConfigurationProtectionTestTags
 import com.healthmd.presentation.common.ConfigurationProtectionUi
 import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.common.lockedReadOnlyDescription
@@ -77,7 +80,11 @@ class AutomationCardLockSemanticsTest {
         render(locked = true)
 
         listOf("Default", "Weekly JSON").forEach { name ->
-            val card = compose.onNode(startsWith("$name, ")).fetchSemanticsNode()
+            // A child of the lock notice, not a sibling drawn over: Android only reports
+            // accessibility nodes that no later sibling covers.
+            val card = compose.onNode(
+                startsWith("$name, ") and hasAnyAncestor(hasTestTag(ConfigurationProtectionTestTags.PROTECTED_REGION)),
+            ).fetchSemanticsNode()
             assertThat(card.config.contains(SemanticsActions.OnClick)).isFalse()
         }
         val notices = compose.onAllNodesWithContentDescription("Settings are locked").fetchSemanticsNodes()
@@ -104,6 +111,7 @@ class AutomationCardLockSemanticsTest {
 
     @Test
     fun descriptionSkipsBlankParts() {
-        assertThat(lockedReadOnlyDescription("Default", " ", null, "Manual")).isEqualTo("Default, Manual")
+        assertThat(lockedReadOnlyDescription("Default", " ", null, "Writes to the folder.", "Manual"))
+            .isEqualTo("Default, Writes to the folder, Manual")
     }
 }

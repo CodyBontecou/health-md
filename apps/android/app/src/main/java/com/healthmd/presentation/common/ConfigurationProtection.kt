@@ -7,6 +7,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -25,17 +26,20 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.isTraversalGroup
-import androidx.compose.ui.semantics.traversalIndex
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -66,10 +70,13 @@ val LocalConfigurationProtection = compositionLocalOf { ConfigurationProtectionU
  * used only for user-facing configuration regions; operation buttons such as Export, Sync, Retry,
  * Stop, and Cancel remain outside it.
  *
- * While locked, TalkBack hears the region's single "Settings are locked" action first. By default
- * the content's semantics are removed so no control inside can be activated past the lock. With
- * [readableWhenLocked], the content keeps its semantics and must itself expose only text (no
- * actions) while [LocalConfigurationProtection] is enabled, e.g. a card's name and summary.
+ * While locked, TalkBack hears the region's single "Settings are locked" action. By default the
+ * content's semantics are removed so no control inside can be activated past the lock, and the
+ * overlay is that action. With [readableWhenLocked], the content keeps its semantics and must
+ * itself expose only text (no actions) while [LocalConfigurationProtection] is enabled, e.g. a
+ * card's name and summary. The lock action then sits on the region itself, read before the
+ * content, and the overlay only intercepts touches: a semantics node drawn over the content
+ * would hide it from accessibility services, which only report uncovered nodes.
  */
 @Composable
 fun ConfigurationProtectedRegion(
@@ -80,7 +87,24 @@ fun ConfigurationProtectedRegion(
     val protection = LocalConfigurationProtection.current
     val blockedTitle = stringResource(R.string.configuration_protection_blocked_title)
     val blockedAction = stringResource(R.string.configuration_protection_blocked_action)
-    Box(modifier = modifier.semantics { isTraversalGroup = true }) {
+    val onBlockedChange by rememberUpdatedState(protection.onBlockedChange)
+    val readableLock = protection.enabled && readableWhenLocked
+    Box(
+        modifier = if (readableLock) {
+            modifier
+                .testTag(ConfigurationProtectionTestTags.PROTECTED_REGION)
+                .semantics {
+                    contentDescription = blockedTitle
+                    role = Role.Button
+                    onClick(label = blockedAction) {
+                        onBlockedChange()
+                        true
+                    }
+                }
+        } else {
+            modifier
+        },
+    ) {
         Box(
             modifier = if (protection.enabled && !readableWhenLocked) {
                 Modifier.clearAndSetSemantics { }
@@ -89,7 +113,13 @@ fun ConfigurationProtectedRegion(
             },
             content = content,
         )
-        if (protection.enabled) {
+        if (readableLock) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .pointerInput(Unit) { detectTapGestures { onBlockedChange() } },
+            )
+        } else if (protection.enabled) {
             Box(
                 modifier = Modifier
                     // Match measured content even in an unbounded scrolling column.
@@ -100,11 +130,7 @@ fun ConfigurationProtectedRegion(
                         onClickLabel = blockedAction,
                         onClick = protection.onBlockedChange,
                     )
-                    // Announced once, before any readable content it covers.
-                    .semantics {
-                        contentDescription = blockedTitle
-                        traversalIndex = -1f
-                    },
+                    .semantics { contentDescription = blockedTitle },
             )
         }
     }
@@ -112,7 +138,7 @@ fun ConfigurationProtectedRegion(
 
 /** A locked, read-only card's spoken text: its visible parts in reading order. */
 fun lockedReadOnlyDescription(vararg parts: String?): String =
-    parts.mapNotNull { it?.trim()?.takeIf(String::isNotEmpty) }.joinToString(", ")
+    parts.mapNotNull { it?.trim()?.trimEnd('.')?.takeIf(String::isNotEmpty) }.joinToString(", ")
 
 @Composable
 fun ConfigurationProtectionToast(
