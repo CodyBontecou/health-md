@@ -29,6 +29,8 @@ The read happens on the Android device. The files go to a folder selected throug
 
 Install Health.md on the Android phone that has access to your Health Connect records. Google Play is the current download destination:
 
+Coming from a Galaxy phone or watch? See how to [export Samsung Health data](/blog/export-samsung-health-data/) first, then confirm the records reached Health Connect.
+
 <div class="cta-row">
 <a class="button" href="https://play.google.com/store/apps/details?id=com.healthmd.android">Get Health.md on Google Play</a>
 <a class="button secondary" href="/docs/android/#distribution-status">Check F-Droid publication status</a>
