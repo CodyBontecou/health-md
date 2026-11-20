@@ -103,7 +103,7 @@ Continue only after the records you need are visible in the phone's health store
 
 1. Grant Health.md read access to the relevant categories. On Android, choose the **Health Connect** source.
 2. Select the metrics or workouts you verified. Start with a completed day containing one recognizable activity and choose a writable folder.
-3. Choose **CSV** for table inspection, **JSON** for structured processing or **Markdown** for daily notes.
+3. Choose **CSV** for table inspection, **JSON** for structured processing or **Markdown** for daily notes. For notes in Obsidian, see [Apple Health data in Obsidian](/blog/export-apple-health-data-to-obsidian/) (iPhone) or [Health Connect to Obsidian](/blog/export-health-connect-to-obsidian/) (Android).
 4. Preview, export and open the actual saved file. Compare its date, units and available fields with the source before increasing the date range.
 
 Daily exports create separate files for the selected days. On iPhone, use the [Apple Health workout guide](/blog/export-apple-health-workouts/) for start-day assignment, JSON session grouping and the difference between reported and elapsed duration. On Android, follow the [Health Connect export guide](/health-connect-export/); do not assume Apple's archive or field rules apply.
