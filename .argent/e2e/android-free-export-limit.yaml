@@ -11,24 +11,27 @@ requires:
 #   adb shell am start -S -n com.healthmd.android.e2e/com.healthmd.presentation.MainActivity \
 #     --ez uitesting true --es UITEST_HEALTH_AUTHORIZED true --es UITEST_PURCHASE_UNLOCKED false \
 #     --es UITEST_FREE_EXPORTS_USED 1 --es UITEST_STATIC_PURCHASE_PRICES true
-# Side effects: none. Leaves the app on the Profile automation page. Uses "Profile" because the button stays disabled until the destination is ready (as in 3.5.0), and the e2e app has no folder.
+# Needs the behaviour of PR #389 (fix/android-unlock-without-destination): Unlock Health.md is
+# enabled even when the automation has no ready destination. The QA app after a pm clear has only
+# the "Default" automation and no picked folder, so without #389 the button stays disabled.
+# Side effects: none. Leaves the app on the Default automation page.
 # Authored from the app's strings and proved by full runner replays (Argent's describe tree is
 # stale on this Pixel; argent 0.33). The sheet is opened from Automations › Profile › Run now
 # because the floating Export now button has no text or id in the runner tree.
-executionPrerequisite: "QA app com.healthmd.android.e2e just started LOCKED with UITEST_FREE_EXPORTS_USED 1 (adb command in the header); Archive showing, possibly under the Recover missed scheduled exports dialog."
+executionPrerequisite: "QA app com.healthmd.android.e2e (a build with PR #389) just started LOCKED with UITEST_FREE_EXPORTS_USED 1 (adb command in the header); a Default automation exists; Archive showing, possibly under the Recover missed scheduled exports dialog."
 steps:
   - echo: Locked QA app, free export used. Dismiss the recovery prompt if shown, open Automations
   - when: { visible: { text: Not now } }
     steps:
       - tap: { text: Not now }
-  - await: { visible: { text: See this day }, timeout: 8000 }
+  - await: { visible: { text: { matches: '^Archive$' } }, timeout: 8000 }
   - await: { idle: true }
   - tap: { text: Automations }
   - await: { visible: { text: New automation }, timeout: 8000 }
   - await: { idle: true }
 
-  - echo: Profile (API endpoint, ready) › Run now. Expect the Export now sheet with the Unlock Health.md button
-  - tap: { text: { matches: '^Profile$' } }
+  - echo: Default (no folder picked) › Run now. Expect the Export now sheet with the Unlock Health.md button
+  - tap: { text: { matches: '^Default$' } }
   - await: { visible: { text: Run now }, timeout: 5000 }
   - await: { idle: true }
   - tap: { text: Run now }
