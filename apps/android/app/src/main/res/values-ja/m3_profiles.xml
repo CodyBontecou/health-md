@@ -41,8 +41,8 @@
     <string name="m3_profiles_editor_clinic_destination">クリニックの書き出し先</string>
     <string name="m3_profiles_editor_clinic_body">この書き出し先はクリニックが管理しています。選択や共有の管理には「クリニックアクセス」を使ってください。ほかの書き出し先にはご自身の Health.md アクセスが必要です。</string>
     <string name="m3_profiles_editor_folder">フォルダ</string>
-    <string name="m3_profiles_editor_folder_current">現在のフォルダ（「書き出し」タブから）</string>
-    <string name="m3_profiles_editor_folder_reset">「書き出し」タブのフォルダを使う</string>
+    <string name="m3_profiles_editor_folder_current">デフォルトのフォルダ（設定 › このデバイスの Vault）</string>
+    <string name="m3_profiles_editor_folder_reset">デフォルトのフォルダを使う</string>
     <string name="m3_profiles_editor_endpoint_invalid">保存する前に有効な http(s) エンドポイント URL を入力してください。</string>
     <string name="m3_profiles_editor_gateway_invalid">保存する前に有効な http(s) ゲートウェイ URL を入力してください。</string>
     <string name="m3_profiles_editor_output">出力</string>
@@ -61,7 +61,7 @@
     <string name="m3_profiles_editor_entries_folder">エントリのフォルダ</string>
     <string name="m3_profiles_editor_category_folders">カテゴリ別フォルダ</string>
     <string name="m3_profiles_editor_entry_filename">エントリのファイル名テンプレート</string>
-    <string name="m3_profiles_editor_entry_rules_note">指標ごとのエントリルールは、このプロファイルが有効なときに「書き出し」タブで編集します。</string>
+    <string name="m3_profiles_editor_entry_rules_note">指標ごとのエントリルールは、このオートメーションの「個別エントリ」ページで編集します。</string>
     <string name="m3_profiles_editor_overlap">%1$s と重複しています：後の実行が前の実行を上書きします。区別するには、別のフォルダかファイル名テンプレートを選んでください。</string>
     <string name="m3_profiles_editor_create">作成</string>
     <plurals name="m3_profiles_metrics_count">

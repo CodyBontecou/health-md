@@ -1,0 +1,112 @@
+version: 1
+requires:
+  platform: ios
+# ios-onboarding-daily-restore: Health.md 4.0's onboarding "Make it daily?" step is the
+# onboarding paywall. A returning user who reinstalled must be able to restore there, so
+# while the purchase is locked the step shows Restore Purchase (onboarding.daily.restore)
+# beside the subscribe offer. Android counterpart: android-onboarding-daily-restore.
+#
+# Prerequisites: an iPhone simulator with a Debug build of Health.md installed. The UI-test
+# launch arguments show first-run onboarding, report Apple Health as authorized, keep the
+# purchase locked and use synthetic HealthKit preview fixtures; analytics stay offline.
+# Side effects: none persistent beyond UI-test state. No folder is chosen, nothing is
+# exported, and the test stops on Make it daily? without finishing onboarding.
+# Restore Purchase is asserted, not tapped: an app launched outside Xcode has no StoreKit
+# test configuration, so AppStore.sync would ask for an Apple Account (not deterministic).
+#
+# Coordinate exception: on this iOS 27 simulator the runner tree carries none of the app's
+# SwiftUI ids or labels (every recorded check warned that it does NOT hold against the
+# runner tree), so checks stay raw `tool: await-ui-element` steps (they read the
+# accessibility tree, where the ids exist) and taps on SwiftUI buttons are points taken
+# from `describe` frames. Each point tap names its target and is followed by a hard check
+# on the destination.
+steps:
+  - echo: Launch Health.md in UI-test mode with first-run onboarding shown, Health
+      authorized and the purchase locked. Expect Welcome (Get started)
+  - launch:
+      native: com.codybontecou.obsidianhealth
+      ios:
+        app: com.codybontecou.obsidianhealth
+        args:
+          - --uitesting
+          - -UITEST_SHOW_ONBOARDING
+          - "true"
+          - -UITEST_HAS_COMPLETED_ONBOARDING
+          - "false"
+          - -UITEST_HEALTH_AUTHORIZED
+          - "true"
+          - -UITEST_PURCHASE_UNLOCKED
+          - "false"
+          - -UITEST_SHOW_RELEASE_NOTES
+          - "false"
+          - -UITEST_HEALTHKIT_EXPORT_PREVIEW_FIXTURES
+          - "true"
+          - -UITEST_ANALYTICS_TRANSPORT
+          - offline
+          - -UITEST_SUPPRESSED_UPGRADE_PROMPTS
+          - 1,3
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Get started
+      timeoutMs: 20000
+  - await: { idle: true }
+  - echo: "Welcome: tap Get started. Expect the packs step (Connect Apple Health)"
+  - tap: { x: 0.5, y: 0.852 } # "Get started" button (describe frame 0.060,0.820,0.881,0.064)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: onboarding.pack.sleep
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: "Packs (Sleep, Activity, Heart preselected): tap Connect Apple Health.
+      Expect the Apple Health step offering Continue (already authorized)"
+  - tap: { x: 0.5, y: 0.902 } # "Connect Apple Health" button (describe frame 0.060,0.870,0.881,0.064)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Continue to Apple Health
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: "Apple Health step: tap Continue. Expect the folder step (Skip for now)"
+  - tap: { x: 0.5, y: 0.76 } # "Continue" button above "Continue to Apple Health" (describe frame 0.060,0.728,0.881,0.064)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: onboarding.destination.folder
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: "Folder step: tap Skip for now (no folder picked, no files written).
+      Expect First note (Finish setup)"
+  - tap: { x: 0.5, y: 0.908 } # "Skip for now" button (describe frame 0.060,0.883,0.881,0.050)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: onboarding.firstNote.rawToggle
+      timeoutMs: 15000
+  - await: { idle: true }
+  - echo: "First note (sample data, no folder): tap Finish setup. Expect Make it
+      daily? with the subscribe offer"
+  - tap: { x: 0.5, y: 0.852 } # "Finish setup" button (describe frame 0.060,0.820,0.881,0.064)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Make it daily?
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: "Make it daily? (locked): expect the Restore Purchase button
+      (onboarding.daily.restore) beside the subscribe offer"
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: onboarding.daily.restore
+      expectedText: Restore Purchase
+      textMatch: equals
+      timeoutMs: 5000

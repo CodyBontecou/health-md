@@ -75,6 +75,7 @@ class OnboardingDriveViewModelTest {
             every { isAvailable } returns false
             every { offers } returns MutableStateFlow(emptyList())
             every { isPurchasing } returns MutableStateFlow(false)
+            every { isRestoring } returns MutableStateFlow(false)
             every { purchaseError } returns MutableStateFlow(null)
         },
         endpointCoordinator = mockk<SavedAPIEndpointCoordinator>(relaxed = true) {

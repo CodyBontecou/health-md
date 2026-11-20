@@ -41,8 +41,8 @@
     <string name="m3_profiles_editor_clinic_destination">Bestemming van de kliniek</string>
     <string name="m3_profiles_editor_clinic_body">Je kliniek beheert deze bestemming. Gebruik Klinische toegang om haar te kiezen of het delen te beheren. Andere bestemmingen vereisen je eigen Health.md-toegang.</string>
     <string name="m3_profiles_editor_folder">Map</string>
-    <string name="m3_profiles_editor_folder_current">Huidige map (van het tabblad Exporteren)</string>
-    <string name="m3_profiles_editor_folder_reset">Map van het tabblad Exporteren gebruiken</string>
+    <string name="m3_profiles_editor_folder_current">Standaardmap (Instellingen › Vault op dit apparaat)</string>
+    <string name="m3_profiles_editor_folder_reset">Standaardmap gebruiken</string>
     <string name="m3_profiles_editor_endpoint_invalid">Voer vóór het opslaan een geldige http(s)-eindpunt-URL in.</string>
     <string name="m3_profiles_editor_gateway_invalid">Voer vóór het opslaan een geldige http(s)-gateway-URL in.</string>
     <string name="m3_profiles_editor_output">Uitvoer</string>
@@ -61,7 +61,7 @@
     <string name="m3_profiles_editor_entries_folder">Map voor items</string>
     <string name="m3_profiles_editor_category_folders">Mappen per categorie</string>
     <string name="m3_profiles_editor_entry_filename">Bestandsnaamsjabloon voor items</string>
-    <string name="m3_profiles_editor_entry_rules_note">Regels per meetwaarde bewerk je op het tabblad Exporteren terwijl dit profiel actief is.</string>
+    <string name="m3_profiles_editor_entry_rules_note">Bewerk regels per meetwaarde op de pagina Afzonderlijke registraties van deze automatisering.</string>
     <string name="m3_profiles_editor_overlap">Overlapt met %1$s: latere runs overschrijven eerdere. Kies een andere map of bestandsnaamsjabloon om ze gescheiden te houden.</string>
     <string name="m3_profiles_editor_create">Maken</string>
     <plurals name="m3_profiles_metrics_count">

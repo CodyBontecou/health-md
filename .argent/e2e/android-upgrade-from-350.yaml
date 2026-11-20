@@ -1,0 +1,73 @@
+version: 1
+requires:
+  platform: android
+# android-upgrade-from-350 (Android ledger A-KEY-04/05, A-SCH-20, 3.5.0 → main upgrade parity):
+# first launch of main installed IN PLACE over a configured Android 3.5.0. It covers only the
+# post-upgrade half; the 3.5.0 half cannot be recorded against the main build. Android twin of
+# the Apple v4-upgrade-from-35 test.
+#
+# Prerequisites (by hand, in this order, on one device; synthetic data only):
+#  1. Build android/v3.5.0 and main as Play debug with applicationId
+#     com.healthmd.android.upgradeqa, same debug key (recipe and APK hashes in the ignored
+#     .pi/v4-parity/android-upgrade/apk/README.txt). The real com.healthmd.android is untouched.
+#  2. Install the 3.5.0 APK. Its first screen is the hard paywall and Play Billing does not know the
+#     QA package, so seed has_completed_onboarding=true and is_purchased=true into
+#     files/datastore/health_md_settings.preferences_pb with `adb shell run-as`.
+#  3. In 3.5.0: Settings › Export Profiles › New "Upgrade JSON" (Markdown + JSON, Append), which
+#     becomes active; Schedule… Enabled, Days, 07:00, lookback 30, Save. Settings shows
+#     "Active: Upgrade JSON · 2 profile(s) · 1 scheduled". Turn Lock configuration changes on.
+#  4. Force-stop, then `adb install -r` the main APK over it.
+# Side effects: turns Lock configuration off to read the cards, then back on. Leaves the app on
+# Settings with the lock on, so the test can be re-run.
+#
+# Not checkable here: the purchase carries over only through Play Billing, which does not know the
+# QA package, so main shows both schedules as "off · Try free". A real 3.5 buyer keeps access
+# through Play (see ledger A-SCH-16).
+steps:
+  - echo: First launch of main over 3.5.0. Expect Archive (no onboarding, no paywall) and the
+      3.5 profile schedule as the next run
+  - launch: com.healthmd.android.upgradeqa
+  - await: { visible: { text: Archive }, timeout: 20000 }
+  - await: { idle: true }
+  # The time uses a narrow no-break space before AM/PM, so match the hour and minute only.
+  - await: { text: { in: { text: Upgrade JSON · }, contains: "7:00" }, timeout: 5000 }
+
+  - echo: "Automations: the 3.5 configuration lock is still on (the lock layer hides the cards)"
+  - tap: { text: Automations }
+  - await: { visible: { text: New automation }, timeout: 8000 }
+  - await: { idle: true }
+  - await: { visible: { text: Settings are locked }, timeout: 5000 }
+
+  - echo: "Settings: Lock configuration reads On. Turn it off on App & support so the cards can be read"
+  - tap: { text: Settings }
+  - await: { visible: { text: Destinations }, timeout: 8000 }
+  - await: { idle: true }
+  - scroll-to: { target: { text: Lock configuration } }
+  - await: { visible: { text: { matches: '^On$' }, after: { text: Lock configuration } }, timeout: 5000 }
+  - tap: { text: Lock configuration }
+  - await: { visible: { text: Prevents accidental changes. }, timeout: 5000 }
+  - await: { idle: true }
+  - tap: { text: { matches: '^Lock configuration$' } }
+  - tap: { text: Back }
+  - await: { visible: { text: { matches: '^Off$' }, after: { text: Lock configuration } }, timeout: 5000 }
+
+  - echo: "Automations: both 3.5 profiles, Default and Upgrade JSON with its 7:00 schedule"
+  - tap: { text: Automations }
+  - await: { visible: { text: New automation }, timeout: 8000 }
+  - await: { idle: true }
+  - await: { hidden: { text: Settings are locked }, timeout: 5000 }
+  - assert: { visible: { text: { matches: '^Default$' } } }
+  - assert: { visible: { text: { matches: '^Upgrade JSON$' } } }
+  - assert: { visible: { text: { matches: '^Daily at 7:00' } } }
+
+  - echo: Restore the lock (so the test can be re-run). Expect Lock configuration On again
+  - tap: { text: Settings }
+  - await: { hidden: { text: New automation }, timeout: 8000 }
+  - await: { idle: true }
+  - scroll-to: { target: { text: Lock configuration } }
+  - tap: { text: Lock configuration }
+  - await: { visible: { text: Prevents accidental changes. }, timeout: 5000 }
+  - await: { idle: true }
+  - tap: { text: { matches: '^Lock configuration$' } }
+  - tap: { text: Back }
+  - await: { visible: { text: { matches: '^On$' }, after: { text: Lock configuration } }, timeout: 5000 }

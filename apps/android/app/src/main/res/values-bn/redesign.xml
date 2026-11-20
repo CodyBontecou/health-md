@@ -219,6 +219,7 @@
     <string name="settings_status_off">বন্ধ</string>
     <string name="settings_status_allowed">অনুমোদিত</string>
     <string name="settings_status_not_allowed">অনুমোদিত নয়</string>
+    <string name="settings_status_partly_allowed">আংশিক অনুমোদিত</string>
     <string name="settings_status_paired">পেয়ার করা</string>
     <string name="settings_health_connect_subtitle">অনুমতি এবং ইতিহাস অ্যাক্সেস</string>
     <string name="settings_default_metrics">ডিফল্ট মেট্রিক্স</string>
@@ -301,6 +302,8 @@
 <string name="automations_no_schedule">সময়সূচি নেই</string>
 <string name="automation_section_automation">অটোমেশন</string>
 <string name="automation_duplicate">নকল তৈরি করুন</string>
+<string name="automation_duplicated_snackbar">“%1$s” নামে নকল তৈরি হয়েছে</string>
+<string name="automation_duplicated_open">খুলুন</string>
 <string name="automation_pause">বিরতি দিন</string>
 <string name="automation_resume">আবার চালু করুন</string>
 <string name="automation_row_name">নাম</string>
@@ -387,6 +390,9 @@
 <string name="output_write_mode_note">অধিলিখন ফাইলটি প্রতিস্থাপন করে। যোগ করুন শেষে যোগ করে। আপডেট নতুন মান মার্জ করে এবং আপনার সম্পাদনা রাখে।</string>
 <string name="output_writes_to">যেখানে লেখে</string>
 <string name="output_endpoint_invalid">একটি বৈধ http(s) URL লিখুন। বৈধ হলে পরিবর্তন সংরক্ষিত হবে।</string>
+<string name="output_reset_configuration">রপ্তানি কনফিগারেশন রিসেট করুন</string>
+<string name="output_reset_configuration_title">রপ্তানি কনফিগারেশন রিসেট করবেন?</string>
+<string name="output_reset_configuration_message">এই অটোমেশনের ফরম্যাট, মেট্রিক্স, ফাইলের নাম, ফরম্যাট কাস্টমাইজেশন, পৃথক এন্ট্রি ও দৈনিক নোট ডিফল্টে ফিরে যাবে। এর গন্তব্য, সাবফোল্ডার ও সময়সূচি একই থাকবে।</string>
 <string name="automation_summary_single">{when}, {range}[-এর {metrics}][ {formats} হিসেবে] {where}-এ লিখুন[ এবং {note}]।</string>
 <string name="automation_summary_multi">{when}, {range}[-এর {metrics}][ {formats} হিসেবে] {where}-এ লিখুন[ এবং {note}]।</string>
 <string name="automation_summary_send_single">{when}, {range}[-এর {metrics}][ {formats} হিসেবে] {where}-এ পাঠান[ এবং {note}]।</string>
@@ -475,6 +481,7 @@
 <string name="export_result_retry_note_one">সম্পূর্ণ তারিখগুলো সম্পূর্ণই থাকবে। আবার চেষ্টা করলে শুধু %1$s লেখা হবে।</string>
 <string name="export_result_retry_note">সম্পূর্ণ তারিখগুলো সম্পূর্ণই থাকবে। আবার চেষ্টা করলে %1$s লেখা হবে।</string>
 <string name="export_result_show_in_files">ফাইলসমূহে দেখুন</string>
+<string name="export_result_open_in_obsidian">Obsidian-এ খুলুন</string>
     <string name="composer_fields_frontmatter_note">এই নোট কোন ডেটা সংগ্রহ করবে তা বেছে নেয়। ফ্রন্টম্যাটার বৈশিষ্ট্যগুলো সব সেটিংস → ফরম্যাট-এ সেট করা হয়।</string>
     <string name="frontmatter_fields_ownership_note">শুধু এখানে চালু করা ফিল্ডগুলোই ফ্রন্টম্যাটারে যায়। ডেটা পেতে ফিল্ডটির মেট্রিকও চালু থাকতে হবে।</string>
 </resources>

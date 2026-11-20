@@ -63,7 +63,7 @@ class ClinicianReportDataSourceTest {
         val manager = mockk<HealthConnectManager>()
         val provider = HealthConnectDataProvider(manager)
         every { manager.isAvailable() } returns true
-        coEvery { manager.hasAllPermissions() } returns true
+        coEvery { manager.hasAnyReadPermission() } returns true
         val registry = mockk<HealthProviderRegistry>()
         val settings = mockk<SettingsRepository>()
         coEvery { settings.getSelectedHealthProviderId() } returns "health_connect"
@@ -90,7 +90,7 @@ class ClinicianReportDataSourceTest {
         val manager = mockk<HealthConnectManager>()
         val provider = HealthConnectDataProvider(manager)
         every { manager.isAvailable() } returns true
-        coEvery { manager.hasAllPermissions() } returns true
+        coEvery { manager.hasAnyReadPermission() } returns true
         val registry = mockk<HealthProviderRegistry>()
         val settings = mockk<SettingsRepository>()
         coEvery { settings.getSelectedHealthProviderId() } returns "health_connect"
@@ -127,7 +127,7 @@ class ClinicianReportDataSourceTest {
             val manager = mockk<HealthConnectManager>()
             val provider = HealthConnectDataProvider(manager)
         every { manager.isAvailable() } returns true
-        coEvery { manager.hasAllPermissions() } returns true
+        coEvery { manager.hasAnyReadPermission() } returns true
             val registry = mockk<HealthProviderRegistry>()
             val settings = mockk<SettingsRepository>()
             coEvery { settings.getSelectedHealthProviderId() } returns "health_connect"

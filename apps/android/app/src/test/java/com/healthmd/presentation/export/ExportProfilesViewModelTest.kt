@@ -32,6 +32,7 @@ import io.mockk.Runs
 import io.mockk.slot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
@@ -733,6 +734,8 @@ class ExportProfilesViewModelTest {
             )
         }
         assertThat(viewModel.uiState.value.detailProfileId).isEqualTo("p-copy")
+        // The source page confirms the copy by the name the repository gave it.
+        assertThat(viewModel.duplicated.first()).isEqualTo(DuplicatedProfile(id = "p-copy", name = "Weekly 2"))
     }
 
     @Test

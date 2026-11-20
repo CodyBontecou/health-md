@@ -634,7 +634,7 @@
     <string name="toggle_android_native_fields">Includeți câmpurile de sănătate native Android</string>
     <string name="toggle_legacy_android_aliases">Duplicați cheile și etichetele Android vechi</string>
     <string name="schedule_enable_scheduled_exports">Activați exporturile programate</string>
-    <string name="schedule_automatic_export_body">Exporturile programate scriu în dosarul de export Android selectat. Exporturile manuale rămân disponibile în fila Export.</string>
+    <string name="schedule_automatic_export_body">Exporturile programate scriu în dosarul de export Android selectat. Exporturile manuale rămân disponibile din Exportați acum.</string>
     <string name="schedule_frequency">Frecvența</string>
     <string name="schedule_time">Ora</string>
     <string name="schedule_date_window">Date</string>

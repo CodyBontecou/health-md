@@ -41,8 +41,8 @@
     <string name="m3_profiles_editor_clinic_destination">Destinația clinicii</string>
     <string name="m3_profiles_editor_clinic_body">Clinica ta gestionează această destinație. Folosește Acces clinică pentru a o selecta sau a gestiona partajarea. Alte destinații necesită propriul acces Health.md.</string>
     <string name="m3_profiles_editor_folder">Folder</string>
-    <string name="m3_profiles_editor_folder_current">Folderul curent (din fila Export)</string>
-    <string name="m3_profiles_editor_folder_reset">Folosește folderul din fila Export</string>
+    <string name="m3_profiles_editor_folder_current">Folderul implicit (Setări › Seif pe acest dispozitiv)</string>
+    <string name="m3_profiles_editor_folder_reset">Folosește folderul implicit</string>
     <string name="m3_profiles_editor_endpoint_invalid">Introdu un URL de endpoint http(s) valid înainte de salvare.</string>
     <string name="m3_profiles_editor_gateway_invalid">Introdu un URL de gateway http(s) valid înainte de salvare.</string>
     <string name="m3_profiles_editor_output">Ieșire</string>
@@ -61,7 +61,7 @@
     <string name="m3_profiles_editor_entries_folder">Folder înregistrări</string>
     <string name="m3_profiles_editor_category_folders">Foldere pe categorii</string>
     <string name="m3_profiles_editor_entry_filename">Șablon nume fișier înregistrare</string>
-    <string name="m3_profiles_editor_entry_rules_note">Regulile pentru fiecare valoare se editează din fila Export cât timp acest profil este activ.</string>
+    <string name="m3_profiles_editor_entry_rules_note">Editați regulile pentru fiecare valoare pe pagina Intrări individuale a acestei automatizări.</string>
     <string name="m3_profiles_editor_overlap">Se suprapune cu %1$s: rulările ulterioare le suprascriu pe cele anterioare. Alege alt folder sau alt șablon de nume de fișier pentru a le păstra separate.</string>
     <string name="m3_profiles_editor_create">Creează</string>
     <plurals name="m3_profiles_metrics_count">

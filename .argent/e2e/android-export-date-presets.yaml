@@ -1,0 +1,59 @@
+version: 1
+requires:
+  platform: android
+# android-export-date-presets (Android ledger A-EXP-02/03/04/06, 3.5.0 → main parity): 3.5.0's
+# Export tab offered Today / Yesterday / All Time / Custom ranges. Main's Export now sheet opens
+# on Yesterday with Yesterday / 7 days / 30 days / Custom, and Today and All Time moved inside
+# Custom. This checks every 3.5 range is still reachable and the button follows the range,
+# including the "Large export." warning for 30 days. Nothing is exported.
+#
+# Prerequisite (fragment): the isolated QA app com.healthmd.android.e2e (playE2e), started
+# UNLOCKED in UI test mode just before the run:
+#   adb shell am start -S -n com.healthmd.android.e2e/com.healthmd.presentation.MainActivity \
+#     --ez uitesting true --es UITEST_HEALTH_AUTHORIZED true --es UITEST_PURCHASE_UNLOCKED true
+# Side effects: none (the sheet is cancelled). Leaves the app on the Default automation page.
+# Authoring note: written from the app's strings and proved by full runner replays (Argent's
+# describe tree is stale on this Pixel after scrolls; argent 0.33).
+executionPrerequisite: "QA app com.healthmd.android.e2e just started UNLOCKED in UI test mode with the adb command in the header; Archive showing, possibly under the Recover missed scheduled exports dialog."
+steps:
+  - echo: Unlocked QA app on Archive. Dismiss the recovery prompt if shown
+  - when: { visible: { text: Not now } }
+    steps:
+      - tap: { text: Not now }
+  - await: { visible: { text: See this day }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: Open the Export now sheet via Automations › Default › Run now (the floating Export now
+      button has no text or id in the runner tree). Expect Dates, Yesterday, Export yesterday
+  - tap: { text: Automations }
+  - await: { visible: { text: New automation }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { text: { matches: '^Default$' } }
+  - await: { visible: { text: Run now }, timeout: 5000 }
+  - await: { idle: true }
+  - tap: { text: Run now }
+  - await: { visible: { text: Dates }, timeout: 8000 }
+  - await: { idle: true }
+  - await: { visible: { text: Export yesterday }, timeout: 5000 }
+
+  - echo: 7 days, then 30 days. Expect the button to follow, and the large-export note for 30
+  - tap: { text: 7 days }
+  - await: { visible: { text: Export 7 days }, timeout: 5000 }
+  - tap: { text: 30 days }
+  - await: { visible: { text: Export 30 days }, timeout: 5000 }
+  - await: { visible: { text: Large export. }, timeout: 5000 }
+
+  - echo: "Custom: expect From and To, and the 3.5 Today and All Time ranges as chips"
+  - tap: { text: Custom }
+  - await: { visible: { text: From }, timeout: 5000 }
+  - await: { visible: { text: To }, timeout: 5000 }
+  - scroll-to: { target: { text: All Time } }
+  - await: { visible: { text: All Time }, timeout: 5000 }
+  - scroll-to: { target: { text: { matches: '^Today$' } }, direction: up }
+  - tap: { text: { matches: '^Today$' } }
+  - await: { visible: { text: Export 1 day }, timeout: 5000 }
+
+  - echo: Cancel. Expect the automation page again and nothing exported
+  - tap: { text: Cancel }
+  - await: { hidden: { text: Dates }, timeout: 5000 }
+  - await: { visible: { text: Run now }, timeout: 5000 }

@@ -87,19 +87,23 @@ class HealthConnectManager(
     }
 
     /**
-     * Check if we have any health permissions granted.
-     * We request many permissions but not all may be available on every device,
-     * so we only require that at least one has been granted.
+     * True when at least one requested read permission is granted. Exports and onboarding gate
+     * on this: one grant is enough to export the types it covers. It does not mean full access;
+     * use [readAccess] for the Allowed / Partly allowed / Not allowed status.
      */
-    suspend fun hasAllPermissions(): Boolean {
+    suspend fun hasAnyReadPermission(): Boolean {
         if (TestMode.isActive) return TestMode.healthAuthorized
         val granted = healthConnectClient.permissionController.getGrantedPermissions()
         return granted.any { it in permissionPlan().foregroundPermissions }
     }
 
+    /** How many of the requested foreground read permissions are granted, and which are missing. */
+    suspend fun readAccess(): HealthConnectReadAccess =
+        HealthConnectReadAccess(requested = permissions, granted = getGrantedPermissions())
+
     /**
      * Export categories this provider can grant but for which no read permission is granted.
-     * [hasAllPermissions] is true when any permission is granted, so this names what it misses.
+     * [hasAnyReadPermission] is true when any permission is granted, so this names what it misses.
      */
     suspend fun blockedReadCategories(): Set<com.healthmd.domain.model.HealthAccessCategory> {
         if (TestMode.isActive) return emptySet()
@@ -195,6 +199,7 @@ class HealthConnectManager(
      */
     suspend fun getGrantedPermissions(): Set<String> = when {
         !TestMode.isActive -> healthConnectClient.permissionController.getGrantedPermissions()
+        TestMode.healthPartiallyAuthorized -> TestMode.partialGrant(permissions)
         TestMode.healthAuthorized -> permissions
         else -> emptySet()
     }
