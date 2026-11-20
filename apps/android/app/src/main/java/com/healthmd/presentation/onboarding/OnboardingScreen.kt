@@ -359,8 +359,9 @@ fun OnboardingScreen(
                 offer = OnboardingFlow.dailyOffer(viewModel.distributionPolicy, state.hasPaidAccess),
                 trialOffer = state.trialOffer,
                 purchasesAvailable = state.purchasesAvailable,
-                isBusy = state.isPurchasing || state.isCompleting,
-                purchaseFailed = state.purchaseError != null,
+                isBusy = state.isPurchasing || state.isRestoring || state.isCompleting,
+                isRestoring = state.isRestoring,
+                errorMessage = OnboardingFlow.dailyErrorMessage(state.purchaseError, state.restoreAttempted),
                 onStartTrial = {
                     viewModel.clearPurchaseError()
                     withNotificationPrompt {
@@ -370,6 +371,7 @@ fun OnboardingScreen(
                         }
                     }
                 },
+                onRestore = viewModel::restorePurchases,
                 onEnable = { withBackgroundAccess { viewModel.enableDailyAndFinish(onComplete) } },
                 onNotNow = { viewModel.skipDaily(onComplete) },
             )
