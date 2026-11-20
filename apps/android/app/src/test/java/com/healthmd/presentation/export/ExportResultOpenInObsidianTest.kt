@@ -12,7 +12,9 @@ import com.google.common.truth.Truth.assertThat
 import com.healthmd.R
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportTarget
+import com.healthmd.presentation.export.components.ExportProgressDialog
 import com.healthmd.presentation.theme.HealthMdTheme
+import com.healthmd.rawexport.ExportMode
 import java.time.LocalDate
 import org.junit.Rule
 import org.junit.Test
@@ -22,7 +24,8 @@ import org.robolectric.annotation.Config
 
 /**
  * Android ledger A-EXP-12: 3.5 offered "Open with" Files or Obsidian after a device-folder
- * export when Obsidian was installed; the 4.0 Export now result must keep offering Obsidian.
+ * export when Obsidian was installed; the 4.0 Export now result and the successful run's done
+ * moment must keep offering the folder in Files and, when installed, in Obsidian.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w400dp-h2000dp", application = Application::class)
@@ -70,6 +73,77 @@ class ExportResultOpenInObsidianTest {
 
         compose.onNodeWithTag("export.result.showInFiles").assertIsDisplayed()
         compose.onNodeWithTag("export.result.openInObsidian").assertDoesNotExist()
+    }
+
+    @Test
+    fun doneMomentOffersFilesAndObsidianBesideItsOwnActions() {
+        var filesOpens = 0
+        var obsidianOpens = 0
+        var archiveOpens = 0
+        setDone(onShowInFiles = { filesOpens++ }, onOpenInObsidian = { obsidianOpens++ }, onSeeInArchive = { archiveOpens++ })
+
+        compose.onNodeWithText(context.getString(R.string.moment_see_in_archive)).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.export_result_show_in_files)).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.export_result_open_in_obsidian)).assertIsDisplayed()
+        compose.onNodeWithTag("export.done.showInFiles").performClick()
+        compose.onNodeWithTag("export.done.openInObsidian").performClick()
+
+        assertThat(filesOpens).isEqualTo(1)
+        assertThat(obsidianOpens).isEqualTo(1)
+        assertThat(archiveOpens).isEqualTo(0)
+    }
+
+    @Test
+    fun doneMomentHidesObsidianWithoutObsidian() {
+        setDone(onShowInFiles = {}, onOpenInObsidian = null, onSeeInArchive = {})
+        compose.onNodeWithTag("export.done.showInFiles").assertIsDisplayed()
+        compose.onNodeWithTag("export.done.openInObsidian").assertDoesNotExist()
+    }
+
+    @Test
+    fun doneMomentWithoutFolderActionsKeepsOnlyItsOwnActions() {
+        setDone(onShowInFiles = null, onOpenInObsidian = null, onSeeInArchive = {})
+        compose.onNodeWithText(context.getString(R.string.moment_see_in_archive)).assertIsDisplayed()
+        compose.onNodeWithTag("export.done.showInFiles").assertDoesNotExist()
+        compose.onNodeWithTag("export.done.openInObsidian").assertDoesNotExist()
+    }
+
+    @Test
+    fun aFullSuccessToADeviceFolderOpensTheFolderWhileItsMomentIsUp() {
+        val success = ExportResult(successCount = 7, totalCount = 7, artifactCount = 7)
+        assertThat(ExportNowFlow.showsResultSheet(success)).isFalse()
+        assertThat(ExportNowFlow.opensResultFolder(success, folder)).isTrue()
+        assertThat(ExportNowFlow.opensResultInObsidian(success, folder, obsidianInstalled = true)).isTrue()
+        assertThat(ExportNowFlow.opensResultInObsidian(success, folder, obsidianInstalled = false)).isFalse()
+        assertThat(
+            ExportNowFlow.opensResultFolder(success.copy(target = ExportTarget.API_ENDPOINT), folder),
+        ).isFalse()
+    }
+
+    private fun setDone(
+        onShowInFiles: (() -> Unit)?,
+        onOpenInObsidian: (() -> Unit)?,
+        onSeeInArchive: (() -> Unit)?,
+    ) {
+        compose.setContent {
+            HealthMdTheme {
+                ExportProgressDialog(
+                    current = 7,
+                    total = 7,
+                    currentDate = null,
+                    rangeStart = LocalDate.of(2026, 11, 1),
+                    rangeEnd = LocalDate.of(2026, 11, 7),
+                    exportMode = ExportMode.COMPATIBILITY,
+                    onCancel = {},
+                    isDone = true,
+                    onSeeInArchive = onSeeInArchive,
+                    onClose = {},
+                    doneSubtitle = "Nov 1 – 7 · 7 files",
+                    onShowInFiles = onShowInFiles,
+                    onOpenInObsidian = onOpenInObsidian,
+                )
+            }
+        }
     }
 
     private fun setResult(onShowInFiles: (() -> Unit)?, onOpenInObsidian: (() -> Unit)?) {
