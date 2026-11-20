@@ -634,7 +634,7 @@
     <string name="toggle_android_native_fields">Incluir campos de salud nativos Android</string>
     <string name="toggle_legacy_android_aliases">Duplicar claves y etiquetas heredadas de Android</string>
     <string name="schedule_enable_scheduled_exports">Habilitar exportaciones programadas</string>
-    <string name="schedule_automatic_export_body">Las exportaciones programadas se escriben en la carpeta de exportación Android seleccionada. Las exportaciones manuales permanecen disponibles desde la pestaña Exportar.</string>
+    <string name="schedule_automatic_export_body">Las exportaciones programadas se escriben en la carpeta de exportación Android seleccionada. Las exportaciones manuales permanecen disponibles desde Exportar ahora.</string>
     <string name="schedule_frequency">Frecuencia</string>
     <string name="schedule_time">Hora</string>
     <string name="schedule_date_window">Fechas</string>

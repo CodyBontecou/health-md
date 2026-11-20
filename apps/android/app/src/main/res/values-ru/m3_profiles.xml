@@ -41,8 +41,8 @@
     <string name="m3_profiles_editor_clinic_destination">Назначение клиники</string>
     <string name="m3_profiles_editor_clinic_body">Этим назначением управляет ваша клиника. Используйте «Доступ клиники», чтобы выбрать его или управлять общим доступом. Для других назначений нужен собственный доступ к Health.md.</string>
     <string name="m3_profiles_editor_folder">Папка</string>
-    <string name="m3_profiles_editor_folder_current">Текущая папка (с вкладки «Экспорт»)</string>
-    <string name="m3_profiles_editor_folder_reset">Использовать папку с вкладки «Экспорт»</string>
+    <string name="m3_profiles_editor_folder_current">Папка по умолчанию (Параметры › Хранилище на этом устройстве)</string>
+    <string name="m3_profiles_editor_folder_reset">Использовать папку по умолчанию</string>
     <string name="m3_profiles_editor_endpoint_invalid">Перед сохранением введите действительный URL конечной точки http(s).</string>
     <string name="m3_profiles_editor_gateway_invalid">Перед сохранением введите действительный URL шлюза http(s).</string>
     <string name="m3_profiles_editor_output">Вывод</string>
@@ -61,7 +61,7 @@
     <string name="m3_profiles_editor_entries_folder">Папка записей</string>
     <string name="m3_profiles_editor_category_folders">Папки по категориям</string>
     <string name="m3_profiles_editor_entry_filename">Шаблон имени файла записи</string>
-    <string name="m3_profiles_editor_entry_rules_note">Правила записей для каждого показателя изменяются на вкладке «Экспорт», пока этот профиль активен.</string>
+    <string name="m3_profiles_editor_entry_rules_note">Правила записей для каждого показателя изменяются на странице «Отдельные записи» этой автоматизации.</string>
     <string name="m3_profiles_editor_overlap">Пересекается с %1$s: более поздние запуски перезаписывают предыдущие. Выберите другую папку или шаблон имени файла, чтобы разделить их.</string>
     <string name="m3_profiles_editor_create">Создать</string>
     <plurals name="m3_profiles_metrics_count">

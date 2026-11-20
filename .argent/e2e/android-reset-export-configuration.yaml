@@ -1,0 +1,94 @@
+version: 1
+requires:
+  platform: android
+# android-reset-export-configuration (Android ledger A-EXP-34, 3.5.0 → main parity): 3.5.0 had
+# "Reset to Defaults" for export configuration; on main it was only in the unreachable
+# full-screen Export layout. PR #378 adds "Reset export configuration" to an automation's Output
+# page, like Apple 4.0 (#360, M-04). This creates "QA Reset", sets its write mode to Append,
+# resets it, checks it is back to Overwrite, then deletes the automation.
+#
+# Prerequisite (fragment): the isolated QA app com.healthmd.android.e2e (playE2e build with
+# #378), started UNLOCKED in UI test mode just before the run:
+#   adb shell am start -S -n com.healthmd.android.e2e/com.healthmd.presentation.MainActivity \
+#     --ez uitesting true --es UITEST_HEALTH_AUTHORIZED true --es UITEST_PURCHASE_UNLOCKED true
+# and no automation whose name starts with "QA Reset".
+# Side effects: none left behind (the automation it creates is deleted). Leaves the app on
+# Automations.
+#
+# Authoring note: on the Pixel 7, Argent's describe tree goes stale after scrolls and on some
+# pushed pages (argent 0.33), so this test was written from the app's string resources and
+# proved by full replays of the runner, whose tree is current. No coordinate steps.
+executionPrerequisite: "QA app com.healthmd.android.e2e (with PR 378) just started UNLOCKED in UI test mode with the adb command in the header; Archive showing, possibly under the Recover missed scheduled exports dialog; no automation named QA Reset."
+steps:
+  - echo: Unlocked QA app on Archive. Dismiss the recovery prompt if shown, then open Automations
+  - when: { visible: { text: Not now } }
+    steps:
+      - tap: { text: Not now }
+  - await: { visible: { text: See this day }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { text: Automations }
+  - await: { visible: { text: New automation }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: Create the automation QA Reset. Expect its detail page with Output set to Overwrite
+  - tap: { text: New automation }
+  - await: { visible: { text: Starts from the current export settings. }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { role: TextField }
+  - tool: run-sequence
+    args:
+      steps:
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { key: backspace } }
+        - { tool: keyboard, args: { text: QA Reset } }
+  - await: { visible: { text: QA Reset, role: TextField }, timeout: 3000 }
+  - tap: { text: Create }
+  - await: { visible: { text: Duplicate }, timeout: 8000 }
+  - await: { idle: true }
+  - await: { visible: { text: Overwrite }, timeout: 5000 }
+
+  - echo: Open Output and choose Append. Expect the detail page to show Append
+  - tap: { text: Output }
+  - await: { visible: { text: Health subfolder }, timeout: 5000 }
+  - await: { idle: true }
+  - scroll-to: { target: { text: When a file exists } }
+  - scroll-to: { target: { text: Append } }
+  - tap: { text: { matches: '^Append$' } }
+  - tap: { text: Back }
+  - await: { visible: { text: Duplicate }, timeout: 5000 }
+  - await: { idle: true }
+  - await: { visible: { text: Append }, timeout: 5000 }
+
+  - echo: Open Output, Reset export configuration, confirm. Expect Overwrite again
+  - tap: { text: Output }
+  - await: { visible: { text: Health subfolder }, timeout: 5000 }
+  - await: { idle: true }
+  - scroll-to: { target: { text: Reset export configuration } }
+  - tap: { text: { matches: '^Reset export configuration$' } }
+  - await: { visible: { text: "Reset export configuration?" }, timeout: 5000 }
+  - await: { visible: { text: "Its destination, subfolder and schedule stay the same." }, timeout: 3000 }
+  - tap: { text: Reset to Defaults }
+  - await: { hidden: { text: "Reset export configuration?" }, timeout: 5000 }
+  - tap: { text: Back }
+  - await: { visible: { text: Duplicate }, timeout: 5000 }
+  - await: { idle: true }
+  - await: { visible: { text: Overwrite }, timeout: 5000 }
+  - await: { hidden: { text: Append }, timeout: 5000 }
+
+  - echo: Delete QA Reset. Expect it gone
+  - scroll-to: { target: { text: Delete automation } }
+  - tap: { text: Delete automation }
+  - await: { visible: { text: The last remaining profile cannot be deleted. }, timeout: 5000 }
+  - tap: { text: { matches: '^Delete$' } }
+  - await: { visible: { text: New automation }, timeout: 5000 }
+  - await: { hidden: { text: QA Reset }, timeout: 5000 }

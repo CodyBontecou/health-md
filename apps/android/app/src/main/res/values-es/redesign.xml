@@ -426,6 +426,9 @@
     <string name="output_write_mode_note">Sobrescribir reemplaza el archivo. Añadir agrega al final. Actualizar combina los valores nuevos y conserva tus cambios.</string>
     <string name="output_writes_to">Escribe en</string>
     <string name="output_endpoint_invalid">Introduce una URL http(s) válida. Los cambios se guardan cuando sea válida.</string>
+    <string name="output_reset_configuration">Restablecer la configuración de exportación</string>
+    <string name="output_reset_configuration_title">¿Restablecer la configuración de exportación?</string>
+    <string name="output_reset_configuration_message">Los formatos, las métricas, los nombres de archivo, la personalización de formato, las entradas individuales y las notas diarias de esta automatización vuelven a sus valores predeterminados. Su destino, subcarpeta y programación no cambian.</string>
     <string name="automation_summary_single">{when}, escribir[ {metrics} de] {range}[ como {formats}] en {where}[ y {note}].</string>
     <string name="automation_summary_multi">{when}, escribir[ {metrics} de] {range}[ como {formats}] en {where}[ y {note}].</string>
     <string name="automation_summary_send_single">{when}, enviar[ {metrics} de] {range}[ como {formats}] a {where}[ y {note}].</string>

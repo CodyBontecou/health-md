@@ -419,6 +419,9 @@
     <string name="output_write_mode_note">Overwrite replaces the file. Append adds to the end. Update merges new values and keeps your edits.</string>
     <string name="output_writes_to">Writes to</string>
     <string name="output_endpoint_invalid">Enter a valid http(s) URL. Changes are saved once it is valid.</string>
+    <string name="output_reset_configuration">Reset export configuration</string>
+    <string name="output_reset_configuration_title">Reset export configuration?</string>
+    <string name="output_reset_configuration_message">Formats, metrics, file names, format customization, entries and daily notes return to their defaults for this automation. Its destination, subfolder and schedule stay the same.</string>
     <string name="automation_summary_single">{when}, write {range}[’s {metrics}][ as {formats}] to {where}[ and {note}].</string>
     <string name="automation_summary_multi">{when}, write[ {metrics} for] {range}[ as {formats}] to {where}[ and {note}].</string>
     <string name="automation_summary_send_single">{when}, send {range}[’s {metrics}][ as {formats}] to {where}[ and {note}].</string>

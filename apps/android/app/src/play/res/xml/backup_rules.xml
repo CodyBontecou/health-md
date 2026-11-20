@@ -2,6 +2,8 @@
 <full-backup-content>
     <!-- Encrypted files depend on this install's Android Keystore key and contain credentials. -->
     <exclude domain="sharedpref" path="health_md_api_export_credentials.xml" />
+    <exclude domain="sharedpref" path="clinic_sync_doorbell_secure_v1.xml" />
+    <exclude domain="sharedpref" path="clinic_sponsorship_secure_v1.xml" />
     <exclude domain="sharedpref" path="health_md_oauth_tokens.xml" />
     <exclude domain="sharedpref" path="health_md_google_drive_account_authority.xml" />
     <exclude domain="sharedpref" path="wear-sync-private.xml" />

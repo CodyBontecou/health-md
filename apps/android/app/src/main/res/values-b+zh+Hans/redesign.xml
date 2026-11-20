@@ -375,6 +375,9 @@
     <string name="output_write_mode_note">覆盖会替换文件。追加会添加到末尾。更新会合并新值，并保留你的编辑。</string>
     <string name="output_writes_to">写入位置</string>
     <string name="output_endpoint_invalid">请输入有效的 http(s) URL。有效后会保存更改。</string>
+    <string name="output_reset_configuration">重置导出配置</string>
+    <string name="output_reset_configuration_title">要重置导出配置吗？</string>
+    <string name="output_reset_configuration_message">此自动化的格式、指标、文件名、格式自定义、单独条目和每日笔记将恢复为默认值。其目标位置、子文件夹和计划保持不变。</string>
     <string name="automation_summary_single">{when}，将{range}[的{metrics}][以 {formats} 格式]写入{where}[，并{note}]。</string>
     <string name="automation_summary_multi">{when}，将{range}[的{metrics}][以 {formats} 格式]写入{where}[，并{note}]。</string>
     <string name="automation_summary_send_single">{when}，将{range}[的{metrics}][以 {formats} 格式]发送到{where}[，并{note}]。</string>

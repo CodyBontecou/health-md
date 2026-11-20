@@ -41,8 +41,8 @@
     <string name="m3_profiles_editor_clinic_destination">وجهة العيادة</string>
     <string name="m3_profiles_editor_clinic_body">تدير عيادتك هذه الوجهة. استخدم «وصول العيادة» لتحديدها أو لإدارة المشاركة. تتطلب الوجهات الأخرى وصولك الخاص إلى Health.md.</string>
     <string name="m3_profiles_editor_folder">المجلد</string>
-    <string name="m3_profiles_editor_folder_current">المجلد الحالي (من علامة التبويب «تصدير»)</string>
-    <string name="m3_profiles_editor_folder_reset">استخدام مجلد علامة التبويب «تصدير»</string>
+    <string name="m3_profiles_editor_folder_current">المجلد الافتراضي (الإعدادات › الخزنة على هذا الجهاز)</string>
+    <string name="m3_profiles_editor_folder_reset">استخدام المجلد الافتراضي</string>
     <string name="m3_profiles_editor_endpoint_invalid">أدخل عنوان URL صالحًا لنقطة نهاية http(s) قبل الحفظ.</string>
     <string name="m3_profiles_editor_gateway_invalid">أدخل عنوان URL صالحًا لبوابة http(s) قبل الحفظ.</string>
     <string name="m3_profiles_editor_output">المخرجات</string>
@@ -61,7 +61,7 @@
     <string name="m3_profiles_editor_entries_folder">مجلد الإدخالات</string>
     <string name="m3_profiles_editor_category_folders">مجلدات حسب الفئة</string>
     <string name="m3_profiles_editor_entry_filename">قالب اسم ملف الإدخال</string>
-    <string name="m3_profiles_editor_entry_rules_note">تُعدَّل قواعد الإدخال لكل مقياس من علامة التبويب «تصدير» أثناء تفعيل هذا الملف الشخصي.</string>
+    <string name="m3_profiles_editor_entry_rules_note">عدّل قواعد الإدخال لكل مقياس من صفحة «الإدخالات الفردية» لهذه الأتمتة.</string>
     <string name="m3_profiles_editor_overlap">يتداخل مع %1$s: التشغيلات اللاحقة تستبدل السابقة. اختر مجلدًا أو قالب اسم ملف مختلفًا لإبقائها منفصلة.</string>
     <string name="m3_profiles_editor_create">إنشاء</string>
     <plurals name="m3_profiles_metrics_count">
