@@ -676,8 +676,11 @@ fun ExportScreen(
                 viewModel.setDateRange(start, end)
             },
             onShowInFiles = folderUri?.takeIf {
-                sheetResult.target == ExportTarget.DEVICE_FOLDER && sheetResult.artifactCount > 0
+                ExportNowFlow.opensResultFolder(sheetResult, it)
             }?.let { uri -> { openInFiles(uri) } },
+            onOpenInObsidian = folderUri?.takeIf {
+                ExportNowFlow.opensResultInObsidian(sheetResult, it, obsidianInstalled)
+            }?.let { { openInObsidian(uiState.folderName) } },
             onDone = {
                 viewModel.dismissResult()
                 onBack?.invoke()
