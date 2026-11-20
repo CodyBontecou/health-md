@@ -34,6 +34,8 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -63,18 +65,24 @@ val LocalConfigurationProtection = compositionLocalOf { ConfigurationProtectionU
  * Keeps the current configuration readable while intercepting an attempted edit. The overlay is
  * used only for user-facing configuration regions; operation buttons such as Export, Sync, Retry,
  * Stop, and Cancel remain outside it.
+ *
+ * While locked, TalkBack hears the region's single "Settings are locked" action first. By default
+ * the content's semantics are removed so no control inside can be activated past the lock. With
+ * [readableWhenLocked], the content keeps its semantics and must itself expose only text (no
+ * actions) while [LocalConfigurationProtection] is enabled, e.g. a card's name and summary.
  */
 @Composable
 fun ConfigurationProtectedRegion(
     modifier: Modifier = Modifier,
+    readableWhenLocked: Boolean = false,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val protection = LocalConfigurationProtection.current
     val blockedTitle = stringResource(R.string.configuration_protection_blocked_title)
     val blockedAction = stringResource(R.string.configuration_protection_blocked_action)
-    Box(modifier = modifier) {
+    Box(modifier = modifier.semantics { isTraversalGroup = true }) {
         Box(
-            modifier = if (protection.enabled) {
+            modifier = if (protection.enabled && !readableWhenLocked) {
                 Modifier.clearAndSetSemantics { }
             } else {
                 Modifier
@@ -92,11 +100,19 @@ fun ConfigurationProtectedRegion(
                         onClickLabel = blockedAction,
                         onClick = protection.onBlockedChange,
                     )
-                    .semantics { contentDescription = blockedTitle },
+                    // Announced once, before any readable content it covers.
+                    .semantics {
+                        contentDescription = blockedTitle
+                        traversalIndex = -1f
+                    },
             )
         }
     }
 }
+
+/** A locked, read-only card's spoken text: its visible parts in reading order. */
+fun lockedReadOnlyDescription(vararg parts: String?): String =
+    parts.mapNotNull { it?.trim()?.takeIf(String::isNotEmpty) }.joinToString(", ")
 
 @Composable
 fun ConfigurationProtectionToast(
