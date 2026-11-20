@@ -514,7 +514,7 @@
     <string name="automatic_export_title">ਸਵੈਚਲਿਤ ਨਿਰਯਾਤ</string>
     <string name="automatic_export_subtitle">ਆਪਣੇ ਸਿਹਤ ਡੇਟਾ ਨੂੰ ਸਵੈਚਲਿਤ ਨਿਰਯਾਤ ਕਰੋ</string>
     <string name="schedule_enable_scheduled_exports">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਨੂੰ ਸਮਰੱਥ ਬਣਾਓ</string>
-    <string name="schedule_automatic_export_body">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਤੁਹਾਡੇ ਚੁਣੇ Android ਨਿਰਯਾਤ ਫੋਲਡਰ ਵਿੱਚ ਲਿਖੇ ਜਾਂਦੇ ਹਨ। ਨਿਰਯਾਤ ਟੈਬ ਤੋਂ ਹੱਥੀਂ ਨਿਰਯਾਤ ਵੀ ਉਪਲਬਧ ਰਹਿੰਦੇ ਹਨ।</string>
+    <string name="schedule_automatic_export_body">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਤੁਹਾਡੇ ਚੁਣੇ Android ਨਿਰਯਾਤ ਫੋਲਡਰ ਵਿੱਚ ਲਿਖੇ ਜਾਂਦੇ ਹਨ। ਹੱਥੀਂ ਨਿਰਯਾਤ “ਹੁਣੇ ਨਿਰਯਾਤ ਕਰੋ” ਤੋਂ ਉਪਲਬਧ ਰਹਿੰਦੇ ਹਨ।</string>
     <string name="schedule_exact_background_note">ਸਹੀ ਸਮੇਂ ਲਈ Android ਦੀ ਅਲਾਰਮ ਅਤੇ ਰਿਮਾਈਂਡਰ ਪਹੁੰਚ ਵਰਤੀ ਜਾਂਦੀ ਹੈ। Health Connect ਦੀ ਬੈਕਗ੍ਰਾਊਂਡ ਪਹੁੰਚ ਹਾਲੇ ਵੀ ਲੋੜੀਂਦੀ ਹੈ, ਅਤੇ ਨੈੱਟਵਰਕ ਨਾ ਹੋਣ ਜਾਂ ਫ਼ੋਨ ਬੰਦ ਹੋਣ ਨਾਲ ਕੰਮ ਪੂਰਾ ਹੋਣ ਵਿੱਚ ਦੇਰੀ ਹੋ ਸਕਦੀ ਹੈ।</string>
     <string name="exact_timing_needed_title">ਸਹੀ ਸਮਾਂ ਬੰਦ ਹੈ</string>
     <string name="exact_timing_needed_body">ਚੁਣੇ ਸਮੇਂ ’ਤੇ ਨਿਰਯਾਤ ਚਲਾਉਣ ਲਈ ਅਲਾਰਮ ਅਤੇ ਰਿਮਾਈਂਡਰ ਦੀ ਇਜਾਜ਼ਤ ਦਿਓ। ਇਸ ਪਹੁੰਚ ਤੋਂ ਬਿਨਾਂ Android ਦੇਰੀ ਵਾਲੇ ਵਿਕਲਪ ਵਜੋਂ WorkManager ਵਰਤਦਾ ਹੈ।</string>

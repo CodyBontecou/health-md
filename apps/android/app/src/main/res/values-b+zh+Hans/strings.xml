@@ -485,7 +485,7 @@
     <string name="automatic_export_title">自动导出</string>
     <string name="automatic_export_subtitle">自动导出您的健康数据</string>
     <string name="schedule_enable_scheduled_exports">启用计划导出</string>
-    <string name="schedule_automatic_export_body">计划导出写入您选择的 Android 导出文件夹。 “导出”选项卡中仍然可以进行手动导出。</string>
+    <string name="schedule_automatic_export_body">计划导出写入您选择的 Android 导出文件夹。仍可通过“立即导出”进行手动导出。</string>
     <string name="schedule_exact_background_note">精确计时会使用 Android 的“闹钟和提醒”权限。仍需授予 Health Connect 后台访问权限；网络不可用或手机关机时，导出可能延迟完成。</string>
     <string name="exact_timing_needed_title">精确计时已关闭</string>
     <string name="exact_timing_needed_body">允许“闹钟和提醒”权限，以便在所选时间触发导出。没有此权限时，Android 会改用可能延迟的 WorkManager。</string>

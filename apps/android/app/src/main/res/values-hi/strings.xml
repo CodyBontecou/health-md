@@ -514,7 +514,7 @@
     <string name="automatic_export_title">स्वचालित निर्यात</string>
     <string name="automatic_export_subtitle">अपने स्वास्थ्य डेटा को स्वचालित रूप से निर्यात करें</string>
     <string name="schedule_enable_scheduled_exports">अनुसूचित निर्यात सक्षम करें</string>
-    <string name="schedule_automatic_export_body">निर्धारित निर्यात आपके चुने हुए Android निर्यात फ़ोल्डर में लिखे जाते हैं। निर्यात टैब से मैन्युअल निर्यात भी उपलब्ध रहते हैं।</string>
+    <string name="schedule_automatic_export_body">निर्धारित निर्यात आपके चुने हुए Android निर्यात फ़ोल्डर में लिखे जाते हैं। मैन्युअल निर्यात “अभी निर्यात करें” से उपलब्ध रहते हैं।</string>
     <string name="schedule_exact_background_note">सटीक समय के लिए Android की अलार्म और रिमाइंडर अनुमति का उपयोग होता है। Health Connect की बैकग्राउंड अनुमति अभी भी ज़रूरी है, और नेटवर्क न होने या फ़ोन बंद होने पर प्रक्रिया पूरी होने में देरी हो सकती है।</string>
     <string name="exact_timing_needed_title">सटीक समय बंद है</string>
     <string name="exact_timing_needed_body">चुने गए समय पर निर्यात शुरू करने के लिए अलार्म और रिमाइंडर की अनुमति दें। इस अनुमति के बिना Android देरी वाले विकल्प के रूप में WorkManager का उपयोग करता है।</string>
