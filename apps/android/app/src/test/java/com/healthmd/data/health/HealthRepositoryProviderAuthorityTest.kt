@@ -25,7 +25,7 @@ class HealthRepositoryProviderAuthorityTest {
     private fun configure() {
         coEvery { settings.getSelectedHealthProviderId() } returns "whoop"
         coEvery { sdk.isAvailable() } returns true
-        coEvery { sdk.hasAllPermissions() } returns true
+        coEvery { sdk.hasAnyReadPermission() } returns true
         coEvery { sdk.fetchHealthDataRange(any(), any(), any(), any(), any(), any(), any()) } answers {
             firstArg<List<LocalDate>>().map { HealthData(it, activity = ActivityData(steps = 99)) }
         }
@@ -40,7 +40,7 @@ class HealthRepositoryProviderAuthorityTest {
         assertThat(restored.fetchHealthDataRange(listOf(day), sleepDayAttributionOverride =
             SleepDayAttributionOverride.Value(SleepDayAttribution.MORNING_ENDS)).single().activity.steps).isEqualTo(99)
         assertThat(restored.hasPermissions()).isTrue()
-        coEvery { sdk.hasAllPermissions() } returns false
+        coEvery { sdk.hasAnyReadPermission() } returns false
         assertThat(restored.hasPermissions()).isFalse()
     }
 

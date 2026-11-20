@@ -1,0 +1,83 @@
+version: 1
+requires:
+  platform: android
+# android-automation-schedule-warnings: an automation's Schedule page shows the same scheduling
+# warning cards as Settings › Schedule settings while that automation's schedule is enabled.
+# With Alarms & reminders denied, "Exact Timing Is Off" / "Allow Exact Timing" must appear on the
+# Default automation's Schedule page when its schedule is on and disappear when it is off.
+#
+# Prerequisite (fragment): the isolated QA app com.healthmd.android.e2e (playE2e build) with exact
+# alarms denied, started UNLOCKED in UI test mode just before the run (Argent cannot pass Android
+# launch extras or change app ops):
+#   adb shell appops set com.healthmd.android.e2e SCHEDULE_EXACT_ALARM deny
+#   adb shell am force-stop com.healthmd.android.e2e
+#   adb shell am start -S -n com.healthmd.android.e2e/com.healthmd.presentation.MainActivity \
+#     --ez uitesting true --es UITEST_HEALTH_AUTHORIZED true --es UITEST_PURCHASE_UNLOCKED true
+# The Default automation's schedule may be unset or paused; the test enables it if needed.
+# Restore afterwards: adb shell appops set com.healthmd.android.e2e SCHEDULE_EXACT_ALARM default
+# Side effects: Default ends with a saved, disabled ("Paused") schedule; it was briefly enabled.
+# Leaves the app on Automations.
+#
+# Selector notes: the "Schedule" row is tapped by exact text because its value ("Off") also
+# appears on other rows. After navigation Argent's live describe tree on the Pixel 7 goes stale,
+# so the Schedule-page steps are runner text selectors; the replays are their proof.
+executionPrerequisite: QA app com.healthmd.android.e2e just started UNLOCKED in UI test mode with
+  exact alarms denied (adb shell appops set com.healthmd.android.e2e SCHEDULE_EXACT_ALARM deny);
+  Archive showing, possibly under the "Recover missed scheduled exports?" dialog; the Default
+  automation's schedule unset or paused.
+steps:
+  - echo: On Archive. Dismiss the recovery prompt if shown, then open Automations
+  - when: { visible: { text: Not now } }
+    steps:
+      - tap: { text: Not now }
+  - tap: { text: Automations }
+  - await: { visible: { text: New automation }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: On Automations. Open the Default automation; expect its detail page
+  - tap: { text: Default }
+  - await: { visible: { text: Edit sentence }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: "On Default. Open Schedule. A new draft opens enabled; a paused schedule opens off, so enable it"
+  - scroll-to: { target: { text: { matches: '^Schedule$' } } }
+  - tap: { text: { matches: '^Schedule$' } }
+  - await: { visible: { text: Run on a schedule }, timeout: 8000 }
+  - await: { idle: true }
+  - scroll-to: { target: { text: Background timing } }
+  - when: { hidden: { text: Exact Timing Is Off } }
+    steps:
+      - scroll-to: { target: { text: Run on a schedule }, direction: up }
+      - tap: { text: Run on a schedule }
+  - echo: Schedule enabled with exact alarms denied. Expect the Exact Timing card
+  - scroll-to: { target: { text: Allow Exact Timing } }
+  - assert: { visible: { text: Exact Timing Is Off } }
+  - assert: { visible: { text: Allow Exact Timing } }
+
+  - echo: Turn the schedule off. Expect the Exact Timing card to disappear
+  - scroll-to: { target: { text: Run on a schedule }, direction: up }
+  - tap: { text: Run on a schedule }
+  - echo: Scroll to the bottom of the page so a hidden card is gone, not just off-screen
+  - scroll-to: { target: { text: Background timing } }
+  - await: { hidden: { text: Exact Timing Is Off }, timeout: 5000 }
+  - assert: { hidden: { text: Allow Exact Timing } }
+
+  - echo: Turn the schedule on. Expect the Exact Timing card and its action again
+  - scroll-to: { target: { text: Run on a schedule }, direction: up }
+  - tap: { text: Run on a schedule }
+  - scroll-to: { target: { text: Allow Exact Timing } }
+  - await: { visible: { text: Exact Timing Is Off }, timeout: 5000 }
+  - assert: { visible: { text: Allow Exact Timing } }
+
+  - echo: Turn the schedule off again (leave it disabled) and go back to Automations
+  - scroll-to: { target: { text: Run on a schedule }, direction: up }
+  - tap: { text: Run on a schedule }
+  - echo: Scroll to the bottom of the page so a hidden card is gone, not just off-screen
+  - scroll-to: { target: { text: Background timing } }
+  - await: { hidden: { text: Exact Timing Is Off }, timeout: 5000 }
+  - assert: { hidden: { text: Allow Exact Timing } }
+  - tap: { text: Back }
+  - await: { visible: { text: Edit sentence }, timeout: 5000 }
+  - await: { idle: true }
+  - tap: { text: Back }
+  - await: { visible: { text: New automation }, timeout: 5000 }

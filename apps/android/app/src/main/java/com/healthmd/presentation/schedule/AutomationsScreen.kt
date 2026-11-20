@@ -58,6 +58,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -76,6 +77,7 @@ import com.healthmd.presentation.common.GeistCardClickable
 import com.healthmd.presentation.common.LocalAppFolderName
 import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.common.LocalFloatingActionClearance
+import com.healthmd.presentation.common.lockedReadOnlyDescription
 import com.healthmd.presentation.export.ExportProfileEditorDialog
 import com.healthmd.presentation.export.ExportProfilesViewModel
 import com.healthmd.presentation.schedule.composer.automationSummary
@@ -182,7 +184,8 @@ fun AutomationsScreen(
                 modifier = Modifier.padding(horizontal = GeistSpacing.space1),
             )
         }
-        ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
+        // Locked cards stay readable by name and summary; the region announces the lock once.
+        ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth(), readableWhenLocked = true) {
             Column(verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3)) {
                 state.rows.forEach { row ->
                     val settings = remember(row.profile.updatedAtEpochMillis, state.currentSettings) {
@@ -194,7 +197,7 @@ fun AutomationsScreen(
                         settings = settings,
                         recentDays = recent[row.profile.id].orEmpty(),
                         selected = row.profile.id == selectedAutomationId,
-                        hasScheduleAccess = schedule.isPurchased || schedule.clinicDestinationAuthorized,
+                        hasScheduleAccess = schedule.hasScheduleAccess,
                         onTryFree = onNavigateToPaywall,
                         onToggle = { enabled -> guarded { schedulesViewModel.setEnabled(row.profile.id, enabled) } },
                         onOpen = { onOpenAutomation(row.profile.id) },
@@ -242,7 +245,7 @@ fun AutomationsScreen(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AutomationCard(
+internal fun AutomationCard(
     profile: ExportProfile,
     entry: ScheduledProfileEntry?,
     settings: ExportSettings,
@@ -257,6 +260,30 @@ private fun AutomationCard(
     val name = profile.name
     val shape = RoundedCornerShape(GeistRadii.large)
     val detailsLabel = stringResource(R.string.automation_detail_details_named, name)
+    val destination = AutomationSentence.destination(profile, LocalAppFolderName.current)
+        ?: stringResource(
+            // An API automation whose saved endpoint was deleted sends nowhere until rebound.
+            if (profile.target == ExportTarget.API_ENDPOINT) R.string.endpoint_not_configured
+            else R.string.automation_destination_selected_folder,
+        )
+    val metrics = settings.metricSelection.enabledCount
+    val summary = if (!hasScheduleAccess) {
+        AnnotatedString(pluralStringResource(R.plurals.automations_writes_metrics, metrics, metrics, destination))
+    } else {
+        automationSummary(
+            settings = settings,
+            entry = entry,
+            destination = destination,
+            sends = profile.target != ExportTarget.DEVICE_FOLDER,
+            tokenStyle = SpanStyle(color = colors.brandPrimary, fontWeight = FontWeight.Medium),
+        )
+    }
+    // "Next · …" only appears when the schedule can actually run.
+    val status = if (hasScheduleAccess) nextRunLabel(entry) else stringResource(R.string.automations_manual)
+    // Locked: one text-only node per card (name, summary, status) with no actions, so TalkBack
+    // reads each automation while the region's single lock notice intercepts edits.
+    val locked = LocalConfigurationProtection.current.enabled
+    val lockedDescription = lockedReadOnlyDescription(name, summary.text, status)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -265,8 +292,18 @@ private fun AutomationCard(
             .background(colors.background200)
             // The automation open beside the list: the brand focus outline, not a fill.
             .then(if (selected) Modifier.border(2.dp, colors.brandPrimary, shape) else Modifier)
-            .then(if (selected) Modifier.semantics { this.selected = true } else Modifier)
-            .clickable(role = Role.Button, onClickLabel = detailsLabel, onClick = onOpen)
+            .then(
+                if (locked) {
+                    Modifier.clearAndSetSemantics {
+                        contentDescription = lockedDescription
+                        if (selected) this.selected = true
+                    }
+                } else {
+                    Modifier
+                        .then(if (selected) Modifier.semantics { this.selected = true } else Modifier)
+                        .clickable(role = Role.Button, onClickLabel = detailsLabel, onClick = onOpen)
+                },
+            )
             .padding(horizontal = GeistSpacing.space6 - GeistSpacing.space1, vertical = GeistSpacing.space4 + 2.dp),
         verticalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
     ) {
@@ -296,30 +333,7 @@ private fun AutomationCard(
                 )
             }
         }
-        val destination = AutomationSentence.destination(profile, LocalAppFolderName.current)
-            ?: stringResource(
-                // An API automation whose saved endpoint was deleted sends nowhere until rebound.
-                if (profile.target == ExportTarget.API_ENDPOINT) R.string.endpoint_not_configured
-                else R.string.automation_destination_selected_folder,
-            )
-        if (!hasScheduleAccess) {
-            val metrics = settings.metricSelection.enabledCount
-            Text(
-                text = pluralStringResource(R.plurals.automations_writes_metrics, metrics, metrics, destination),
-                style = GeistType.copy16,
-                color = colors.secondary,
-            )
-        } else Text(
-            text = automationSummary(
-                settings = settings,
-                entry = entry,
-                destination = destination,
-                sends = profile.target != ExportTarget.DEVICE_FOLDER,
-                tokenStyle = SpanStyle(color = colors.brandPrimary, fontWeight = FontWeight.Medium),
-            ),
-            style = GeistType.copy16,
-            color = colors.secondary,
-        )
+        Text(text = summary, style = GeistType.copy16, color = colors.secondary)
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -329,8 +343,7 @@ private fun AutomationCard(
                 AutomationRecentStrip(recentDays, Modifier.align(Alignment.CenterVertically))
             }
             Text(
-                // "Next · …" only appears when the schedule can actually run.
-                if (hasScheduleAccess) nextRunLabel(entry) else stringResource(R.string.automations_manual),
+                status,
                 style = GeistType.label12,
                 color = colors.secondary,
                 modifier = Modifier.align(Alignment.CenterVertically).padding(start = GeistSpacing.space2),

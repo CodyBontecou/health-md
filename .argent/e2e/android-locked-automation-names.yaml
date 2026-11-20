@@ -1,0 +1,64 @@
+version: 1
+requires:
+  platform: android
+# android-locked-automation-names: with Lock configuration on, the Automations list used to be
+# one "Settings are locked" button for TalkBack, hiding every automation name. Now the lock is
+# announced once and each card stays readable (one text-only node: name, summary, status).
+# The runner reads the same accessibility hierarchy TalkBack does, so a card whose description
+# starts with its name proves the name is spoken.
+#
+# Prerequisite (fragment): the isolated QA app com.healthmd.android.e2e (playE2e), started
+# UNLOCKED in UI test mode with Lock configuration OFF and its "Default" automation:
+#   adb shell am force-stop com.healthmd.android.e2e
+#   adb shell am start -S -n com.healthmd.android.e2e/com.healthmd.presentation.MainActivity \
+#     --ez uitesting true --es UITEST_HEALTH_AUTHORIZED true --es UITEST_PURCHASE_UNLOCKED true
+# Side effects: turns Lock configuration on, then off again, so the app ends as it started (on
+# Settings). Authored from the app's strings and proved by full runner replays (Argent's
+# describe tree is stale on this Pixel). No coordinate steps. A tap on a locked card must still
+# only show the lock toast.
+executionPrerequisite: "QA app com.healthmd.android.e2e just started UNLOCKED in UI test mode (adb command in the header) with Lock configuration off; Archive showing, possibly under the Recover missed scheduled exports dialog."
+steps:
+  - echo: QA app in test mode. Dismiss the recovery prompt if shown, then open Settings
+  - when: { visible: { text: Not now } }
+    steps:
+      - tap: { text: Not now }
+  - await: { visible: { text: { matches: '^Archive$' } }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { text: Settings }
+  - await: { visible: { text: Destinations }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: "Turn Lock configuration on (App & support). Expect the row to read On"
+  - scroll-to: { target: { text: Lock configuration } }
+  - await: { visible: { text: { matches: '^Off$' }, after: { text: Lock configuration } }, timeout: 5000 }
+  - tap: { text: Lock configuration }
+  - await: { visible: { text: Prevents accidental changes. }, timeout: 5000 }
+  - await: { idle: true }
+  - tap: { text: { matches: '^Lock configuration$' } }
+  - tap: { text: Back }
+  - await: { visible: { text: { matches: '^On$' }, after: { text: Lock configuration } }, timeout: 5000 }
+
+  - echo: "Automations while locked: one lock notice, and the Default card still readable by name"
+  - tap: { text: Automations }
+  - await: { visible: { text: New automation }, timeout: 8000 }
+  - await: { idle: true }
+  - await: { visible: { text: Settings are locked }, timeout: 5000 }
+  - assert: { visible: { text: { matches: '^Default, ' } } }
+
+  - echo: "Tapping the readable card is still blocked: it shows the lock toast, not the automation"
+  - tap: { text: { matches: '^Default, ' } }
+  # The toast's Open setting button is merged into the toast's one node, so match its body.
+  - await: { visible: { text: Turn off Prevent Accidental Changes }, timeout: 5000 }
+  - assert: { visible: { text: { matches: '^Default, ' } } }
+
+  - echo: Restore the lock to off so the QA app ends as it started
+  - tap: { text: Settings }
+  - await: { hidden: { text: New automation }, timeout: 8000 }
+  - await: { idle: true }
+  - scroll-to: { target: { text: Lock configuration } }
+  - tap: { text: Lock configuration }
+  - await: { visible: { text: Prevents accidental changes. }, timeout: 5000 }
+  - await: { idle: true }
+  - tap: { text: { matches: '^Lock configuration$' } }
+  - tap: { text: Back }
+  - await: { visible: { text: { matches: '^Off$' }, after: { text: Lock configuration } }, timeout: 5000 }

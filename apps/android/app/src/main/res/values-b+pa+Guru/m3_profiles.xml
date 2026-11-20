@@ -41,8 +41,8 @@
     <string name="m3_profiles_editor_clinic_destination">ਕਲੀਨਿਕ ਮੰਜ਼ਿਲ</string>
     <string name="m3_profiles_editor_clinic_body">ਇਸ ਮੰਜ਼ਿਲ ਦਾ ਪ੍ਰਬੰਧ ਤੁਹਾਡਾ ਕਲੀਨਿਕ ਕਰਦਾ ਹੈ। ਇਸਨੂੰ ਚੁਣਨ ਜਾਂ ਸਾਂਝ ਦਾ ਪ੍ਰਬੰਧ ਕਰਨ ਲਈ ਕਲੀਨਿਕ ਪਹੁੰਚ ਵਰਤੋ। ਹੋਰ ਮੰਜ਼ਿਲਾਂ ਲਈ ਤੁਹਾਡੀ ਆਪਣੀ Health.md ਪਹੁੰਚ ਲੋੜੀਂਦੀ ਹੈ।</string>
     <string name="m3_profiles_editor_folder">ਫੋਲਡਰ</string>
-    <string name="m3_profiles_editor_folder_current">ਮੌਜੂਦਾ ਫੋਲਡਰ (Export ਟੈਬ ਤੋਂ)</string>
-    <string name="m3_profiles_editor_folder_reset">Export ਟੈਬ ਵਾਲਾ ਫੋਲਡਰ ਵਰਤੋ</string>
+    <string name="m3_profiles_editor_folder_current">ਡਿਫ਼ੌਲਟ ਫੋਲਡਰ (ਸੈਟਿੰਗਜ਼ › ਇਸ ਡਿਵਾਈਸ ਉੱਤੇ ਵੌਲਟ)</string>
+    <string name="m3_profiles_editor_folder_reset">ਡਿਫ਼ੌਲਟ ਫੋਲਡਰ ਵਰਤੋ</string>
     <string name="m3_profiles_editor_endpoint_invalid">ਸੰਭਾਲਣ ਤੋਂ ਪਹਿਲਾਂ ਇੱਕ ਵੈਧ http(s) ਐਂਡਪੁਆਇੰਟ URL ਦਾਖਲ ਕਰੋ।</string>
     <string name="m3_profiles_editor_gateway_invalid">ਸੰਭਾਲਣ ਤੋਂ ਪਹਿਲਾਂ ਇੱਕ ਵੈਧ http(s) ਗੇਟਵੇ URL ਦਾਖਲ ਕਰੋ।</string>
     <string name="m3_profiles_editor_output">ਆਉਟਪੁੱਟ</string>
@@ -61,7 +61,7 @@
     <string name="m3_profiles_editor_entries_folder">ਐਂਟਰੀ ਫੋਲਡਰ</string>
     <string name="m3_profiles_editor_category_folders">ਸ਼੍ਰੇਣੀ ਫੋਲਡਰ</string>
     <string name="m3_profiles_editor_entry_filename">ਐਂਟਰੀ ਫ਼ਾਈਲ ਨਾਮ ਟੈਂਪਲੇਟ</string>
-    <string name="m3_profiles_editor_entry_rules_note">ਜਦੋਂ ਇਹ ਪ੍ਰੋਫ਼ਾਈਲ ਸਰਗਰਮ ਹੋਵੇ, ਹਰ ਮੈਟ੍ਰਿਕ ਦੇ ਐਂਟਰੀ ਨਿਯਮ Export ਟੈਬ ਤੋਂ ਸੋਧੇ ਜਾਂਦੇ ਹਨ।</string>
+    <string name="m3_profiles_editor_entry_rules_note">ਹਰ ਮੈਟ੍ਰਿਕ ਦੇ ਐਂਟਰੀ ਨਿਯਮ ਇਸ ਆਟੋਮੇਸ਼ਨ ਦੇ “ਵਿਅਕਤੀਗਤ ਐਂਟਰੀਆਂ” ਪੰਨੇ ਤੋਂ ਸੋਧੋ।</string>
     <string name="m3_profiles_editor_overlap">%1$s ਨਾਲ ਓਵਰਲੈਪ ਹੁੰਦਾ ਹੈ: ਬਾਅਦ ਦੀਆਂ ਰਨਾਂ ਪਹਿਲਾਂ ਵਾਲੀਆਂ ਨੂੰ ਓਵਰਰਾਈਟ ਕਰਦੀਆਂ ਹਨ। ਵੱਖ ਰੱਖਣ ਲਈ ਕੋਈ ਹੋਰ ਫੋਲਡਰ ਜਾਂ ਫ਼ਾਈਲ ਨਾਮ ਟੈਂਪਲੇਟ ਚੁਣੋ।</string>
     <string name="m3_profiles_editor_create">ਬਣਾਓ</string>
     <plurals name="m3_profiles_metrics_count">

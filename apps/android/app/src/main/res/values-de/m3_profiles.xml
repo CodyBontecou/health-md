@@ -41,8 +41,8 @@
     <string name="m3_profiles_editor_clinic_destination">Klinikziel</string>
     <string name="m3_profiles_editor_clinic_body">Deine Klinik verwaltet dieses Ziel. Nutze „Klinikzugang“, um es auszuwählen oder die Freigabe zu verwalten. Andere Ziele erfordern deinen eigenen Health.md-Zugang.</string>
     <string name="m3_profiles_editor_folder">Ordner</string>
-    <string name="m3_profiles_editor_folder_current">Aktueller Ordner (aus dem Tab „Export“)</string>
-    <string name="m3_profiles_editor_folder_reset">Ordner aus dem Tab „Export“ verwenden</string>
+    <string name="m3_profiles_editor_folder_current">Standardordner (Einstellungen › Vault auf diesem Gerät)</string>
+    <string name="m3_profiles_editor_folder_reset">Standardordner verwenden</string>
     <string name="m3_profiles_editor_endpoint_invalid">Gib vor dem Speichern eine gültige http(s)-Endpunkt-URL ein.</string>
     <string name="m3_profiles_editor_gateway_invalid">Gib vor dem Speichern eine gültige http(s)-Gateway-URL ein.</string>
     <string name="m3_profiles_editor_output">Ausgabe</string>
@@ -61,7 +61,7 @@
     <string name="m3_profiles_editor_entries_folder">Eintragsordner</string>
     <string name="m3_profiles_editor_category_folders">Kategorieordner</string>
     <string name="m3_profiles_editor_entry_filename">Dateinamenvorlage für Einträge</string>
-    <string name="m3_profiles_editor_entry_rules_note">Regeln pro Messwert werden im Tab „Export“ bearbeitet, solange dieses Profil aktiv ist.</string>
+    <string name="m3_profiles_editor_entry_rules_note">Regeln pro Messwert werden auf der Seite „Einzeleinträge“ dieser Automation bearbeitet.</string>
     <string name="m3_profiles_editor_overlap">Überlappt mit %1$s: Spätere Läufe überschreiben frühere. Wähle einen anderen Ordner oder eine andere Dateinamenvorlage, um sie zu trennen.</string>
     <string name="m3_profiles_editor_create">Erstellen</string>
     <plurals name="m3_profiles_metrics_count">

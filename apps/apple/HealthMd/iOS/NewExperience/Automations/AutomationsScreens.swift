@@ -145,6 +145,31 @@ struct AutomationFacts {
     }
 }
 
+/// The brief confirmation Duplicate shows on the source page (Android: a tick and a snackbar),
+/// since the copy otherwise appears only in the list.
+struct AutomationDuplicateConfirmation: Equatable, Identifiable {
+    /// New for every Duplicate, so a repeat replays the haptic and restarts the timer.
+    let id: UUID
+    let copyID: UUID
+    let copyName: String
+
+    init(copy: ExportProfile, id: UUID = UUID()) {
+        self.id = id
+        copyID = copy.id
+        copyName = copy.name
+    }
+
+    /// How long the confirmation stays before it hides itself.
+    static let visibleDuration: Duration = .seconds(4)
+
+    var message: String {
+        String(
+            localized: "Duplicated as “\(copyName)”",
+            comment: "Brief confirmation after duplicating an automation; the interpolated value is the copy's name"
+        )
+    }
+}
+
 /// The settings rows of one automation, shared by its detail and the wide composer.
 struct AutomationSettingsRows: View {
     let profile: ExportProfile
@@ -668,6 +693,8 @@ struct AutomationDetailScreen: View {
     @State private var pendingContextPeer: UUID?
     @State private var showContextBindingConfirmation = false
     @State private var contextBindingError: String?
+    @State private var duplicateConfirmation: AutomationDuplicateConfirmation?
+    @State private var openedCopyID: UUID?
 
     init(
         coordinator: ExportProfileCoordinator,
@@ -724,9 +751,12 @@ struct AutomationDetailScreen: View {
                     Button(String(localized: "Run now")) { onRun(profile.id) }
                     Button(String(localized: "Duplicate")) {
                         configurationProtection.performConfigurationChange {
-                            _ = coordinator.duplicateProfile(id: profile.id)
+                            if let copy = coordinator.duplicateProfile(id: profile.id) {
+                                duplicateConfirmation = AutomationDuplicateConfirmation(copy: copy)
+                            }
                         }
                     }
+                    .accessibilityIdentifier("glass.automation.duplicate")
                     if let entry {
                         Button(entry.isEnabled ? String(localized: "Pause") : String(localized: "Resume")) {
                             setEnabled(!entry.isEnabled, profileID: profile.id)
@@ -863,10 +893,36 @@ struct AutomationDetailScreen: View {
         .background(palette.bg.ignoresSafeArea())
         .navigationTitle(profile.name)
         .navigationBarTitleDisplayMode(.inline)
+        .overlay(alignment: .top) {
+            if let duplicateConfirmation {
+                duplicatedNotice(duplicateConfirmation)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: duplicateConfirmation)
+        .sensoryFeedback(.impact(weight: .light), trigger: duplicateConfirmation?.id) { _, new in new != nil }
+        .task(id: duplicateConfirmation?.id) {
+            guard let confirmation = duplicateConfirmation else { return }
+            AccessibilityNotification.Announcement(confirmation.message).post()
+            try? await Task.sleep(for: AutomationDuplicateConfirmation.visibleDuration)
+            if duplicateConfirmation?.id == confirmation.id { duplicateConfirmation = nil }
+        }
         .onAppear {
             contextBindingPeer = AppleContextPhoneClient.shared.boundPeer(profileID: profile.id)
         }
         .navigationDestination(item: $page) { GlassProfilePage(kind: $0, coordinator: coordinator, profile: profile) }
+        .navigationDestination(item: $openedCopyID) { copyID in
+            AutomationDetailScreen(
+                coordinator: coordinator,
+                profileID: copyID,
+                onRun: onRun,
+                onPreview: onPreview,
+                onSchedulesChanged: onSchedulesChanged,
+                showsComposerLink: showsComposerLink
+            )
+        }
         .navigationDestination(isPresented: $showSchedule) {
             GlassScheduleSheet(profile: profile, entry: entry, entryStore: entryStore) { updated in
                 _ = entryStore.upsert(updated)
@@ -904,6 +960,31 @@ struct AutomationDetailScreen: View {
             GlassSectionLabel(title: title).padding(.horizontal, 20)
             content()
         }
+    }
+
+    /// "Duplicated as “<name>”" with Open, which shows the copy (Android's snackbar action).
+    private func duplicatedNotice(_ confirmation: AutomationDuplicateConfirmation) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(palette.ok)
+                .accessibilityHidden(true)
+            Text(confirmation.message)
+                .glassFont(.caption)
+                .foregroundStyle(palette.text)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("glass.automation.duplicated")
+            Button(String(localized: "Open")) {
+                self.duplicateConfirmation = nil
+                openedCopyID = confirmation.copyID
+            }
+            .buttonStyle(.plain)
+            .glassFont(.caption)
+            .foregroundStyle(palette.accent)
+            .frame(minHeight: GlassMetrics.touchTarget)
+            .accessibilityIdentifier("glass.automation.duplicated.open")
+        }
+        .padding(.horizontal, GlassMetrics.panelPadding)
+        .glassSurface(cornerRadius: GlassMetrics.panelSmallRadius)
     }
 
     private func requestContextBinding() {

@@ -263,6 +263,7 @@
     <string name="settings_status_off">متوقف</string>
     <string name="settings_status_allowed">مسموح</string>
     <string name="settings_status_not_allowed">غير مسموح</string>
+    <string name="settings_status_partly_allowed">مسموح جزئيًا</string>
     <string name="settings_status_paired">مقترن</string>
     <string name="settings_health_connect_subtitle">الأذونات والوصول إلى السجل</string>
     <string name="settings_default_metrics">المقاييس الافتراضية</string>
@@ -370,6 +371,8 @@
 <string name="automations_no_schedule">بلا جدول</string>
 <string name="automation_section_automation">الأتمتة</string>
 <string name="automation_duplicate">إنشاء نسخة</string>
+<string name="automation_duplicated_snackbar">تم إنشاء نسخة باسم “%1$s”</string>
+<string name="automation_duplicated_open">فتح</string>
 <string name="automation_pause">إيقاف مؤقت</string>
 <string name="automation_resume">استئناف</string>
 <string name="automation_row_name">الاسم</string>
@@ -483,6 +486,9 @@
 <string name="output_write_mode_note">يستبدل وضع «استبدال» الملف. يضيف «إلحاق» إلى نهايته. يدمج «تحديث» القيم الجديدة ويحتفظ بتعديلاتك.</string>
 <string name="output_writes_to">يكتب في</string>
 <string name="output_endpoint_invalid">أدخل عنوان URL صالحًا يستخدم http(s). تُحفظ التغييرات بمجرد صلاحيته.</string>
+<string name="output_reset_configuration">إعادة ضبط إعدادات التصدير</string>
+<string name="output_reset_configuration_title">هل تريد إعادة ضبط إعدادات التصدير؟</string>
+<string name="output_reset_configuration_message">تعود التنسيقات والمقاييس وأسماء الملفات وتخصيص الصيغة والإدخالات الفردية والملاحظات اليومية لهذه الأتمتة إلى إعداداتها الافتراضية. وتبقى الوجهة والمجلد الفرعي والجدول كما هي.</string>
 <string name="automation_summary_single">{when}، اكتب {range}[ بما فيه {metrics}][ بصيغة {formats}] إلى {where}[ و{note}].</string>
 <string name="automation_summary_multi">{when}، اكتب {range}[ بما فيه {metrics}][ بصيغة {formats}] إلى {where}[ و{note}].</string>
 <string name="automation_summary_send_single">{when}، أرسل {range}[ بما فيه {metrics}][ بصيغة {formats}] إلى {where}[ و{note}].</string>
@@ -585,6 +591,7 @@
 <string name="export_result_retry_note_one">تبقى التواريخ المكتملة مكتملة. تكتب إعادة المحاولة %1$s فقط.</string>
 <string name="export_result_retry_note">تبقى التواريخ المكتملة مكتملة. تكتب إعادة المحاولة %1$s.</string>
 <string name="export_result_show_in_files">عرض في الملفات</string>
+<string name="export_result_open_in_obsidian">فتح في Obsidian</string>
     <string name="composer_fields_frontmatter_note">يحدد البيانات التي تجمعها هذه الملاحظة. تُضبط خصائص Frontmatter في كل الإعدادات ← الصيغة.</string>
     <string name="frontmatter_fields_ownership_note">لا تدخل في Frontmatter إلا الحقول المفعّلة هنا. ويحتاج الحقل أيضًا إلى تفعيل مقياسه ليحتوي على بيانات.</string>
 </resources>

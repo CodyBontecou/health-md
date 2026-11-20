@@ -1,0 +1,30 @@
+version: 1
+requires:
+  platform: android
+# android-health-connect-status-full: Settings › Health Connect status with every requested Health Connect read permission granted (UITEST_HEALTH_AUTHORIZED). Expect the row to read Allowed.
+# Before the fix any single grant read "Allowed"; now Allowed needs every requested read
+# permission, a partial grant reads "Partly allowed", and none reads "Not allowed".
+#
+# Prerequisite (fragment): the isolated QA app com.healthmd.android.e2e (playE2e), started just
+# before the run with:
+#   adb shell am force-stop com.healthmd.android.e2e
+#   adb shell am start -S -n com.healthmd.android.e2e/com.healthmd.presentation.MainActivity \
+#     --ez uitesting true --es UITEST_HEALTH_AUTHORIZED true --es UITEST_PURCHASE_UNLOCKED true
+# Side effects: none. Reads Settings only; the row is not tapped (it opens Health Connect).
+# Authored from the app's strings and proved by full runner replays (Argent's describe tree is
+# stale on this Pixel). No coordinate steps.
+executionPrerequisite: "QA app com.healthmd.android.e2e just started in UI test mode with --es UITEST_HEALTH_AUTHORIZED true (adb command in the header); Archive showing (with or without exported days), possibly under the Recover missed scheduled exports dialog."
+steps:
+  - echo: QA app in test mode. Dismiss the recovery prompt if shown, then open Settings
+  - when: { visible: { text: Not now } }
+    steps:
+      - tap: { text: Not now }
+  - await: { visible: { text: { matches: '^Archive$' } }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { text: Settings }
+  - await: { visible: { text: Destinations }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: "Data section: the Health Connect row reads Allowed"
+  - scroll-to: { target: { text: { matches: '^Health Connect$' } } }
+  - await: { visible: { text: { matches: '^Allowed$' }, next: { text: { matches: '^Health Connect$' } } }, timeout: 5000 }

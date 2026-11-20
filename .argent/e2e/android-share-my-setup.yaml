@@ -1,0 +1,38 @@
+version: 1
+requires:
+  platform: android
+# android-share-my-setup (Android ledger A-SUP-12, 3.5.0 → main parity): 3.5.0 had Share My Setup
+# with "share via the Android Sharesheet" and "Save Setup File" actions. Main rewrote the screen
+# (+1136 lines) and moved its entry to Settings › Help & diagnostics (App & support). This checks
+# the entry is reachable and both 3.5 actions are still offered. Nothing is shared or saved.
+#
+# Prerequisite (fragment): the isolated QA app com.healthmd.android.e2e (playE2e), started UNLOCKED
+# in UI test mode just before the run:
+#   adb shell am force-stop com.healthmd.android.e2e
+#   adb shell am start -S -n com.healthmd.android.e2e/com.healthmd.presentation.MainActivity \
+#     --ez uitesting true --es UITEST_HEALTH_AUTHORIZED true --es UITEST_PURCHASE_UNLOCKED true
+# Side effects: none. Leaves the app on Share My Setup.
+executionPrerequisite: "QA app com.healthmd.android.e2e just started UNLOCKED in UI test mode with the adb commands in the header; Archive showing, possibly under the Recover missed scheduled exports dialog."
+steps:
+  - echo: Unlocked QA app on Archive. Dismiss the recovery prompt if shown, then open Settings
+  - when: { visible: { text: Not now } }
+    steps:
+      - tap: { text: Not now }
+  - await: { visible: { text: See this day }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { text: Settings }
+  - await: { visible: { text: Destinations }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: Help & diagnostics (App & support). Expect the Share My Setup entry
+  - scroll-to: { target: { text: Help & diagnostics } }
+  - tap: { text: Help & diagnostics }
+  - await: { visible: { text: Share My Setup }, timeout: 5000 }
+  - await: { idle: true }
+
+  - echo: Open Share My Setup. Expect the 3.5 share (Sharesheet) and Save Setup File actions
+  - tap: { text: Share My Setup }
+  - await: { visible: { text: Use the Android Sharesheet }, timeout: 8000 }
+  - await: { idle: true }
+  - scroll-to: { target: { text: Save Setup File } }
+  - await: { visible: { text: Choose where to create the document }, timeout: 3000 }

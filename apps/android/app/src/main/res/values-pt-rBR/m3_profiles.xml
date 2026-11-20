@@ -41,8 +41,8 @@
     <string name="m3_profiles_editor_clinic_destination">Destino da clínica</string>
     <string name="m3_profiles_editor_clinic_body">Sua clínica gerencia este destino. Use Acesso da clínica para selecioná-lo ou gerenciar o compartilhamento. Outros destinos exigem seu próprio acesso ao Health.md.</string>
     <string name="m3_profiles_editor_folder">Pasta</string>
-    <string name="m3_profiles_editor_folder_current">Pasta atual (da aba Exportar)</string>
-    <string name="m3_profiles_editor_folder_reset">Usar a pasta da aba Exportar</string>
+    <string name="m3_profiles_editor_folder_current">Pasta padrão (Configurações › Cofre neste dispositivo)</string>
+    <string name="m3_profiles_editor_folder_reset">Usar a pasta padrão</string>
     <string name="m3_profiles_editor_endpoint_invalid">Insira uma URL de endpoint http(s) válida antes de salvar.</string>
     <string name="m3_profiles_editor_gateway_invalid">Insira uma URL de gateway http(s) válida antes de salvar.</string>
     <string name="m3_profiles_editor_output">Saída</string>
@@ -61,7 +61,7 @@
     <string name="m3_profiles_editor_entries_folder">Pasta das entradas</string>
     <string name="m3_profiles_editor_category_folders">Pastas por categoria</string>
     <string name="m3_profiles_editor_entry_filename">Modelo de nome de arquivo da entrada</string>
-    <string name="m3_profiles_editor_entry_rules_note">As regras de entrada por métrica são editadas na aba Exportar enquanto este perfil está ativo.</string>
+    <string name="m3_profiles_editor_entry_rules_note">Edite as regras de entrada por métrica na página Entradas individuais desta automação.</string>
     <string name="m3_profiles_editor_overlap">Sobrepõe %1$s: execuções posteriores substituem as anteriores. Escolha outra pasta ou outro modelo de nome de arquivo para mantê-los separados.</string>
     <string name="m3_profiles_editor_create">Criar</string>
     <plurals name="m3_profiles_metrics_count">

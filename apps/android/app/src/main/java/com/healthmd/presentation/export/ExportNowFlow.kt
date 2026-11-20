@@ -2,6 +2,7 @@ package com.healthmd.presentation.export
 
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportResult
+import com.healthmd.domain.model.ExportTarget
 import com.healthmd.rawexport.ExportMode
 import java.time.LocalDate
 
@@ -32,6 +33,17 @@ internal object ExportNowFlow {
     fun showsResultSheet(result: ExportResult): Boolean =
         result.exportMode != ExportMode.RAW_SNAPSHOT && result.totalCount > 0 &&
             !result.toDiagnosticsSummary().shouldAutoDismiss
+
+    /** The result can open its folder only when this run wrote at least one file to a device folder. */
+    fun opensResultFolder(result: ExportResult, folderUri: String?): Boolean =
+        folderUri != null && result.target == ExportTarget.DEVICE_FOLDER && result.artifactCount > 0
+
+    /**
+     * Android 3.5 offered Obsidian beside Files after a device-folder export when Obsidian was
+     * installed (ledger A-EXP-12). Android-only: Apple has no post-export Obsidian hand-off.
+     */
+    fun opensResultInObsidian(result: ExportResult, folderUri: String?, obsidianInstalled: Boolean): Boolean =
+        obsidianInstalled && opensResultFolder(result, folderUri)
 }
 
 /** ExportResultG's day list: which days were written, failed, or left unwritten by Cancel. */

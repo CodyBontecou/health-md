@@ -3,6 +3,7 @@ package com.healthmd.presentation.settings
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -32,6 +33,9 @@ import com.healthmd.presentation.drive.GoogleDriveSettingsCard
 import com.healthmd.R
 import com.healthmd.data.health.HealthConnectIntentLauncher
 import com.healthmd.data.health.HealthConnectManager
+import com.healthmd.data.health.HealthConnectReadAccess
+import com.healthmd.data.health.HealthConnectReadAccessState
+import com.healthmd.data.health.tryLaunchHealthConnectPermissions
 import com.healthmd.data.health.providers.HealthProviderId
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.AgentDataGatewayEndpoint
@@ -97,13 +101,18 @@ fun SettingsScreen(
         emptyList()
     }
     val healthConnect = remember(context) { HealthConnectManager(context) }
-    var healthConnectAllowed by remember { mutableStateOf<Boolean?>(null) }
+    // Allowed only when every requested type is granted; a partial grant says so.
+    var healthConnectAccess by remember { mutableStateOf<HealthConnectReadAccess?>(null) }
+    val loadHealthConnectAccess: suspend () -> HealthConnectReadAccess = {
+        runCatching {
+            if (healthConnect.isAvailable()) healthConnect.readAccess() else HealthConnectReadAccess.NONE
+        }.getOrDefault(HealthConnectReadAccess.NONE)
+    }
+    val healthPermissionLauncher = rememberLauncherForActivityResult(healthConnect.getPermissionContract()) {
+        coroutineScope.launch { healthConnectAccess = loadHealthConnectAccess() }
+    }
     LifecycleResumeEffect(healthConnect) {
-        val check = coroutineScope.launch {
-            healthConnectAllowed = runCatching {
-                healthConnect.isAvailable() && healthConnect.hasAllPermissions()
-            }.getOrDefault(false)
-        }
+        val check = coroutineScope.launch { healthConnectAccess = loadHealthConnectAccess() }
         onPauseOrDispose { check.cancel() }
     }
     val metricCount = HealthMetricCategory.entries.sumOf { exportSettings.metricSelection.enabledMetricCount(it) }
@@ -238,14 +247,21 @@ fun SettingsScreen(
                     title = stringResource(R.string.health_provider_label_health_connect),
                     subtitle = stringResource(R.string.settings_health_connect_subtitle),
                     icon = Icons.Outlined.FavoriteBorder,
-                    trailing = when (healthConnectAllowed) {
-                        true -> stringResource(R.string.settings_status_allowed)
-                        false -> stringResource(R.string.settings_status_not_allowed)
-                        null -> null
+                    trailing = healthConnectAccess?.state?.let { stringResource(healthConnectStatusLabel(it)) },
+                    trailingTone = if (healthConnectAccess?.state == HealthConnectReadAccessState.ALL) {
+                        SettingsTrailingTone.POSITIVE
+                    } else {
+                        SettingsTrailingTone.NEUTRAL
                     },
-                    trailingTone = if (healthConnectAllowed == true) SettingsTrailingTone.POSITIVE else SettingsTrailingTone.NEUTRAL,
-                    onClick = { HealthConnectIntentLauncher(context).openSettings() },
-                    external = true,
+                    onClick = {
+                        // A partial grant asks for the rest; otherwise Health Connect settings open.
+                        val access = healthConnectAccess
+                        val requested = access?.state == HealthConnectReadAccessState.PARTIAL &&
+                            tryLaunchHealthConnectPermissions(access.missing, healthPermissionLauncher::launch)
+                        if (!requested) HealthConnectIntentLauncher(context).openSettings()
+                    },
+                    external = healthConnectAccess?.state != HealthConnectReadAccessState.PARTIAL,
+                    modifier = Modifier.testTag("settings.healthConnect"),
                 )
             }
             add { shape ->
@@ -401,4 +417,11 @@ internal fun openExternalUrl(context: Context, url: String) {
             },
         )
     }
+}
+
+/** The Settings › Health Connect status for a read-access state. */
+internal fun healthConnectStatusLabel(state: HealthConnectReadAccessState): Int = when (state) {
+    HealthConnectReadAccessState.ALL -> R.string.settings_status_allowed
+    HealthConnectReadAccessState.PARTIAL -> R.string.settings_status_partly_allowed
+    HealthConnectReadAccessState.NONE -> R.string.settings_status_not_allowed
 }

@@ -664,7 +664,7 @@
     <string name="toggle_android_native_fields">تضمين حقول البيانات الصحية الأصلية في Android</string>
     <string name="toggle_legacy_android_aliases">إنشاء نسخة مكررة من مفاتيح Android وتسمياته القديمة</string>
     <string name="schedule_enable_scheduled_exports">تمكين عمليات التصدير المجدولة</string>
-    <string name="schedule_automatic_export_body">تكتب عمليات التصدير المجدولة الملفات في مجلد تصدير Android الذي حددته. وتظل عمليات التصدير اليدوية متاحة من علامة تبويب «التصدير».</string>
+    <string name="schedule_automatic_export_body">تكتب عمليات التصدير المجدولة الملفات في مجلد تصدير Android الذي حددته. وتظل عمليات التصدير اليدوية متاحة من «التصدير الآن».</string>
     <string name="schedule_frequency">التكرار</string>
     <string name="schedule_time">الوقت</string>
     <string name="schedule_date_window">التواريخ</string>

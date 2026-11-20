@@ -66,6 +66,22 @@ data class ArchiveWeekDay(val date: LocalDate, val status: CoverageStatus, val i
 /** The earliest upcoming run: the automation's name, or null for the app-wide schedule. */
 data class ArchiveNextRun(val profileName: String?, val atMillis: Long)
 
+/** What the Archive's next-run card reads (iOS `nextRunCard`). */
+sealed interface ArchiveNextRunLine {
+    data class Scheduled(val run: ArchiveNextRun) : ArchiveNextRunLine
+    data object NothingScheduled : ArchiveNextRunLine
+    /** A schedule exists but cannot run without access: never claim a run that won't happen. */
+    data object NeedsSubscription : ArchiveNextRunLine
+
+    companion object {
+        fun of(nextRun: ArchiveNextRun?, hasScheduleAccess: Boolean): ArchiveNextRunLine = when {
+            nextRun == null -> NothingScheduled
+            !hasScheduleAccess -> NeedsSubscription
+            else -> Scheduled(nextRun)
+        }
+    }
+}
+
 /** A saved automation as the Archive's sentence card and paused note read it. */
 data class ArchiveAutomation(val profile: ExportProfile, val entry: ScheduledProfileEntry?) {
     val isRunning: Boolean get() = entry?.isEnabled == true
@@ -216,7 +232,7 @@ class ArchiveViewModel @Inject constructor(
         environmentTick.update { it + 1 }
         viewModelScope.launch {
             _healthConnectConnected.value = try {
-                healthConnectManager.isAvailable() && healthConnectManager.hasAllPermissions()
+                healthConnectManager.isAvailable() && healthConnectManager.hasAnyReadPermission()
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
