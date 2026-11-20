@@ -1,0 +1,29 @@
+version: 1
+requires:
+  platform: ios
+# ios-device-export-to-mac-cleanup: puts the phone back after ios-device-export-to-mac.
+# Deletes the "Default 2" copy (files it already wrote stay) and turns Mac destination off.
+# Called by ios-device-export-to-mac with run:; can also be run on its own from that state.
+executionPrerequisite: Health.md on the iPhone, on the Default 2 automation detail page left by
+  ios-device-export-to-mac; Mac destination is on.
+steps:
+  - echo: On Default 2. Scroll to Delete automation
+  - scroll-to: { target: { text: Delete automation } }
+  - tap: { text: Delete automation }
+  - tap: { text: Delete “Default 2” }
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        text: Default 2
+      timeoutMs: 5000
+
+  - echo: Default 2 deleted. Settings > Mac Destination; turn it off
+  - tap: { id: glass.tab.settings }
+  - await: { visible: { id: glass.settings.mac }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { id: glass.settings.mac }
+  - await: { visible: { text: Ready for Mac Exports }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { id: sync.syncToggle }
+  - await: { hidden: { text: Ready for Mac Exports }, timeout: 8000 }
