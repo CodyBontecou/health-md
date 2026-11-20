@@ -31,6 +31,7 @@ adb shell am start -S -n com.healthmd.android.e2e/com.healthmd.presentation.Main
 | Key | Default | Effect |
 | --- | --- | --- |
 | `UITEST_HEALTH_AUTHORIZED` | `false` | Health Connect reports granted permissions and serves synthetic days. When false, it reports no access and empty days. |
+| `UITEST_HEALTH_PARTIAL` | `false` | Grants only steps and heart rate: exports still run and serve synthetic days, and Settings › Health Connect reads "Partly allowed". Android only; HealthKit hides read grants, so Apple has no equivalent. |
 | `UITEST_SHOW_ONBOARDING` | `false` | Starts in first-run onboarding. |
 | `UITEST_HAS_COMPLETED_ONBOARDING` | `true` | `false` also starts in onboarding (Apple parity). |
 | `UITEST_PURCHASE_UNLOCKED` | unchanged | Seeds the purchase flag and the debug entitlement override. |

@@ -495,7 +495,7 @@
     <string name="automatic_export_title">Автоматты экспорт</string>
     <string name="automatic_export_subtitle">Денсаулық деректеріңізді автоматты түрде экспорттау</string>
     <string name="schedule_enable_scheduled_exports">Жоспарланған экспорттарды қосу</string>
-    <string name="schedule_automatic_export_body">Жоспарланған экспорттар таңдалған Android экспорт қалтасына жазылады. Қолмен жасалатын экспорттар «Экспорт» қойындысында қолжетімді болып қалады.</string>
+    <string name="schedule_automatic_export_body">Жоспарланған экспорттар таңдалған Android экспорт қалтасына жазылады. Қолмен жасалатын экспорттар «Қазір экспорттау» арқылы қолжетімді болып қалады.</string>
     <string name="schedule_exact_background_note">Дәл уақыт үшін Android жүйесінің «Дабылдар мен еске салғыштар» рұқсаты қолданылады. Health Connect фондық рұқсаты әлі де қажет. Желі қолжетімсіз болса немесе телефон өшірулі болса, аяқталу кешігуі мүмкін.</string>
     <string name="exact_timing_needed_title">Дәл уақыт өшірулі</string>
     <string name="exact_timing_needed_body">Экспортты таңдалған уақытта іске қосу үшін «Дабылдар мен еске салғыштарға» рұқсат беріңіз. Бұл рұқсатсыз Android кешіктірілген резервтік режим ретінде WorkManager-ді пайдаланады.</string>

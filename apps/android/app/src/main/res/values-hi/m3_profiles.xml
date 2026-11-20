@@ -41,8 +41,8 @@
     <string name="m3_profiles_editor_clinic_destination">क्लिनिक डेस्टिनेशन</string>
     <string name="m3_profiles_editor_clinic_body">यह डेस्टिनेशन आपका क्लिनिक प्रबंधित करता है। इसे चुनने या शेयरिंग प्रबंधित करने के लिए क्लिनिक ऐक्सेस का उपयोग करें। दूसरे डेस्टिनेशन के लिए आपका अपना Health.md ऐक्सेस ज़रूरी है।</string>
     <string name="m3_profiles_editor_folder">फ़ोल्डर</string>
-    <string name="m3_profiles_editor_folder_current">मौजूदा फ़ोल्डर (Export टैब से)</string>
-    <string name="m3_profiles_editor_folder_reset">Export टैब का फ़ोल्डर इस्तेमाल करें</string>
+    <string name="m3_profiles_editor_folder_current">डिफ़ॉल्ट फ़ोल्डर (सेटिंग्स › इस डिवाइस का वॉल्ट)</string>
+    <string name="m3_profiles_editor_folder_reset">डिफ़ॉल्ट फ़ोल्डर इस्तेमाल करें</string>
     <string name="m3_profiles_editor_endpoint_invalid">सहेजने से पहले एक मान्य http(s) एंडपॉइंट URL दर्ज करें।</string>
     <string name="m3_profiles_editor_gateway_invalid">सहेजने से पहले एक मान्य http(s) गेटवे URL दर्ज करें।</string>
     <string name="m3_profiles_editor_output">आउटपुट</string>
@@ -61,7 +61,7 @@
     <string name="m3_profiles_editor_entries_folder">एंट्री फ़ोल्डर</string>
     <string name="m3_profiles_editor_category_folders">श्रेणी फ़ोल्डर</string>
     <string name="m3_profiles_editor_entry_filename">एंट्री फ़ाइल नाम टेम्पलेट</string>
-    <string name="m3_profiles_editor_entry_rules_note">जब यह प्रोफ़ाइल सक्रिय हो, तब हर मेट्रिक के एंट्री नियम Export टैब से संपादित किए जाते हैं।</string>
+    <string name="m3_profiles_editor_entry_rules_note">हर मेट्रिक के एंट्री नियम इस ऑटोमेशन के “अलग-अलग प्रविष्टियाँ” पेज पर संपादित करें।</string>
     <string name="m3_profiles_editor_overlap">%1$s से ओवरलैप होता है: बाद के रन पहले वालों को ओवरराइट करते हैं। इन्हें अलग रखने के लिए कोई दूसरा फ़ोल्डर या फ़ाइल नाम टेम्पलेट चुनें।</string>
     <string name="m3_profiles_editor_create">बनाएँ</string>
     <plurals name="m3_profiles_metrics_count">

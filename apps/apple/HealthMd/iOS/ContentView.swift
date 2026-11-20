@@ -1113,6 +1113,13 @@ struct ContentView: View {
                 if let error = purchaseManager.purchaseError { return .failed(error) }
                 return .cancelled
             },
+            restore: {
+                await purchaseManager.restore(source: .onboardingUnlock)
+                return OnboardingRestoreOutcome.resolve(
+                    isUnlocked: purchaseManager.isUnlocked,
+                    error: purchaseManager.purchaseError
+                )
+            },
             finish: { enableDailySchedule in
                 configurationProtection.performConfigurationChange {
                     finishOnboardingAutomation(enableDailySchedule: enableDailySchedule)

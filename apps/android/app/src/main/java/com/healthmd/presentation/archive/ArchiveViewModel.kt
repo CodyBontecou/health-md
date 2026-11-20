@@ -232,7 +232,7 @@ class ArchiveViewModel @Inject constructor(
         environmentTick.update { it + 1 }
         viewModelScope.launch {
             _healthConnectConnected.value = try {
-                healthConnectManager.isAvailable() && healthConnectManager.hasAllPermissions()
+                healthConnectManager.isAvailable() && healthConnectManager.hasAnyReadPermission()
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {

@@ -567,57 +567,23 @@ fun ScheduleScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            if (!uiState.exactTimingAvailable) {
-                ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
-                    WarningCard(
-                        title = stringResource(R.string.exact_timing_needed_title),
-                        body = stringResource(R.string.exact_timing_needed_body),
-                        action = stringResource(R.string.exact_timing_enable_button),
-                        onAction = { openExactAlarmSettings(context) },
-                    )
-                }
-            }
-
-            if (backgroundReadFeatureAvailable && !backgroundReadReady) {
-                ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
-                    WarningCard(
-                        title = stringResource(R.string.background_health_permission_needed_title),
-                        body = stringResource(R.string.background_health_permission_needed_body),
-                        action = stringResource(R.string.background_health_permission_enable_button),
-                        onAction = {
-                            launchBackgroundReadPermission()
-                        },
-                    )
-                }
-            }
-
-            if (!notificationsReady) {
-                ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
-                    WarningCard(
-                        title = stringResource(R.string.notifications_needed_title),
-                        body = stringResource(R.string.notifications_needed_body),
-                        action = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationsGranted) {
-                            stringResource(R.string.notifications_enable_button)
-                        } else {
-                            stringResource(R.string.notifications_open_settings_button)
-                        },
-                        secondaryAction = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationsGranted) {
-                            stringResource(R.string.notifications_open_settings_button)
-                        } else {
-                            null
-                        },
-                        onAction = {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationsGranted) {
-                                hasPromptedForNotifications = true
-                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            } else {
-                                openNotificationSettings(context)
-                            }
-                        },
-                        onSecondaryAction = { openNotificationSettings(context) },
-                    )
-                }
-            }
+            ScheduleWarningCards(
+                warnings = scheduleWarnings(
+                    scheduleEnabled = uiState.isEnabled,
+                    exactTimingAvailable = uiState.exactTimingAvailable,
+                    backgroundReadFeatureAvailable = backgroundReadFeatureAvailable,
+                    backgroundReadReady = backgroundReadReady,
+                    notificationsReady = notificationsReady,
+                ),
+                canRequestNotificationsInApp = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationsGranted,
+                onAllowExactTiming = { openExactAlarmSettings(context) },
+                onAllowBackgroundRead = { launchBackgroundReadPermission() },
+                onRequestNotifications = {
+                    hasPromptedForNotifications = true
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                },
+                onOpenNotificationSettings = { openNotificationSettings(context) },
+            )
 
             ScheduleHistoryHeading(
                 onRequestClearHistory = {
@@ -747,7 +713,7 @@ private fun ScheduleToggleCard(
 /** A tonal warning note (no border): icon, title and color carry the status; text actions. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun WarningCard(
+internal fun WarningCard(
     title: String,
     body: String,
     action: String,
@@ -896,7 +862,7 @@ private data class TimePatternRun(
     val length: Int get() = endExclusive - start
 }
 
-private fun hasPostNotificationsPermission(context: Context): Boolean {
+internal fun hasPostNotificationsPermission(context: Context): Boolean {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
     return ContextCompat.checkSelfPermission(
         context,
@@ -904,7 +870,7 @@ private fun hasPostNotificationsPermission(context: Context): Boolean {
     ) == PackageManager.PERMISSION_GRANTED
 }
 
-private fun openExactAlarmSettings(context: Context) {
+internal fun openExactAlarmSettings(context: Context) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
     val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
         data = Uri.parse("package:${context.packageName}")
@@ -921,7 +887,7 @@ private fun openExactAlarmSettings(context: Context) {
     }
 }
 
-private fun openNotificationSettings(context: Context) {
+internal fun openNotificationSettings(context: Context) {
     val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
         putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

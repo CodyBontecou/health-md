@@ -1,0 +1,144 @@
+version: 1
+requires:
+  platform: ios
+# ios-automation-duplicate-feedback: tapping Duplicate on an automation's detail page used to
+# give no feedback on iOS (the copy only appeared in the list). It now plays a light haptic
+# and shows "Duplicated as “<name>”" (glass.automation.duplicated) with Open for about four
+# seconds. This duplicates Default, checks the confirmation on the source page and that it
+# hides itself, then deletes the copy. Android counterpart:
+# android-automation-duplicate-feedback.
+#
+# Prerequisites: an iPhone simulator with a Debug build of Health.md installed. The UI-test
+# launch arguments reset automations to Default, select a synthetic TestVault and unlock the
+# app; no Health data is needed. No export runs.
+# Side effects: none. The copy "Default 2" is deleted, so the app ends with only Default
+# (the haptic itself cannot be observed on a simulator).
+#
+# Coordinate exception: on this iOS 27 simulator the runner tree carries none of the app's
+# SwiftUI ids or labels (every recorded check warned that it does NOT hold against the
+# runner tree), so checks stay raw `tool: await-ui-element` steps (they read the
+# accessibility tree, where the ids exist), taps on SwiftUI controls are points taken from
+# `describe` frames, and the scroll to Delete automation is a raw swipe (scroll-to cannot
+# see the target). Each point tap or swipe names its target and is followed by a hard check.
+# The Back chevron and the UIKit confirmation button keep the recorder's selectors.
+steps:
+  - echo: Launch Health.md in UI-test mode (automations reset to Default, unlocked,
+      vault selected). Expect Archive
+  - launch:
+      native: com.codybontecou.obsidianhealth
+      ios:
+        app: com.codybontecou.obsidianhealth
+        args:
+          - --uitesting
+          - -UITEST_HAS_COMPLETED_ONBOARDING
+          - "true"
+          - -UITEST_PURCHASE_UNLOCKED
+          - "true"
+          - -UITEST_HEALTH_AUTHORIZED
+          - "true"
+          - -UITEST_VAULT_SELECTED
+          - "true"
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.tab.automations
+      timeoutMs: 20000
+  - await: { idle: true }
+  - echo: "Archive: open the Automations tab. Expect the list with New automation"
+  - tap: { x: 0.405, y: 0.895 } # Automations tab (glass.tab.automations, frame 0.289,0.867,0.232,0.057)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: New automation
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: Open the Default automation card. Expect its detail page with the
+      Duplicate button (glass.automation.duplicate)
+  - tap: { x: 0.4, y: 0.3 } # Default automation card (only card, glass.automation.card, frame 0.040,0.235,0.920,0.172)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.duplicate
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: Tap Duplicate on Default. Expect the confirmation "Duplicated as “Default
+      2”" (glass.automation.duplicated) on the source page
+  - tap: { x: 0.735, y: 0.37 } # Duplicate button (glass.automation.duplicate, frame 0.510,0.344,0.450,0.053)
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.automation.duplicated
+      expectedText: Duplicated as “Default 2”
+      textMatch: equals
+      timeoutMs: 3000
+  - echo: The confirmation hides itself after about 4 seconds
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: glass.automation.duplicated
+      timeoutMs: 8000
+  - echo: Go back to the list. Expect the copy "Default 2" beside Default
+  - tap:
+      id: chevron.backward
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Default 2, On demand
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: "Clean up: open Default 2 (second card). Expect its detail page"
+  - tap: { x: 0.4, y: 0.507 } # "Default 2" card (second glass.automation.card, frame 0.040,0.421,0.920,0.172)
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.automation.name
+      expectedText: Default 2
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: Scroll to Delete automation at the bottom of Default 2's page
+  - tool: gesture-swipe # scroll the detail page to its end (the runner cannot see the SwiftUI target for scroll-to)
+    args:
+      fromX: 0.5
+      fromY: 0.75
+      toX: 0.5
+      toY: 0.2
+      durationMs: 300
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Delete automation
+      timeoutMs: 5000
+  - await: { idle: true }
+  - echo: Tap Delete automation. Expect the confirmation with Delete “Default 2”
+  - tap: { x: 0.5, y: 0.771 } # "Delete automation" button after the scroll (frame 0.040,0.744,0.920,0.055)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Delete “Default 2”
+      timeoutMs: 5000
+  - await: { idle: true } # let the confirmation popover finish presenting
+  - tap:
+      text: Delete “Default 2”
+  - echo: "Back on the list: Default 2 is gone and only Default remains (start
+      state)"
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        text: Default 2, On demand
+      timeoutMs: 8000
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Default, On demand
+      timeoutMs: 5000

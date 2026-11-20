@@ -569,7 +569,7 @@ final class IPhoneDirectCLIService: ObservableObject {
 
     func rejectExternalPairingLink() {
         guard pendingPairingLink == nil, !isConnecting else { return }
-        lastError = "For secure pairing, open the Sync tab and use Scan Pairing QR inside Health.md."
+        lastError = "For secure pairing, open Settings › healthmd CLI and tap Scan pairing QR."
     }
 
     func handleScannedPairingLink(_ pairingLink: IPhoneDirectCLIPairingLink) {

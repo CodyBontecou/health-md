@@ -83,6 +83,9 @@ data class OnboardingUiState(
     val trialOffer: PurchaseOffer? = null,
     val purchasesAvailable: Boolean = false,
     val isPurchasing: Boolean = false,
+    val isRestoring: Boolean = false,
+    /** True when [purchaseError] came from Restore rather than the trial. */
+    val restoreAttempted: Boolean = false,
     val purchaseError: BillingError? = null,
     /** Set while a started trial waits for the store entitlement to arrive. */
     val awaitingTrial: Boolean = false,
@@ -199,6 +202,9 @@ class OnboardingViewModel @Inject constructor(
                 purchaseRepository.isPurchasing.collect { purchasing -> _uiState.update { it.copy(isPurchasing = purchasing) } }
             }
             viewModelScope.launch {
+                purchaseRepository.isRestoring.collect { restoring -> _uiState.update { it.copy(isRestoring = restoring) } }
+            }
+            viewModelScope.launch {
                 purchaseRepository.purchaseError.collect { error -> _uiState.update { it.copy(purchaseError = error) } }
             }
             entitlementRepository.refresh()
@@ -306,7 +312,7 @@ class OnboardingViewModel @Inject constructor(
         }
         val unavailable = runCatching { HealthPackPermissions.unavailablePacks(healthConnectManager.permissionPlan()) }
             .getOrDefault(emptySet())
-        runCatchingCancellable { healthConnectManager.hasAllPermissions() }
+        runCatchingCancellable { healthConnectManager.hasAnyReadPermission() }
             .onSuccess { hasPermissions ->
                 _uiState.update {
                     it.copy(
@@ -517,7 +523,7 @@ class OnboardingViewModel @Inject constructor(
     /** Starts the store trial. The schedule is enabled once the entitlement arrives. */
     fun startTrial(activity: Activity) {
         val offer = _uiState.value.trialOffer ?: return
-        _uiState.update { it.copy(awaitingTrial = true) }
+        _uiState.update { it.copy(awaitingTrial = true, restoreAttempted = false) }
         purchaseRepository.clearError()
         viewModelScope.launch {
             val launched = runCatchingCancellable { purchaseRepository.launchPurchase(activity, offer.plan) }
@@ -528,7 +534,21 @@ class OnboardingViewModel @Inject constructor(
 
     fun clearPurchaseError() {
         purchaseRepository.clearError()
-        _uiState.update { it.copy(awaitingTrial = false) }
+        _uiState.update { it.copy(awaitingTrial = false, restoreAttempted = false) }
+    }
+
+    /**
+     * Restores an earlier store purchase (a returning user after a reinstall). Success unlocks
+     * access, so the step switches to the Enable offer; a failure keeps the repository's error.
+     */
+    fun restorePurchases() {
+        if (!_uiState.value.purchasesAvailable || _uiState.value.isRestoring) return
+        purchaseRepository.clearError()
+        _uiState.update { it.copy(awaitingTrial = false, restoreAttempted = true) }
+        viewModelScope.launch {
+            runCatchingCancellable { purchaseRepository.restorePurchase() }
+                .onFailure { Timber.e(it, "Onboarding restore failed") }
+        }
     }
 
     /** F-Droid or active access: turn the 8:00 schedule on and finish. */

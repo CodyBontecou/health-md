@@ -219,6 +219,7 @@
     <string name="settings_status_off">Off</string>
     <string name="settings_status_allowed">Allowed</string>
     <string name="settings_status_not_allowed">Not allowed</string>
+    <string name="settings_status_partly_allowed">Partly allowed</string>
     <string name="settings_status_paired">Paired</string>
     <string name="settings_health_connect_subtitle">Permissions and history access</string>
     <string name="settings_default_metrics">Default metrics</string>
@@ -315,6 +316,8 @@
     <string name="automations_no_schedule">No schedule</string>
     <string name="automation_section_automation">Automation</string>
     <string name="automation_duplicate">Duplicate</string>
+    <string name="automation_duplicated_snackbar">Duplicated as “%1$s”</string>
+    <string name="automation_duplicated_open">Open</string>
     <string name="automation_pause">Pause</string>
     <string name="automation_resume">Resume</string>
     <string name="automation_row_name">Name</string>
@@ -419,6 +422,9 @@
     <string name="output_write_mode_note">Overwrite replaces the file. Append adds to the end. Update merges new values and keeps your edits.</string>
     <string name="output_writes_to">Writes to</string>
     <string name="output_endpoint_invalid">Enter a valid http(s) URL. Changes are saved once it is valid.</string>
+    <string name="output_reset_configuration">Reset export configuration</string>
+    <string name="output_reset_configuration_title">Reset export configuration?</string>
+    <string name="output_reset_configuration_message">Formats, metrics, file names, format customization, entries and daily notes return to their defaults for this automation. Its destination, subfolder and schedule stay the same.</string>
     <string name="automation_summary_single">{when}, write {range}[’s {metrics}][ as {formats}] to {where}[ and {note}].</string>
     <string name="automation_summary_multi">{when}, write[ {metrics} for] {range}[ as {formats}] to {where}[ and {note}].</string>
     <string name="automation_summary_send_single">{when}, send {range}[’s {metrics}][ as {formats}] to {where}[ and {note}].</string>
@@ -529,6 +535,7 @@
     <string name="export_result_retry_note_one">Completed dates stay completed. Retry writes only %1$s.</string>
     <string name="export_result_retry_note">Completed dates stay completed. Retry writes %1$s.</string>
     <string name="export_result_show_in_files">Show in Files</string>
+    <string name="export_result_open_in_obsidian">Open in Obsidian</string>
     <string name="composer_fields_frontmatter_note">Picks the data this note collects. Frontmatter properties are set in All settings → Format.</string>
     <string name="frontmatter_fields_ownership_note">Only fields switched on here go into frontmatter. A field also needs its metric switched on to have data.</string>
 </resources>
