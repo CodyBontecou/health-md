@@ -95,6 +95,8 @@ Health.md's JSON renderer can include route and time-series data when the workou
 
 Detailed Time-Series adds selected samples and intervals where supported. Lossless Health Records adds Health.md's representation of selected public HealthKit/WorkoutKit records; it is Apple-only and not a copy of Apple's private database. Inspect capture status, query results, and warnings rather than assuming every possible record was captured. Read the [format guide](/docs/format/) and [canonical Apple Health record reference](/docs/reference/canonical-healthkit-records/) before using an archive.
 
+Using Strava? Its own downloads and what it shares to Apple Health differ; see the [Strava export guide](/blog/export-strava-data/).
+
 Laps and splits describe parts of a workout. Do not add their distance or duration to the complete workout total. Not every sport has every statistic, and running cadence in steps per minute is distinct from cycling cadence in revolutions per minute.
 
 ## Troubleshooting
