@@ -268,7 +268,7 @@ struct OnboardingView: View {
                             : (services.trialEligible()
                                 ? String(localized: "Start 7-day free trial")
                                 : String(localized: "Subscribe for daily notes")),
-                        isDisabled: trialState == .purchasing,
+                        isDisabled: trialState.isBusy,
                         action: startTrial
                     )
                     if case .failed(let message) = trialState {
@@ -277,6 +277,7 @@ struct OnboardingView: View {
                             .foregroundStyle(Color.glassAdaptive(\.coral))
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: .infinity)
+                            .accessibilityIdentifier("onboarding.daily.error")
                     }
                 }
                 OnboardingQuietButton(
@@ -284,6 +285,14 @@ struct OnboardingView: View {
                     action: { finish(enableSchedule: false) }
                 )
                 if !purchaseManager.isUnlocked {
+                    // A returning user who reinstalled restores the earlier purchase here.
+                    OnboardingQuietButton(
+                        title: String(localized: "Restore Purchase"),
+                        action: restorePurchase
+                    )
+                    .disabled(trialState.isBusy)
+                    .opacity(trialState == .restoring ? 0.5 : 1)
+                    .accessibilityIdentifier("onboarding.daily.restore")
                     Text("Cancel anytime in Settings › Apple ID › Subscriptions.")
                         .glassFont(.caption)
                         .foregroundStyle(Color.glassAdaptive(\.muted))
@@ -498,6 +507,20 @@ struct OnboardingView: View {
         }
     }
 
+    /// Restores through the existing App Store path. Success unlocks access, so the
+    /// step switches to "Turn on daily notes"; a failure shows the restore error.
+    private func restorePurchase() {
+        trialState = .restoring
+        Task {
+            switch await services.restore() {
+            case .restored, .cancelled:
+                trialState = .idle
+            case .failed(let message):
+                trialState = .failed(message)
+            }
+        }
+    }
+
     private func finish(enableSchedule: Bool) {
         services.finish(enableSchedule)
         onComplete()
@@ -562,7 +585,10 @@ enum OnboardingSaveState: Equatable {
 enum OnboardingTrialState: Equatable {
     case idle
     case purchasing
+    case restoring
     case failed(String)
+
+    var isBusy: Bool { self == .purchasing || self == .restoring }
 }
 
 enum OnboardingSaveOutcome: Equatable {
@@ -574,6 +600,20 @@ enum OnboardingTrialOutcome: Equatable {
     case started
     case cancelled
     case failed(String)
+}
+
+enum OnboardingRestoreOutcome: Equatable {
+    case restored
+    case cancelled
+    case failed(String)
+
+    /// Reads `PurchaseManager.restore()`'s result: unlocked access wins; otherwise its error
+    /// (including "No purchase found"); no error means the Apple Account sign-in was cancelled.
+    static func resolve(isUnlocked: Bool, error: String?) -> OnboardingRestoreOutcome {
+        if isUnlocked { return .restored }
+        if let error, !error.isEmpty { return .failed(error) }
+        return .cancelled
+    }
 }
 
 private enum TransitionDirection {
@@ -669,6 +709,8 @@ struct OnboardingServices {
     var trialEligible: @MainActor () -> Bool
     var prepareTrial: @MainActor () async -> Void
     var startTrial: @MainActor () async -> OnboardingTrialOutcome
+    /// Restores an earlier App Store purchase (AppStore.sync and the legacy checks).
+    var restore: @MainActor () async -> OnboardingRestoreOutcome = { .cancelled }
     var finish: @MainActor (_ enableDailySchedule: Bool) -> Void
 
     /// Inert services for previews and marketing capture.

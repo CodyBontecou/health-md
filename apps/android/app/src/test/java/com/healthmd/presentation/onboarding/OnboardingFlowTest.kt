@@ -1,6 +1,8 @@
 package com.healthmd.presentation.onboarding
 
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.R
+import com.healthmd.domain.billing.BillingError
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.repository.PurchaseOffer
 import com.healthmd.domain.repository.PurchasePlan
@@ -45,6 +47,28 @@ class OnboardingFlowTest {
         // Unavailable billing never enables a schedule without access.
         assertThat(OnboardingFlow.dailyOffer(play.copy(purchasesAvailable = false), hasPaidAccess = false))
             .isEqualTo(DailyOffer.TRIAL)
+    }
+
+    @Test
+    fun restoreShowsBesideTheTrialOnlyWhereStorePurchasesExist() {
+        assertThat(OnboardingFlow.showsRestore(DailyOffer.TRIAL, purchasesAvailable = true)).isTrue()
+        // Sideload/F-Droid-style builds have no store purchase to restore.
+        assertThat(OnboardingFlow.showsRestore(DailyOffer.TRIAL, purchasesAvailable = false)).isFalse()
+        // Access already active: nothing to restore.
+        assertThat(OnboardingFlow.showsRestore(DailyOffer.ENABLE, purchasesAvailable = true)).isFalse()
+    }
+
+    @Test
+    fun dailyErrorExplainsARestoreFailureWithTheRestoreMessage() {
+        assertThat(OnboardingFlow.dailyErrorMessage(null, afterRestore = true)).isNull()
+        assertThat(OnboardingFlow.dailyErrorMessage(BillingError.PURCHASE_FAILED, afterRestore = false))
+            .isEqualTo(R.string.onboarding_daily_purchase_error)
+        assertThat(OnboardingFlow.dailyErrorMessage(BillingError.RESTORE_FAILED, afterRestore = true))
+            .isEqualTo(R.string.billing_error_restore_failed)
+        assertThat(OnboardingFlow.dailyErrorMessage(BillingError.NO_PREVIOUS_PURCHASE, afterRestore = true))
+            .isEqualTo(R.string.billing_error_no_previous_purchase)
+        assertThat(OnboardingFlow.dailyErrorMessage(BillingError.SERVICE_UNAVAILABLE, afterRestore = true))
+            .isEqualTo(R.string.billing_error_service_unavailable)
     }
 
     @Test
