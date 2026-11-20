@@ -289,6 +289,8 @@
     <string name="automations_no_schedule">无计划</string>
     <string name="automation_section_automation">自动化</string>
     <string name="automation_duplicate">创建副本</string>
+    <string name="automation_duplicated_snackbar">已创建副本“%1$s”</string>
+    <string name="automation_duplicated_open">打开</string>
     <string name="automation_pause">暂停</string>
     <string name="automation_resume">恢复</string>
     <string name="automation_row_name">名称</string>

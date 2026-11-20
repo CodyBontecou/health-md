@@ -340,6 +340,8 @@
     <string name="automations_no_schedule">Без розкладу</string>
     <string name="automation_section_automation">Автоматизація</string>
     <string name="automation_duplicate">Дублювати</string>
+    <string name="automation_duplicated_snackbar">Створено копію «%1$s»</string>
+    <string name="automation_duplicated_open">Відкрити</string>
     <string name="automation_pause">Призупинити</string>
     <string name="automation_resume">Відновити</string>
     <string name="automation_row_name">Назва</string>

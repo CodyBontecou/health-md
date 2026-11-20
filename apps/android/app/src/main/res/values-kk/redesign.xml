@@ -310,6 +310,8 @@
     <string name="automations_no_schedule">Кесте жоқ</string>
     <string name="automation_section_automation">Автоматтандыру</string>
     <string name="automation_duplicate">Көшірмесін жасау</string>
+    <string name="automation_duplicated_snackbar">«%1$s» деген атпен көшірмесі жасалды</string>
+    <string name="automation_duplicated_open">Ашу</string>
     <string name="automation_pause">Кідірту</string>
     <string name="automation_resume">Жалғастыру</string>
     <string name="automation_row_name">Атауы</string>

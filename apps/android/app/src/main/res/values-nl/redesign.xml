@@ -310,6 +310,8 @@
     <string name="automations_no_schedule">Geen planning</string>
     <string name="automation_section_automation">Automatisering</string>
     <string name="automation_duplicate">Dupliceren</string>
+    <string name="automation_duplicated_snackbar">Gedupliceerd als ‘%1$s’</string>
+    <string name="automation_duplicated_open">Openen</string>
     <string name="automation_pause">Pauzeren</string>
     <string name="automation_resume">Hervatten</string>
     <string name="automation_row_name">Naam</string>

@@ -322,6 +322,8 @@
     <string name="automations_no_schedule">Sin programación</string>
     <string name="automation_section_automation">Automatización</string>
     <string name="automation_duplicate">Duplicar</string>
+    <string name="automation_duplicated_snackbar">Duplicada como «%1$s»</string>
+    <string name="automation_duplicated_open">Abrir</string>
     <string name="automation_pause">Pausar</string>
     <string name="automation_resume">Reanudar</string>
     <string name="automation_row_name">Nombre</string>
