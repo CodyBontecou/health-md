@@ -132,6 +132,18 @@ enum ArchiveNextRun {
         }
         return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
     }
+
+    /// What the card says: a schedule without paid access never runs, so it names no run.
+    enum Line: Equatable {
+        case scheduled
+        case nothingScheduled
+        case needsSubscription
+    }
+
+    static func line(hasScheduledRun: Bool, hasPaidAccess: Bool) -> Line {
+        guard hasScheduledRun else { return .nothingScheduled }
+        return hasPaidAccess ? .scheduled : .needsSubscription
+    }
 }
 
 extension ArchiveModel {

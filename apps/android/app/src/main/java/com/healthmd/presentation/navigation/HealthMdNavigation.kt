@@ -367,6 +367,11 @@ fun HealthMdNavigation(
                     onChooseFolder = {
                         navController.navigate(SubRoutes.FOLDER_DESTINATION) { launchSingleTop = true }
                     },
+                    onOpenPaywall = {
+                        if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                            navController.navigate(PaywallEntryPoint.SCHEDULE.route)
+                        }
+                    },
                 )
             }
             composable(

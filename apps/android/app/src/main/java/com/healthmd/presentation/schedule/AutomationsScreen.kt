@@ -197,7 +197,7 @@ fun AutomationsScreen(
                         settings = settings,
                         recentDays = recent[row.profile.id].orEmpty(),
                         selected = row.profile.id == selectedAutomationId,
-                        hasScheduleAccess = schedule.isPurchased || schedule.clinicDestinationAuthorized,
+                        hasScheduleAccess = schedule.hasScheduleAccess,
                         onTryFree = onNavigateToPaywall,
                         onToggle = { enabled -> guarded { schedulesViewModel.setEnabled(row.profile.id, enabled) } },
                         onOpen = { onOpenAutomation(row.profile.id) },

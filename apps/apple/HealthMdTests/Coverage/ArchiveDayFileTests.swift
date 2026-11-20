@@ -109,6 +109,12 @@ final class ArchiveDayFileTests: XCTestCase {
         XCTAssertTrue(ArchiveNextRun.whenText(date(31, hour: 7), now: now, calendar: calendar).hasPrefix("tomorrow at"))
     }
 
+    func testNextRunNamesNoRunWithoutPaidAccess() {
+        XCTAssertEqual(ArchiveNextRun.line(hasScheduledRun: true, hasPaidAccess: true), .scheduled)
+        XCTAssertEqual(ArchiveNextRun.line(hasScheduledRun: true, hasPaidAccess: false), .needsSubscription)
+        XCTAssertEqual(ArchiveNextRun.line(hasScheduledRun: false, hasPaidAccess: false), .nothingScheduled)
+    }
+
     func testNextRunFollowsTheArchiveFilter() {
         let early = UUID(), late = UUID()
         func profile(_ id: UUID, _ name: String, hour: Int) -> ArchiveProfile {

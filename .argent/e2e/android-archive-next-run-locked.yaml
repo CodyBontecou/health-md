@@ -1,0 +1,45 @@
+version: 1
+requires:
+  platform: android
+# android-archive-next-run-locked: a locked user (no purchase) whose automation has a schedule
+# used to see the Archive's "Next run  Default · tomorrow at 6:00 AM", but schedules are gated off
+# without access, so that run never happens. The card must instead read "Automatic notes need a
+# subscription" (the Automations string), name no run, and open the paywall when tapped. The
+# month-gaps button beside it stays.
+#
+# Prerequisite (fragment), on the isolated QA app com.healthmd.android.e2e (playE2e) only:
+#   1. Start it UNLOCKED and switch on the Default automation's schedule (Automations › Default's
+#      switch; a schedule cannot be switched on while locked):
+#        adb shell am force-stop com.healthmd.android.e2e
+#        adb shell am start -S -n com.healthmd.android.e2e/com.healthmd.presentation.MainActivity \
+#          --ez uitesting true --es UITEST_HEALTH_AUTHORIZED true --es UITEST_PURCHASE_UNLOCKED true
+#      The Archive then reads "Default · tomorrow at …" (the state this test proves is gone).
+#   2. Restart it LOCKED just before the run:
+#        adb shell am start -S -n com.healthmd.android.e2e/com.healthmd.presentation.MainActivity \
+#          --ez uitesting true --es UITEST_HEALTH_AUTHORIZED true --es UITEST_PURCHASE_UNLOCKED false \
+#          --es UITEST_STATIC_PURCHASE_PRICES true
+# Side effects: none (the paywall is opened and closed; nothing is bought). Leaves the app on the
+# Archive. Afterwards restore the QA app by relaunching UNLOCKED and switching Default's schedule
+# off again.
+# The "Default · " hidden check has no visible twin in this locked run: the unlocked state of
+# step 1 is where that text shows. Argent cannot pass launch extras, hence the fragment.
+executionPrerequisite: "QA app com.healthmd.android.e2e with the Default automation's schedule switched on (done while UNLOCKED), then just started LOCKED in UI test mode (adb commands in the header); Archive showing, possibly under the Recover missed scheduled exports dialog."
+steps:
+  - echo: Locked QA app on Archive with Default scheduled. Dismiss the recovery prompt if shown
+  - when: { visible: { text: Not now } }
+    steps:
+      - tap: { text: Not now }
+  - echo: Expect the Next run card to say schedules need a subscription, naming no run
+  - await: { visible: { text: Next run }, timeout: 8000 }
+  - await: { idle: true }
+  - await: { visible: { text: Automatic notes need a subscription }, timeout: 5000 }
+  - assert: { hidden: { text: "Default · " } }
+
+  - echo: Tap the subscription line. Expect the paywall (Restore Purchase), then close it back to the Archive
+  - tap: { text: Automatic notes need a subscription }
+  - await: { visible: { text: Restore Purchase }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { text: Close }
+  - await: { hidden: { text: Restore Purchase }, timeout: 5000 }
+  - await: { visible: { text: Automatic notes need a subscription }, timeout: 5000 }
+  - await: { idle: true }

@@ -54,6 +54,8 @@ struct ArchiveScreen: View {
     var onOpenDay: (Date, UUID?) -> Void = { _, _ in }
 
     @Environment(\.glassPalette) private var palette
+    /// The same access the Automations cards read: without it no schedule runs.
+    @ObservedObject private var purchaseManager = PurchaseManager.shared
     @State private var month = Date()
     @State private var selectedDate = Calendar.current.startOfDay(for: Date())
     /// Archive B: the iPhone leads with a week strip and a readable day; Month shows
@@ -700,9 +702,14 @@ struct ArchiveScreen: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(palette.muted)
                 Group {
-                    if let next {
-                        Text(verbatim: "\(next.profile.name) · \(ArchiveNextRun.whenText(next.date, now: model.now, calendar: calendar))")
-                    } else {
+                    switch ArchiveNextRun.line(hasScheduledRun: next != nil, hasPaidAccess: purchaseManager.isUnlocked) {
+                    case .scheduled:
+                        if let next {
+                            Text(verbatim: "\(next.profile.name) · \(ArchiveNextRun.whenText(next.date, now: model.now, calendar: calendar))")
+                        }
+                    case .needsSubscription:
+                        Text("Automatic notes need a subscription")
+                    case .nothingScheduled:
                         Text("Nothing scheduled")
                     }
                 }

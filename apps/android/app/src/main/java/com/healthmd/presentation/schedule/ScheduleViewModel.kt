@@ -508,7 +508,13 @@ data class ScheduleUiState(
     val exactTimingAvailable: Boolean = true,
     val requiresHealthConnectBackgroundAccess: Boolean = true,
     val healthProviderSelectionLoaded: Boolean = false,
-)
+) {
+    /**
+     * Whether schedules can run: paid access or the sponsored clinic destination. The
+     * Automations cards and the Archive's next-run card both read this one decision.
+     */
+    val hasScheduleAccess: Boolean get() = isPurchased || clinicDestinationAuthorized
+}
 
 private data class ScheduleCombinedState(
     val settings: com.healthmd.domain.model.ExportSettings,
