@@ -11,9 +11,9 @@ requires:
 #   - Health.md for Mac running on the same network with Receiver "Listening" and its destination
 #     folder set to a QA folder named `mac-dest` (the test checks "Sent to mac-dest"). Back up the
 #     Mac prefs first and point the folder back afterwards.
-#   - Launch (or relaunch) Health.md for Mac right before the run. Known issue (2026-11-20): once an
-#     iPhone disconnects, this Mac session cannot re-pair with it until the Mac app is relaunched
-#     (the phone side ends the session; Mac log: "Peer [iPhone] declined invitation").
+#   - No Mac relaunch is needed between runs: the Mac re-pairs after a disconnect since PR #401
+#     (regression test: ios-device-mac-repair-after-disconnect). With an older Mac build, relaunch
+#     Health.md for Mac right before the run.
 # Side effects: the Mac writes <mac-dest>/Health/<yesterday>.md, a range rollup and the data
 #   dictionary. The run: cleanup step deletes the "Default 2" copy and turns Mac destination off,
 #   so the phone ends as it started. The user's Default automation is only duplicated, never edited.
