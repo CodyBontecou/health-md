@@ -634,7 +634,11 @@ jobs:
           fi
           while IFS= read -r LOCALE; do
             [[ -z "$LOCALE" ]] && continue
-            METADATA_FILE="metadata/version/$VERSION/$LOCALE.json"
+            # Mac-specific notes win; otherwise fall back to the shared iOS version file.
+            METADATA_FILE="metadata/macos/version/$VERSION/$LOCALE.json"
+            if [[ ! -f "$METADATA_FILE" ]] || [[ -z "$(jq -r '.whatsNew // empty' "$METADATA_FILE")" ]]; then
+              METADATA_FILE="metadata/version/$VERSION/$LOCALE.json"
+            fi
             WHATS_NEW="$DEFAULT_WHATS_NEW"
             if [[ -f "$METADATA_FILE" ]]; then
               LOCALIZED_WHATS_NEW=$(jq -r '.whatsNew // empty' "$METADATA_FILE")

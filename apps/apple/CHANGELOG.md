@@ -2,14 +2,7 @@
 
 All notable changes to Health.md will be documented in this file.
 
-## [Unreleased]
-
-### Fixed
-- Fields in this note shows a field as checked only when the daily note will contain it. Checking a field also turns it on in Format → Custom, so a field switched off there earlier no longer drops a metric you just picked.
-- The Daily notes page accepts a filename with folders, such as `{year}/{month}/{date}`. A pattern like this from an earlier version no longer blocks every change on the page, including the folder.
-- Export Preview shows a daily note's path once, without repeating the date folders from its filename.
-
-## [4.0.0] - Unreleased
+## [4.0.0] - 2026-11-21
 
 ### Added
 - A redesigned app with Liquid Glass styling on iPhone, iPad, Mac, Apple Watch, widgets and the Live Activity. iPhone and iPad are organized around Archive, Automations and Settings, with Export now always one tap away.
@@ -27,6 +20,8 @@ All notable changes to Health.md will be documented in this file.
 - Archive widget showing this month's archived days and a 14-day coverage strip.
 - An optional Sunday reminder, shown only if notifications are already allowed, that counts this week's Archive gaps; tap it to backfill.
 - Select or clear a whole metric category with one checkbox.
+- Mac: exports received from your iPhone appear in Home, Activity and History.
+- Restore Purchase on the onboarding step that turns on daily exports.
 
 ### Changed
 - On iPhone and iPad, setup and your first 7-day export no longer require paid access. Scheduled exports still need an active trial, subscription or Lifetime access. The macOS companion stays free.
@@ -40,6 +35,10 @@ All notable changes to Health.md will be documented in this file.
 - Daily-note merges write only the frontmatter fields you selected, and explain when two fields would use the same name.
 - Manual exports skip days that have no data instead of writing empty Lossless files.
 - Feedback reports explain how to recover when a report can't be sent.
+- Fields in this note shows a field as checked only when the daily note will contain it. Checking a field also turns it on in Format → Custom, so a field switched off there earlier no longer drops a metric you just picked.
+- The Daily notes page accepts a filename with folders, such as `{year}/{month}/{date}`. A pattern like this from an earlier version no longer blocks every change on the page, including the folder.
+- Export Preview shows a daily note's path once, without repeating the date folders from its filename.
+- Mac: pairing with an iPhone again after a disconnect works.
 
 ## [3.5.0] - 2026-10-30
 
