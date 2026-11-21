@@ -11,7 +11,7 @@ platform: apple
 category: "Workflow guide"
 related:
   - export-apple-health-blood-pressure
-  - export-apple-health-weight-data
+  - export-dexcom-data
   - export-health-data-without-the-cloud
 draft: false
 tags:
