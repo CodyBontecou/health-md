@@ -83,13 +83,30 @@ struct NearbyPeerAttemptPlanner<Peer: Equatable> {
     }
 
     /// Prevents an unexpectedly disconnected active peer from immediately
-    /// starving another already-discovered candidate.
-    mutating func activePeerDisconnected(_ peer: Peer) -> Peer? {
+    /// starving another nearby candidate. The caller replaces the browser, whose
+    /// discoveries then choose the next peer.
+    mutating func activePeerDisconnected(_ peer: Peer) {
         pendingPeer = nil
         if !attemptedPeers.contains(peer) {
             attemptedPeers.append(peer)
         }
-        return nextCandidate()
+    }
+
+    /// Ends the current invitation without choosing another peer. The caller is
+    /// replacing the browser, and the replacement reports candidates afresh.
+    /// Returns false for a late callback from an earlier invitation.
+    mutating func abandonPending(_ peer: Peer) -> Bool {
+        guard pendingPeer == peer else { return false }
+        pendingPeer = nil
+        return true
+    }
+
+    /// Forgets the peers a replaced browser reported. This round's attempts are
+    /// kept, so a peer that just failed is not retried ahead of another candidate
+    /// the new browser reports.
+    mutating func browserReplaced() {
+        pendingPeer = nil
+        discoveredPeers = []
     }
 
     mutating func beginNewRound() -> Peer? {

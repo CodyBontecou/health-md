@@ -1,0 +1,21 @@
+# Fragment: pause and resume nearby receiving on Health.md for Mac (toolbar).
+#
+# Used between runs of ios-device-mac-repair-after-disconnect: Pause -> Resume restarts the Mac's
+# nearby discovery, which made the next iPhone pairing fail before the re-pair fix (2026-11-20).
+#
+# Prerequisites:
+#   - Health.md for Mac (Debug) started by argent, on the Mac destination page, receiving
+#     (toolbar shows "Pause Receiving"). English UI: toolbar targets use fixed English text.
+# Side effects:
+#   - Pause/Resume is in-memory view state; no settings or folders change. Ends receiving.
+version: 1
+requires:
+  platform: macos
+steps:
+  - echo: Pause receiving. Expect the Receiver row to read Paused
+  - tap: { text: Pause Receiving }
+  - await: { text: { in: { id: mac.systemStatus.receiver }, contains: Paused }, timeout: 5000 }
+
+  - echo: Resume receiving. Expect the Receiver row to read Listening
+  - tap: { text: Resume Receiving }
+  - await: { text: { in: { id: mac.systemStatus.receiver }, contains: Listening }, timeout: 5000 }
