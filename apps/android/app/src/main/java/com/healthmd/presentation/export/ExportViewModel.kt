@@ -4,6 +4,7 @@ import android.app.Activity
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.healthmd.BuildConfig
 import com.healthmd.data.export.AgentDataGatewayExportRunner
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
@@ -312,9 +313,19 @@ class ExportViewModel @Inject constructor(
         }
     }
 
-    fun onReviewRequestFailed() {
-        if (reviewRequestState == ReviewRequestState.PENDING) {
-            reviewRequestState = ReviewRequestState.IDLE
+    fun onReviewRequestFailed(atEpochMillis: Long = System.currentTimeMillis()) {
+        if (reviewRequestState != ReviewRequestState.PENDING) return
+        reviewRequestState = ReviewRequestState.RECORDING
+        viewModelScope.launch {
+            try {
+                runCatchingCancellable {
+                    settingsRepository.recordReviewRequestFailure(atEpochMillis)
+                }.onFailure { error ->
+                    Timber.e(error, "Failed to persist in-app review request failure")
+                }
+            } finally {
+                reviewRequestState = ReviewRequestState.IDLE
+            }
         }
     }
 
@@ -324,7 +335,7 @@ class ExportViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 runCatchingCancellable {
-                    settingsRepository.recordReviewAttempt(atEpochMillis)
+                    settingsRepository.recordReviewAttempt(atEpochMillis, BuildConfig.VERSION_CODE.toLong())
                 }.onFailure { error ->
                     Timber.e(error, "Failed to persist in-app review attempt")
                 }
@@ -753,28 +764,31 @@ class ExportViewModel @Inject constructor(
             }
         }
 
-        // Review prompts use their own counter, separate from free-tier quota. A Play
-        // request failure must not consume the attempt; completion is reported by the UI.
+        // Review prompts use their own counter, separate from free-tier quota. Scheduled
+        // workers count too; only this foreground success may ask Play. A failed Play
+        // request starts a short retry cooldown; completion is reported by the UI.
         if (reviewPrompter.isAvailable && ExportAccountingPolicy.shouldCountForReviewPrompt(result)) {
-            settingsRepository.incrementSuccessfulExportCount()
-            val count = settingsRepository.getSuccessfulExportCount()
+            settingsRepository.recordReviewEligibleSuccess(LocalDate.now().toEpochDay())
+            val insideFreeExportFlow = !_uiState.value.isPurchased &&
+                FreemiumPolicy.remainingExports(settingsRepository.getFreeExportsUsed()) <= 0
             if (
                 postExportMilestone == null &&
-                count >= ReviewPromptPolicy.MINIMUM_SUCCESSFUL_EXPORTS &&
-                reviewRequestState == ReviewRequestState.IDLE
+                !insideFreeExportFlow &&
+                reviewRequestState == ReviewRequestState.IDLE &&
+                _requestReview.subscriptionCount.value > 0
             ) {
                 val nowEpochMillis = System.currentTimeMillis()
-                val lastAttempt = settingsRepository.getLastReviewAttemptEpochMillis(nowEpochMillis)
+                val reviewState = settingsRepository.getReviewPromptState(nowEpochMillis)
                 if (
                     ReviewPromptPolicy.shouldRequestReview(
-                        successfulExportCount = count,
-                        lastAttemptEpochMillis = lastAttempt,
+                        state = reviewState,
+                        currentAppVersionCode = BuildConfig.VERSION_CODE.toLong(),
                         nowEpochMillis = nowEpochMillis,
                     )
                 ) {
                     reviewRequestState = ReviewRequestState.PENDING
                     if (_requestReview.tryEmit(Unit)) {
-                        Timber.d("In-app review requested after $count successful exports")
+                        Timber.d("In-app review requested after ${reviewState.successfulExportCount} successful exports")
                     } else {
                         reviewRequestState = ReviewRequestState.IDLE
                     }

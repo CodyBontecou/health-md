@@ -141,6 +141,14 @@ class FakeSettingsRepository(
         private set
     var lastReviewAttemptEpochMillis: Long? = null
         private set
+    var lastReviewAttemptVersionCode: Long? = null
+        private set
+    var lastReviewFailureEpochMillis: Long? = null
+        private set
+    private val initialExtraSuccessDays = 0
+    private val reviewSuccessDays = mutableSetOf<Long>()
+    var successDayCount = 0
+        private set
 
     override val exportSettings: Flow<ExportSettings> = exportSettingsState
 
@@ -203,19 +211,32 @@ class FakeSettingsRepository(
     private val successfulOperationIds = mutableSetOf<String>()
     override suspend fun recordSuccessfulExportOnce(operationId: String): Boolean {
         if (!successfulOperationIds.add(operationId)) return false
-        incrementSuccessfulExportCount()
+        recordReviewEligibleSuccess(java.time.LocalDate.now().toEpochDay())
         return true
     }
 
-    override suspend fun incrementSuccessfulExportCount() {
+    override suspend fun recordReviewEligibleSuccess(epochDay: Long) {
         successfulExportCount++
+        if (reviewSuccessDays.add(epochDay)) successDayCount = reviewSuccessDays.size + initialExtraSuccessDays
     }
 
-    override suspend fun getLastReviewAttemptEpochMillis(migrationEpochMillis: Long): Long? =
-        lastReviewAttemptEpochMillis
+    override suspend fun getReviewPromptState(migrationEpochMillis: Long) =
+        com.healthmd.domain.export.ReviewPromptState(
+            successfulExportCount = successfulExportCount,
+            successDayCount = successDayCount,
+            lastAttemptEpochMillis = lastReviewAttemptEpochMillis,
+            lastAttemptAppVersionCode = lastReviewAttemptVersionCode,
+            lastFailedRequestEpochMillis = lastReviewFailureEpochMillis,
+        )
 
-    override suspend fun recordReviewAttempt(epochMillis: Long) {
+    override suspend fun recordReviewAttempt(epochMillis: Long, appVersionCode: Long) {
         lastReviewAttemptEpochMillis = epochMillis
+        lastReviewAttemptVersionCode = appVersionCode
+        lastReviewFailureEpochMillis = null
+    }
+
+    override suspend fun recordReviewRequestFailure(epochMillis: Long) {
+        lastReviewFailureEpochMillis = epochMillis
     }
 
     override val selectedHealthProviderId: Flow<String> = selectedHealthProviderIdState

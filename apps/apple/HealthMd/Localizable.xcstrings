@@ -139977,19 +139977,6 @@
         "zh-Hans": {"stringUnit":{"state":"translated","value":"%@：样本结束边界 %@。保留更早的开始时间。"}}
       }
     },
-    "%lld out of 5 stars" : {
-      "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"%lld von 5 Sternen"}},
-        "es": {"stringUnit":{"state":"translated","value":"%lld de 5 estrellas"}},
-        "fr": {"stringUnit":{"state":"translated","value":"Note : %lld sur 5"}},
-        "it": {"stringUnit":{"state":"translated","value":"%lld su 5 stelle"}},
-        "ja": {"stringUnit":{"state":"translated","value":"5つ星中%lldつ星"}},
-        "ko": {"stringUnit":{"state":"translated","value":"별점 5점 만점에 %lld점"}},
-        "nl": {"stringUnit":{"state":"translated","value":"%lld van 5 sterren"}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"%lld de 5 estrelas"}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"%lld 星（满分 5 星）"}}
-      }
-    },
     "A Mac binding is saved. Refresh shortcuts require that same authenticated Mac." : {
       "localizations" : {
         "de": {"stringUnit":{"state":"translated","value":"Eine Mac-Bindung ist gespeichert. Aktualisierungskurzbefehle erfordern denselben authentifizierten Mac."}},
@@ -140159,19 +140146,6 @@
         "zh-Hans": {"stringUnit":{"state":"translated","value":"App Store"}}
       }
     },
-    "App Store Could Not Be Opened" : {
-      "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"App Store konnte nicht geöffnet werden"}},
-        "es": {"stringUnit":{"state":"translated","value":"No se ha podido abrir el App Store"}},
-        "fr": {"stringUnit":{"state":"translated","value":"Impossible d’ouvrir l’App Store"}},
-        "it": {"stringUnit":{"state":"translated","value":"Impossibile aprire App Store"}},
-        "ja": {"stringUnit":{"state":"translated","value":"App Storeを開けませんでした"}},
-        "ko": {"stringUnit":{"state":"translated","value":"App Store를 열 수 없음"}},
-        "nl": {"stringUnit":{"state":"translated","value":"App Store kon niet worden geopend"}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"Não foi possível abrir a App Store"}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"无法打开 App Store"}}
-      }
-    },
     "Apple Ads measurement" : {
       "localizations" : {
         "de": {"stringUnit":{"state":"translated","value":"Erfolgsmessung für Apple Ads"}},
@@ -140222,19 +140196,6 @@
         "nl": {"stringUnit":{"state":"translated","value":"Aan deze Mac koppelen"}},
         "pt-BR": {"stringUnit":{"state":"translated","value":"Vincular a este Mac"}},
         "zh-Hans": {"stringUnit":{"state":"translated","value":"绑定到此 Mac"}}
-      }
-    },
-    "Built with the Health.md community" : {
-      "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"Mit der Health.md-Community entwickelt"}},
-        "es": {"stringUnit":{"state":"translated","value":"Creado con la comunidad de Health.md"}},
-        "fr": {"stringUnit":{"state":"translated","value":"Créé avec la communauté Health.md"}},
-        "it": {"stringUnit":{"state":"translated","value":"Realizzato con la community di Health.md"}},
-        "ja": {"stringUnit":{"state":"translated","value":"Health.mdコミュニティとともに開発"}},
-        "ko": {"stringUnit":{"state":"translated","value":"Health.md 커뮤니티와 함께 만들었습니다"}},
-        "nl": {"stringUnit":{"state":"translated","value":"Gebouwd met de Health.md-community"}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"Criado com a comunidade Health.md"}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"与 Health.md 社区共同打造"}}
       }
     },
     "Cancel Run" : {
@@ -140887,19 +140848,6 @@
         "zh-Hans": {"stringUnit":{"state":"translated","value":"完成模拟导出"}}
       }
     },
-    "Five-star App Store reviews · US" : {
-      "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"Fünf-Sterne-Rezensionen im App Store · USA"}},
-        "es": {"stringUnit":{"state":"translated","value":"Reseñas de cinco estrellas en el App Store · EE. UU."}},
-        "fr": {"stringUnit":{"state":"translated","value":"Avis cinq étoiles sur l’App Store · États-Unis"}},
-        "it": {"stringUnit":{"state":"translated","value":"Recensioni a cinque stelle su App Store · USA"}},
-        "ja": {"stringUnit":{"state":"translated","value":"App Storeの5つ星レビュー · 米国"}},
-        "ko": {"stringUnit":{"state":"translated","value":"App Store 별점 5점 리뷰 · 미국"}},
-        "nl": {"stringUnit":{"state":"translated","value":"Vijfsterrenrecensies in de App Store · VS"}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"Avaliações de cinco estrelas na App Store · EUA"}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"App Store 五星评价 · 美国"}}
-      }
-    },
     "Frozen snapshot: %lld events. Health content: %@. ZIP is not encrypted." : {
       "localizations" : {
         "de": {"stringUnit":{"state":"translated","value":"Fixierter Schnappschuss: Anzahl der Ereignisse: %lld. Gesundheitsinhalte: %@. ZIP ist nicht verschlüsselt."}},
@@ -141251,19 +141199,6 @@
         "zh-Hans": {"stringUnit":{"state":"translated","value":"过去一小时"}}
       }
     },
-    "Leave a review to help more people make their health data their own." : {
-      "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"Hilf mit einer Rezension mehr Menschen, ihre Gesundheitsdaten selbst in die Hand zu nehmen."}},
-        "es": {"stringUnit":{"state":"translated","value":"Deja una reseña para ayudar a más personas a tomar el control de sus datos de salud."}},
-        "fr": {"stringUnit":{"state":"translated","value":"Laissez un avis pour aider davantage de personnes à s’approprier leurs données de santé."}},
-        "it": {"stringUnit":{"state":"translated","value":"Lascia una recensione per aiutare più persone a prendere il controllo dei propri dati sanitari."}},
-        "ja": {"stringUnit":{"state":"translated","value":"より多くの人が自分の健康データを活用できるよう、レビューでご協力ください。"}},
-        "ko": {"stringUnit":{"state":"translated","value":"더 많은 사람이 자신의 건강 데이터를 직접 활용할 수 있도록 리뷰를 남겨 주세요."}},
-        "nl": {"stringUnit":{"state":"translated","value":"Schrijf een recensie en help meer mensen hun gezondheidsgegevens in eigen hand te nemen."}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"Deixe uma avaliação para ajudar mais pessoas a assumir o controle dos próprios dados de saúde."}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"留下评价，帮助更多人掌握自己的健康数据。"}}
-      }
-    },
     "Lifetime access: %@" : {
       "localizations" : {
         "de": {"stringUnit":{"state":"translated","value":"Lebenslanger Zugriff: %@"}},
@@ -141537,19 +141472,6 @@
         "zh-Hans": {"stringUnit":{"state":"translated","value":"重新打开领取页面"}}
       }
     },
-    "Opens the App Store review page" : {
-      "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"Öffnet die Rezensionsseite im App Store"}},
-        "es": {"stringUnit":{"state":"translated","value":"Abre la página de reseñas del App Store"}},
-        "fr": {"stringUnit":{"state":"translated","value":"Ouvre la page des avis de l’App Store"}},
-        "it": {"stringUnit":{"state":"translated","value":"Apre la pagina delle recensioni su App Store"}},
-        "ja": {"stringUnit":{"state":"translated","value":"App Storeのレビューページを開きます"}},
-        "ko": {"stringUnit":{"state":"translated","value":"App Store 리뷰 페이지를 엽니다"}},
-        "nl": {"stringUnit":{"state":"translated","value":"Opent de recensiepagina in de App Store"}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"Abre a página de avaliações da App Store"}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"打开 App Store 评价页面"}}
-      }
-    },
     "Operation UUID (Optional)" : {
       "localizations" : {
         "de": {"stringUnit":{"state":"translated","value":"Vorgangs-UUID (optional)"}},
@@ -141626,19 +141548,6 @@
         "nl": {"stringUnit":{"state":"translated","value":"Lab voor export op een fysiek apparaat"}},
         "pt-BR": {"stringUnit":{"state":"translated","value":"Laboratório de exportação em dispositivo físico"}},
         "zh-Hans": {"stringUnit":{"state":"translated","value":"真机导出实验室"}}
-      }
-    },
-    "Please try again later. You can close this screen and keep using Health.md." : {
-      "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"Bitte versuche es später erneut. Du kannst diesen Bildschirm schließen und Health.md weiter nutzen."}},
-        "es": {"stringUnit":{"state":"translated","value":"Inténtalo de nuevo más tarde. Puedes cerrar esta pantalla y seguir usando Health.md."}},
-        "fr": {"stringUnit":{"state":"translated","value":"Veuillez réessayer plus tard. Vous pouvez fermer cet écran et continuer à utiliser Health.md."}},
-        "it": {"stringUnit":{"state":"translated","value":"Riprova più tardi. Puoi chiudere questa schermata e continuare a usare Health.md."}},
-        "ja": {"stringUnit":{"state":"translated","value":"しばらくしてからもう一度お試しください。この画面を閉じてもHealth.mdを引き続き使用できます。"}},
-        "ko": {"stringUnit":{"state":"translated","value":"나중에 다시 시도해 주세요. 이 화면을 닫고 Health.md를 계속 사용할 수 있습니다."}},
-        "nl": {"stringUnit":{"state":"translated","value":"Probeer het later opnieuw. Je kunt dit scherm sluiten en Health.md blijven gebruiken."}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"Tente novamente mais tarde. Você pode fechar esta tela e continuar usando o Health.md."}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"请稍后重试。你可以关闭此页面并继续使用 Health.md。"}}
       }
     },
     "Prepare Bundle" : {
@@ -141756,19 +141665,6 @@
         "nl": {"stringUnit":{"state":"translated","value":"Lees een opgeslagen bevestiging van contextvernieuwing en vraag een bijgewerkte status op bij de oorspronkelijke geauthenticeerde computer. Een verbroken verbinding betekent niet dat het proces voltooid is."}},
         "pt-BR": {"stringUnit":{"state":"translated","value":"Leia um comprovante salvo de atualização do contexto e solicite um status atualizado ao computador autenticado original. Desconexão não significa conclusão."}},
         "zh-Hans": {"stringUnit":{"state":"translated","value":"读取已保存的上下文刷新回执，并向原先通过身份验证的电脑请求更新状态。连接断开不代表已完成。"}}
-      }
-    },
-    "Read full reviews on the App Store" : {
-      "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"Vollständige Rezensionen im App Store lesen"}},
-        "es": {"stringUnit":{"state":"translated","value":"Leer las reseñas completas en el App Store"}},
-        "fr": {"stringUnit":{"state":"translated","value":"Lire les avis complets sur l’App Store"}},
-        "it": {"stringUnit":{"state":"translated","value":"Leggi le recensioni complete su App Store"}},
-        "ja": {"stringUnit":{"state":"translated","value":"App Storeでレビューの全文を読む"}},
-        "ko": {"stringUnit":{"state":"translated","value":"App Store에서 리뷰 전문 읽기"}},
-        "nl": {"stringUnit":{"state":"translated","value":"Lees volledige recensies in de App Store"}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"Leia as avaliações completas na App Store"}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"在 App Store 阅读完整评价"}}
       }
     },
     "Ready to export to the gateway" : {
@@ -141938,19 +141834,6 @@
         "nl": {"stringUnit":{"state":"translated","value":"Verzoek opgeslagen; contextvernieuwing is in afwachting. Gebruik 'Status van Mac-contextvernieuwing ophalen' met dit verzoek."}},
         "pt-BR": {"stringUnit":{"state":"translated","value":"Solicitação salva; a atualização do contexto está pendente. Use Obter status da atualização do contexto do Mac com esta solicitação."}},
         "zh-Hans": {"stringUnit":{"state":"translated","value":"请求已保存；上下文刷新待处理。请使用此请求执行“获取 Mac 上下文刷新状态”。"}}
-      }
-    },
-    "Requests Apple’s optional rating dialog" : {
-      "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"Fordert Apples optionalen Bewertungsdialog an"}},
-        "es": {"stringUnit":{"state":"translated","value":"Solicita el diálogo opcional de valoración de Apple"}},
-        "fr": {"stringUnit":{"state":"translated","value":"Demande l’affichage de la boîte de dialogue facultative de notation d’Apple"}},
-        "it": {"stringUnit":{"state":"translated","value":"Richiede la finestra facoltativa di valutazione di Apple"}},
-        "ja": {"stringUnit":{"state":"translated","value":"Appleの任意の評価ダイアログの表示をリクエストします"}},
-        "ko": {"stringUnit":{"state":"translated","value":"참여가 선택 사항인 Apple 평가 대화상자를 요청합니다"}},
-        "nl": {"stringUnit":{"state":"translated","value":"Vraagt het optionele beoordelingsvenster van Apple aan"}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"Solicita a caixa de diálogo opcional de avaliação da Apple"}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"请求显示 Apple 的可选评分对话框"}}
       }
     },
     "Review Health Access" : {

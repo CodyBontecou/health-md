@@ -2,7 +2,8 @@
 //  ReviewManagerTests.swift
 //  HealthMdTests
 //
-//  Tests for ReviewManager milestone triggers and cooldown enforcement.
+//  Tests for the App Store review request policy: a threshold of full successes
+//  on distinct days, and a 120-day plus new-version cooldown after each request.
 //
 
 import XCTest
@@ -11,9 +12,8 @@ import XCTest
 @MainActor
 final class ReviewManagerTests: XCTestCase {
 
-    // STATIC RETENTION JUSTIFICATION: ReviewManager is an ObservableObject.
-    // Static retention avoids macOS 26 / Swift 6 deinit crash.
-    // See docs/testing/lifecycle-audit.md.
+    // STATIC RETENTION JUSTIFICATION: avoids the macOS 26 / Swift 6 deinit crash
+    // seen with per-test manager instances. See docs/testing/lifecycle-audit.md.
     private static var retainedManagers: [ReviewManager] = []
 
     private var defaults: FakeUserDefaults!
@@ -30,124 +30,131 @@ final class ReviewManagerTests: XCTestCase {
         return cal.date(from: DateComponents(year: 2026, month: 3, day: 15, hour: 12))!
     }()
 
-    private func makeManager(now: @escaping () -> Date = { ReviewManagerTests.fixedNow }) -> ReviewManager {
-        let manager = ReviewManager(defaults: defaults, now: now)
+    nonisolated private static let utc: Calendar = {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        return cal
+    }()
+
+    /// A manager whose clock is `days` after the fixed date, on `version`.
+    private func manager(day days: Double = 0, version: String = "4.1.0") -> ReviewManager {
+        let date = Self.fixedNow.addingTimeInterval(days * 86_400)
+        let manager = ReviewManager(defaults: defaults, now: { date }, calendar: Self.utc, appVersion: { version })
         Self.retainedManagers.append(manager)
         return manager
     }
 
-    // MARK: - First Milestone (3rd export)
-
-    func testFirstMilestone_triggersAtThirdExport() {
-        let manager = makeManager()
-        XCTAssertFalse(manager.recordSuccessfulExport()) // 1
-        XCTAssertFalse(manager.recordSuccessfulExport()) // 2
-        XCTAssertTrue(manager.recordSuccessfulExport())  // 3 = milestone
+    /// Three full successes over two days: the minimum eligible usage.
+    private func establishUsage() {
+        manager(day: 0).recordSuccessfulExport()
+        manager(day: 0).recordSuccessfulExport()
+        manager(day: 1).recordSuccessfulExport()
     }
 
-    func testSecondExport_doesNotTrigger() {
-        let manager = makeManager()
-        _ = manager.recordSuccessfulExport() // 1
-        XCTAssertFalse(manager.recordSuccessfulExport()) // 2
+    // MARK: - Threshold
+
+    func testFreshInstall_isNotEligible() {
+        XCTAssertFalse(manager().isEligibleForReviewRequest)
     }
 
-    // MARK: - Repeat Milestones (every 30 after first)
+    func testThreeSuccessesOnOneDay_isNotEligible() {
+        for _ in 1...3 { manager().recordSuccessfulExport() }
+        XCTAssertFalse(manager().isEligibleForReviewRequest, "Needs a second day of use")
+    }
 
-    func testRepeatMilestone_triggersAt33() {
-        // Use advancing time: start at fixedNow, advance 121 days after first milestone
-        let manager = makeManager()
-        for _ in 1...3 { _ = manager.recordSuccessfulExport() }
-        manager.didRequestReview()
+    func testTwoSuccessesOnTwoDays_isNotEligible() {
+        manager(day: 0).recordSuccessfulExport()
+        manager(day: 1).recordSuccessfulExport()
+        XCTAssertFalse(manager(day: 1).isEligibleForReviewRequest, "Needs three full successes")
+    }
 
-        // Create a new manager with time advanced past 120-day cooldown
-        let laterDate = Calendar.current.date(byAdding: .day, value: 121, to: Self.fixedNow)!
-        let laterManager = makeManager(now: { laterDate })
+    func testThreeSuccessesOnTwoDays_isEligible() {
+        establishUsage()
+        XCTAssertTrue(manager(day: 1).isEligibleForReviewRequest)
+    }
 
-        for i in 4...33 {
-            let result = laterManager.recordSuccessfulExport()
-            if i == 33 {
-                XCTAssertTrue(result, "Should trigger at 33rd export (3 + 30)")
-            } else {
-                XCTAssertFalse(result, "Should not trigger at export \(i)")
-            }
+    func testThresholdIsNotAnExactCount() {
+        for day in 0..<10 { manager(day: Double(day)).recordSuccessfulExport() }
+        XCTAssertTrue(manager(day: 9).isEligibleForReviewRequest, "Later successes stay eligible")
+    }
+
+    func testSameCalendarDayCountsOnce() {
+        manager(day: 0).recordSuccessfulExport()
+        manager(day: 0.4).recordSuccessfulExport() // 21:36 UTC, same day
+        manager(day: 0.45).recordSuccessfulExport()
+        XCTAssertFalse(manager(day: 0.45).isEligibleForReviewRequest)
+    }
+
+    func testCountsRecordedBeforeDayTrackingCountAsOneEarlierDay() {
+        // An upgrade from the exact-count policy leaves only the export count.
+        defaults.set(5, forKey: "reviewManager.successfulExportCount")
+        XCTAssertFalse(manager().isEligibleForReviewRequest)
+        manager().recordSuccessfulExport()
+        XCTAssertTrue(manager().isEligibleForReviewRequest)
+    }
+
+    // MARK: - Cooldown and version
+
+    func testConsideringEligibilityDoesNotStartCooldown() {
+        establishUsage()
+        XCTAssertTrue(manager(day: 1).isEligibleForReviewRequest)
+        XCTAssertTrue(manager(day: 1).isEligibleForReviewRequest, "Only a real request starts the cooldown")
+    }
+
+    func testRequestBlocksForCooldownEvenOnNewVersion() {
+        establishUsage()
+        manager(day: 1).didRequestReview()
+        XCTAssertFalse(manager(day: 1).isEligibleForReviewRequest)
+        XCTAssertFalse(manager(day: 120, version: "4.2.0").isEligibleForReviewRequest)
+        XCTAssertTrue(manager(day: 121, version: "4.2.0").isEligibleForReviewRequest)
+    }
+
+    func testRequestBlocksSameVersionAfterCooldown() {
+        establishUsage()
+        manager(day: 1, version: "4.1.0").didRequestReview()
+        XCTAssertFalse(manager(day: 400, version: "4.1.0").isEligibleForReviewRequest)
+        XCTAssertTrue(manager(day: 400, version: "4.1.1").isEligibleForReviewRequest)
+    }
+
+    func testLegacyIntroductionDateStillCoolsDown() {
+        establishUsage()
+        let shown = try! JSONEncoder().encode(Self.fixedNow)
+        defaults.set(shown, forKey: "reviewManager.lastIntroductionDate")
+        XCTAssertFalse(manager(day: 1).isEligibleForReviewRequest)
+        XCTAssertTrue(manager(day: 120).isEligibleForReviewRequest)
+    }
+
+    func testClockRollbackDoesNotBypassCooldown() {
+        establishUsage()
+        manager(day: 1).didRequestReview()
+        XCTAssertFalse(manager(day: -1, version: "9.0").isEligibleForReviewRequest)
+    }
+
+    #if DEBUG
+    func testDebugSeedMakesNextRequestEligible() {
+        manager().seedEligibleForTesting()
+        XCTAssertTrue(manager().isEligibleForReviewRequest)
+        manager().didRequestReview()
+        XCTAssertFalse(manager().isEligibleForReviewRequest)
+        manager().seedEligibleForTesting()
+        XCTAssertTrue(manager().isEligibleForReviewRequest)
+    }
+    #endif
+
+    // MARK: - Release notes
+
+    func testReleaseNotesSkipPatchesAndAllowMinorAndMajorUpdates() {
+        XCTAssertFalse(ReviewManager.shouldPresentReleaseNotes(current: "3.4.4", lastSeen: "3.4.3"))
+        XCTAssertFalse(ReviewManager.shouldPresentReleaseNotes(current: "3.4.4", lastSeen: "3.4.4"))
+        XCTAssertTrue(ReviewManager.shouldPresentReleaseNotes(current: "3.5.0", lastSeen: "3.4.4"))
+        XCTAssertTrue(ReviewManager.shouldPresentReleaseNotes(current: "4.0.0", lastSeen: "3.5.0"))
+        XCTAssertTrue(ReviewManager.shouldPresentReleaseNotes(current: "3.5.0", lastSeen: nil))
+    }
+
+    func testInvalidReleaseFamilies() {
+        for version in ["", "3", "3..0", "3.a.0", "-3.5.0", "3.5.0.1"] {
+            XCTAssertNil(ReviewManager.releaseFamily(version), version)
         }
-    }
-
-    func testRepeatMilestone_triggersAt63() {
-        let manager = makeManager()
-        for _ in 1...3 { _ = manager.recordSuccessfulExport() }
-        manager.didRequestReview()
-
-        // Advance past cooldown for milestone 33
-        let day121 = Calendar.current.date(byAdding: .day, value: 121, to: Self.fixedNow)!
-        let mgr33 = makeManager(now: { day121 })
-        for _ in 4...33 { _ = mgr33.recordSuccessfulExport() }
-        mgr33.didRequestReview()
-
-        // Advance past cooldown for milestone 63
-        let day242 = Calendar.current.date(byAdding: .day, value: 242, to: Self.fixedNow)!
-        let mgr63 = makeManager(now: { day242 })
-        for i in 34...63 {
-            let result = mgr63.recordSuccessfulExport()
-            if i == 63 {
-                XCTAssertTrue(result, "Should trigger at 63rd export (3 + 30 + 30)")
-            }
-        }
-    }
-
-    // MARK: - Cooldown Enforcement
-
-    func testCooldown_blocksIfTooSoon() {
-        let manager = makeManager()
-        _ = manager.recordSuccessfulExport() // 1
-        _ = manager.recordSuccessfulExport() // 2
-        XCTAssertTrue(manager.recordSuccessfulExport()) // 3 = triggers
-        manager.didRequestReview()
-
-        // Only 5 days later (within 120-day cooldown)
-        let fiveDaysLater = Calendar.current.date(byAdding: .day, value: 5, to: Self.fixedNow)!
-        let cooldownManager = makeManager(now: { fiveDaysLater })
-
-        // Reach next milestone (export 33) — should be blocked by cooldown
-        for i in 4...33 {
-            let result = cooldownManager.recordSuccessfulExport()
-            if i == 33 {
-                XCTAssertFalse(result, "Should be blocked by cooldown")
-            }
-        }
-    }
-
-    func testCooldown_allowsAfterCooldownExpires() {
-        let manager = makeManager()
-        _ = manager.recordSuccessfulExport() // 1
-        _ = manager.recordSuccessfulExport() // 2
-        XCTAssertTrue(manager.recordSuccessfulExport()) // 3 = triggers
-        manager.didRequestReview()
-
-        // 121 days later (past 120-day cooldown)
-        let fifteenDaysLater = Calendar.current.date(byAdding: .day, value: 121, to: Self.fixedNow)!
-        let laterManager = makeManager(now: { fifteenDaysLater })
-
-        for i in 4...33 {
-            let result = laterManager.recordSuccessfulExport()
-            if i == 33 {
-                XCTAssertTrue(result, "Should trigger after cooldown expires")
-            }
-        }
-    }
-
-    // MARK: - Non-milestones
-
-    func testNonMilestone_doesNotTrigger() {
-        let manager = makeManager()
-        for _ in 1...3 { _ = manager.recordSuccessfulExport() }
-        manager.didRequestReview()
-
-        let laterDate = Calendar.current.date(byAdding: .day, value: 121, to: Self.fixedNow)!
-        let laterManager = makeManager(now: { laterDate })
-
-        for i in 4...32 {
-            XCTAssertFalse(laterManager.recordSuccessfulExport(), "Export \(i) should not trigger review")
-        }
+        XCTAssertEqual(ReviewManager.releaseFamily("3.5.2"), "3.5")
     }
 }

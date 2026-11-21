@@ -2,6 +2,7 @@ package com.healthmd.presentation.export
 
 import android.net.Uri
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.BuildConfig
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.APIExportEnvelopeBuilder
@@ -58,6 +59,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -652,108 +654,123 @@ class ExportViewModelTest {
         assertThat(settingsReset.formatCustomization.includeAndroidNativeFields).isTrue()
     }
 
-    @Test
-    fun failedReviewRequestRemainsEligibleForLaterSuccessfulExport() = runTest {
-        val settingsRepository = FakeSettingsRepository(initialSuccessfulExportCount = 1, initialFreeExportsUsed = 3)
+    /** Two earlier full successes on an earlier day: the next one meets the 3-on-2-days threshold. */
+    private fun reviewReadySettings(
+        initialLastReviewAttemptEpochMillis: Long? = null,
+        initialLastReviewAttemptVersionCode: Long? = null,
+        initialLastReviewFailureEpochMillis: Long? = null,
+    ) = FakeSettingsRepository(
+        initialSuccessfulExportCount = 2,
+        initialFreeExportsUsed = 3,
+        initialLastReviewAttemptEpochMillis = initialLastReviewAttemptEpochMillis,
+        initialExtraSuccessDays = 1,
+        initialLastReviewFailureEpochMillis = initialLastReviewFailureEpochMillis,
+        initialLastReviewAttemptVersionCode = initialLastReviewAttemptVersionCode,
+    )
+
+    private suspend fun TestScope.reviewRequestsAfterExports(
+        settingsRepository: FakeSettingsRepository,
+        exports: Int = 1,
+        collect: Boolean = true,
+        afterEachExport: (ExportViewModel) -> Unit = {},
+    ): List<Unit> {
         val viewModel = createViewModel(
             healthRepository = FakeHealthRepository(hasPermissions = true),
             settingsRepository = settingsRepository,
         )
         advanceUntilIdle()
         val reviewRequests = mutableListOf<Unit>()
-        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.requestReview.toList(reviewRequests)
+        val collector = if (collect) {
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.requestReview.toList(reviewRequests)
+            }
+        } else null
+        repeat(exports) {
+            viewModel.startExport()
+            advanceUntilIdle()
+            afterEachExport(viewModel)
+            advanceUntilIdle()
         }
-
-        viewModel.startExport()
-        advanceUntilIdle()
-        assertThat(reviewRequests).hasSize(1)
-        assertThat(settingsRepository.lastReviewAttemptEpochMillis).isNull()
-
-        viewModel.onReviewRequestFailed()
-        viewModel.startExport()
-        advanceUntilIdle()
-
-        assertThat(reviewRequests).hasSize(2)
-        assertThat(settingsRepository.lastReviewAttemptEpochMillis).isNull()
-        collector.cancel()
+        collector?.cancel()
+        return reviewRequests
     }
 
     @Test
-    fun completedReviewFlowRecordsAttemptAndStartsCooldown() = runTest {
-        val settingsRepository = FakeSettingsRepository(initialSuccessfulExportCount = 1, initialFreeExportsUsed = 3)
-        val viewModel = createViewModel(
-            healthRepository = FakeHealthRepository(hasPermissions = true),
-            settingsRepository = settingsRepository,
-        )
-        advanceUntilIdle()
-        val reviewRequests = mutableListOf<Unit>()
-        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.requestReview.toList(reviewRequests)
-        }
+    fun thirdFullSuccessOnSecondDayRequestsReview() = runTest {
+        val settingsRepository = reviewReadySettings()
+        assertThat(reviewRequestsAfterExports(settingsRepository)).hasSize(1)
+        assertThat(settingsRepository.successfulExportCount).isEqualTo(3)
+        assertThat(settingsRepository.lastReviewAttemptEpochMillis).isNull()
+    }
 
-        viewModel.startExport()
-        advanceUntilIdle()
+    @Test
+    fun manySuccessesOnOneDayDoNotRequestReview() = runTest {
+        val settingsRepository = FakeSettingsRepository(initialSuccessfulExportCount = 5, initialFreeExportsUsed = 3)
+        assertThat(reviewRequestsAfterExports(settingsRepository, exports = 2)).isEmpty()
+        assertThat(settingsRepository.successDayCount).isEqualTo(1)
+    }
+
+    @Test
+    fun noForegroundCollectorMeansNoRequestButSuccessStillCounts() = runTest {
+        val settingsRepository = reviewReadySettings()
+        assertThat(reviewRequestsAfterExports(settingsRepository, collect = false)).isEmpty()
+        assertThat(settingsRepository.successfulExportCount).isEqualTo(3)
+        assertThat(settingsRepository.lastReviewFailureEpochMillis).isNull()
+    }
+
+    @Test
+    fun failedPlayRequestWaitsForShortRetryCooldown() = runTest {
+        val settingsRepository = reviewReadySettings()
+        val requests = reviewRequestsAfterExports(settingsRepository, exports = 2) { it.onReviewRequestFailed() }
+        assertThat(requests).hasSize(1)
+        assertThat(settingsRepository.lastReviewFailureEpochMillis).isNotNull()
+        assertThat(settingsRepository.lastReviewAttemptEpochMillis).isNull()
+    }
+
+    @Test
+    fun failedPlayRequestRetriesAfterRetryCooldown() = runTest {
+        val oldFailure = System.currentTimeMillis() - Duration.ofDays(8).toMillis()
+        val settingsRepository = reviewReadySettings(initialLastReviewFailureEpochMillis = oldFailure)
+        assertThat(reviewRequestsAfterExports(settingsRepository)).hasSize(1)
+    }
+
+    @Test
+    fun completedReviewFlowRecordsAttemptAndVersionAndStartsCooldown() = runTest {
+        val settingsRepository = reviewReadySettings()
         val completedAt = System.currentTimeMillis()
-        viewModel.onReviewFlowCompleted(completedAt)
-        advanceUntilIdle()
-
+        val requests = reviewRequestsAfterExports(settingsRepository, exports = 2) {
+            it.onReviewFlowCompleted(completedAt)
+        }
+        assertThat(requests).hasSize(1)
         assertThat(settingsRepository.lastReviewAttemptEpochMillis).isEqualTo(completedAt)
-
-        viewModel.startExport()
-        advanceUntilIdle()
-        assertThat(reviewRequests).hasSize(1)
-        collector.cancel()
+        assertThat(settingsRepository.lastReviewAttemptVersionCode).isEqualTo(BuildConfig.VERSION_CODE.toLong())
     }
 
     @Test
     fun recentReviewAttemptSuppressesPrompt() = runTest {
         val recentAttempt = System.currentTimeMillis() - Duration.ofDays(1).toMillis()
-        val settingsRepository = FakeSettingsRepository(
-            initialSuccessfulExportCount = 1,
-            initialFreeExportsUsed = 3,
-            initialLastReviewAttemptEpochMillis = recentAttempt,
-        )
-        val viewModel = createViewModel(
-            healthRepository = FakeHealthRepository(hasPermissions = true),
-            settingsRepository = settingsRepository,
-        )
-        advanceUntilIdle()
-        val reviewRequests = mutableListOf<Unit>()
-        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.requestReview.toList(reviewRequests)
-        }
-
-        viewModel.startExport()
-        advanceUntilIdle()
-
-        assertThat(reviewRequests).isEmpty()
-        collector.cancel()
+        val settingsRepository = reviewReadySettings(initialLastReviewAttemptEpochMillis = recentAttempt)
+        assertThat(reviewRequestsAfterExports(settingsRepository)).isEmpty()
     }
 
     @Test
-    fun elapsedReviewCooldownAllowsAnotherPrompt() = runTest {
+    fun elapsedCooldownOnSameVersionDoesNotPrompt() = runTest {
         val oldAttempt = System.currentTimeMillis() - Duration.ofDays(121).toMillis()
-        val settingsRepository = FakeSettingsRepository(
-            initialSuccessfulExportCount = 1,
-            initialFreeExportsUsed = 3,
+        val settingsRepository = reviewReadySettings(
             initialLastReviewAttemptEpochMillis = oldAttempt,
+            initialLastReviewAttemptVersionCode = BuildConfig.VERSION_CODE.toLong(),
         )
-        val viewModel = createViewModel(
-            healthRepository = FakeHealthRepository(hasPermissions = true),
-            settingsRepository = settingsRepository,
+        assertThat(reviewRequestsAfterExports(settingsRepository)).isEmpty()
+    }
+
+    @Test
+    fun elapsedCooldownOnNewVersionAllowsAnotherPrompt() = runTest {
+        val oldAttempt = System.currentTimeMillis() - Duration.ofDays(121).toMillis()
+        val settingsRepository = reviewReadySettings(
+            initialLastReviewAttemptEpochMillis = oldAttempt,
+            initialLastReviewAttemptVersionCode = BuildConfig.VERSION_CODE.toLong() - 1,
         )
-        advanceUntilIdle()
-        val reviewRequests = mutableListOf<Unit>()
-        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.requestReview.toList(reviewRequests)
-        }
-
-        viewModel.startExport()
-        advanceUntilIdle()
-
-        assertThat(reviewRequests).hasSize(1)
-        collector.cancel()
+        assertThat(reviewRequestsAfterExports(settingsRepository)).hasSize(1)
     }
 
     @Test
@@ -1047,6 +1064,10 @@ private class FakeSettingsRepository(
     initialSuccessfulExportCount: Int = 0,
     initialFreeExportsUsed: Int = 0,
     initialLastReviewAttemptEpochMillis: Long? = null,
+    /** Distinct success days already behind the initial count (none by default). */
+    private val initialExtraSuccessDays: Int = 0,
+    initialLastReviewFailureEpochMillis: Long? = null,
+    initialLastReviewAttemptVersionCode: Long? = null,
 ) : SettingsRepository {
     private val exportSettingsState = MutableStateFlow(initialSettings)
     private val exportFolderUriState = MutableStateFlow(initialFolderUri)
@@ -1060,6 +1081,13 @@ private class FakeSettingsRepository(
     var successfulExportCount = initialSuccessfulExportCount
         private set
     var lastReviewAttemptEpochMillis = initialLastReviewAttemptEpochMillis
+        private set
+    var lastReviewAttemptVersionCode: Long? = initialLastReviewAttemptVersionCode
+        private set
+    var lastReviewFailureEpochMillis: Long? = initialLastReviewFailureEpochMillis
+        private set
+    private val reviewSuccessDays = mutableSetOf<Long>()
+    var successDayCount = initialExtraSuccessDays
         private set
 
     override val exportSettings: Flow<ExportSettings> = exportSettingsState
@@ -1117,19 +1145,32 @@ private class FakeSettingsRepository(
     private val successfulOperationIds = mutableSetOf<String>()
     override suspend fun recordSuccessfulExportOnce(operationId: String): Boolean {
         if (!successfulOperationIds.add(operationId)) return false
-        incrementSuccessfulExportCount()
+        recordReviewEligibleSuccess(java.time.LocalDate.now().toEpochDay())
         return true
     }
 
-    override suspend fun incrementSuccessfulExportCount() {
+    override suspend fun recordReviewEligibleSuccess(epochDay: Long) {
         successfulExportCount++
+        if (reviewSuccessDays.add(epochDay)) successDayCount = reviewSuccessDays.size + initialExtraSuccessDays
     }
 
-    override suspend fun getLastReviewAttemptEpochMillis(migrationEpochMillis: Long): Long? =
-        lastReviewAttemptEpochMillis
+    override suspend fun getReviewPromptState(migrationEpochMillis: Long) =
+        com.healthmd.domain.export.ReviewPromptState(
+            successfulExportCount = successfulExportCount,
+            successDayCount = successDayCount,
+            lastAttemptEpochMillis = lastReviewAttemptEpochMillis,
+            lastAttemptAppVersionCode = lastReviewAttemptVersionCode,
+            lastFailedRequestEpochMillis = lastReviewFailureEpochMillis,
+        )
 
-    override suspend fun recordReviewAttempt(epochMillis: Long) {
+    override suspend fun recordReviewAttempt(epochMillis: Long, appVersionCode: Long) {
         lastReviewAttemptEpochMillis = epochMillis
+        lastReviewAttemptVersionCode = appVersionCode
+        lastReviewFailureEpochMillis = null
+    }
+
+    override suspend fun recordReviewRequestFailure(epochMillis: Long) {
+        lastReviewFailureEpochMillis = epochMillis
     }
 
     override suspend fun getSelectedHealthProviderId(): String = selectedHealthProviderIdState.value

@@ -1112,14 +1112,7 @@ enum HealthMdReleaseNotes {
 }
 
 private struct HealthMdReleaseNotesSheet: ViewModifier {
-    private struct Introduction: Identifiable { let id = UUID() }
-
-    @Binding var reviewMilestonePending: Bool
-    let canPresentReview: Bool
-    @Environment(\.scenePhase) private var scenePhase
     @State private var presented: HealthMdVersionNotes?
-    @State private var introduction: Introduction?
-    @State private var pendingReleaseVersion: String?
 
     func body(content: Content) -> some View {
         content
@@ -1129,55 +1122,19 @@ private struct HealthMdReleaseNotesSheet: ViewModifier {
             }
             .sheet(
                 isPresented: Binding(get: { presented != nil }, set: { if !$0 { presented = nil } }),
-                onDismiss: releaseNotesDidDismiss
+                onDismiss: HealthMdReleaseNotes.markCurrentVersionAsSeen
             ) {
                 if let presented {
                     GlassWhatsNewScreen(notes: presented) { self.presented = nil }
                 }
             }
-            .sheet(item: $introduction) { _ in
-                ReviewIntroductionView()
-                    .presentationDetents([.large])
-            }
-            .onChange(of: reviewMilestonePending) { _, _ in presentIntroductionIfPossible() }
-            .onChange(of: pendingReleaseVersion) { _, _ in presentIntroductionIfPossible() }
-            .onChange(of: canPresentReview) { _, _ in presentIntroductionIfPossible() }
-            .onChange(of: scenePhase) { _, _ in presentIntroductionIfPossible() }
-    }
-
-    private func releaseNotesDidDismiss() {
-        HealthMdReleaseNotes.markCurrentVersionAsSeen()
-        pendingReleaseVersion = HealthMdReleaseNotes.currentAppVersion
-    }
-
-    private func presentIntroductionIfPossible() {
-        guard !TestMode.isUITesting else { return }
-        #if DEBUG
-        guard !MarketingCapture.isActive else { return }
-        #endif
-        guard canPresentReview, scenePhase == .active, introduction == nil,
-              reviewMilestonePending || pendingReleaseVersion != nil else { return }
-        // What's New owns the first sheet. Never compete with unseen release notes.
-        guard presented == nil,
-              !HealthMdReleaseNotes.isPresentationAllowed || HealthMdReleaseNotes.unseenCurrentNotes() == nil else { return }
-        let releaseVersion = pendingReleaseVersion
-        pendingReleaseVersion = nil
-        reviewMilestonePending = false
-        guard ReviewManager.shared.claimIntroduction(forRelease: releaseVersion) else { return }
-        introduction = Introduction()
     }
 }
 
 extension View {
-    /// Presents the glass What's New sheet once per release, then the review introduction
-    /// after an export milestone or a new release when nothing else is presenting.
-    func healthMdReleaseNotesSheet(
-        reviewMilestonePending: Binding<Bool> = .constant(false),
-        canPresentReview: Bool = true
-    ) -> some View {
-        modifier(HealthMdReleaseNotesSheet(
-            reviewMilestonePending: reviewMilestonePending,
-            canPresentReview: canPresentReview
-        ))
+    /// Presents the glass What's New sheet once per release. It never leads into a
+    /// review request; those follow a visible export success (`reviewPrompt`).
+    func healthMdReleaseNotesSheet() -> some View {
+        modifier(HealthMdReleaseNotesSheet())
     }
 }
