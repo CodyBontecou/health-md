@@ -1,84 +1,131 @@
 import Foundation
 
-/// Determines when to prompt users for an App Store review.
+/// Decides when Health.md may ask StoreKit for an App Store rating.
 ///
-/// Strategy:
-/// - Trigger after the **3rd full successful export** (first milestone)
-/// - Then every **30 successful exports** thereafter
-/// - Enforce a **120-day cooldown** between introductions or native request attempts
-/// - Only count *full* successes — partial exports and failures don't qualify
+/// Policy (mirrored by Android's `ReviewPromptPolicy`):
+/// - Every **full** successful export counts, whatever started it: manual, Google
+///   Drive, API, gateway, Mac, scheduled, background or Shortcut. Partial, failed
+///   and cancelled exports never count.
+/// - Eligible once there are at least **3 full successes** on at least **2 distinct
+///   days**.
+/// - After a request, wait at least **120 days** *and* a new app version before the
+///   next one. Apple shows the system prompt at most three times a year anyway.
+/// - The cooldown starts only when the system request is actually made
+///   (`didRequestReview()`), never when a prompt was merely considered.
+///
+/// This type only keeps the counters. The iOS UI decides *where* it may ask
+/// (foreground, nothing else presented) and calls StoreKit directly; there is no
+/// custom pre-prompt (App Store Review Guideline 5.6.1).
 final class ReviewManager {
     static let shared = ReviewManager()
 
+    static let minimumSuccessfulExports = 3
+    static let minimumDistinctSuccessDays = 2
+    static let cooldown: TimeInterval = 120 * 24 * 60 * 60
+
     private enum Keys {
         static let successfulExportCount = "reviewManager.successfulExportCount"
+        static let successDayCount = "reviewManager.successDayCount"
+        static let lastSuccessDay = "reviewManager.lastSuccessDay"
         static let lastReviewRequestDate = "reviewManager.lastReviewRequestDate"
-        static let lastIntroductionDate = "reviewManager.lastIntroductionDate"
-        static let lastIntroductionRelease = "reviewManager.lastIntroductionRelease"
+        static let lastReviewRequestVersion = "reviewManager.lastReviewRequestVersion"
+        /// Written by the retired custom introduction screen. Still honoured as a
+        /// cooldown so people who just saw it are not asked again straight away.
+        static let legacyIntroductionDate = "reviewManager.lastIntroductionDate"
     }
-
-    private let firstMilestone = 3
-    private let repeatInterval = 30
-    private let cooldown: TimeInterval = 120 * 24 * 60 * 60
 
     private let defaults: UserDefaultsStoring
     private let now: () -> Date
+    private let calendar: Calendar
+    private let appVersion: () -> String?
 
     private init() {
         self.defaults = SystemUserDefaults()
         self.now = { Date() }
+        self.calendar = .current
+        self.appVersion = { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String }
     }
 
-    init(defaults: UserDefaultsStoring, now: @escaping () -> Date = { Date() }) {
+    init(
+        defaults: UserDefaultsStoring,
+        now: @escaping () -> Date = { Date() },
+        calendar: Calendar = .current,
+        appVersion: @escaping () -> String? = { "1.0" }
+    ) {
         self.defaults = defaults
         self.now = now
+        self.calendar = calendar
+        self.appVersion = appVersion
     }
 
-    // MARK: - Persisted State
+    // MARK: - Recording
 
-    private var successfulExportCount: Int {
-        get { defaults.integer(forKey: Keys.successfulExportCount) }
-        set { defaults.set(newValue, forKey: Keys.successfulExportCount) }
-    }
+    /// Call after every full successful export, from any source.
+    /// Counting never presents anything.
+    func recordSuccessfulExport() {
+        let previousCount = defaults.integer(forKey: Keys.successfulExportCount)
+        defaults.set(previousCount + 1, forKey: Keys.successfulExportCount)
 
-    private var lastReviewRequestDate: Date? {
-        get { defaults.data(forKey: Keys.lastReviewRequestDate).flatMap { try? JSONDecoder().decode(Date.self, from: $0) } }
-        set {
-            if let date = newValue, let data = try? JSONEncoder().encode(date) {
-                defaults.set(data, forKey: Keys.lastReviewRequestDate)
-            } else {
-                defaults.removeObject(forKey: Keys.lastReviewRequestDate)
-            }
+        let today = dayKey(for: now())
+        let lastDay = defaults.string(forKey: Keys.lastSuccessDay)
+        guard lastDay != today else { return }
+        var days = defaults.integer(forKey: Keys.successDayCount)
+        if lastDay == nil, previousCount > 0 {
+            // Counted before days were tracked: that earlier use is one day.
+            days = max(days, 1)
         }
+        defaults.set(days + 1, forKey: Keys.successDayCount)
+        defaults.set(today, forKey: Keys.lastSuccessDay)
     }
 
-    // MARK: - Public API
-
-    /// Call after every full successful export.
-    /// Returns `true` if the app should now request a review.
-    func recordSuccessfulExport() -> Bool {
-        successfulExportCount += 1
-        return shouldRequest()
-    }
-
-    /// Records an attempt, never proof that StoreKit displayed UI or a review was submitted.
+    /// Records that the system review request was made. StoreKit decides whether it
+    /// shows anything, so this is an attempt, not proof of a rating.
     func didRequestReview() {
-        lastReviewRequestDate = now()
+        if let data = try? JSONEncoder().encode(now()) {
+            defaults.set(data, forKey: Keys.lastReviewRequestDate)
+        }
+        if let version = appVersion() {
+            defaults.set(version, forKey: Keys.lastReviewRequestVersion)
+        }
     }
 
-    /// Reserves one presentation across roots/windows and survives dismissal or restart.
-    /// A release-triggered introduction is limited to one per major/minor release.
-    func claimIntroduction(forRelease version: String? = nil) -> Bool {
-        guard successfulExportCount >= firstMilestone, isOutsideCooldown else { return false }
-        if let version {
-            guard let family = Self.releaseFamily(version),
-                  defaults.string(forKey: Keys.lastIntroductionRelease) != family else { return false }
-            defaults.set(family, forKey: Keys.lastIntroductionRelease)
+    // MARK: - Eligibility
+
+    /// True when the usage threshold is met and the previous request (if any) is at
+    /// least 120 days old and was made on a different app version.
+    var isEligibleForReviewRequest: Bool {
+        guard defaults.integer(forKey: Keys.successfulExportCount) >= Self.minimumSuccessfulExports,
+              defaults.integer(forKey: Keys.successDayCount) >= Self.minimumDistinctSuccessDays else { return false }
+
+        let current = now()
+        let previousAttempts = [Keys.lastReviewRequestDate, Keys.legacyIntroductionDate].compactMap(date(forKey:))
+        // A date in the future (clock rollback) also blocks.
+        guard previousAttempts.allSatisfy({ current.timeIntervalSince($0) >= Self.cooldown }) else { return false }
+
+        if defaults.data(forKey: Keys.lastReviewRequestDate) != nil,
+           let lastVersion = defaults.string(forKey: Keys.lastReviewRequestVersion),
+           lastVersion == appVersion() {
+            return false
         }
-        guard let data = try? JSONEncoder().encode(now()) else { return false }
-        defaults.set(data, forKey: Keys.lastIntroductionDate)
         return true
     }
+
+    #if DEBUG
+    /// Debug-only setup for device QA: meets the usage threshold and clears any
+    /// earlier request, so the next foreground success asks StoreKit.
+    func seedEligibleForTesting() {
+        defaults.set(Self.minimumSuccessfulExports, forKey: Keys.successfulExportCount)
+        defaults.set(Self.minimumDistinctSuccessDays, forKey: Keys.successDayCount)
+        defaults.set(dayKey(for: now()), forKey: Keys.lastSuccessDay)
+        defaults.removeObject(forKey: Keys.lastReviewRequestDate)
+        defaults.removeObject(forKey: Keys.lastReviewRequestVersion)
+        defaults.removeObject(forKey: Keys.legacyIntroductionDate)
+    }
+    #endif
+
+    // MARK: - Release notes
+
+    // Release-family helpers used by What's New; they predate this type's review role.
 
     static func releaseFamily(_ version: String) -> String? {
         let parts = version.split(separator: ".", omittingEmptySubsequences: false)
@@ -93,24 +140,14 @@ final class ReviewManager {
         return family != releaseFamily(lastSeen)
     }
 
-    private var isOutsideCooldown: Bool {
-        let introductionDate = defaults.data(forKey: Keys.lastIntroductionDate)
-            .flatMap { try? JSONDecoder().decode(Date.self, from: $0) }
-        return [lastReviewRequestDate, introductionDate].compactMap { $0 }.allSatisfy {
-            now().timeIntervalSince($0) >= cooldown
-        }
-    }
-
     // MARK: - Private
 
-    private func shouldRequest() -> Bool {
-        let count = successfulExportCount
+    private func date(forKey key: String) -> Date? {
+        defaults.data(forKey: key).flatMap { try? JSONDecoder().decode(Date.self, from: $0) }
+    }
 
-        // Must land on a milestone
-        let isFirstMilestone = (count == firstMilestone)
-        let isRepeatMilestone = count > firstMilestone && ((count - firstMilestone) % repeatInterval == 0)
-        guard isFirstMilestone || isRepeatMilestone else { return false }
-
-        return isOutsideCooldown
+    private func dayKey(for date: Date) -> String {
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
 }

@@ -1,0 +1,127 @@
+version: 1
+requires:
+  platform: ios
+# ios-review-prompt-after-export: a visible manual full success asks Apple's system rating
+# API directly (no custom pre-prompt), and a second success on the same app version does not
+# ask again because the cooldown is recorded when the system request is made.
+#
+# Prerequisites: a Debug HealthMd build installed on an iPhone simulator. Synthetic UI-test
+# mode (no HealthKit, test vault, simulated export). `-UITEST_REVIEW_PROMPT eligible` is
+# Debug-only: it seeds the 3-successes-on-2-days threshold and clears any earlier request at
+# launch, and is the only UI-test launch that allows automatic review requests. Debug builds
+# show the StoreKit sheet every time it is requested.
+# Side effects: writes the simulated export file 2026-03-28.md into the UI-test vault and
+# records a review request in the app's UserDefaults (reset by the next seeded launch).
+# Coordinate exception: on this simulator the runner's native tree does not carry the glass
+# SwiftUI controls or StoreKit's remote sheet (the recorder derived the Archive container for
+# Export now), so those taps are raw points, each preceded by an accessibility-tree wait on
+# the element it hits; those waits stay raw await-ui-element steps on that tree.
+steps:
+  - echo: Launch Health.md in synthetic UI-test mode with the review threshold
+      seeded. Expect Archive
+  - launch:
+      native: com.codybontecou.obsidianhealth
+      ios:
+        app: com.codybontecou.obsidianhealth
+        args:
+          - --uitesting
+          - -UITEST_HEALTH_AUTHORIZED
+          - "true"
+          - -UITEST_VAULT_SELECTED
+          - "true"
+          - -UITEST_PURCHASE_UNLOCKED
+          - "true"
+          - -UITEST_HEALTHKIT_EXPORT_PREVIEW_FIXTURES
+          - "true"
+          - -UITEST_SUPPRESSED_UPGRADE_PROMPTS
+          - 1,3
+          - -UITEST_REVIEW_PROMPT
+          - eligible
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.archive.sentence
+      timeoutMs: 20000
+  - await: { idle: true }
+  - echo: On Archive. Open Export now. Expect the export sheet
+  # Coordinate: centre of glass.exportNow (not in the runner tree).
+  - tap:
+      x: 0.817
+      y: 0.895
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.exportNow.confirm
+      timeoutMs: 10000
+  - await: { idle: true }
+  - echo: Export yesterday (simulated full success). Expect the success badge, then
+      Apple's system rating request directly, with no custom pre-prompt
+  # Coordinate: centre of glass.exportNow.confirm (not in the runner tree).
+  - tap:
+      x: 0.5
+      y: 0.921
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Enjoying Health.md?
+      timeoutMs: 10000
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Not Now
+      timeoutMs: 5000
+  - echo: Decline with Not Now. Expect the system sheet to close over Archive
+  # Coordinate: centre of StoreKit's "Not Now" button (a remote StoreKit view the runner
+  # cannot target; the wait above proves it is on screen).
+  - tap:
+      x: 0.5
+      y: 0.645
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        text: Enjoying Health.md?
+      timeoutMs: 5000
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.exportNow
+      timeoutMs: 5000
+  - await: { idle: true }
+  - echo: Export again on the same app version. Expect the success badge and NO
+      rating request (cooldown recorded when the system request was made)
+  # Coordinate: centre of glass.exportNow (not in the runner tree).
+  - tap:
+      x: 0.817
+      y: 0.895
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.exportNow.confirm
+      timeoutMs: 10000
+  - await: { idle: true }
+  # Coordinate: centre of glass.exportNow.confirm (not in the runner tree).
+  - tap:
+      x: 0.5
+      y: 0.921
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: status.exportBadge
+      timeoutMs: 10000
+  - echo: Wait 4 s (over three times the 1.2 s settle delay before a request) and
+      confirm no rating sheet appeared
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        text: Enjoying Health.md?
+      timeoutMs: 2000
+    delayMs: 4000

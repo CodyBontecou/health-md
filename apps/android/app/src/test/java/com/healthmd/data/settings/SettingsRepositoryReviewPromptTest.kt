@@ -49,4 +49,22 @@ class SettingsRepositoryReviewPromptTest {
             )
         ).isNull()
     }
+
+    @Test
+    fun firstTrackedDayStartsAtOne() {
+        assertThat(nextReviewSuccessDayCount(currentDayCount = null, hasTrackedDay = false, previousSuccessCount = 0))
+            .isEqualTo(1)
+    }
+
+    @Test
+    fun countsFromBeforeDayTrackingAreOneEarlierDay() {
+        assertThat(nextReviewSuccessDayCount(currentDayCount = null, hasTrackedDay = false, previousSuccessCount = 7))
+            .isEqualTo(2)
+    }
+
+    @Test
+    fun newDayAddsOne() {
+        assertThat(nextReviewSuccessDayCount(currentDayCount = 2, hasTrackedDay = true, previousSuccessCount = 7))
+            .isEqualTo(3)
+    }
 }

@@ -105,25 +105,24 @@
     },
     {
       "id": "support.native-review-introduction",
-      "name": "Optional introduction to native store reviews",
-      "classification": "planned",
-      "summary": "An optional purple review introduction for established users after successful export milestones or major/minor release notes. Feedback and dismissal remain available to everyone. Cooldowns record introductions and request attempts, never submitted ratings. No health data or new analytics are collected. iPhone and iPad use StoreKit for rating entry; explicit written-review actions open the App Store. The macOS companion does not present mobile review introductions.",
+      "name": "Native store review requests",
+      "classification": "shared",
+      "summary": "Health.md asks the system review API directly (StoreKit on iPhone and iPad, Google Play In-App Review on the Play build), with no custom pre-prompt. Every full successful export counts, including scheduled, background and Shortcut exports; partial, failed and cancelled exports never count. Requests become eligible after 3 full successes on at least 2 distinct days and repeat only after 120 days and a new app version. Only the foreground app asks: after a visible manual success or a dismissed scheduled-export result, when no paywall, error, partial notice, alert, onboarding or free-export upgrade flow is showing. Cooldowns record request attempts, never submitted ratings; a failed Play request waits 7 days. No health data or new analytics are collected. The F-Droid build and the macOS companion never request reviews; Settings keeps an explicit review screen.",
       "profiles": [],
       "platforms": {
         "apple": {
           "state": "available"
         },
         "android": {
-          "state": "planned",
-          "target": "Android review-introduction follow-up: adapt the optional purple introduction to Google Play review guidance, retain the 120-day attempt cooldown and F-Droid unavailable behavior, and wire release-note completion before enabling it."
+          "state": "available"
         }
       },
       "evidence": [
-        "apps/apple/HealthMd/iOS/Views/ReviewIntroductionView.swift",
-        "apps/apple/HealthMd/iOS/ReleaseNotes.swift",
         "apps/apple/HealthMd/Shared/Utilities/ReviewManager.swift",
-        "apps/apple/HealthMdTests/Utilities/ReviewIntroductionPolicyTests.swift",
-        "apps/android/app/src/main/java/com/healthmd/domain/export/ReviewPromptPolicy.kt"
+        "apps/apple/HealthMd/iOS/Views/ReviewPromptModifier.swift",
+        "apps/apple/HealthMdTests/Utilities/ReviewManagerTests.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/export/ReviewPromptPolicy.kt",
+        "apps/android/app/src/test/java/com/healthmd/domain/export/ReviewPromptPolicyTest.kt"
       ]
     },
     {

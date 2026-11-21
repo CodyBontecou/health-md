@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.healthmd.domain.billing.FreemiumPolicy
+import com.healthmd.domain.export.ReviewPromptState
 import com.healthmd.domain.exportengine.ExportEngineMode
 import com.healthmd.domain.exportengine.ExportEnginePinCodec
 import com.healthmd.domain.model.CompatibilitySchemaProfile
@@ -51,6 +52,10 @@ class SettingsRepositoryImpl(
         val DIRECT_SUCCESSFUL_OPERATION_IDS = stringSetPreferencesKey("direct_successful_operation_ids")
         val SUCCESSFUL_EXPORT_COUNT = intPreferencesKey("successful_export_count")
         val LAST_REVIEW_ATTEMPT_EPOCH_MILLIS = longPreferencesKey("last_review_attempt_epoch_millis")
+        val LAST_REVIEW_ATTEMPT_VERSION_CODE = longPreferencesKey("last_review_attempt_version_code")
+        val LAST_REVIEW_FAILURE_EPOCH_MILLIS = longPreferencesKey("last_review_failure_epoch_millis")
+        val REVIEW_SUCCESS_DAY_COUNT = intPreferencesKey("review_success_day_count")
+        val REVIEW_LAST_SUCCESS_EPOCH_DAY = longPreferencesKey("review_last_success_epoch_day")
         val LEGACY_HAS_REQUESTED_REVIEW = booleanPreferencesKey("has_requested_review")
         val FIRST_HEALTH_PERMISSION_GRANT_DATE = stringPreferencesKey("first_health_permission_grant_date")
         val SELECTED_HEALTH_PROVIDER_ID = stringPreferencesKey("selected_health_provider_id")
@@ -228,11 +233,21 @@ class SettingsRepositoryImpl(
     override suspend fun getSuccessfulExportCount(): Int =
         dataStore.data.map { it[Keys.SUCCESSFUL_EXPORT_COUNT] ?: 0 }.first()
 
-    override suspend fun incrementSuccessfulExportCount() {
-        dataStore.edit { prefs ->
-            val current = prefs[Keys.SUCCESSFUL_EXPORT_COUNT] ?: 0
-            prefs[Keys.SUCCESSFUL_EXPORT_COUNT] = current + 1
-        }
+    override suspend fun recordReviewEligibleSuccess(epochDay: Long) {
+        dataStore.edit { prefs -> prefs.recordReviewSuccess(epochDay) }
+    }
+
+    private fun MutablePreferences.recordReviewSuccess(epochDay: Long) {
+        val previous = (this[Keys.SUCCESSFUL_EXPORT_COUNT] ?: 0).coerceAtLeast(0)
+        this[Keys.SUCCESSFUL_EXPORT_COUNT] = if (previous == Int.MAX_VALUE) previous else previous + 1
+        val lastDay = this[Keys.REVIEW_LAST_SUCCESS_EPOCH_DAY]
+        if (lastDay == epochDay) return
+        this[Keys.REVIEW_SUCCESS_DAY_COUNT] = nextReviewSuccessDayCount(
+            currentDayCount = this[Keys.REVIEW_SUCCESS_DAY_COUNT],
+            hasTrackedDay = lastDay != null,
+            previousSuccessCount = previous,
+        )
+        this[Keys.REVIEW_LAST_SUCCESS_EPOCH_DAY] = epochDay
     }
 
     override suspend fun recordSuccessfulExportOnce(operationId: String): Boolean {
@@ -243,8 +258,7 @@ class SettingsRepositoryImpl(
         dataStore.edit { prefs ->
             val operations = prefs[Keys.DIRECT_SUCCESSFUL_OPERATION_IDS].orEmpty()
             if (operationId !in operations) {
-                val count = (prefs[Keys.SUCCESSFUL_EXPORT_COUNT] ?: 0).coerceAtLeast(0)
-                prefs[Keys.SUCCESSFUL_EXPORT_COUNT] = if (count == Int.MAX_VALUE) count else count + 1
+                prefs.recordReviewSuccess(LocalDate.now().toEpochDay())
                 prefs[Keys.DIRECT_SUCCESSFUL_OPERATION_IDS] = operations + operationId
                 recorded = true
             }
@@ -252,29 +266,43 @@ class SettingsRepositoryImpl(
         return recorded
     }
 
-    override suspend fun getLastReviewAttemptEpochMillis(migrationEpochMillis: Long): Long? {
+    override suspend fun getReviewPromptState(migrationEpochMillis: Long): ReviewPromptState {
         require(migrationEpochMillis >= 0)
-        var resolved: Long? = null
+        var state: ReviewPromptState? = null
         dataStore.edit { prefs ->
-            resolved = resolveReviewAttemptEpochMillis(
+            val attempt = resolveReviewAttemptEpochMillis(
                 currentAttemptEpochMillis = prefs[Keys.LAST_REVIEW_ATTEMPT_EPOCH_MILLIS],
                 legacyRequested = prefs[Keys.LEGACY_HAS_REQUESTED_REVIEW] ?: false,
                 migrationEpochMillis = migrationEpochMillis,
             )
-            if (prefs[Keys.LAST_REVIEW_ATTEMPT_EPOCH_MILLIS] == null && resolved != null) {
-                prefs[Keys.LAST_REVIEW_ATTEMPT_EPOCH_MILLIS] = requireNotNull(resolved)
+            if (prefs[Keys.LAST_REVIEW_ATTEMPT_EPOCH_MILLIS] == null && attempt != null) {
+                prefs[Keys.LAST_REVIEW_ATTEMPT_EPOCH_MILLIS] = attempt
             }
             prefs.remove(Keys.LEGACY_HAS_REQUESTED_REVIEW)
+            state = ReviewPromptState(
+                successfulExportCount = (prefs[Keys.SUCCESSFUL_EXPORT_COUNT] ?: 0).coerceAtLeast(0),
+                successDayCount = (prefs[Keys.REVIEW_SUCCESS_DAY_COUNT] ?: 0).coerceAtLeast(0),
+                lastAttemptEpochMillis = attempt,
+                lastAttemptAppVersionCode = prefs[Keys.LAST_REVIEW_ATTEMPT_VERSION_CODE],
+                lastFailedRequestEpochMillis = prefs[Keys.LAST_REVIEW_FAILURE_EPOCH_MILLIS]?.takeIf { it >= 0 },
+            )
         }
-        return resolved
+        return requireNotNull(state)
     }
 
-    override suspend fun recordReviewAttempt(epochMillis: Long) {
+    override suspend fun recordReviewAttempt(epochMillis: Long, appVersionCode: Long) {
         require(epochMillis >= 0)
         dataStore.edit { prefs ->
             prefs[Keys.LAST_REVIEW_ATTEMPT_EPOCH_MILLIS] = epochMillis
+            prefs[Keys.LAST_REVIEW_ATTEMPT_VERSION_CODE] = appVersionCode
+            prefs.remove(Keys.LAST_REVIEW_FAILURE_EPOCH_MILLIS)
             prefs.remove(Keys.LEGACY_HAS_REQUESTED_REVIEW)
         }
+    }
+
+    override suspend fun recordReviewRequestFailure(epochMillis: Long) {
+        require(epochMillis >= 0)
+        dataStore.edit { prefs -> prefs[Keys.LAST_REVIEW_FAILURE_EPOCH_MILLIS] = epochMillis }
     }
 
     override val selectedHealthProviderId: Flow<String> = dataStore.data.map { prefs ->
@@ -362,6 +390,20 @@ internal fun resolveFreeExportsUsed(currentUsed: Int?, legacyRemaining: Int?): I
     currentUsed != null -> FreemiumPolicy.sanitizedUsedCount(currentUsed)
     legacyRemaining != null -> FreemiumPolicy.usedCountFromLegacyRemaining(legacyRemaining)
     else -> 0
+}
+
+/**
+ * Distinct success days after a new day's success. Counts recorded before days were
+ * tracked represent one earlier day, so upgraded users are not reset to zero.
+ */
+internal fun nextReviewSuccessDayCount(
+    currentDayCount: Int?,
+    hasTrackedDay: Boolean,
+    previousSuccessCount: Int,
+): Int {
+    var days = (currentDayCount ?: 0).coerceAtLeast(0)
+    if (!hasTrackedDay && previousSuccessCount > 0) days = maxOf(days, 1)
+    return if (days == Int.MAX_VALUE) days else days + 1
 }
 
 internal fun resolveReviewAttemptEpochMillis(

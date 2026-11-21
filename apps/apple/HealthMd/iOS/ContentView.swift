@@ -95,7 +95,7 @@ struct ContentView: View {
     @State private var activeMacExportStartDate: Date?
     @State private var activeMacExportEndDate: Date?
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
-    @State private var reviewMilestonePending = false
+    @State private var reviewPromptPending = false
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @ObservedObject private var clinicSponsorship = ClinicSponsorshipManager.shared
 
@@ -604,10 +604,13 @@ struct ContentView: View {
             invalidateExecutionHistory()
             saveDateRangeSelection()
         }
-        .healthMdReleaseNotesSheet(
-            reviewMilestonePending: $reviewMilestonePending,
-            canPresentReview: canPresentReviewIntroduction
-        )
+        .healthMdReleaseNotesSheet()
+        .reviewPrompt(pending: $reviewPromptPending, canPresent: canPresentReviewPrompt)
+        .onChange(of: schedulingManager.notificationExportResult) { previous, current in
+            // Dismissing a scheduled export's full-success result is a visible success.
+            guard current == nil, case .success? = previous?.status else { return }
+            markReviewMomentAfterVisibleSuccess()
+        }
         .onDisappear {
             invalidateExecutionHistory()
             historyProfilePublicationObserver.unbind()
@@ -619,14 +622,25 @@ struct ContentView: View {
         } // else (main app)
     }
 
-    private var canPresentReviewIntroduction: Bool {
-        hasCompletedOnboarding && selectedTab == .export && !isExporting
+    /// Nothing else is on screen: onboarding done, Archive showing, no export,
+    /// done card, paywall, upgrade prompt, error, partial notice, alert or sheet.
+    private var canPresentReviewPrompt: Bool {
+        hasCompletedOnboarding && selectedTab == .export && !isExporting && !isShowingExportMoment
             && !isAssessingHistory && !showFolderPicker && !showError
             && !showDestinationChangedAlert && !showPaywall
             && !showUpgradePromptPaywall && purchaseManager.pendingUpgradePrompt == nil
             && !presentFirstAutomationCreator && markdownPreview == nil && quickLookURL == nil
             && exportFolderBrowserPresentation == nil && !showExportProfiles && !showClinicianReport
             && partialExportNotice == nil && schedulingManager.notificationExportResult == nil
+    }
+
+    /// A visible full success may lead to a review request, but never inside the
+    /// free-export flow (an upgrade prompt is queued or the free exports are used up).
+    private func markReviewMomentAfterVisibleSuccess() {
+        guard scenePhase == .active,
+              purchaseManager.pendingUpgradePrompt == nil,
+              purchaseManager.canExport else { return }
+        reviewPromptPending = true
     }
 
     // MARK: - Marketing Capture
@@ -1986,9 +2000,7 @@ struct ContentView: View {
                 }
                 startStatusDismissTimer()
 
-                if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
-                    reviewMilestonePending = true
-                }
+                markReviewMomentAfterVisibleSuccess()
             } else if result.isPartialSuccess {
                 let isCompletedDailyNoteSkip = advancedSettings.dailyNotesOnlyModeEnabled
                     && result.dailyNoteSkipCount > 0
@@ -2107,6 +2119,7 @@ struct ContentView: View {
             } else if result.isFullSuccess {
                 exportStatusMessage = "Uploaded \(result.totalFilesWritten) file(s) to Google Drive"
                 startStatusDismissTimer()
+                markReviewMomentAfterVisibleSuccess()
             } else if result.isPartialSuccess {
                 partialExportNotice = PartialExportNotice(result: result)
                 exportStatusMessage = "Google Drive export partially completed (partial_completion)."
@@ -2207,9 +2220,7 @@ struct ContentView: View {
                 vaultManager.lastExportStatus = "API export complete"
                 startStatusDismissTimer()
 
-                if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
-                    reviewMilestonePending = true
-                }
+                markReviewMomentAfterVisibleSuccess()
             } else if result.isPartialSuccess {
                 partialExportNotice = PartialExportNotice(result: result)
                 let warning = result.hasDegradingPartialFailures ? result.partialFailureSummary : nil
@@ -2316,9 +2327,7 @@ struct ContentView: View {
                 vaultManager.recordSuccessfulExportStatus("Agent Data gateway export complete")
                 startStatusDismissTimer()
 
-                if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
-                    reviewMilestonePending = true
-                }
+                markReviewMomentAfterVisibleSuccess()
             } else if result.isPartialSuccess {
                 partialExportNotice = PartialExportNotice(result: result)
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
@@ -3117,9 +3126,8 @@ struct ContentView: View {
             }
             startStatusDismissTimer()
 
-            if ReviewManager.shared.recordSuccessfulExport(), purchaseManager.pendingUpgradePrompt == nil {
-                reviewMilestonePending = true
-            }
+            // A success that carries degrading warnings is not a full success.
+            if exportResult.isFullSuccess { markReviewMomentAfterVisibleSuccess() }
         case .partialSuccess:
             let isCompletedDailyNoteSkip = completionSettings.dailyNotesOnlyModeEnabled
                 && result.dailyNoteSkipCount > 0
@@ -3350,6 +3358,9 @@ struct ContentView: View {
                 purchaseManager.recordExportUse()
                 exportProgress = 1.0
                 startStatusDismissTimer()
+                // Mirror a real full success: count it, then offer the review moment.
+                ReviewManager.shared.recordSuccessfulExport()
+                markReviewMomentAfterVisibleSuccess()
             }
         }
     }

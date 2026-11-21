@@ -114,6 +114,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.data.health.HealthCategoryPermissions
@@ -406,10 +407,14 @@ fun ExportScreen(
 
     // The flavor-owned prompter contains every store SDK reference. F-Droid never emits this
     // request, but an unavailable result also fails open without affecting export success.
+    // Collect only while started: the view model asks only when someone is listening, so a
+    // success that finishes in the background never prompts.
     val activity = context as? Activity
-    LaunchedEffect(Unit) {
-        viewModel.requestReview.collect {
-            activity?.let(viewModel::performReviewPrompt) ?: viewModel.onReviewRequestFailed()
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.requestReview.collect {
+                activity?.let(viewModel::performReviewPrompt) ?: viewModel.onReviewRequestFailed()
+            }
         }
     }
 

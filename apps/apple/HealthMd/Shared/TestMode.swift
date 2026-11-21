@@ -112,6 +112,17 @@ enum TestMode {
         env("UITEST_EXPORT_RESULT")
     }
 
+    /// Review-request scenario for UI tests. Automatic review requests stay off in
+    /// UI-test launches unless this is "eligible" (Debug only), which also seeds the
+    /// usage threshold so the next visible full success asks StoreKit.
+    static var reviewPromptScenario: String? {
+        #if DEBUG
+        isUITesting ? env("UITEST_REVIEW_PROMPT") : nil
+        #else
+        nil
+        #endif
+    }
+
     /// Simulated connected-Mac destination state for iOS export-target UI tests.
     /// Supported values: "none", "ready", "noFolder", "accessDenied", "busy".
     static var macExportStatus: String {

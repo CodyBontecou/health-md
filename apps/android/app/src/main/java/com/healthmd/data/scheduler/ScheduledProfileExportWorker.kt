@@ -583,6 +583,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                     googleDriveExportOrchestrator.acknowledgeAfterHistory(it)
                 }
             }
+            settingsRepository.countScheduledReviewSuccess(result, distributionPolicy)
         }
         val failedDates = result.failedDateDetails.mapTo(hashSetOf()) { it.date }
         val refreshSucceeded = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {

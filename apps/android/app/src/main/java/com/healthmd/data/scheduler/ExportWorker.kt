@@ -789,6 +789,7 @@ class ExportWorker @AssistedInject constructor(
                     googleDriveExportOrchestrator.acknowledgeAfterHistory(operationId)
                 }
             }
+            settingsRepository.countScheduledReviewSuccess(result, distributionPolicy)
 
             val titleResId = when {
                 result.isFullSuccess -> R.string.export_notification_title_complete

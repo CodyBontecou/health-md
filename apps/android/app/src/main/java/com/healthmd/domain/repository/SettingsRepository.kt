@@ -1,5 +1,6 @@
 package com.healthmd.domain.repository
 
+import com.healthmd.domain.export.ReviewPromptState
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.SleepDayAttribution
 import kotlinx.coroutines.flow.Flow
@@ -68,11 +69,16 @@ interface SettingsRepository {
 
     // In-app review tracking
     suspend fun getSuccessfulExportCount(): Int
-    suspend fun incrementSuccessfulExportCount()
+    /** Counts one full success toward the review threshold, and its calendar day. */
+    suspend fun recordReviewEligibleSuccess(epochDay: Long)
     /** Atomically persists one success and its opaque operation receipt across retries. */
     suspend fun recordSuccessfulExportOnce(operationId: String): Boolean
-    suspend fun getLastReviewAttemptEpochMillis(migrationEpochMillis: Long): Long?
-    suspend fun recordReviewAttempt(epochMillis: Long)
+    /** Resolves review-request inputs, migrating the legacy one-shot flag to a timestamp. */
+    suspend fun getReviewPromptState(migrationEpochMillis: Long): ReviewPromptState
+    /** A completed Play review flow: starts the long cooldown for this app version. */
+    suspend fun recordReviewAttempt(epochMillis: Long, appVersionCode: Long)
+    /** A failed Play request: starts the short retry cooldown only. */
+    suspend fun recordReviewRequestFailure(epochMillis: Long)
 
     // Health provider selection / direct-provider connection state
     val selectedHealthProviderId: Flow<String>

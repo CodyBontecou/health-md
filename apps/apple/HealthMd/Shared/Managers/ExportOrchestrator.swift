@@ -2418,6 +2418,13 @@ struct ExportOrchestrator {
         profileName: String? = nil,
         profileID: UUID? = nil
     ) {
+        // Every recorded full success counts toward the review threshold, whatever
+        // its source (manual, Google Drive, scheduled, background, Shortcut, Mac).
+        // Counting never prompts; only the foreground UI may ask StoreKit.
+        if result.isFullSuccess {
+            ReviewManager.shared.recordSuccessfulExport()
+        }
+
         let history = ExportHistoryManager.shared
         let suppliedFileCount = fileCount.map { max($0, 0) }
         let resolvedFileCount = suppliedFileCount ?? result.totalFilesWritten

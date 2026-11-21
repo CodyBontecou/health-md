@@ -50,7 +50,6 @@ class ProductCapabilityManifestTest {
                 "direct.cli_agent_push_wake",
                 "export.range-summary",
                 "setup.share-portable-configuration",
-                "support.native-review-introduction",
             ),
             idsWithState(states, "planned"),
         )
@@ -133,6 +132,7 @@ class ProductCapabilityManifestTest {
 
     private companion object {
         val sharedCapabilities = setOf(
+            "support.native-review-introduction",
             "support.local-reporting-fallback",
         "account.clinic-sponsored-access",
             "purchase.free-export-journey",
@@ -190,7 +190,6 @@ class ProductCapabilityManifestTest {
         )
 
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
-            "support.native-review-introduction",
             "account.clinic-sync-requests",
             "export.scheduled-receiver-coverage",
             "source.private-platform-database",
