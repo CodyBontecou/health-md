@@ -105,7 +105,10 @@ final class SyncEventHistoryManager: ObservableObject {
 
     // MARK: - Public Methods
 
+    /// Records `event`, replacing an earlier entry with the same id (a replayed terminal
+    /// result for one export job) so it appears once.
     func record(_ event: SyncEvent) {
+        history.removeAll { $0.id == event.id }
         history.insert(event, at: 0)
 
         if history.count > Self.maxHistoryEntries {

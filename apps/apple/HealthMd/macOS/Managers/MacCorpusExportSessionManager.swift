@@ -17,9 +17,19 @@ struct MacEncryptedContextCommitEvidence {
 }
 
 enum MacCorpusFinalizeOutcome {
-    case files(result: MacExportResultPayload, acknowledgement: ConnectedCorpusTransferFinalAck)
+    /// `manifest` identifies the received export (source device, dates, target) so the
+    /// caller can record it in the Mac's export history and activity.
+    case files(
+        result: MacExportResultPayload,
+        acknowledgement: ConnectedCorpusTransferFinalAck,
+        manifest: ConnectedCorpusExportManifest
+    )
     case strictRaw(spool: CanonicalRawResultSpool, acknowledgement: ConnectedCorpusTransferFinalAck)
-    case failed(failure: MacExportFailure, acknowledgement: ConnectedCorpusTransferFinalAck)
+    case failed(
+        failure: MacExportFailure,
+        acknowledgement: ConnectedCorpusTransferFinalAck,
+        manifest: ConnectedCorpusExportManifest
+    )
     case replay(
         acknowledgement: ConnectedCorpusTransferFinalAck,
         fileResult: MacExportResultPayload?
@@ -353,6 +363,8 @@ final class MacCorpusExportSessionManager {
 
     var activeJobID: UUID? { activeSession?.journal.session.jobID }
     var activeSessionID: UUID? { activeSession?.journal.session.sessionID }
+    /// Manifest of the session currently receiving partitions, if any (no disk access).
+    var activeExportManifest: ConnectedCorpusExportManifest? { activeSession?.journal.exportManifest }
     var activeExportMode: ConnectedCorpusExportMode? {
         activeSession?.journal.exportManifest.mode
     }
@@ -894,7 +906,11 @@ final class MacCorpusExportSessionManager {
                 cleanupPayloadFiles(session)
                 if activeSession === session { activeSession = nil }
                 admittedPartitions.removeAll()
-                return .failed(failure: failure, acknowledgement: acknowledgement)
+                return .failed(
+                    failure: failure,
+                    acknowledgement: acknowledgement,
+                    manifest: session.journal.exportManifest
+                )
             }
             if let storedSpool = session.journal.strictRawTerminalSpool {
                 let spool = try restoreStrictRawTerminalSpool(storedSpool, session: session)
@@ -1025,7 +1041,11 @@ final class MacCorpusExportSessionManager {
             cleanupPayloadFiles(session)
             activeSession = nil
             admittedPartitions.removeAll()
-            return .files(result: result, acknowledgement: acknowledgement)
+            return .files(
+                result: result,
+                acknowledgement: acknowledgement,
+                manifest: session.journal.exportManifest
+            )
 
         case .writeFiles:
             guard let derivedSettings = writeFilesSettings else {
@@ -1411,7 +1431,11 @@ final class MacCorpusExportSessionManager {
             cleanupPayloadFiles(session)
             activeSession = nil
             admittedPartitions.removeAll()
-            return .files(result: result, acknowledgement: acknowledgement)
+            return .files(
+                result: result,
+                acknowledgement: acknowledgement,
+                manifest: session.journal.exportManifest
+            )
 
         case .strictRaw:
             let dateFormatter = Self.sourceDateFormatter

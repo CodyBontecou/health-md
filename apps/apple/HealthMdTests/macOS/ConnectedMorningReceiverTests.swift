@@ -76,7 +76,7 @@ struct ConnectedMorningReceiverTests {
             outcome = try await MacCorpusExportSessionManager(rootURL: fixture.sessions).finalize(finalize, vaultManager: vault)
             #expect(rejecting.calls == 0)
         } else { outcome = try await manager.finalize(finalize, vaultManager: fixture.vault) }
-        guard case .files(let result, let acknowledgement) = outcome else {
+        guard case .files(let result, let acknowledgement, _) = outcome else {
             Issue.record("Morning corpus must produce committed files"); return
         }
         let providerCount = fixture.payload.externalDailyRecords.count
@@ -219,7 +219,7 @@ struct ConnectedMorningReceiverTests {
             outcome = try await MacCorpusExportSessionManager(rootURL: f.sessions).finalize(finalize, vaultManager: vault)
             #expect(rejecting.calls == 0)
         } else { outcome = try await manager.finalize(finalize, vaultManager: f.vault) }
-        guard case .files(let result, _) = outcome else { Issue.record("Expected terminal note result"); return }
+        guard case .files(let result, _, _) = outcome else { Issue.record("Expected terminal note result"); return }
         let skipped = mode == "notes-skip"
         let only = skipped || mode == "notes-only"
         #expect(result.dailyNoteUpdateCount == (skipped ? 0 : 1))
@@ -335,7 +335,7 @@ struct ConnectedMorningReceiverTests {
         let personal = Data("Personal journal stays untouched.\r\n".utf8)
         try personal.write(to: note)
         let (manager, finalize) = try await openAndApply(f)
-        guard case .files(let result, _) = try await manager.finalize(finalize, vaultManager: f.vault) else {
+        guard case .files(let result, _, _) = try await manager.finalize(finalize, vaultManager: f.vault) else {
             Issue.record("Expected summary-only result"); return
         }
         #expect(result.successCount == 1 && result.totalFilesWritten == 4)
@@ -365,7 +365,7 @@ struct ConnectedMorningReceiverTests {
         let rejecting = NoReplan()
         let vault = makeVault(root: f.destination, planner: rejecting)
         let resumed = try await MacCorpusExportSessionManager(rootURL: f.sessions).finalize(finalize, vaultManager: vault)
-        guard case .files(let result, _) = resumed else { Issue.record("Expected exact replay after task cancellation"); return }
+        guard case .files(let result, _, _) = resumed else { Issue.record("Expected exact replay after task cancellation"); return }
         #expect(rejecting.calls == 0)
         #expect(result.successCount == 1 && result.dailyNoteUpdateCount == 1 && result.totalFilesWritten == 0)
         #expect(try Data(contentsOf: note) == written)
@@ -403,7 +403,7 @@ struct ConnectedMorningReceiverTests {
             }
         }
         let outcome = try await MacCorpusExportSessionManager(rootURL: f.sessions).finalize(finalize, vaultManager: vault)
-        guard case .files(let result, _) = outcome else { Issue.record("Expected committed individuals"); return }
+        guard case .files(let result, _, _) = outcome else { Issue.record("Expected committed individuals"); return }
         #expect(rejecting.calls == 0)
         #expect(result.totalFilesWritten == 4 + expected.files.count + f.payload.externalDailyRecords.count)
         #expect(result.dailyNoteUpdateCount == (mode == "individual-notes" ? 1 : 0))
@@ -498,7 +498,7 @@ struct ConnectedMorningReceiverTests {
             #expect(try Data(contentsOf: first) == Data("edited".utf8))
         } else {
             let resumed = try await MacCorpusExportSessionManager(rootURL: f.sessions).finalize(finalize, vaultManager: vault)
-            guard case .files(let result, _) = resumed else { Issue.record("Expected exact artifact replay"); return }
+            guard case .files(let result, _, _) = resumed else { Issue.record("Expected exact artifact replay"); return }
             #expect(result.totalFilesWritten == 7 && result.hasConsistentFileAccounting)
             #expect(try Data(contentsOf: first) == bytes)
         }
@@ -537,7 +537,7 @@ struct ConnectedMorningReceiverTests {
         let rejecting = NoReplan()
         let vault = makeVault(root: f.destination, planner: rejecting)
         let outcome = try await MacCorpusExportSessionManager(rootURL: f.sessions).finalize(finalize, vaultManager: vault)
-        guard case .files(let result, let acknowledgement) = outcome else { Issue.record("Expected archive result"); return }
+        guard case .files(let result, let acknowledgement, _) = outcome else { Issue.record("Expected archive result"); return }
         #expect(result.successCount == 1 && acknowledgement.successCount == 1)
         #expect(result.totalFilesWritten == 1 && result.externalRecordFileCount == 0)
         #expect(result.hasConsistentFileAccounting)
@@ -623,7 +623,7 @@ struct ConnectedMorningReceiverTests {
             #expect(try Data(contentsOf: archive) == Data("edited".utf8))
         } else {
             let resumed = try await MacCorpusExportSessionManager(rootURL: f.sessions).finalize(finalize, vaultManager: vault)
-            guard case .files(let result, _) = resumed else { Issue.record("Expected exact ZIP replay"); return }
+            guard case .files(let result, _, _) = resumed else { Issue.record("Expected exact ZIP replay"); return }
             #expect(result.totalFilesWritten == 1 && result.dailyNoteUpdateCount == 1 && result.hasConsistentFileAccounting)
             #expect(try Data(contentsOf: archive) == bytes)
         }

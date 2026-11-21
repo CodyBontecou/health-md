@@ -1008,7 +1008,7 @@ final class AppleContextAutomationTests: XCTestCase {
             requestFingerprint: session.requestFingerprint, partitionCount: 1,
             totalByteCount: partition.descriptor.byteCount, finalPartitionSHA256: partition.descriptor.sha256)
         let outcome = try await corpus.finalize(finalize, vaultManager: vault)
-        guard case .files(let committedResult, _) = outcome else { return XCTFail("Expected committed encrypted context") }
+        guard case .files(let committedResult, _, _) = outcome else { return XCTFail("Expected committed encrypted context") }
         XCTAssertEqual(committedResult.totalFilesWritten, 0)
         XCTAssertTrue(fileSystem.files.isEmpty, "Context must never write export files")
         XCTAssertFalse(jobs.complete(with: committedResult), "Ordinary file result cannot complete context even with zero files")
