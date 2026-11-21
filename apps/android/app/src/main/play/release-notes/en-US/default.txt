@@ -1,7 +1,7 @@
-v3.5.6 — Stability fixes
-• Fixes a crash after updating or restarting your phone when a scheduled export uses a long custom template.
-• Run now no longer crashes and waits for the automation switch to finish.
-• Large exports no longer freeze the app or run out of memory.
-• JSON exports no longer crash on an invalid value.
-• Fixes a crash when closing a schedule picker.
-• Scheduled exports work again for automations set up before 3.5.2. If one shows Paused, switch it back on.
+v3.5.7 — Fixes and restored tools
+• Health Connect shows Partly allowed when only some data types are allowed.
+• Open in Obsidian is back on the export result.
+• Reset export configuration is back on an automation's Output page.
+• An automation's Schedule page shows exact-timing, background and notification warnings.
+• Restore Purchase is available during setup.
+• TalkBack reads automation names while settings are locked.
