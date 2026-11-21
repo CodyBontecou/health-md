@@ -1,0 +1,8 @@
+// Google Drive OAuth: test (Google Cloud project `health-md-test`, consent screen in Testing).
+// Debug and Debug-iOS builds of the HealthMd iOS app target use this file, so local and
+// simulator builds never authorize against the production consent screen. Only the
+// project's registered test users can complete sign-in.
+// This is a public native OAuth client identifier, not a secret. Never add a client secret.
+GOOGLE_DRIVE_IOS_CLIENT_ID = 265872636157-gtfog1fd9ogngof16gnuljgrov13kotb.apps.googleusercontent.com
+GOOGLE_DRIVE_REDIRECT_SCHEME = com.googleusercontent.apps.265872636157-gtfog1fd9ogngof16gnuljgrov13kotb
+GOOGLE_DRIVE_REDIRECT_URI = com.googleusercontent.apps.265872636157-gtfog1fd9ogngof16gnuljgrov13kotb:/oauthredirect

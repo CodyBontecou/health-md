@@ -1,0 +1,165 @@
+version: 1
+requires:
+  platform: ios
+# ios-google-drive-connect-oauth: a Debug build carries the health-md-test Google OAuth
+# client (apps/apple/Config/GoogleDrive.Debug.xcconfig), so the Google Drive destination is
+# offered as available instead of configuration_missing, and Connect & Choose Folder opens
+# Google's sign-in for the test consent screen ("to continue to Health.md (test)").
+# The run stops at Google's sign-in page: it never enters an account or password. Completing
+# sign-in, the Picker return, refresh and revoke need a registered test user on a physical
+# iPhone (see docs/qa/google-drive-export-release-checklist.md).
+#
+# Prerequisites: an iPhone simulator with a Debug (Debug-iOS) build of Health.md installed and
+# network access to accounts.google.com. The UI-test launch arguments unlock the app and select
+# a synthetic TestVault; no Health data is read and no export runs.
+# Side effects: the Default automation's Output destination is switched to Google Drive in the
+# UI-test store (no folder is bound, nothing is saved to Google). The ASWebAuthenticationSession
+# sheet is cancelled at the end.
+#
+# Coordinate exceptions: on this iOS 27 simulator the runner tree carries none of the app's
+# SwiftUI ids or labels (the recorder warned on every app check), so checks stay raw
+# `tool: await-ui-element` steps, and taps on SwiftUI controls without a usable runner selector
+# are points taken from `describe` frames. The iOS sign-in consent alert and the Safari view
+# service sheet belong to other processes, so their Continue and Cancel buttons are points too.
+# Each point tap names its target and is followed by a hard check.
+# Replay warns that those two out-of-process taps are dispatched without a settle (the runner
+# cannot read another process's tree); the checks after each prove where they landed.
+steps:
+  - echo: Launch Health.md in UI-test mode (onboarded, unlocked, vault selected).
+      Expect the Automations tab
+  - launch:
+      native: com.codybontecou.obsidianhealth
+      ios:
+        app: com.codybontecou.obsidianhealth
+        args:
+          - --uitesting
+          - -UITEST_HAS_COMPLETED_ONBOARDING
+          - "true"
+          - -UITEST_PURCHASE_UNLOCKED
+          - "true"
+          - -UITEST_HEALTH_AUTHORIZED
+          - "true"
+          - -UITEST_VAULT_SELECTED
+          - "true"
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.tab.automations
+      timeoutMs: 20000
+  - await: { idle: true }
+  - echo: "Archive: open the Automations tab. Expect New automation"
+  - tap: { x: 0.405, y: 0.895 } # Automations tab (glass.tab.automations, frame 0.289,0.867,0.232,0.057)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: New automation
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: Open the Default automation card. Expect its detail page with the Output
+      row (glass.automation.output)
+  - tap: { x: 0.5, y: 0.27 } # Default automation card (only card, glass.automation.card, frame 0.040,0.235,0.920,0.172)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.output
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: Open Output (glass.automation.output). Expect the Output screen with its
+      destination picker
+  - tap: { x: 0.5, y: 0.6315 } # Output row (glass.automation.output, frame 0.040,0.604,0.920,0.055)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Choose New Folder
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: "Output: open the Destination menu. Expect a Google Drive option"
+  - tap:
+      text: Vault on this iPhone
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Google Drive
+      timeoutMs: 8000
+  - echo: Choose Google Drive. Expect the Connect & Choose Folder button
+      (glass.output.connectGoogleDrive) and the folder prompt, not configuration_missing
+  - tap:
+      text: Google Drive
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.output.connectGoogleDrive
+      timeoutMs: 8000
+  - await: { idle: true }
+  # GoogleDriveProfileBindingValidation reports configuration_missing before anything else, so
+  # this folder prompt appears only when the build carries a usable client configuration.
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        role: StaticText
+        text: Select a Google Drive folder
+      expectedText: Select a Google Drive folder
+      textMatch: equals
+      timeoutMs: 5000
+  - echo: Tap Connect & Choose Folder. Expect the sensitive-data disclosure with
+      Continue to Google
+  - tap: { x: 0.5005, y: 0.3335 } # Connect & Choose Folder (glass.output.connectGoogleDrive, frame 0.080,0.306,0.841,0.055)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Continue to Google
+      timeoutMs: 8000
+  # The popover ignores taps while it animates in; wait for it to settle.
+  - await: { idle: true }
+  - echo: Tap Continue to Google. Expect the iOS ASWebAuthenticationSession consent
+      alert (Continue)
+  # The runner's text selector resolved but did not activate the popover button on replay, so
+  # this is a point tap at the button's describe frame.
+  - tap: { x: 0.4995, y: 0.4765 } # Continue to Google (disclosure popover button, frame 0.241,0.449,0.517,0.055)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Wants to Use
+      timeoutMs: 15000
+  - echo: "System alert: Health.md wants to use accounts.google.com. Tap Continue.
+      Expect Google's sign-in page for Health.md (test)"
+  - tap: { x: 0.684, y: 0.5935 } # Continue on the system sign-in alert (springboard, frame 0.510,0.566,0.348,0.055)
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: URL
+        role: Button
+      expectedText: accounts.google.com
+      timeoutMs: 20000
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Health.md (test)
+      timeoutMs: 20000
+  - echo: "Endpoint reached: Google sign-in for Health.md (test). No credentials are
+      entered. Cancel the sheet. Expect the Output screen with no Drive folder
+      bound"
+  - tap: { x: 0.0945, y: 0.114 } # Cancel on the Safari view service sheet (id Close, frame 0.040,0.089,0.109,0.050)
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        text: Health.md (test)
+      timeoutMs: 10000
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.output.connectGoogleDrive
+      timeoutMs: 10000
