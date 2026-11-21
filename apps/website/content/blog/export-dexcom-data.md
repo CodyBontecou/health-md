@@ -47,7 +47,7 @@ Dexcom's [raw-data export instructions](https://www.dexcom.com/en-us/faqs/can-i-
 3. Select the date range you need and save the CSV.
 4. Keep an untouched original. Inspect its dates, event types, glucose units and available columns before filtering it in a spreadsheet.
 
-Dexcom describes the file as a CSV "viewable in Excel" but its help pages, as checked, do not list the columns. Treat the columns you actually download as the reference: expect timestamps, event types and glucose values only if the file shows them, and read the unit from the file (mg/dL or mmol/L, depending on how you view glucose) rather than assuming one. Do not convert between units by hand without keeping the original. Dexcom says the CSV is viewable in Excel; for import tips see the [Excel walkthrough](/blog/apple-health-to-excel/), and check the dates after opening.
+Dexcom describes the file as a CSV "viewable in Excel" but its help pages, as checked, do not list the columns. Treat the columns you actually download as the reference: look for timestamps, event types and glucose values, and read the unit from the file (mg/dL or mmol/L, depending on how you view glucose) rather than assuming one. Do not convert between units by hand without keeping the original. For import tips see the [Excel walkthrough](/blog/apple-health-to-excel/), and check the dates after opening.
 
 This route is the better starting point for original Dexcom data. It does not require Health.md. Check that the required history has reached Clarity; an export cannot include readings missing from the selected account or date range.
 
@@ -104,7 +104,7 @@ For spreadsheet work, use the [Excel walkthrough](/blog/apple-health-to-excel/) 
 
 Health.md's core folder export needs no Health.md account and creates no Health.md server copy by default. A cloud-synced folder, emailed file or online spreadsheet follows that destination's storage rules. Keep glucose files private and review them before sharing; see the [local-only export guide](/blog/export-health-data-without-the-cloud/).
 
-## Other tools people use
+## Share with your clinic
 
 Dexcom says that once a receiver is uploaded to your personal Clarity account, you can [share your data with your clinic](https://www.dexcom.com/en-us/faqs/can-i-export-raw-data). Dexcom's help pages checked here do not describe third-party platforms, so check their own documentation for any exports.
 
