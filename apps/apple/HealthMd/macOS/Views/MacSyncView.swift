@@ -480,6 +480,8 @@ struct MacSyncView: View {
             )
             MacGlassDivider()
             MacGlassRow(String(localized: "Last export"), value: lastExportText)
+                .accessibilityValue(lastExportText)
+                .accessibilityIdentifier(AccessibilityID.Mac.lastExport)
             if displayConnectionState != .connected {
                 MacGlassDivider()
                 MacGlassRow(String(localized: "iPhone"), value: statusPrimaryLine, tone: .warning)
@@ -664,6 +666,7 @@ struct MacSyncView: View {
             }
             if historyManager.history.isEmpty && activeExportProgress == nil {
                 MacGlassRow(String(localized: "No activity yet"), value: String(localized: "Exports received from iPhone appear here."))
+                    .accessibilityIdentifier(AccessibilityID.Mac.activityEmpty)
             }
             // MacHomeG lists the three most recent events; History holds the full record.
             ForEach(Array(historyManager.history.prefix(3).enumerated()), id: \.element.id) { index, event in
@@ -673,6 +676,8 @@ struct MacSyncView: View {
                     value: event.activityLine,
                     tone: event.isSuccess ? .muted : .coral
                 )
+                .accessibilityValue(event.activityLine)
+                .accessibilityIdentifier(AccessibilityID.Mac.activityEvent)
             }
         }
         .id("marketing-activity")

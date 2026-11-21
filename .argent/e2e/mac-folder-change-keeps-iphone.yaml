@@ -1,0 +1,61 @@
+version: 1
+requires:
+  platform: macos
+# mac-folder-change-keeps-iphone: changing the Mac's destination folder while an iPhone is paired keeps
+# the pairing (or restores it within 15 s) with no action on the iPhone.
+#
+# Regression check for the 2026-11-20 simulator report: changing the Mac folder dropped the pairing
+# (iPhone "Offline · Connection Error", Mac back to "Searching") until Mac destination was toggled on the
+# phone. Does not reproduce since the Mac re-pair fix (PR #401): on a physical iPhone the session survives
+# both folder changes and the iPhone shows the new path. A disconnected Mac shows "Connect iPhone" in the
+# readiness badge, so the Ready checks fail if the pairing drops and does not come back.
+#
+# Prerequisites (fragment): Health.md for Mac (Debug, started by argent so the folder panel can be
+# answered) on the Mac destination page, with an iPhone paired over nearby networking (badge "Ready"),
+# e.g. by running ios-device-mac-repair-after-disconnect up to "Ready for Mac Exports". QA folders
+# ~/dev/health-md/.pi/v4-parity/r2-mac-history/mac-dest and mac-dest-2 exist. Back up the Mac prefs first.
+# Side effects: the Mac destination ends on the mac-dest QA folder; put it back to your real folder after.
+# Steps use folder-panel answers (file-panel tool), not coordinates.
+executionPrerequisite: Health.md for Mac (Debug, started by argent) on the Mac
+  destination page with an iPhone paired over nearby networking (readiness badge
+  "Ready"); QA folders ~/dev/health-md/.pi/v4-parity/r2-mac-history/mac-dest and
+  mac-dest-2 exist.
+steps:
+  - echo: "iPhone paired: expect the readiness badge Ready"
+  - await: { text: { in: { text: Mac export readiness }, equals: Mac export readiness Ready }, timeout: 5000 }
+
+  - echo: Change the destination folder to mac-dest-2 while paired; expect the folder row to show mac-dest-2
+  - tap: { id: mac.destination.changeFolder }
+  - tool: file-panel
+    args:
+      action: choose
+      path: ~/dev/health-md/.pi/v4-parity/r2-mac-history/mac-dest-2
+  - await: { text: { in: { id: mac.destination.folder }, contains: mac-dest-2 }, timeout: 5000 }
+
+  - echo: After the folder change the iPhone must still be (or be again) paired within 15 s, with no iPhone action
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: Mac export readiness
+      expectedText: Mac export readiness Ready
+      textMatch: equals
+      timeoutMs: 15000
+    delayMs: 5000
+
+  - echo: Change the folder again, to mac-dest; expect the folder row to show mac-dest and the iPhone to stay paired
+  - tap: { id: mac.destination.changeFolder }
+  - tool: file-panel
+    args:
+      action: choose
+      path: ~/dev/health-md/.pi/v4-parity/r2-mac-history/mac-dest
+  - await: { text: { in: { id: mac.destination.folder }, contains: "accessible: mac-dest Destination" }, timeout: 5000 }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: Mac export readiness
+      expectedText: Mac export readiness Ready
+      textMatch: equals
+      timeoutMs: 15000
+    delayMs: 5000

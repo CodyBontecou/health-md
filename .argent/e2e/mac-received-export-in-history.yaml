@@ -1,0 +1,33 @@
+version: 1
+requires:
+  platform: macos
+# mac-received-export-in-history: after an iPhone export reaches Health.md for Mac, the Mac shows it in
+# Home "Last export", the Activity list and the History page.
+#
+# Reproduction for the 2026-11-20 report: after "1 day written · Sent to mac-dest" the Mac still showed
+# Last export "None yet", Activity "No activity yet" and History "No Export History". Cause: current
+# iPhones send exports as partitioned connected-corpus transfers, and that receive path never recorded
+# history or activity (only the legacy whole-job path did, also in v3.5.0).
+#
+# Prerequisites (fragment): Health.md for Mac (Debug) running with an iPhone export to it finished
+# TODAY: run ios-device-export-to-mac on the phone right before (Mac folder on a QA folder). The
+# "Today" check fails for an export from an earlier day, so don't run it across midnight.
+# Side effects: none (read-only; it opens History and leaves the window there).
+executionPrerequisite: Health.md for Mac (Debug) running; an iPhone export to
+  this Mac finished today (run ios-device-export-to-mac just before); the Mac
+  window shows any sidebar page.
+steps:
+  - echo: Open Mac destination (Home); expect the Last export row
+  - tap: { text: Mac destination }
+  - await: { visible: { id: mac.destination.lastExport }, timeout: 5000 }
+  - await: { idle: true }
+
+  - echo: Last export shows today's received export (it read "None yet" before the fix)
+  - assert: { text: { in: { id: mac.destination.lastExport }, contains: Today } }
+
+  - echo: Activity lists the received export (it read "No activity yet" before the fix)
+  - assert: { text: { in: { id: mac.activity.event }, contains: Received } }
+
+  - echo: Open History; expect a completed export entry (it showed "No Export History" before the fix)
+  - tap: { text: { matches: '^History$' } }
+  - await: { visible: { text: Complete. Exported }, timeout: 5000 }

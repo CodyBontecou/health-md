@@ -973,6 +973,7 @@ struct HealthMdApp: App {
         IdleTimerCoordinator.shared.beginActivity(applicationActivityID)
         defer { IdleTimerCoordinator.shared.endActivity(applicationActivityID) }
 
+        let activeManifest = macCorpusExportSessionManager.activeExportManifest
         do {
             let outcome = try await macCorpusExportSessionManager.finalize(
                 finalize,
@@ -1006,8 +1007,9 @@ struct HealthMdApp: App {
                 if connectedCorpusAwakeCoordinator.finishJob(jobID: finalize.jobID) {
                     syncService.isSyncing = false
                 }
-            case .failed(let failure, let acknowledgement):
+            case .failed(let failure, let acknowledgement, let manifest):
                 syncService.lastMacExportFailure = failure
+                recordReceivedCorpusExport(manifest, jobID: finalize.jobID, failure: failure)
                 _ = iphoneExportRequestCoordinator.complete(with: failure)
                 // Publish the application failure first. The rejected ACK is terminal
                 // only because both messages were durably bound in the corpus journal.
@@ -1016,10 +1018,11 @@ struct HealthMdApp: App {
                 if connectedCorpusAwakeCoordinator.finishJob(jobID: finalize.jobID) {
                     syncService.isSyncing = false
                 }
-            case .files(let result, let acknowledgement):
+            case .files(let result, let acknowledgement, let manifest):
                 syncService.lastMacExportResult = result
                 syncService.lastMacExportFailure = nil
                 guard completeVerifiedCorpusResult(result, finalize: finalize) else { return }
+                recordReceivedCorpusExport(manifest, jobID: finalize.jobID, result: result)
                 syncService.send(.macExportResult(result))
                 syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
                 if connectedCorpusAwakeCoordinator.finishJob(jobID: finalize.jobID) {
@@ -1087,11 +1090,35 @@ struct HealthMdApp: App {
                 syncService.isSyncing = false
             }
             syncService.lastMacExportFailure = failure
+            if let activeManifest {
+                recordReceivedCorpusExport(activeManifest, jobID: finalize.jobID, failure: failure)
+            }
             _ = iphoneExportRequestCoordinator.complete(with: failure)
             syncService.send(.macExportFailed(failure))
             syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
             publishMacDestinationStatus()
         }
+    }
+
+    /// Partitioned connected exports are how current iPhones send files to this Mac, so they
+    /// must reach Home "Last export", Activity and History like `executeMacExportJob` does.
+    /// Encrypted-context refreshes and strict-raw results are Mac-requested data, not exports.
+    private func recordReceivedCorpusExport(
+        _ manifest: ConnectedCorpusExportManifest,
+        jobID: UUID,
+        result: MacExportResultPayload
+    ) {
+        guard manifest.mode == .writeFiles else { return }
+        MacReceivedExportRecorder.record(MacReceivedExport(jobID: jobID, manifest: manifest), result: result)
+    }
+
+    private func recordReceivedCorpusExport(
+        _ manifest: ConnectedCorpusExportManifest,
+        jobID: UUID,
+        failure: MacExportFailure
+    ) {
+        guard manifest.mode == .writeFiles else { return }
+        MacReceivedExportRecorder.record(MacReceivedExport(jobID: jobID, manifest: manifest), failure: failure)
     }
 
     private func logConnectedTransferFailure(_ error: Error, phase: String) {
@@ -1196,15 +1223,13 @@ struct HealthMdApp: App {
         case .success(let payload):
             syncService.lastMacExportResult = payload
             syncService.lastMacExportFailure = nil
-            recordMacAgentHistory(for: job, result: payload)
-            recordMacAgentActivity(for: job, result: payload)
+            MacReceivedExportRecorder.record(MacReceivedExport(job: job), result: payload)
             _ = iphoneExportRequestCoordinator.complete(with: payload)
             syncService.send(.macExportResult(payload))
         case .failure(let failure):
             syncService.lastMacExportFailure = failure
             syncService.lastMacExportResult = nil
-            recordMacAgentHistory(for: job, failure: failure)
-            recordMacAgentActivity(for: job, failure: failure)
+            MacReceivedExportRecorder.record(MacReceivedExport(job: job), failure: failure)
             _ = iphoneExportRequestCoordinator.complete(with: failure)
             syncService.send(.macExportFailed(failure))
         }
@@ -1452,139 +1477,6 @@ struct HealthMdApp: App {
             activeJobID: effectiveActiveJobID,
             capabilities: .current(platform: .macOS)
         )
-    }
-
-    private func recordMacAgentHistory(for job: MacExportJob, result: MacExportResultPayload) {
-        let exportResult = ExportOrchestrator.ExportResult(macExportPayload: result)
-        ExportOrchestrator.recordResult(
-            exportResult,
-            source: .macAgent,
-            dateRangeStart: job.dateRangeStart,
-            dateRangeEnd: job.dateRangeEnd,
-            targetLabel: job.requestedTarget?.destinationDisplayName ?? job.requestedTarget?.displayName ?? "Mac",
-            fileCount: result.hasAuthoritativeFileCount
-                ? result.totalFilesWritten : nil
-        )
-    }
-
-    private func recordMacAgentHistory(for job: MacExportJob, failure: MacExportFailure) {
-        let failedDetail = FailedDateDetail(
-            date: job.dateRangeStart,
-            reason: exportFailureReason(for: failure.reason),
-            errorDetails: failure.underlyingError ?? failure.message
-        )
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = job.settingsSnapshot.calendarTimeZoneIdentifier
-            .flatMap(TimeZone.init(identifier:)) ?? .gmt
-        let totalCount = max(ExportOrchestrator.dateRange(
-            from: job.dateRangeStart,
-            to: job.dateRangeEnd,
-            calendar: calendar
-        ).count, 1)
-        let exportResult = ExportOrchestrator.ExportResult(
-            successCount: 0,
-            totalCount: totalCount,
-            failedDateDetails: [failedDetail],
-            formatsPerDate: job.settingsSnapshot.makeAdvancedExportSettings().looseFormatsPerDate,
-            wasCancelled: failure.reason == .cancelled
-        )
-        ExportOrchestrator.recordResult(
-            exportResult,
-            source: .macAgent,
-            dateRangeStart: job.dateRangeStart,
-            dateRangeEnd: job.dateRangeEnd,
-            targetLabel: job.requestedTarget?.destinationDisplayName ?? job.requestedTarget?.displayName ?? "Mac",
-            fileCount: 0
-        )
-    }
-
-    private func recordMacAgentActivity(for job: MacExportJob, result: MacExportResultPayload) {
-        SyncEventHistoryManager.shared.record(SyncEvent(
-            peerName: job.sourceDeviceName,
-            kind: syncEventKind(for: result.status),
-            recordCount: max(result.totalFilesWritten, result.dailyNoteUpdateCount),
-            recordCountIsLowerBound: result.hasAuthoritativeFileCount ? nil : true,
-            dateRangeStart: job.dateRangeStart,
-            dateRangeEnd: job.dateRangeEnd,
-            failureMessage: activityFailureMessage(for: result)
-        ))
-    }
-
-    private func recordMacAgentActivity(for job: MacExportJob, failure: MacExportFailure) {
-        SyncEventHistoryManager.shared.record(SyncEvent(
-            peerName: job.sourceDeviceName,
-            kind: failure.reason == .cancelled ? .macExportCancelled : .macExportFailed,
-            recordCount: 0,
-            dateRangeStart: job.dateRangeStart,
-            dateRangeEnd: job.dateRangeEnd,
-            failureMessage: activityFailureMessage(for: failure)
-        ))
-    }
-
-    private func syncEventKind(for status: MacExportResultStatus) -> SyncEventKind {
-        switch status {
-        case .success:
-            return .macExportSucceeded
-        case .partialSuccess:
-            return .macExportPartialSuccess
-        case .failure:
-            return .macExportFailed
-        case .cancelled:
-            return .macExportCancelled
-        }
-    }
-
-    private func activityFailureMessage(for result: MacExportResultPayload) -> String? {
-        switch result.status {
-        case .success:
-            return nil
-        case .partialSuccess:
-            if result.dailyNoteSkipCount > 0,
-               result.hasAuthoritativeFileCount,
-               result.totalFilesWritten == 0,
-               result.completedDates?.count == result.totalCount {
-                return String(localized: "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily note(s); no export files were created.")
-            }
-            guard result.hasAuthoritativeFileCount else {
-                return String(localized: "Mac export partially completed")
-            }
-            return String(localized: "Mac export wrote \(result.totalFilesWritten) file(s); \(result.failedDateDetails.count) date(s) need attention.")
-        case .failure:
-            guard let detail = result.failedDateDetails.first?.reason.shortDescription else {
-                return String(localized: "Mac export failed")
-            }
-            return String(localized: "Mac export failed. Details: \(detail)")
-        case .cancelled:
-            return result.successCount > 0 && result.hasAuthoritativeFileCount
-                ? String(localized: "Mac export stopped after writing \(result.totalFilesWritten) file(s).")
-                : String(localized: "Mac export cancelled")
-        }
-    }
-
-    private func activityFailureMessage(for failure: MacExportFailure) -> String {
-        let detail = failure.message.trimmingCharacters(in: .whitespacesAndNewlines)
-        let summary = failure.reason == .cancelled
-            ? String(localized: "Mac export cancelled")
-            : String(localized: "Mac export failed")
-        guard !detail.isEmpty, detail != summary else { return summary }
-        return String(localized: "\(summary). Details: \(detail)")
-    }
-
-    private func exportFailureReason(for reason: MacExportFailureReason) -> ExportFailureReason {
-        switch reason {
-        case .noMacFolderSelected:
-            return .noVaultSelected
-        case .macFolderAccessDenied:
-            return .accessDenied
-        case .noHealthRecordsReceived:
-            return .noHealthData
-        case .exportWriteFailure:
-            return .fileWriteError
-        case .cancelled:
-            return .unknown
-        case .incompatibleProtocol, .noFormatsSelected, .payloadDecodeFailure, .macBusy:
-            return .unknown
-        }
     }
 
     private func syncEvent(from payload: SyncPayload) -> SyncEvent {

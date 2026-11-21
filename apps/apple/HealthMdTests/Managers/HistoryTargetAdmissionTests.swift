@@ -399,7 +399,7 @@ private final class AdmissionConnectedReceiver {
                 guard case .connectedCorpusTransferFinalize(let decoded) = try wire(.connectedCorpusTransferFinalize(request)) else { throw CocoaError(.coderInvalidValue) }
                 lastFinalize = decoded; finalRequestFingerprint = decoded.requestFingerprint
                 let outcome = try await receiver.finalize(decoded, vaultManager: vault)
-                guard case .files(_, let acknowledgement) = outcome,
+                guard case .files(_, let acknowledgement, _) = outcome,
                       case .connectedCorpusTransferFinalAck(let reply) = try wire(.connectedCorpusTransferFinalAck(acknowledgement)) else { throw CocoaError(.coderInvalidValue) }
                 return reply
             } catch { XCTFail("Real durable finalization failed: \(error)"); return nil }

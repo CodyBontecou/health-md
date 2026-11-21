@@ -413,6 +413,68 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         ).disposition, .accept)
     }
 
+    // MARK: Received-export history (Mac Home "Last export", Activity, History)
+
+    func testReceivedCorpusExportBuildsActivityEventKeyedByJob() throws {
+        let start = Self.day(2026, 1, 2)
+        let end = Self.day(2026, 1, 3)
+        let context = try makeContext(requestedDates: [start, end])
+        let jobID = context.session.jobID
+        let export = MacReceivedExport(jobID: jobID, manifest: context.manifest)
+
+        XCTAssertEqual(export.sourceDeviceName, "Test iPhone")
+        XCTAssertEqual(export.targetLabel, "CorpusVault")
+        XCTAssertEqual(export.dateRangeStart, start)
+        XCTAssertEqual(export.dateRangeEnd, end)
+
+        let result = MacExportResultPayload(
+            jobID: jobID,
+            status: .success,
+            successCount: 2,
+            totalCount: 2,
+            formatsPerDate: 1,
+            totalFilesWritten: 3,
+            externalRecordFileCount: 0,
+            failedDateDetails: [],
+            completedDates: [start, end],
+            destinationDisplayName: "CorpusVault",
+            destinationPathForDisplay: "/Synthetic/CorpusVault",
+            completedAt: end
+        )
+        let event = MacReceivedExportRecorder.activityEvent(for: export, result: result)
+        XCTAssertEqual(event.id, jobID, "A replayed result must replace, not duplicate, its entry")
+        XCTAssertEqual(event.kind, .macExportSucceeded)
+        XCTAssertEqual(event.peerName, "Test iPhone")
+        XCTAssertEqual(event.recordCount, 3)
+        XCTAssertEqual(event.dateRangeStart, start)
+        XCTAssertEqual(event.dateRangeEnd, end)
+        XCTAssertTrue(event.isSuccess)
+    }
+
+    func testReceivedCorpusExportFailureBuildsFailedHistoryAndActivity() throws {
+        let start = Self.day(2026, 1, 2)
+        let end = Self.day(2026, 1, 4)
+        let context = try makeContext(requestedDates: [start, end])
+        let export = MacReceivedExport(jobID: context.session.jobID, manifest: context.manifest)
+        let failure = MacExportFailure(
+            jobID: context.session.jobID,
+            reason: .exportWriteFailure,
+            message: "Mac could not finalize the partitioned corpus export."
+        )
+
+        let event = MacReceivedExportRecorder.activityEvent(for: export, failure: failure)
+        XCTAssertEqual(event.id, context.session.jobID)
+        XCTAssertEqual(event.kind, .macExportFailed)
+        XCTAssertFalse(event.isSuccess)
+        XCTAssertEqual(event.recordCount, 0)
+
+        let history = MacReceivedExportRecorder.historyResult(for: export, failure: failure)
+        XCTAssertEqual(history.successCount, 0)
+        XCTAssertEqual(history.totalCount, 3)
+        XCTAssertEqual(history.failedDateDetails.first?.reason, .fileWriteError)
+        XCTAssertFalse(history.wasCancelled)
+    }
+
     func testPartitionCommitWritesDailyOutputAndReplayIsIdempotent() async throws {
         let date = Self.day(2026, 1, 2)
         let context = try makeContext(requestedDates: [date])
@@ -470,10 +532,12 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             ),
             vaultManager: vaultManager
         )
-        guard case .files(let result, let acknowledgement) = outcome else {
+        guard case .files(let result, let acknowledgement, let manifest) = outcome else {
             return XCTFail("Expected file result")
         }
         XCTAssertEqual(result.status, .success)
+        // The app records this received export in Mac History/Activity from the manifest.
+        XCTAssertEqual(manifest, context.manifest)
         XCTAssertEqual(
             diskSpaceCheckCount,
             diskSpaceChecksBeforeFinalization,
@@ -554,7 +618,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             finalize,
             vaultManager: vaultManager
         )
-        guard case .failed(let replayedFailure, let replayedAcknowledgement) = replay else {
+        guard case .failed(let replayedFailure, let replayedAcknowledgement, _) = replay else {
             return XCTFail("Expected durable failure and rejected ACK replay")
         }
         XCTAssertEqual(replayedFailure, failure)
@@ -814,7 +878,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             ),
             vaultManager: vaultManager
         )
-        guard case .files(let result, let acknowledgement) = outcome else {
+        guard case .files(let result, let acknowledgement, _) = outcome else {
             return XCTFail("Expected connected range file result")
         }
         XCTAssertEqual(result.status, .success)
@@ -892,7 +956,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             ),
             vaultManager: vaultManager
         )
-        guard case .files(let result, _) = outcome else {
+        guard case .files(let result, _, _) = outcome else {
             return XCTFail("Expected summary-only connected range result")
         }
         XCTAssertEqual(result.status, .partialSuccess)
@@ -944,7 +1008,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             totalByteCount: partition.descriptor.byteCount,
             finalPartitionSHA256: partition.descriptor.sha256
         ), vaultManager: vaultManager)
-        guard case .files(let result, let acknowledgement) = outcome else {
+        guard case .files(let result, let acknowledgement, _) = outcome else {
             return XCTFail("Expected daily file result")
         }
         XCTAssertEqual(result.status, .partialSuccess)
@@ -1006,7 +1070,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             ),
             vaultManager: vaultManager
         )
-        guard case .files(let result, let acknowledgement) = outcome else {
+        guard case .files(let result, let acknowledgement, _) = outcome else {
             return XCTFail("Expected terminal no-data result")
         }
         XCTAssertEqual(result.status, .failure)
@@ -1080,7 +1144,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             ),
             vaultManager: vaultManager
         )
-        guard case .files(let result, _) = outcome else {
+        guard case .files(let result, _, _) = outcome else {
             return XCTFail("Expected nonterminal range warning")
         }
         XCTAssertEqual(result.status, .success)
@@ -1180,7 +1244,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             interrupted.finalize,
             vaultManager: resumedVault
         )
-        guard case .files(let result, let acknowledgement) = outcome else {
+        guard case .files(let result, let acknowledgement, _) = outcome else {
             return XCTFail("Expected resumed range completion")
         }
         XCTAssertEqual(rejectingPlanner.callCount, 0, "resume must not invoke either renderer")
@@ -1648,7 +1712,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             ),
             vaultManager: vaultManager
         )
-        guard case .files(let result, _) = outcome else {
+        guard case .files(let result, _, _) = outcome else {
             return XCTFail("Expected connected range file result")
         }
         XCTAssertEqual(result.status, .success)
@@ -1943,7 +2007,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             jobID: context.session.jobID, requestFingerprint: context.session.requestFingerprint,
             partitionCount: 1, totalByteCount: partition.descriptor.byteCount,
             finalPartitionSHA256: partition.descriptor.sha256), vaultManager: vaultManager)
-        guard case .files(let result, _) = outcome else { return XCTFail("Expected context completion") }
+        guard case .files(let result, _, _) = outcome else { return XCTFail("Expected context completion") }
         XCTAssertEqual(result.totalFilesWritten, 0)
         let executor = EncryptedHealthContextQueryExecutor(store: contextStore,
             evidenceScope: HealthMdEvidenceScope(allowedMetricIDs: ["steps"]))
@@ -2016,7 +2080,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             ),
             vaultManager: vaultManager
         )
-        guard case .files(let result, let acknowledgement) = outcome else {
+        guard case .files(let result, let acknowledgement, _) = outcome else {
             return XCTFail("Expected encrypted-context completion")
         }
         XCTAssertEqual(result.status, .success)
@@ -2528,7 +2592,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             ),
             vaultManager: realVault
         )
-        guard case .files(let result, _) = outcome else {
+        guard case .files(let result, _, _) = outcome else {
             return XCTFail("Expected file result")
         }
 
@@ -2608,7 +2672,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             ),
             vaultManager: realVault
         )
-        guard case .files(let result, _) = outcome else { return XCTFail("Expected file result") }
+        guard case .files(let result, _, _) = outcome else { return XCTFail("Expected file result") }
         XCTAssertEqual(result.status, .success)
         XCTAssertEqual(result.externalRecordFileCount, 1)
         let dailyNoteURL = ExportPathPlanner.dailyNoteURL(
@@ -2682,7 +2746,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             ),
             vaultManager: vaultManager
         )
-        guard case .files(let result, _) = outcome else { return XCTFail("Expected file result") }
+        guard case .files(let result, _, _) = outcome else { return XCTFail("Expected file result") }
         XCTAssertEqual(result.status, .success)
         XCTAssertTrue(result.failedDateDetails.isEmpty)
         XCTAssertEqual(result.completedDates, [requestedDate])
@@ -2743,7 +2807,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             ),
             vaultManager: vaultManager
         )
-        guard case .files(let result, _) = outcome else { return XCTFail("Expected file result") }
+        guard case .files(let result, _, _) = outcome else { return XCTFail("Expected file result") }
         XCTAssertEqual(result.status, .partialSuccess)
         XCTAssertEqual(result.failedDateDetails.map(\.date), [failedDate])
         XCTAssertEqual(result.completedDates, [successfulDate])
@@ -2880,7 +2944,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             ),
             vaultManager: vaultManager
         )
-        guard case .files(let result, _) = outcome else { return XCTFail("Expected file result") }
+        guard case .files(let result, _, _) = outcome else { return XCTFail("Expected file result") }
         XCTAssertEqual(result.status, .success)
         XCTAssertEqual(result.completedDates, [firstDate, secondDate])
     }
@@ -2941,7 +3005,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             ),
             vaultManager: realVault
         )
-        guard case .files(let result, _) = outcome else { return XCTFail("Expected file result") }
+        guard case .files(let result, _, _) = outcome else { return XCTFail("Expected file result") }
         XCTAssertEqual(result.status, .success)
         XCTAssertEqual(result.completedDates, [firstDate, secondDate])
         XCTAssertEqual(result.totalFilesWritten, 1)
