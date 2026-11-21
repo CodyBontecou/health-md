@@ -1,7 +1,7 @@
 # Health.md 4.0.0 App Review notes (draft, not yet entered in App Store Connect)
 # Paste the iOS block into the iOS 4.0.0 version and the macOS block into the Mac 4.0.0 version.
-# Contact fields stay as in 3.5.0. Replace <BUILD> and <SHA> at release time. Keep the
-# Google Drive paragraph only if Drive ships configured in this build; otherwise delete it.
+# Contact fields stay as in 3.5.0. Replace <BUILD> and <SHA> at release time. Google Drive ships
+# configured in 4.0.0 (production OAuth clients wired in #410), so the Drive paragraph stays.
 
 === iOS / iPadOS ===
 

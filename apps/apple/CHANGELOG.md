@@ -20,6 +20,7 @@ All notable changes to Health.md will be documented in this file.
 - Archive widget showing this month's archived days and a 14-day coverage strip.
 - An optional Sunday reminder, shown only if notifications are already allowed, that counts this week's Archive gaps; tap it to backfill.
 - Select or clear a whole metric category with one checkbox.
+- Google Drive as an export destination on iPhone and iPad. Pick a folder in Google's Picker; Health.md requests only the `drive.file` scope and uploads straight from the device to Drive.
 - Mac: exports received from your iPhone appear in Home, Activity and History.
 - Restore Purchase on the onboarding step that turns on daily exports.
 
