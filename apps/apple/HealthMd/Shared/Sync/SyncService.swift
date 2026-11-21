@@ -325,10 +325,17 @@ final class SyncService: NSObject, ObservableObject {
     // MARK: - Private Properties
 
     private let logger = Logger(subsystem: "com.codybontecou.obsidianhealth", category: "SyncService")
-    private let myPeerID: MCPeerID
-    private let session: MCSession
+    /// The persisted identity on iPhone. The Mac, which only browses, replaces it while idle; see
+    /// `refreshNearbyIdentityIfIdle()`.
+    private var myPeerID: MCPeerID
+    private var session: MCSession
     private var advertiser: MCNearbyServiceAdvertiser?
     private var browser: MCNearbyServiceBrowser?
+    /// Number of times the Mac replaced its nearby browser while browsing (diagnostics and tests).
+    private(set) var nearbyBrowserGeneration = 0
+    /// Number of times the Mac replaced its multipeer identity and session (diagnostics and tests).
+    private(set) var nearbyIdentityGeneration = 0
+    private var hasBrowsedForNearbyPeers = false
     private var connectedMultipeerPeerID: MCPeerID?
     private var nearbyAttemptPlanner = NearbyPeerAttemptPlanner<MCPeerID>()
     private var nearbyAutomaticConnectionsEnabled = false
@@ -499,6 +506,11 @@ final class SyncService: NSObject, ObservableObject {
         nearbyAutomaticConnectionsEnabled = true
         nearbyRetryRound = 0
         discoveredPeers = []
+        // Resume Receiving / Check Again: an earlier browser may have left an invitation behind.
+        if hasBrowsedForNearbyPeers {
+            refreshNearbyIdentityIfIdle()
+        }
+        hasBrowsedForNearbyPeers = true
         let br = MCNearbyServiceBrowser(peer: myPeerID, serviceType: Self.serviceType)
         br.delegate = self
         self.browser = br
@@ -570,8 +582,8 @@ final class SyncService: NSObject, ObservableObject {
     private func handleNearbyPeerLost(_ peer: MCPeerID) {
         DiagnosticRecorder.shared.record(.peerLost, fields: DiagnosticRecorder.shared.peerFields(peer.displayName))
         logger.info("Lost peer: \(peer.displayName)")
-        let wasPending = nearbyAttemptPlanner.pendingPeer?.isEqual(peer) == true
-        let nextPeer = nearbyAttemptPlanner.lose(peer)
+        let wasPending = nearbyAttemptPlanner.abandonPending(peer)
+        _ = nearbyAttemptPlanner.lose(peer)
         discoveredPeers = nearbyAttemptPlanner.discoveredPeers
         guard wasPending else { return }
 
@@ -582,11 +594,7 @@ final class SyncService: NSObject, ObservableObject {
             connectionState = .disconnected
             connectedPeerName = nil
         }
-        if let nextPeer {
-            beginNearbyInvitation(to: nextPeer)
-        } else {
-            scheduleNearbyRetry()
-        }
+        recycleNearbyBrowser(reason: "peer lost during invitation")
     }
 
     private func scheduleNearbyAutoConnect() {
@@ -655,18 +663,66 @@ final class SyncService: NSObject, ObservableObject {
 
         nearbyInvitationTimeoutTask?.cancel()
         nearbyInvitationTimeoutTask = nil
-        let nextPeer = nearbyAttemptPlanner.failPending(peer)
+        _ = nearbyAttemptPlanner.abandonPending(peer)
         guard nearbyAutomaticConnectionsEnabled,
               activeTransport != .manualIP,
               connectedMultipeerPeerID == nil else { return }
 
         connectionState = .disconnected
         connectedPeerName = nil
-        if let nextPeer {
-            beginNearbyInvitation(to: nextPeer)
-        } else {
-            scheduleNearbyRetry()
-        }
+        recycleNearbyBrowser(reason: "unanswered invitation")
+    }
+
+    /// Replaces the Mac's browser (and, while idle, its multipeer identity and session) after an
+    /// invitation went unanswered or the connected iPhone dropped. The new browser's discoveries
+    /// drive the next invitation.
+    ///
+    /// An invitation sent while the iPhone was going away (Mac destination off, a paused
+    /// receiver, a stale Bonjour record) is held by MultipeerConnectivity and, after the Mac has
+    /// already timed it out, delivered when the iPhone advertises again, even through a new
+    /// browser. The iPhone accepts it, the Mac aborts ("Received an invitation response ... but
+    /// we never sent it an invitation"), and the iPhone then ignores further invitations from
+    /// that Mac peer ID until an app is relaunched. A fresh peer ID is a peer the iPhone has
+    /// no such state for, which is what a Mac relaunch used to provide.
+    func recycleNearbyBrowser(reason: String) {
+        guard let retired = browser else { return }
+        retired.delegate = nil
+        retired.stopBrowsingForPeers()
+        nearbyAutoConnectTask?.cancel()
+        nearbyAutoConnectTask = nil
+        nearbyRetryTask?.cancel()
+        nearbyRetryTask = nil
+        nearbyAttemptPlanner.browserReplaced()
+        discoveredPeers = []
+        refreshNearbyIdentityIfIdle()
+        let replacement = MCNearbyServiceBrowser(peer: myPeerID, serviceType: Self.serviceType)
+        replacement.delegate = self
+        browser = replacement
+        nearbyBrowserGeneration += 1
+        logger.info("Recycled nearby browser after \(reason, privacy: .public) (generation \(self.nearbyBrowserGeneration))")
+        replacement.startBrowsingForPeers()
+    }
+
+    /// Gives the Mac a new `MCPeerID` (same display name) and a matching `MCSession` while no
+    /// peer is connected. Mac only: the iPhone keeps its persisted, advertised identity.
+    @discardableResult
+    func refreshNearbyIdentityIfIdle() -> Bool {
+        #if os(macOS)
+        guard session.connectedPeers.isEmpty else { return false }
+        let retired = session
+        retired.delegate = nil
+        retired.disconnect()
+        let peer = MCPeerID(displayName: myPeerID.displayName)
+        let replacement = MCSession(peer: peer, securityIdentity: nil, encryptionPreference: .required)
+        replacement.delegate = self
+        myPeerID = peer
+        session = replacement
+        nearbyIdentityGeneration += 1
+        logger.info("Replaced nearby identity and session (generation \(self.nearbyIdentityGeneration))")
+        return true
+        #else
+        return false
+        #endif
     }
 
     private func scheduleNearbyRetry() {
@@ -1971,11 +2027,8 @@ final class SyncService: NSObject, ObservableObject {
         guard let disconnectedPeer,
               nearbyAutomaticConnectionsEnabled,
               browser != nil else { return }
-        if let nextPeer = nearbyAttemptPlanner.activePeerDisconnected(disconnectedPeer) {
-            beginNearbyInvitation(to: nextPeer)
-        } else {
-            scheduleNearbyRetry()
-        }
+        nearbyAttemptPlanner.activePeerDisconnected(disconnectedPeer)
+        recycleNearbyBrowser(reason: "peer disconnected")
     }
 
     // MARK: - Manual IP / Tailscale Transport
@@ -2879,6 +2932,8 @@ extension SyncService: MCSessionDelegate {
     nonisolated func session(_ session: MCSession, peer peerID: MCPeerID, didChange state: MCSessionState) {
         let peerName = peerID.displayName
         Task { @MainActor in
+            // A session retired by refreshNearbyIdentityIfIdle() must not drive state.
+            guard session === self.session else { return }
             if self.activeTransport == .manualIP {
                 return
             }
@@ -2917,13 +2972,12 @@ extension SyncService: MCSessionDelegate {
                 self.logger.info("Peer disconnected: \(peerName)")
                 self.nearbyInvitationTimeoutTask?.cancel()
                 self.nearbyInvitationTimeoutTask = nil
-                let nextPeer: MCPeerID?
                 if pendingPeerMatches {
-                    nextPeer = self.nearbyAttemptPlanner.failPending(peerID)
+                    _ = self.nearbyAttemptPlanner.abandonPending(peerID)
                 } else if activePeerMatches {
-                    nextPeer = self.nearbyAttemptPlanner.activePeerDisconnected(peerID)
-                } else {
-                    nextPeer = nil
+                    // Recorded as attempted so another nearby iPhone goes first; the
+                    // replacement browser below picks the next candidate.
+                    self.nearbyAttemptPlanner.activePeerDisconnected(peerID)
                 }
 
                 self.stopConnectionHeartbeat()
@@ -2945,12 +2999,11 @@ extension SyncService: MCSessionDelegate {
                 }
 
                 guard self.nearbyAutomaticConnectionsEnabled,
-                      self.browser != nil else { return }
-                if let nextPeer {
-                    self.beginNearbyInvitation(to: nextPeer)
-                } else {
-                    self.scheduleNearbyRetry()
-                }
+                      self.browser != nil,
+                      pendingPeerMatches || activePeerMatches else { return }
+                self.recycleNearbyBrowser(
+                    reason: pendingPeerMatches ? "failed invitation" : "peer disconnected"
+                )
             case .connecting:
                 if !session.connectedPeers.isEmpty {
                     self.logger.info("Peer connecting: \(peerName); keeping existing connected peer")

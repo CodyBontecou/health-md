@@ -1,0 +1,49 @@
+version: 1
+requires:
+  platform: ios
+# ios-device-mac-repair-after-disconnect: after the iPhone disconnects from Health.md for Mac
+# (Mac destination off), turning Mac destination back on re-pairs promptly WITHOUT relaunching
+# the Mac app.
+#
+# Reproduction for the Mac re-pair bug (2026-11-20): an invitation the Mac sent while the iPhone was
+# going away was held by MultipeerConnectivity and delivered, already timed out, when the iPhone
+# advertised again. The iPhone accepted it, the Mac aborted ("Received an invitation response ...
+# but we never sent it an invitation"), and the iPhone then ignored that Mac peer ID until the Mac
+# app was relaunched (Mac log: "Peer [iPhone] declined invitation" every 8 s). Fixed by giving the
+# Mac a fresh browser, peer ID and session after a failed invitation, a dropped iPhone, or a
+# resumed receiver. A fresh pairing takes 3-8 s, so the reconnect wait is capped at 15 s.
+# Pair with mac-pause-resume-receiving between runs to cover the Pause -> Resume trigger.
+#
+# Prerequisites: a physical iPhone (pass --device) unlocked, Health.md 4.x installed, Mac destination
+# OFF; Health.md for Mac running on the same network (Receiver "Listening"). No export is sent and
+# no files are written. Side effects: none; the test ends with Mac destination off. A FAILED run leaves Mac
+# destination ON: turn it off before the next run.
+steps:
+  - echo: Restart Health.md on the iPhone; expect Archive
+  - launch: com.codybontecou.obsidianhealth
+  - await: { visible: { id: glass.exportNow }, timeout: 20000 }
+  - await: { idle: true }
+
+  - echo: Open Settings > Mac Destination
+  - tap: { id: glass.tab.settings }
+  - await: { visible: { id: glass.settings.mac }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { id: glass.settings.mac }
+  - await: { visible: { id: sync.syncToggle }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: Turn Mac destination on; expect pairing
+  - tap: { id: sync.syncToggle }
+  - await: { visible: { text: Ready for Mac Exports }, timeout: 45000 }
+
+  - echo: "Disconnect: turn Mac destination off; expect the pairing card to go away"
+  - tap: { id: sync.syncToggle }
+  - await: { hidden: { text: Ready for Mac Exports }, timeout: 8000 }
+
+  - echo: "Reconnect: turn Mac destination on again; expect Ready for Mac Exports within 15 s, no Mac relaunch"
+  - tap: { id: sync.syncToggle }
+  - await: { visible: { text: Ready for Mac Exports }, timeout: 15000 }
+
+  - echo: "Clean up: turn Mac destination off"
+  - tap: { id: sync.syncToggle }
+  - await: { hidden: { text: Ready for Mac Exports }, timeout: 8000 }
