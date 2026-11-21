@@ -1,0 +1,8 @@
+// Google Drive OAuth: production (Google Cloud project `health-md`).
+// Release and Release-iOS builds of the HealthMd iOS app target use this file,
+// which covers the App Store archive made by .github/workflows/release-ios.yml.
+// This is a public native OAuth client identifier, not a secret. Never add a client secret.
+// The client is registered for bundle ID com.codybontecou.obsidianhealth (team 67KC823C9A).
+GOOGLE_DRIVE_IOS_CLIENT_ID = 814670655833-59lojpfv391virnu2cn4fr3g8bcm18a5.apps.googleusercontent.com
+GOOGLE_DRIVE_REDIRECT_SCHEME = com.googleusercontent.apps.814670655833-59lojpfv391virnu2cn4fr3g8bcm18a5
+GOOGLE_DRIVE_REDIRECT_URI = com.googleusercontent.apps.814670655833-59lojpfv391virnu2cn4fr3g8bcm18a5:/oauthredirect

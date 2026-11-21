@@ -46,7 +46,24 @@ val exportEngineAndroidAnalyticalV5 = configuredEngineMode("EXPORT_ENGINE_ANDROI
 val exportEngineApiV1FrozenV4 = configuredEngineMode("EXPORT_ENGINE_API_V1_FROZEN_V4")
 val directProtocolEngine = configuredEngineMode("DIRECT_PROTOCOL_ENGINE")
 val practiceCompiledIn = configuredValue("PRACTICE_COMPILED_IN") == "included"
-val googleDriveAndroidClientId = configuredValue("GOOGLE_DRIVE_ANDROID_CLIENT_ID")
+// Public Android OAuth client identifiers for direct Google Drive export. These are not
+// secrets: Google authorizes the Play-services request by package name and signing
+// certificate, and the identifier here only gates whether the build offers Drive.
+// Release (Play App Signing) uses production project `health-md`; debug/e2e builds use the
+// `health-md-test` project, whose client trusts the upload-key certificate. A Gradle
+// property or environment variable overrides both for isolated QA builds. F-Droid never
+// receives a client identifier.
+val googleDriveAndroidClientIdOverride = configuredValue("GOOGLE_DRIVE_ANDROID_CLIENT_ID")
+val googleDriveAndroidProductionClientId =
+    "814670655833-ijtd9i2jndu0ib5t2dpi3gesalvim0qt.apps.googleusercontent.com"
+val googleDriveAndroidTestClientId =
+    "265872636157-ht6ffee02g9c6hpjg8gqkifuk9qj9k24.apps.googleusercontent.com"
+fun googleDriveAndroidClientId(flavor: String?, buildType: String?): String = when {
+    flavor == "fdroid" -> ""
+    googleDriveAndroidClientIdOverride.isNotBlank() -> googleDriveAndroidClientIdOverride
+    buildType == "release" -> googleDriveAndroidProductionClientId
+    else -> googleDriveAndroidTestClientId
+}
 val instrumentedTestBuildType = providers.gradleProperty("healthmdInstrumentedTestBuildType")
     .getOrElse("debug")
     .also { require(it in setOf("debug", "e2e")) }
@@ -109,12 +126,6 @@ android {
             "PRACTICE_COMPILED_IN",
             practiceCompiledIn.toString(),
         )
-        // Public Android OAuth client identifier only. No client secret is shipped.
-        buildConfigField(
-            "String",
-            "GOOGLE_DRIVE_ANDROID_CLIENT_ID",
-            googleDriveAndroidClientId.asBuildConfigString(),
-        )
     }
 
     signingConfigs {
@@ -152,7 +163,6 @@ android {
         create("fdroid") {
             dimension = "distribution"
             buildConfigField("String", "DISTRIBUTION_CHANNEL", "\"fdroid\"")
-            buildConfigField("String", "GOOGLE_DRIVE_ANDROID_CLIENT_ID", "\"\"")
         }
     }
 
@@ -211,6 +221,21 @@ android {
 
     packaging {
         resources.excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+    }
+}
+
+// GOOGLE_DRIVE_ANDROID_CLIENT_ID depends on flavor and build type, so it is set per variant.
+// Public Android OAuth client identifier only. No client secret is shipped.
+androidComponents {
+    onVariants { variant ->
+        variant.buildConfigFields.put(
+            "GOOGLE_DRIVE_ANDROID_CLIENT_ID",
+            com.android.build.api.variant.BuildConfigField(
+                "String",
+                googleDriveAndroidClientId(variant.flavorName, variant.buildType).asBuildConfigString(),
+                "Public Google Drive OAuth client identifier; empty when unavailable.",
+            ),
+        )
     }
 }
 

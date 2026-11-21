@@ -12,6 +12,15 @@ Production and test builds must use separate Google Cloud projects. In each proj
 4. Register the custom redirect URI and scheme supplied to the build.
 5. Supply `GOOGLE_DRIVE_IOS_CLIENT_ID`, `GOOGLE_DRIVE_REDIRECT_URI`, and `GOOGLE_DRIVE_REDIRECT_SCHEME` as Xcode build settings. See `Config/GoogleDrive.example.xcconfig`.
 
+The public identifiers are committed as the `HealthMd` iOS app target's base configuration files:
+
+| Build configurations | File | Google Cloud project |
+|---|---|---|
+| `Release`, `Release-iOS` (App Store archive in `release-ios.yml`) | `Config/GoogleDrive.Release.xcconfig` | `health-md` (production consent screen) |
+| `Debug`, `Debug-iOS` (local, simulator, and unit-test builds) | `Config/GoogleDrive.Debug.xcconfig` | `health-md-test` (Testing consent screen; registered test users only) |
+
+Both clients are registered for bundle ID `com.codybontecou.obsidianhealth`. The macOS app has no direct Google Drive UI and its Info.plist does not carry these keys, so the `HealthMd-macOS` target is intentionally not configured.
+
 A build with absent or placeholder values remains compilable and shows `configuration_missing`; it never falls back to Files, an API endpoint, a connected Mac, or another Google account.
 
 Health.md requests only `https://www.googleapis.com/auth/drive.file`. Before OAuth opens, the profile editor discloses that sensitive health exports will go directly to Google and be governed by the selected Google account/Workspace policies. Authorization uses `ASWebAuthenticationSession`, authorization-code PKCE S256, offline access, explicit consent, and Google's mobile folder Picker controls. Refresh tokens are stored in Keychain with after-first-unlock accessibility so scheduled work can refresh silently.

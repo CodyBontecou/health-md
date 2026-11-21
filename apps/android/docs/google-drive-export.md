@@ -9,7 +9,15 @@ Create separate test and production Google Cloud projects. In each project:
 1. Enable the **Google Drive API** and **Google Picker API**.
 2. Configure and publish the Google OAuth consent screen with the deployed Health.md homepage and privacy-policy URLs.
 3. Create an Android OAuth client for the exact application ID and signing-certificate SHA fingerprints.
-4. Supply the public client identifier as either a Gradle property or environment variable:
+4. The public client identifiers are committed in `app/build.gradle.kts` and set per variant:
+
+   | Variant | `GOOGLE_DRIVE_ANDROID_CLIENT_ID` | Google Cloud project |
+   |---|---|---|
+   | `playRelease` | production client | `health-md` (Play App Signing certificate) |
+   | `playDebug`, `playE2e` | test client | `health-md-test` (upload-key certificate; registered test users only) |
+   | `fdroid*` | empty, always | none |
+
+   Google Play services selects the OAuth client by package name and signing certificate; the build value only decides whether Health.md offers direct Drive. To override it for an isolated QA build, supply the public client identifier as either a Gradle property or environment variable:
 
    ```properties
    GOOGLE_DRIVE_ANDROID_CLIENT_ID=000000000000-actual-client.apps.googleusercontent.com

@@ -149,6 +149,8 @@
 /* Begin PBXFileReference section */
 		A7D2B0012F6E400100A5E001 /* WatchDashboardMetrics.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchDashboardMetrics.swift; sourceTree = "<group>"; };
 		A7D2B0052F6E400100A5E005 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		C11C00000000000000000002 /* GoogleDrive.Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = GoogleDrive.Debug.xcconfig; path = Config/GoogleDrive.Debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		C11C00000000000000000003 /* GoogleDrive.Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = GoogleDrive.Release.xcconfig; path = Config/GoogleDrive.Release.xcconfig; sourceTree = SOURCE_ROOT; };
 		C11C00000000000000000001 /* NativeLicensing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = NativeLicensing.xcconfig; path = ../licensing/deploy/NativeLicensing.xcconfig; sourceTree = SOURCE_ROOT; };
 		A90000000000000000000001 /* healthmd-mcp */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "healthmd-mcp"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A90000000000000000000002 /* main.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "mcp-main.swift"; path = "Sources/healthmd-mcp/main.swift"; sourceTree = "<group>"; };
@@ -453,6 +455,8 @@
 			isa = PBXGroup;
 			children = (
 				C11C00000000000000000001 /* NativeLicensing.xcconfig */,
+				C11C00000000000000000002 /* GoogleDrive.Debug.xcconfig */,
+				C11C00000000000000000003 /* GoogleDrive.Release.xcconfig */,
 				624B99F12F15D70300F9103F /* HealthMd */,
 				62A1B0032F50A00100000003 /* HealthMdTests */,
 				624B99F02F15D70300F9103F /* Products */,
@@ -1459,6 +1463,7 @@
 		};
 		624B99FB2F15D70500F9103F /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C11C00000000000000000002 /* GoogleDrive.Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CONNECTED_APPS_WHOOP_ENABLED = NO;
@@ -1492,6 +1497,7 @@
 		};
 		624B99FC2F15D70500F9103F /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C11C00000000000000000003 /* GoogleDrive.Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CONNECTED_APPS_WHOOP_ENABLED = NO;
@@ -2078,6 +2084,7 @@
 		};
 		B4428BEEE2DA447693C13E95 /* Debug-iOS */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C11C00000000000000000002 /* GoogleDrive.Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CONNECTED_APPS_WHOOP_ENABLED = NO;
@@ -2162,6 +2169,7 @@
 		};
 		DB9AE14AE846497D92336564 /* Release-iOS */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C11C00000000000000000003 /* GoogleDrive.Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CONNECTED_APPS_WHOOP_ENABLED = NO;

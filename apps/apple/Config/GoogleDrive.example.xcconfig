@@ -1,4 +1,5 @@
-// Copy values into a developer-local, gitignored xcconfig or CI/App Store build settings.
+// Shipped builds use GoogleDrive.Release.xcconfig (production) and GoogleDrive.Debug.xcconfig (test).
+// This example shows the expected shape for another Google Cloud project.
 // This is an OAuth public native client. Never add a client secret.
 // Enable both Google Drive API and Google Picker API in the matching Google Cloud project.
 GOOGLE_DRIVE_IOS_CLIENT_ID = 000000000000-example.apps.googleusercontent.com
