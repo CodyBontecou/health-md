@@ -115,6 +115,7 @@ final class CIQualityGateTests: XCTestCase {
         }
         let onboardingHiddenCount = try [
             "HealthMd/iOS/Views/OnboardingView.swift",
+            "HealthMd/iOS/Views/OnboardingSteps.swift",
             "HealthMd/iOS/Components/OnboardingA11yComponents.swift",
         ].reduce(into: 0) { count, relativePath in
             count += try source(relativePath).components(separatedBy: ".accessibilityHidden(true)").count - 1

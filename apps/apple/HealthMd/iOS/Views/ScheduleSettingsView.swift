@@ -1053,7 +1053,7 @@ struct ScheduleSettingsView: View {
 
     private func performGoogleDriveJournalRetry(_ entry: ExportHistoryEntry) async {
         guard purchaseManager.canExport else {
-            retryErrorMessage = "Free export limit reached. Unlock Full Access to retry this export."
+            retryErrorMessage = String(localized: "Retrying this export requires an active trial or subscription, or Lifetime access.")
             showRetryError = true
             return
         }

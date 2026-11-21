@@ -5,7 +5,8 @@ import XCTest
 /// frontmatter, for every category including workouts (#353). The per-note field list
 /// (metric selection) decides which data is collected; it is not a second frontmatter switch.
 final class FrontmatterFieldOwnershipTests: XCTestCase {
-    /// AdvancedExportSettings are retained per the macOS deinit-crash workaround in ExporterSmokeTests.
+    // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings owns nested observation state that can
+    // crash during test-process teardown on macOS 26 (same workaround as ExporterSmokeTests).
     private static var retainedSettings: [AdvancedExportSettings] = []
 
     private static func isWorkoutKey(_ key: String) -> Bool {
