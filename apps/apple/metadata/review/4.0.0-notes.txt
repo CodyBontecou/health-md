@@ -1,0 +1,45 @@
+# Health.md 4.0.0 App Review notes (draft, not yet entered in App Store Connect)
+# Paste the iOS block into the iOS 4.0.0 version and the macOS block into the Mac 4.0.0 version.
+# Contact fields stay as in 3.5.0. Replace <BUILD> and <SHA> at release time. Google Drive ships
+# configured in 4.0.0 (production OAuth clients wired in #410), so the Drive paragraph stays.
+
+=== iOS / iPadOS ===
+
+No Health.md login or demo account is required.
+
+Health.md 4.0.0 is a redesign. Setup and the first export are free; a paywall then gates further exports and scheduled automations.
+
+How to test:
+1. On a fresh install, onboarding asks you to choose metric packs, then requests Apple Health read access. Health.md only reads Health data; it never writes to Health.
+2. Choose where notes go: a folder in Files (On My iPhone works), an API endpoint, or Google Drive.
+3. Onboarding previews the past 7 days as notes and saves them. This is the free first export, and no purchase is needed for it.
+4. The paywall appears when you turn on daily exports or start a second export. Select Individual or Family and Weekly or Yearly, then purchase. Eligible subscriptions include a 7-day free trial; ineligible accounts see the store's paid terms. Lifetime is a one-time purchase with no trial. The paywall and the onboarding "Make it daily" step both provide Restore Purchases, Terms, Privacy and subscription management.
+
+Health data: the exports contain only what the device's Health app holds. If the review device has no Health data for the last 7 days, the preview shows empty days and no files are written for them. To see real output, first add a few samples in the Health app (Browse > Activity > Steps > Add Data, and Sleep or Weight), then run onboarding or Export now.
+
+Notifications: Health.md asks for notification permission only when you start a free trial (for a reminder two days before it renews) or turn on a scheduled automation (to deliver scheduled exports). Declining keeps the app fully usable; schedules then run on a best-effort basis. An optional weekly reminder of missing days is shown only if notifications are already allowed.
+
+Google Drive (optional destination): Google Drive is used only if you choose it. It requests only the https://www.googleapis.com/auth/drive.file scope; you pick one folder in Google's own Picker, and Health.md can access only that folder and files it creates. Files go directly from the device to Google. Health.md runs no server that sees health data or Google tokens; the refresh token is stored in the iOS Keychain. Disconnecting revokes access and removes local credentials but does not delete files already in Drive. Use any Google account; do not use real health data.
+
+Family Sharing grants app access only, never another person's health records. Existing Lifetime and grandfathered access is preserved. The macOS companion remains free.
+
+Build: 4.0.0 (<BUILD>), source <SHA>.
+
+=== macOS ===
+
+No demo account is required, and the Mac app sells nothing.
+
+Health.md for Mac is the free companion and local destination for Health.md on iPhone. Version 4.0.0 redesigns Home and the menu bar and shows exports received from the iPhone in Home, Activity and History. The Mac cannot read Apple Health on its own.
+
+The app keeps the com.apple.security.network.server entitlement for the Mac Destination feature. It receives iPhone exports over the local network using Multipeer Connectivity / Bonjour (_healthmd-sync._tcp and _healthmd-sync._udp) and writes Markdown, JSON or CSV files to a folder the user selects. Health data is not uploaded to Health.md servers. Without the entitlement the sandboxed app can no longer receive.
+
+How to test:
+1. Open Health.md on the Mac and choose a destination folder.
+2. Open Health.md on an iPhone, choose Mac Destination as the folder, connect to the Mac and export.
+3. The files appear in the folder, and the export appears in the Mac's Home, Activity and History.
+
+The bundled healthmd and healthmd-mcp helpers are App-Sandboxed. Use the Mac-managed folder or stdout; direct exports to arbitrary paths use the separately installed standalone CLI.
+
+Legal: Privacy Policy https://healthmd.app/privacy-policy.html. Health.md uses Apple's standard EULA (https://www.apple.com/legal/internet-services/itunes/dev/stdeula/).
+
+Build: 4.0.0 (<BUILD>), source <SHA>.
