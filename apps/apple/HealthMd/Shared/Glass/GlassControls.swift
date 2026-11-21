@@ -197,6 +197,15 @@ struct GoogleDriveConnectionButton: View {
     let title: LocalizedStringKey
     let action: () -> Void
 
+    /// Google's mobile Picker opens a folder on tap and selects it only on a long press,
+    /// which testers missed on device (2026-11-21), so every connect surface explains it.
+    static var pickerHint: String {
+        String(
+            localized: "In Google's picker, touch and hold a folder to select it, then tap Insert. Tapping a folder opens it.",
+            comment: "Hint under the Google Drive connect button explaining how to choose a folder in Google's Picker"
+        )
+    }
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {

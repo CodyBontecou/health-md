@@ -240,6 +240,13 @@ struct GlassOutputScreen: View {
             .padding(.vertical, 8)
             .disabled(connectingDrive || googleDriveConnectionManager.readiness == .configurationMissing)
             .accessibilityIdentifier("glass.output.connectGoogleDrive")
+            Text(GoogleDriveConnectionButton.pickerHint)
+                .glassFont(.rowSubtitle)
+                .foregroundStyle(palette.muted)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, GlassMetrics.panelPadding)
+                .padding(.bottom, 8)
+                .accessibilityIdentifier("glass.output.googleDrivePickerHint")
             if connectingDrive {
                 ProgressView().padding(.horizontal, GlassMetrics.panelPadding)
             }

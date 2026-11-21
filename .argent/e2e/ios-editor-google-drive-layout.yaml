@@ -1,0 +1,102 @@
+version: 1
+requires:
+  platform: ios
+# ios-editor-google-drive-layout: in the New automation editor, choosing Google Drive as the
+# target shows a "Drive folder" row, a padded Connect & Choose Folder button
+# (export.profiles.editor.connectGoogleDrive) and the hint that Google's Picker selects a
+# folder with touch and hold. Regression for the 2026-11-21 device QA, where testers tapped a
+# folder in the Picker (which opens it) and the editor's Drive controls had no row padding.
+#
+# Prerequisites: an iPhone simulator with a Debug (Debug-iOS) build of Health.md installed.
+# The UI-test launch arguments unlock the app and select a synthetic TestVault; no Health data
+# is read, nothing is connected and no export runs.
+# Side effects: none. The editor is cancelled, so no automation is created.
+#
+# Coordinate exceptions: on this iOS 27 simulator the runner tree carries none of the app's
+# SwiftUI ids or labels (the recorder warned on every app check), so checks stay raw
+# `tool: await-ui-element` steps, and the taps whose recorded selector resolved to the wrong
+# element (tab bar, New automation, Target row, Cancel) are points taken from `describe` frames.
+# Each point tap names its target and is followed by a hard check.
+steps:
+  - echo: Launch Health.md in UI-test mode (onboarded, unlocked, vault selected).
+      Expect the tab bar
+  - launch:
+      native: com.codybontecou.obsidianhealth
+      ios:
+        app: com.codybontecou.obsidianhealth
+        args:
+          - --uitesting
+          - -UITEST_HAS_COMPLETED_ONBOARDING
+          - "true"
+          - -UITEST_PURCHASE_UNLOCKED
+          - "true"
+          - -UITEST_HEALTH_AUTHORIZED
+          - "true"
+          - -UITEST_VAULT_SELECTED
+          - "true"
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.tab.automations
+      timeoutMs: 20000
+  - await: { idle: true }
+  - echo: Open the Automations tab. Expect New automation
+  - tap: { x: 0.405, y: 0.8955 } # Automations tab (glass.tab.automations, frame 0.289,0.867,0.232,0.057)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: New automation
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: Tap New automation. Expect the editor sheet with the Target row
+  - tap: { x: 0.9055, y: 0.11 } # New automation (id plus, frame 0.851,0.085,0.109,0.050)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: export.profiles.editor.confirm
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: Editor open. Open the Target menu. Expect a Google Drive option
+  - tap: { x: 0.5, y: 0.7765 } # Target row (value Local Folder, frame 0.058,0.750,0.884,0.053)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Google Drive
+      timeoutMs: 8000
+  - echo: Choose Google Drive. Expect the Drive folder row, the Connect button and the
+      Picker hint
+  - tap: { text: Google Drive }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: export.profiles.editor.connectGoogleDrive
+      timeoutMs: 8000
+  - await: { idle: true }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: touch and hold a folder to select it
+      timeoutMs: 5000
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: Drive folder
+        role: Button
+      expectedText: Drive folder
+      timeoutMs: 5000
+  - echo: Layout checked. Cancel the editor without creating anything. Expect the
+      editor to close
+  - tap: { x: 0.156, y: 0.512 } # Cancel (frame 0.058,0.492,0.196,0.040)
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: export.profiles.editor.connectGoogleDrive
+      timeoutMs: 8000
