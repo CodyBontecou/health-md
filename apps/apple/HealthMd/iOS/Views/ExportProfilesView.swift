@@ -1430,21 +1430,31 @@ struct ExportProfileEditorSheet: View {
                 case .connectedMac:
                     EmptyView()
                 case .googleDrive:
-                Picker("Drive folder", selection: $googleDriveDestinationID) {
-                    Text("Select a Google Drive folder").tag(UUID?.none)
-                    ForEach(googleDriveDestinationStore.destinations) { destination in
-                        Text(destination.folderLabel ?? "Google Drive folder")
-                            .tag(UUID?.some(destination.id))
+                    rowDivider
+                    EditorMenuRow(
+                        title: String(localized: "Drive folder", comment: "Profile editor Google Drive folder picker label"),
+                        selection: $googleDriveDestinationID,
+                        options: [nil] + googleDriveDestinationStore.destinations.map { Optional($0.id) },
+                        label: { id in
+                            googleDriveDestinationStore.destination(id: id)?.folderLabel
+                                ?? String(localized: "Select a Google Drive folder")
+                        },
+                        palette: palette
+                    )
+                    rowDivider
+                    GoogleDriveConnectionButton(
+                        title: googleDriveDestinationID == nil ? "Connect & Choose Folder…" : "Reconnect or Change Folder…"
+                    ) {
+                        configurationProtection.performConfigurationChange {
+                            showGoogleDrivePrivacyDisclosure = true
+                        }
                     }
-                }
-                GoogleDriveConnectionButton(
-                    title: googleDriveDestinationID == nil ? "Connect & Choose Folder…" : "Reconnect or Change Folder…"
-                ) {
-                    configurationProtection.performConfigurationChange {
-                        showGoogleDrivePrivacyDisclosure = true
-                    }
-                }
+                    .padding(.horizontal, GlassMetrics.panelPadding)
+                    .padding(.vertical, 10)
+                    .disabled(googleDriveConnectionManager.readiness == .configurationMissing)
+                    .accessibilityIdentifier("export.profiles.editor.connectGoogleDrive")
                 if let destinationID = googleDriveDestinationID {
+                    rowDivider
                     Button(role: .destructive) {
                         configurationProtection.performConfigurationChange {
                             Task {
@@ -1466,19 +1476,43 @@ struct ExportProfileEditorSheet: View {
                             }
                         }
                     } label: {
-                        Label("Disconnect Google Drive", systemImage: "link.badge.minus")
+                        HStack(spacing: 12) {
+                            Image(systemName: "link.badge.minus")
+                                .font(.body.weight(.semibold))
+                                .frame(width: 24)
+                                .accessibilityHidden(true)
+                            Text("Disconnect Google Drive")
+                                .glassFont(.body)
+                            Spacer(minLength: 8)
+                        }
+                        .foregroundStyle(Color.error)
+                        .padding(.horizontal, GlassMetrics.panelPadding)
+                        .frame(minHeight: GlassMetrics.rowMinHeight)
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("Disconnect Google Drive"))
+                    .accessibilityIdentifier("export.profiles.editor.disconnectGoogleDrive")
                 }
                 if let driveConnectionError {
                     Text(driveConnectionError)
                         .font(.caption)
                         .foregroundStyle(Color.error)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, GlassMetrics.panelPadding)
+                        .padding(.bottom, 10)
                 } else if googleDriveConnectionManager.readiness == .configurationMissing {
                     Text("Google Drive is unavailable in this build (configuration_missing).")
                         .font(.caption)
                         .foregroundStyle(Color.warning)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, GlassMetrics.panelPadding)
+                        .padding(.bottom, 10)
                 }
                 }
+            }
+            if target == .googleDrive {
+                footnote(GoogleDriveConnectionButton.pickerHint)
             }
             if clinic.status.active && !purchases.canExport {
                 footnote(String(localized: "Your clinic manages this destination. Use Clinic access to select it or manage sharing. Other destinations require your own Health.md access."))
