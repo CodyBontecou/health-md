@@ -157,3 +157,5 @@ The core local folder export requires no Health.md account and creates no Health
 The separate opt-in, single-owner Health.md Cloud pilot retains only API exports intentionally uploaded to it, has no public signup and no automatic device sync, and is not generally available. This folder workflow does not upload to that pilot. See [retention and destination boundaries](/privacy-policy.html#retention).
 
 For spreadsheet analysis, continue with [Apple Health to Excel](/blog/apple-health-to-excel/) or [Google Sheets](/blog/apple-health-to-google-sheets/), adapting the metric filters and keeping sessions separate. For Android data, use the [Health Connect export guide](/health-connect-export/); its source semantics and archive capabilities must not be assumed identical to Apple's.
+
+Recording workouts on a Garmin watch? See how to [export Garmin data](/blog/export-garmin-connect-data/): Garmin's own archive, CSV and FIT files, plus the Apple Health route.
