@@ -136,10 +136,93 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertEqual(lockedDecision, .allowed)
 
         // ...but a refund observed by a reliable read on an unlocked device revokes it.
-        let refunded = makeScheduledManager(reliable: { true }) { $0.concludeNoEntitlementForTesting() }
+        let refunded = makeScheduledManager(reliable: { true }) {
+            $0.concludeNoEntitlementForTesting(cachedEntitlementRevoked: true)
+        }
         let decision = await refunded.scheduledExportAccess(jobID: UUID())
         XCTAssertEqual(decision, .limitReached)
         XCTAssertFalse(refunded.hasValidLastKnownEntitlement())
+    }
+
+    /// Regression: a lifetime owner got "Free Export Limit Reached" from a
+    /// scheduled export when StoreKit returned no entitlements on a background
+    /// launch of an unlocked device, and the empty read erased the cache.
+    func testReliableEmptyReadWithoutRevocationKeepsLifetimeOwner() async {
+        for product in [PurchaseManager.productID, PurchaseManager.familyProductID, PurchaseManager.familyUpgradeProductID] {
+            keychain = FakeKeychainStore()
+            makeManager().recordStoreKitEntitlementForTesting(productID: product)
+
+            let relaunched = makeScheduledManager(reliable: { true }) { $0.concludeNoEntitlementForTesting() }
+            relaunched.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+            let decision = await relaunched.scheduledExportAccess(jobID: UUID())
+
+            XCTAssertEqual(decision, .allowed, product)
+            XCTAssertTrue(relaunched.isUnlocked, product)
+            XCTAssertTrue(relaunched.canExport, product)
+            XCTAssertTrue(relaunched.hasValidLastKnownEntitlement(), "\(product): an empty read must not erase the cache")
+        }
+    }
+
+    func testReliableEmptyReadKeepsLegacyOwner() async {
+        makeManager().recordLegacyUnlockForTesting()
+        let relaunched = makeScheduledManager(reliable: { true }) { $0.concludeNoEntitlementForTesting() }
+        relaunched.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+        let decision = await relaunched.scheduledExportAccess(jobID: UUID())
+        XCTAssertEqual(decision, .allowed)
+        XCTAssertTrue(relaunched.isLegacyUser)
+        XCTAssertTrue(relaunched.hasValidLastKnownEntitlement())
+    }
+
+    func testReliableEmptyReadKeepsAnUnexpiredSubscription() async {
+        makeManager().recordStoreKitEntitlementForTesting(
+            productID: HealthMdPurchaseOption.yearly.productID,
+            expirationDate: Date().addingTimeInterval(86_400))
+        let relaunched = makeScheduledManager(reliable: { true }) { $0.concludeNoEntitlementForTesting() }
+        relaunched.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+        let decision = await relaunched.scheduledExportAccess(jobID: UUID())
+        XCTAssertEqual(decision, .allowed)
+        XCTAssertTrue(relaunched.isUnlocked)
+        XCTAssertEqual(relaunched.unlockedProductID, HealthMdPurchaseOption.yearly.productID)
+        XCTAssertTrue(relaunched.hasValidLastKnownEntitlement(), "An empty read must not erase the cache")
+    }
+
+    func testReliableRevocationEndsAnUnexpiredSubscription() async {
+        makeManager().recordStoreKitEntitlementForTesting(
+            productID: HealthMdPurchaseOption.yearly.productID,
+            expirationDate: Date().addingTimeInterval(86_400))
+        let refunded = makeScheduledManager(reliable: { true }) {
+            $0.concludeNoEntitlementForTesting(cachedEntitlementRevoked: true)
+        }
+        refunded.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+        let decision = await refunded.scheduledExportAccess(jobID: UUID())
+        XCTAssertEqual(decision, .limitReached)
+        XCTAssertFalse(refunded.isUnlocked)
+        XCTAssertFalse(refunded.hasValidLastKnownEntitlement())
+    }
+
+    func testLockedReadDefersRevocationUntilAReliableRead() async {
+        makeManager().recordStoreKitEntitlementForTesting(
+            productID: HealthMdPurchaseOption.yearly.productID,
+            expirationDate: Date().addingTimeInterval(86_400))
+        let locked = makeScheduledManager(reliable: { false }) {
+            $0.concludeNoEntitlementForTesting(cachedEntitlementRevoked: true)
+        }
+        locked.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+        let decision = await locked.scheduledExportAccess(jobID: UUID())
+        XCTAssertEqual(decision, .allowed)
+        XCTAssertTrue(locked.hasValidLastKnownEntitlement())
+    }
+
+    func testOnlyARevocationOfTheCachedPeriodEndsASubscription() {
+        let end = Date()
+        // Lifetime: any revocation of the product ends it.
+        XCTAssertTrue(PurchaseManager.revocationEndsCachedTerm(cachedExpiresAt: nil, revokedExpiresAt: nil))
+        // The cached period itself was refunded.
+        XCTAssertTrue(PurchaseManager.revocationEndsCachedTerm(cachedExpiresAt: end, revokedExpiresAt: end))
+        // An earlier period was refunded before a resubscribe.
+        XCTAssertFalse(PurchaseManager.revocationEndsCachedTerm(
+            cachedExpiresAt: end, revokedExpiresAt: end.addingTimeInterval(-30 * 86_400)))
+        XCTAssertFalse(PurchaseManager.revocationEndsCachedTerm(cachedExpiresAt: end, revokedExpiresAt: nil))
     }
 
     func testExpiredSubscriptionIsNotALastKnownEntitlement() async {
