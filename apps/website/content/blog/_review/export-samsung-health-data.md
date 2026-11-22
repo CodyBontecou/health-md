@@ -22,3 +22,4 @@ No Samsung device, watch, Health Connect permission flow, app export, spreadshee
 - [x] 2026-11-22 re-check: removed the "commonly reported" file-layout claims (timestamped folder, CSV/JSON mix, `day_time`, metadata line asserted as typical, "commonly contains CSV"), which had no primary source. The section is now an explicitly conditional checklist ("if the first line is not headers", "if a column holds a large number"). Only Samsung's ANS10001379 page is cited for steps/location. Not executed: no Samsung export was run. Edits stay within allowed paths.
 
 - [x] 2026-11-22 reviewer fixes: troubleshooting file-split bullet now says data "may be split"; GPX table row and FAQ no longer imply an in-app GPX option exists (unconfirmed, varies by version); Excel FAQ is conditional on the download's contents. Not executed.
+- [x] 2026-11-22: table row for Samsung files made conditional on CSV being present; description no longer promises to say what the download contains.

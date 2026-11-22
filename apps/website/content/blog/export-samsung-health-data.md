@@ -1,6 +1,6 @@
 ---
 title: "How to export Samsung Health data (CSV, Excel, GPX)"
-description: "Samsung Health's Download personal data saves your files to My Files → Downloads → Samsung Health. See what the download contains, how to open it in Excel or Sheets, why it may look empty, and how to get daily CSV via Health Connect."
+description: "Samsung Health's Download personal data saves your files to My Files → Downloads → Samsung Health. See how to inspect and open it in Excel or Sheets, why it may look empty, and how to get daily CSV via Health Connect."
 lead: "Download personal data in Samsung Health is free and needs no extra app. Here is where the files land, how to open them, and when Health Connect plus Health.md gives you cleaner daily CSV."
 date: "2026-10-30"
 updated: "2026-11-22"
@@ -30,7 +30,7 @@ tags:
 | Your goal | Use |
 | --- | --- |
 | A full download of what Samsung holds about you | Samsung Health's **Download personal data**, described below. Health.md is not needed. |
-| A spreadsheet of Samsung's files | Open the downloaded CSV files in Excel or Sheets; see [how to open them](#whats-in-samsungs-download-and-how-to-open-it). |
+| A spreadsheet of Samsung's files | If your download contains CSV files, open them in Excel or Sheets; see [how to open them](#whats-in-samsungs-download-and-how-to-open-it). |
 | One workout as GPX | Varies by Samsung Health version. Samsung's download page does not document GPX, and this guide has not confirmed an in-app GPX option, so do not assume your version has one. Health.md does not export GPX. |
 | Daily spreadsheet or Obsidian files (steps, sleep, heart rate) | Share supported records with Health Connect, then export with Health.md. |
 
