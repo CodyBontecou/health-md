@@ -53,6 +53,7 @@ common=(-Phealthmd.ciAbi="$abi" -PhealthmdInstrumentedTestBuildType=e2e --max-wo
     -Dorg.gradle.daemon.registry.base="$daemon_registry")
 ./scripts/run-ci-gradle.sh "${common[@]}" :app:testPlayE2eUnitTest \
     --tests com.healthmd.data.health.HealthConnectPinnedZoneRangeTest \
+    --tests com.healthmd.data.health.HealthConnectWorkoutSeriesMemoryTest \
     --tests com.healthmd.domain.exportengine.ExportRepositoryEngineSeamTest \
     --tests com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotTest \
     --tests com.healthmd.data.settings.ConfigurationProtectionRepositoryTest \
@@ -71,6 +72,7 @@ python3 scripts/ci/verify_junit.py \
     apps/android/healthmd-core/build/outputs/androidTest-results/connected \
     --require com.healthmd.domain.semantic.HealthMdSemanticInputAdapterInstrumentationTest#capturedModelEncodesOnceAndProcessesThroughPackagedRustCore \
     --require com.healthmd.domain.exportengine.DailyAggregateRustPlannerInstrumentationTest#packagedCorePlansExactNativeBytesForBothAndroidProfiles \
+    --require com.healthmd.data.health.HealthConnectWorkoutSeriesMemoryTest#workoutOnlyExpandsSeriesRecordsOverlappingItsWindow \
     --require com.healthmd.direct.protocol.LiveCliInteropTest#pairsAndNegotiatesWithRustListener \
     --require com.healthmd.core.HealthMdCoreInstrumentationTest#packagedNativeCorePassesBuildInfoSelfTestAndStableMalformedInputError \
     --require com.healthmd.core.HealthMdCoreInstrumentationTest#packagedProtocolFoundationMatchesPureV1V2CryptoAndTransferFixtures
