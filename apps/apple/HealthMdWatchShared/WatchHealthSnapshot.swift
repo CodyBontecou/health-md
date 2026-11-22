@@ -28,6 +28,22 @@ struct WatchHealthSnapshot: Codable, Hashable, Sendable {
         bloodOxygenPercent: 97
     )
 
+    #if DEBUG
+    /// WatchDashboardG's values (the same day as the iPhone App Store slides), for App Store captures.
+    static let appStoreFixture = WatchHealthSnapshot(
+        date: .now,
+        lastUpdated: .now,
+        steps: 8_412,
+        activeEnergyKilocalories: 512,
+        exerciseMinutes: 32,
+        standHours: 9,
+        sleepHours: 7.2,
+        restingHeartRate: 54,
+        heartRateVariabilityMS: 48,
+        bloodOxygenPercent: 97
+    )
+    #endif
+
     var hasAnyData: Bool {
         steps != nil || activeEnergyKilocalories != nil || exerciseMinutes != nil || standHours != nil ||
         sleepHours != nil || restingHeartRate != nil || heartRateVariabilityMS != nil || bloodOxygenPercent != nil

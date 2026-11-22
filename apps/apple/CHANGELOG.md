@@ -8,6 +8,9 @@ All notable changes to Health.md will be documented in this file.
 - The App Store page shows screenshots of the redesigned app on iPhone, iPad and Mac.
 - Updating straight from 3.x to 4.0.1 shows the 4.0 What's New sheet. Anyone who already saw it on 4.0.0 doesn't see it again.
 
+### Fixed
+- Apple Watch: the dashboard showed German labels when the watch language was English.
+
 ## [4.0.0] - 2026-11-21
 
 ### Added
