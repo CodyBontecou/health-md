@@ -30,3 +30,18 @@ No Excel click-through, formula execution in Excel, device export, or visual QA 
 - [x] Adds an authored 28-day example from the existing fictional starter dataset, not a producer schema fixture. It has 28 step values, 27 sleep values and one deliberately missing sleep date (October 8). CSV headers and metric/unit labels follow the existing six-column subset. No exporter, contract or personal data changed. The prior statement that no multi-day workbook was published is superseded by this addition.
 - [x] The Excel workbook has native charts and formula-linked calculations, with separate raw rows and daily metrics. Artifact runtime mutation checks cover changed values, blanks, zeros, invalid inputs, duplicates and date coverage; a LibreOffice round-trip recalculates the saved workbook and populates chart caches. Host checks verify cached results, formulas, series bindings, units and archive contents. No Excel UI/device export or native Google Sheets import was performed. The Sheets exercise uses combined.csv and the existing import recipe; native chart conversion is explicitly unverified.
 - [x] The authoring builder, sample pack generator, source-data checks and workbook/CSV regressions maintain the resource. Existing article routes and publication dates remain unchanged.
+
+## Refresh — 2026-11-21 (export.zip answer first)
+
+Verified 2026-11-21, method: traced. No Excel (Windows, Mac, web or mobile) was run in this refresh.
+
+- [x] Apple native export is an XML archive via Export All Health Data: https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios and the existing XML guide. Archive contents beyond `export.xml` (CDA XML, GPX routes, ECG CSVs) are not asserted on the page because no primary source was checked here; the XML guide is linked instead.
+- [x] Excel XML import: NOT checked in real desktop Excel on Windows or Mac, so the page gives no menu path and says so. It only cites Microsoft's Power Query XML connector page (https://learn.microsoft.com/en-us/power-query/connectors/xml) and the connector-availability page. The warning that a large archive may struggle is stated as expectation, not a tested result.
+- [x] Row limit 1,048,576 per worksheet: https://support.microsoft.com/en-us/office/excel-specifications-and-limits-1672b34d-7043-467e-8e27-269d656771c3.
+- [x] Excel for the web/iPhone/iPad: untested; page says so and makes no capability claim.
+- [x] Single-day Detailed CSV: columns `Date,Category,Metric,Value,Unit,Timestamp` and the sample metric names/timestamp format match `docs-src/public/reference/generated/core/summary-day.csv` and `csv-row-contracts.md`; example rows are copied from that fictional fixture (lines 50, 51, 76). Sample rows are written only when samples exist (`CSVExporter.swift`). Mode name "Detailed Time-Series": `docs-src/src/content/docs/format.md`.
+- [x] FAQ answers: derived from the above; "choose metrics and dates" per `iphone-first-export.md`/`format.md`. Sample workbook values (249,630 steps; 7.49 h; Oct 8 gap), pricing sentence and Cloud-pilot privacy wording unchanged. Inbound link added from the XML guide; Sheets and steps guides already link here.
+
+## Re-check — 2026-11-22
+
+- [x] Re-audited every claim against opened primary sources or repository files; claims without one stay out (export.zip internal file list, Excel XML menu paths, web/mobile Excel capabilities). Chooser anchors resolve in the built page; `test/blog-verification.test.mjs` passes (98); blog build succeeds; page viewed headless at 390 and 1280 px (no new overflow beyond the shared site layout). Only files under the allowed content paths are changed.

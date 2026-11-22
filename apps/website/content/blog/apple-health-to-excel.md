@@ -1,16 +1,16 @@
 ---
-title: "How to export Apple Health to Excel"
-description: "Export Apple Health to Excel using CSV. Import daily files, filter steps or sleep, combine dates, and build a weekly PivotTable without counting metadata."
-lead: "Export Apple Health as daily CSV files with Health.md, import them into desktop Excel, then select the metric and unit you want before building a table or chart."
+title: "Export Apple Health data to Excel (from export.zip or as daily CSV)"
+description: "Have an Apple Health export.zip? See why Excel struggles with export.xml, then get daily or single-day CSV files from Health.md into Excel."
+lead: "Apple exports XML, not a spreadsheet. Pick your route: convert the export.zip you already have, or export daily CSV files from your iPhone and import them into desktop Excel."
 date: "2026-10-25"
-updated: "2026-10-27"
+updated: "2026-11-21"
 category: "Workflow guide"
 related:
   - apple-health-to-google-sheets
   - export-apple-health-steps-data
   - apple-health-to-notion
 draft: false
-verified: "2026-10-27"
+verified: "2026-11-21"
 verified_by: "Codex (agent)"
 verified_method: traced
 tags:
@@ -20,7 +20,30 @@ tags:
   - export
 ---
 
-Apple Health's built-in **Export All Health Data** creates an XML archive. For a spreadsheet workflow, Health.md reads authorized data on your iPhone and writes CSV files that Excel can import. This guide uses those daily files; it does not convert an existing Apple XML archive or export an Excel workbook directly.
+**Apple Health exports XML, not a spreadsheet.** If you already have `export.zip` from **Export All Health Data**, Excel will not give you tidy columns by double-clicking its `export.xml`; convert the records you need first (see below). If you would rather start from daily totals or one day's entries, Health.md writes CSV files that Excel can import.
+
+| What you have or want | Best route |
+| --- | --- |
+| I already have **export.zip** from the Health app | [Convert it locally](#section-if-you-already-have-export-zip), filtering the record type you need |
+| I want **daily totals** (steps, sleep, weight) in a sheet | Health.md daily CSV: follow [steps 1–4](#section-1-export-one-day-before-a-longer-range) |
+| I want **every entry for one day** | Health.md [Detailed Time-Series CSV for a single day](#section-every-entry-for-one-day) |
+
+Health.md does not convert an existing Apple XML archive, and it does not export an Excel workbook directly. It reads authorized data on your iPhone and writes CSV.
+
+## If you already have export.zip
+
+Apple's [Health sharing guide](https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios) documents **Export All Health Data**, which produces an XML archive. Unzip a copy and keep the original. The records live in `export.xml`; see [Apple Health XML export](/blog/apple-health-xml-export/) for what the archive holds and how its records map to a table.
+
+**Why export.xml is a poor fit for double-clicking in Excel:**
+
+- Years of history make it very large, so it is slow to open and can freeze.
+- It is one long list of `<Record>` elements whose values sit in attributes (type, unit, source, start and end dates), not a grid of days and metrics.
+- A worksheet holds at most 1,048,576 rows ([Microsoft's Excel limits](https://support.microsoft.com/en-us/office/excel-specifications-and-limits-1672b34d-7043-467e-8e27-269d656771c3)), and a full-history archive can contain more raw records than that.
+
+**Realistic options:**
+
+1. **Filter one record type with a local script or converter.** Run it on your own computer and write a CSV of just the type you need, then import that CSV with the steps below. See [Apple Health to Python](/blog/apple-health-to-python/) for a worked filter, and [workout distance in export.xml](/blog/apple-health-export-xml-workout-distance/) for an XML example.
+2. **Excel's own XML import.** Microsoft documents a [Power Query XML connector](https://learn.microsoft.com/en-us/power-query/connectors/xml) and [which connectors each Excel version has](https://support.microsoft.com/en-gb/excel/power-query-data-sources-in-excel-versions?nochrome=true). We did not try it on a real export.xml in Windows or Mac Excel, so we do not give menu paths or promise it works; expect it to struggle on a large archive.
 
 ## Try the 28-day spreadsheet sample
 
@@ -116,6 +139,27 @@ A day absent from the export is missing data, not a zero-step day. A weekly aver
 
 When new files arrive, refresh the import query (or append the newly imported rows), rebuild the filtered Steps copy, extend its table and helper formulas, then refresh the PivotTable. Refreshing a raw query alone does not update a manually copied analysis sheet.
 
+## Every entry for one day
+
+To get a spreadsheet of the individual entries from one day, choose **CSV**, then **Detailed Time-Series**, then one completed date in Health.md. Summary rows still appear, and timestamped samples are added where the metric supports them and the day has data. Do not assume every metric has samples; a metric with none produces no sample rows.
+
+The file has the same six columns as the daily CSV: `Date,Category,Metric,Value,Unit,Timestamp`. In the exporter's [generated reference CSV](/docs/reference/generated/core/summary-day.csv), the timestamped rows are `Heart Rate Sample`, `HRV Sample`, `Blood Oxygen Sample`, `Blood Glucose Sample`, `Respiratory Rate Sample`, `Blood Pressure Sample` and `Sleep Stage`, with a UTC ISO 8601 `Timestamp`. Fictional example rows in that format:
+
+```csv
+Date,Category,Metric,Value,Unit,Timestamp
+2026-03-15,Heart,Heart Rate Sample,61.0,bpm,2026-03-15T00:30:00Z
+2026-03-15,Heart,Heart Rate Sample,92.0,bpm,2026-03-15T01:00:00Z
+2026-03-15,Vitals,Blood Pressure Sample,121/79,mmHg,2026-03-15T01:23:20Z
+```
+
+Import it with the Text/CSV steps above, then filter **Metric** for the sample type you want. Keep these rows out of daily totals.
+
+<a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Export a single day as Detailed CSV with Health.md</a>
+
+## Excel for the web, iPhone or iPad?
+
+The import steps in this guide use desktop Excel. We did not test the browser or mobile versions, so we make no claim about what they can import; once a workbook exists you can open or share it from any Excel you use.
+
 ## Use sleep instead of steps
 
 Repeat the filtered-copy workflow with `Category = Sleep`, `Metric = Total Duration`, and `Unit = seconds`. After numeric conversion, add an **Hours** column with `=IF(G2="","",G2/3600)` and chart that column against Calendar date. The synthetic sample's **27900.0 seconds = 7.75 hours**.
@@ -124,11 +168,30 @@ Daily sleep summaries use a local noon-to-noon journal window. For Monday night,
 
 ## Fix common import problems
 
+- **export.xml opens as one column, or Excel freezes:** it is not a CSV and is too large for a worksheet. Close it, and convert one record type to CSV with a local tool first.
 - **Everything appears in one column:** re-import with Comma as the delimiter.
 - **A number becomes an error or text:** inspect the original cell and separators after filtering the metric. Keep errors visible until resolved.
 - **Weekly totals look too high:** check duplicate exports, repeated headers, mixed units, and samples combined with summaries.
 - **Dates look wrong:** inspect the raw text and conversion, including the selected export date format. Formatting text as Date alone does not parse it.
 - **Your metric is absent:** check the selected day, metrics, Apple Health source records, and read authorization. An absent row does not prove a zero or identify a specific permission state. See [export troubleshooting](/docs/troubleshooting/).
+
+## FAQ
+
+### Can I export Apple Health directly to Excel?
+
+No. Apple's built-in export is an XML archive, not a spreadsheet. Convert records to CSV first, or export CSV from Health.md.
+
+### Why won't export.xml open in Excel?
+
+It is a very large list of `<Record>` elements rather than rows and columns, and a long history can exceed the worksheet row limit. Filter the record type you need into CSV first.
+
+### Does Apple Health export CSV?
+
+Not as its main export, which is the XML archive. Health.md writes CSV from your iPhone instead.
+
+### Can I export one metric only?
+
+Apple's built-in export covers everything. Health.md lets you choose the metrics and dates before exporting.
 
 ## Where the files are stored
 

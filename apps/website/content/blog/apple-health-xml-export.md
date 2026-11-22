@@ -28,6 +28,8 @@ tags:
 
 This sample is Health.md output, not a conversion of your XML. It contains fictional values and can help you check a spreadsheet import before using personal records.
 
+Want the result in Excel? See [Apple Health to Excel](/blog/apple-health-to-excel/).
+
 ## 1. Create or locate the Apple Health archive
 
 On iPhone, open **Health → Summary**, tap your picture or initials, then choose **Export All Health Data**. When the share sheet appears, choose where to save or send the export. Apple's [Health sharing guide](https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios) documents this XML export.
