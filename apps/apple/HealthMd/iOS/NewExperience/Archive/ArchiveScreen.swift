@@ -285,6 +285,7 @@ struct ArchiveScreen: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: compact ? 6 : 8) {
                 chip(String(localized: "All"), color: nil, id: nil, compact: compact)
+                    .accessibilityIdentifier("glass.archive.chip.all")
                 ForEach(model.profiles) { profile in
                     chip(
                         profile.isPaused && !compact
@@ -294,6 +295,9 @@ struct ArchiveScreen: View {
                         id: profile.id,
                         compact: compact
                     )
+                    // The automation's own name: stable across languages, unlike the localized
+                    // "· paused" title (UI tests filter the Archive by it).
+                    .accessibilityIdentifier("glass.archive.chip.\(profile.name)")
                 }
             }
             .padding(.horizontal, layout.isWide ? 22 : GlassMetrics.screenMargin)

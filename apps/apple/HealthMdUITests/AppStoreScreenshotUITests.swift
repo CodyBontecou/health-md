@@ -130,8 +130,9 @@ final class AppStoreScreenshotUITests: XCTestCase {
         XCTAssertTrue(previous.waitForExistence(timeout: 5), "Missing Previous month")
         previous.tap()
         if let profile {
-            // Automation names are fixture data, identical in every language.
-            let chip = app.buttons[profile].firstMatch
+            // Automation names are fixture data, identical in every language. Match the chip by
+            // identifier: the day list below the calendar can hold a button with the same label.
+            let chip = app.buttons["glass.archive.chip.\(profile)"].firstMatch
             XCTAssertTrue(chip.waitForExistence(timeout: 5), "Missing archive chip \(profile)")
             chip.tap()
         }
