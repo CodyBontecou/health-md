@@ -31,7 +31,7 @@ tags:
 | --- | --- |
 | A full download of what Samsung holds about you | Samsung Health's **Download personal data**, described below. Health.md is not needed. |
 | A spreadsheet of Samsung's files | Open the downloaded CSV files in Excel or Sheets; see [how to open them](#whats-in-samsungs-download-and-how-to-open-it). |
-| One workout as GPX | Varies by Samsung Health version. Some versions offer a share or export option from that workout in the exercise history; check the workout's menu on your device. Samsung's download page does not document GPX, and Health.md does not export GPX. |
+| One workout as GPX | Varies by Samsung Health version. Samsung's download page does not document GPX, and this guide has not confirmed an in-app GPX option, so do not assume your version has one. Health.md does not export GPX. |
 | Daily spreadsheet or Obsidian files (steps, sleep, heart rate) | Share supported records with Health Connect, then export with Health.md. |
 
 Health Connect can contain records from several apps. A Health.md Health Connect export can therefore include other sources; review coverage before treating it as Samsung-only. The shared records are also a different representation from Samsung's downloaded files.
@@ -64,7 +64,7 @@ These are things to check, not confirmed causes for every device:
 
 - **Data still on the watch.** Galaxy Watch data reaches the phone when they synchronize. Open Samsung Health on the phone and confirm the day appears there before downloading. Samsung's [Health Connect setup article](https://developer.samsung.com/health/blog/en/accessing-samsung-health-data-through-health-connect) describes the watch and phone as separate stages.
 - **Data held only in Samsung's cloud.** If your history was saved to your Samsung account and is not on this device, the download from the phone may not contain it. Check your Samsung account and backup settings; Samsung's download page does not say what is included, so treat this as something to check.
-- **The type you need is in a different file.** Each data type has its own file, so a file for one type will not show another. Search the folder for the type you need.
+- **The type you need is in a different file.** Data may be split across several files, so a file for one type may not show another. Search the folder for the type you need.
 - **The CSV opened as one column or looks blank.** See the import steps above; a metadata line or missing column split can make a file look empty or unlike the app.
 - **Numbers differ from the app.** Compare one known day between the app and the file before trusting either; Samsung does not document how the two relate.
 
@@ -134,7 +134,7 @@ For overnight sleep, check the [journal-date examples](/docs/sleep-date-attribut
 
 ### Can I export Samsung Health to Excel?
 
-Yes, in two ways. Download your personal data and open the CSV files in Excel (import them, and start at row 2 if line 1 is metadata), or export daily CSV with Health.md and open that.
+Health.md's daily CSV from Health Connect opens in Excel. Samsung's own download is a separate option: its page does not document the file format, so if your download contains CSV files, import them into Excel (start at row 2 if line 1 is not headers).
 
 ### Can I export Samsung Health to CSV?
 
@@ -142,7 +142,7 @@ Samsung's page does not document the file format, so check which file types your
 
 ### Can I export a single workout as GPX?
 
-It varies by Samsung Health version. Look in that workout's menu in the exercise history for a share or export option. Health.md does not export GPX.
+It varies by Samsung Health version. Samsung's download page does not document GPX, and this guide has not confirmed an in-app GPX option. Health.md does not export GPX.
 
 ### Does Samsung Health export to Apple Health?
 
