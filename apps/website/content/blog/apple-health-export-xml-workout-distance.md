@@ -279,7 +279,7 @@ The workout distance comes out as a number with an explicit unit:
 - In the [fictional sample CSV](/docs/reference/generated/core/summary-day.csv), a run's distance is the row with Category `Workouts`, Metric `Running Distance`, Value `10000` and Unit `meters`.
 - In the [fictional sample JSON](/docs/reference/generated/core/summary-day.json), each workout object carries `distance` (`10000`), `distanceKm` (`10`) and `distanceMi`, next to its ID and start and end timestamps.
 
-See the [workouts guide](/blog/export-apple-health-workouts/) for the row layout and the [CSV import rules](/apple-health-to-csv/) before opening files in a spreadsheet.
+Want per-workout CSV or JSON without parsing XML? See [exporting Apple Fitness workouts](/blog/export-apple-health-workouts/) for the row layout and the [CSV import rules](/apple-health-to-csv/) before opening files in a spreadsheet.
 
 <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
 
