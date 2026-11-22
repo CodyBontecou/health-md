@@ -1,17 +1,18 @@
 ---
-title: "How to export Apple Health workouts"
-description: "Export Apple Health workouts to CSV or JSON with Health.md. Check workout dates, duration, distance, units, session identity, and available routes before analysis."
-lead: "Select Workouts in Health.md, preview one known workout day, and export CSV for inspection or JSON for separate workout objects with IDs and timestamps."
+title: "Export Apple Fitness and Apple Health workouts (CSV, JSON)"
+description: "Export Apple Fitness and Apple Watch workouts: Apple's native export.zip (export.xml plus GPX routes) or per-workout CSV and JSON with Health.md. Pick the right route."
+lead: "Apple documents one export, in the Health app. For per-workout CSV or JSON from Apple Watch or Fitness workouts, select Workouts in Health.md, preview one known day, and export."
 date: "2026-10-25"
-updated: "2026-10-25"
+updated: "2026-11-22"
 category: "Workflow guide"
+platform: apple
 related:
   - export-apple-health-steps-data
   - export-apple-health-heart-rate
   - export-strava-data
 draft: false
-verified: "2026-10-25"
-verified_by: "Codex (agent)"
+verified: "2026-11-22"
+verified_by: "Claude (agent)"
 verified_method: traced
 tags:
   - apple-health
@@ -20,13 +21,45 @@ tags:
   - json
 ---
 
-To export workouts already stored in Apple Health, authorize Health.md to read them, select **Workouts**, choose the day the workout started, and save a CSV or JSON export. Start with one session you can recognize before exporting a longer range.
+**Can you export Apple Fitness data?** Apple documents its export in the **Health** app, not in Fitness: **Health → your picture or initials → Export All Health Data** produces `export.zip`. Workouts are `<Workout>` elements in `export.xml`, and recorded routes are GPX files in `workout-routes/`. For per-workout CSV or JSON you can open in Excel or script against, use Health.md to export workouts from Apple Watch or the Fitness app that are stored in Apple Health.
 
 <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
 
-Health.md includes **5 free export actions**, followed by a single lifetime unlock. Manual export runs on your iPhone and does not require a Mac. For Apple's native XML archive and the broader export choices, see [how to export Apple Health data](/apple-health-export/).
+Health.md offers weekly, yearly and Lifetime access, and eligible subscriptions start with a 7-day free trial; see [purchase details](/docs/paywall/). Manual export runs on your iPhone and does not require a Mac.
 
-## Choose the format for the job
+## Where Apple Fitness workouts are stored
+
+Health.md reads workouts from Apple Health. It does not connect to the Fitness app directly, and it cannot recover a workout that was never saved to Health. If a workout from your Apple Watch or iPhone is listed in Health, Health.md can read it, subject to your read authorization.
+
+## Option 1: Apple's native export (export.zip)
+
+Apple's [Share your health data guide](https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios) describes the export:
+
+1. Open the **Health** app and tap your picture or initials.
+2. Tap **Export All Health Data** and save or share the resulting `export.zip`.
+
+For workouts, the archive contains:
+
+- `<Workout>` elements in `export.xml`.
+- GPX route files in `workout-routes/`, linked from each workout through `WorkoutRoute` → `FileReference`.
+
+It is one large archive of everything in Health, not a per-workout spreadsheet. To parse it, see [where workout distance lives in export.xml](/blog/apple-health-export-xml-workout-distance/) and the [XML export guide](/blog/apple-health-xml-export/).
+
+## Which route should you use?
+
+| I want… | Use |
+| --- | --- |
+| The full archive or a backup | Apple's native export (`export.zip`) |
+| The GPS route as GPX | Apple's archive: `workout-routes/`. Health.md does not write GPX. |
+| Workouts in Excel or Sheets | Health.md CSV, then the [Excel](/blog/apple-health-to-excel/) and [Google Sheets](/blog/apple-health-to-google-sheets/) guides |
+| One object per session, with IDs and start/end times | Health.md JSON |
+| Upload to Strava or another service | Check that service's importer; Health.md does not write GPX, FIT or TCX. See the [Strava guide](/blog/export-strava-data/). |
+
+For Health.md's own options beyond workouts, see [how to export Apple Health data](/apple-health-export/).
+
+## Option 2: Health.md per-workout CSV or JSON
+
+### Choose the format for the job
 
 | Goal | Starting format | What to expect |
 | --- | --- | --- |
@@ -37,15 +70,15 @@ Health.md includes **5 free export actions**, followed by a single lifetime unlo
 
 This walkthrough uses CSV and JSON, not a GPX, FIT, or TCX conversion. Route coordinates inside JSON are not automatically a file another fitness service can import. Check that service's accepted formats before choosing a workflow.
 
-## 1. Check the source and authorize access
+### 1. Check the source and authorize access
 
-Confirm the workout is present in Apple Health on this iPhone. Health.md can read only records the watch or source app has written there and the public APIs make available under your authorization.
+Confirm the workout from Apple Watch or the Fitness app is present in Apple Health on this iPhone. Health.md can read only records the watch or source app has written there and the public APIs make available under your authorization.
 
 In Health.md, authorize the health categories you need and enable **Workouts** in **Health Metrics**. If you skipped access earlier, review Health.md's read permissions in Apple Health. Apple's [Health sharing and permissions guide](https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios) explains how to review app access and describes the separate native XML export.
 
 A recorded workout does not guarantee that heart rate, distance, laps, power, cadence, or a route exists. Source apps, hardware, workout type, synchronization, and available permissions affect those fields. Selecting Workouts cannot reconstruct records that were never saved.
 
-## 2. Preview one known workout day
+### 2. Preview one known workout day
 
 1. Choose **CSV** or **JSON** and start with **Summary**. You can select both formats in the same export action.
 2. Select the calendar day the workout **started**. Health.md's daily workout projection assigns sessions by their start time in the effective export calendar. For an overnight session, check the start day rather than only the day it ended.
@@ -54,7 +87,7 @@ A recorded workout does not guarantee that heart rate, distance, laps, power, ca
 
 A longer range produces daily files, not one combined workout workbook. Follow [your first iPhone export](/docs/iphone-first-export/) for setup, folder selection, and preview. For a non-synced destination, use the [local export guide](/blog/export-health-data-without-the-cloud/), including its separate backup checks.
 
-## 3. Understand the workout CSV rows
+### 3. Understand the workout CSV rows
 
 Try the [synthetic daily CSV](/docs/reference/generated/core/summary-day.csv) before using personal records. It is generated by the exporter and contains fictional measurements, metadata, and several workout examples.
 
@@ -77,7 +110,7 @@ Some identity/type rows have an exact Timestamp; many compatibility summary rows
 
 Two runs on the same day can have the same Metric labels. For reliable per-session grouping, use the JSON workout objects instead of grouping CSV rows only by date and the word “Running.” Keep distance, duration, calories, and heart-rate statistics separate rather than adding unlike units. See [Apple Health to CSV](/apple-health-to-csv/) for import rules.
 
-## 4. Use JSON to keep workout sessions together
+### 4. Use JSON to keep workout sessions together
 
 The [synthetic daily JSON](/docs/reference/generated/core/summary-day.json) contains a `workouts` array. Each workout object includes `id`, `type`, `sport`, `startTimeISO`, `endTimeISO`, `duration`, and `elapsedDuration`. Available source data can add distance, heart-rate statistics, laps, splits, device/source metadata, route points, or time-series arrays.
 
@@ -89,7 +122,7 @@ JSON uses nested fields and arrays rather than CSV columns. Inspect the `units` 
 
 ## Routes, laps, and detailed records
 
-A workout total, a route, and a stream of heart-rate samples are different data. Apple's [workout route documentation](https://developer.apple.com/documentation/healthkit/hkworkoutroute) describes route data as location samples associated with a workout. A distance total is not enough to rebuild those coordinates. Parsing distance out of Apple's own `export.xml` instead? See [where workout distance lives in export.xml](/blog/apple-health-export-xml-workout-distance/).
+A workout total, a route, and a stream of heart-rate samples are different data. Apple's [workout route documentation](https://developer.apple.com/documentation/healthkit/hkworkoutroute) describes route data as location samples associated with a workout. A distance total is not enough to rebuild those coordinates. Want the GPX route itself? Apple's native archive keeps recorded routes as GPX files in `workout-routes/`; Health.md does not write GPX. Parsing distance out of Apple's own `export.xml` instead? See [where workout distance lives in export.xml](/blog/apple-health-export-xml-workout-distance/).
 
 Health.md's JSON renderer can include route and time-series data when the workout read returns them. **Inspect even a Summary JSON export before sharing it:** selecting Summary is not a guarantee that workout objects contain no detailed fields or coordinates. The synthetic JSON intentionally exercises optional fields; it is not a promise that every real workout includes them.
 
@@ -98,6 +131,16 @@ Detailed Time-Series adds selected samples and intervals where supported. Lossle
 Using Strava? Its own downloads and what it shares to Apple Health differ; see the [Strava export guide](/blog/export-strava-data/).
 
 Laps and splits describe parts of a workout. Do not add their distance or duration to the complete workout total. Not every sport has every statistic, and running cadence in steps per minute is distinct from cycling cadence in revolutions per minute.
+
+## FAQ
+
+**Can you export Apple Fitness data?** Apple documents the export in the Health app (Export All Health Data, giving `export.zip`). For per-workout CSV or JSON, use Health.md on workouts stored in Health.
+
+**Can I export workouts to Excel?** Yes: export CSV with Health.md and follow the [Excel guide](/blog/apple-health-to-excel/). Apple's `export.xml` is not a spreadsheet.
+
+**Can I get the GPS route?** Apple's archive stores recorded routes as GPX in `workout-routes/`. Health.md JSON can include route points when the workout read returns them, but it is not a GPX file.
+
+**Does Health.md export GPX or FIT?** No. It writes CSV, JSON and the other formats in the [format guide](/docs/format/), not GPX, FIT or TCX.
 
 ## Troubleshooting
 

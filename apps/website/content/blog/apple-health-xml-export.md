@@ -48,7 +48,7 @@ Uncompressing a file does not convert its data. A text editor can inspect XML, b
 
 ## 3. Understand what an XML record means
 
-XML stores named fields and can contain nested information. A record's type, unit, source, and start and end times matter when turning it into a table. The converter's [documented record output](https://github.com/muquit/applehealth2csv#how-to-use) illustrates those fields. Workouts are separate `<Workout>` elements whose distance can sit in a child element or an attribute; see [how to find workout distance in export.xml](/blog/apple-health-export-xml-workout-distance/).
+XML stores named fields and can contain nested information. A record's type, unit, source, and start and end times matter when turning it into a table. The converter's [documented record output](https://github.com/muquit/applehealth2csv#how-to-use) illustrates those fields. Workouts are separate `<Workout>` elements whose distance can sit in a child element or an attribute; see [how to find workout distance in export.xml](/blog/apple-health-export-xml-workout-distance/). For per-workout CSV or JSON instead, see [exporting Apple Fitness and Apple Health workouts](/blog/export-apple-health-workouts/).
 
 For example, an interval with **25 steps**, unit **count**, from **09:00 to 09:05** describes one fictional interval. It is not automatically a daily step total. Preserve the unit and time offset, and decide how records should be grouped before calculating a daily or weekly summary.
 

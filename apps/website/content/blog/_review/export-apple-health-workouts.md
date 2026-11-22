@@ -24,3 +24,12 @@ No device workout export, Files/spreadsheet click-through, route capture, or vis
 ## Workout distance inbound link — 2026-11-19
 
 - [x] One contextual sentence links to /blog/apple-health-export-xml-workout-distance/ from "Routes, laps, and detailed records". The linked tutorial's format claims are traced in its own ledger (`_review/apple-health-export-xml-workout-distance.md`). This page's existing claims are unchanged; `updated` not bumped.
+
+## Apple Fitness refresh — 2026-11-22 (method: traced)
+
+- [x] Native export path (Health → picture/initials → Export All Health Data, `export.zip`): https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios.
+- [x] `<Workout>` in export.xml, `workout-routes/` GPX, `WorkoutRoute` → `FileReference`: traced in `_review/apple-health-export-xml-workout-distance.md` (DTD copies and fixture). Routes as location samples: https://developer.apple.com/documentation/healthkit/hkworkoutroute.
+- [x] "Fitness workouts are stored in Health": no Apple support page could be found that states it (Watch and iPhone guide pages fetched did not), so the page makes no such claim. It says only that Health.md reads workouts present in Apple Health, per producer source (`HealthKitManager.swift` fetchWorkouts) and existing ledger entries. It does not claim a direct Fitness app connection or recovery of unsaved workouts.
+- [x] No GPX/FIT/TCX output: existing ledger entry and format docs; the chooser sends GPX seekers to Apple's archive. JSON may include route points (JSONExporter route emission), stated as such in the FAQ.
+- [x] Pricing line replaced with the wording of `docs-src/src/content/docs/paywall.md` (weekly/yearly/Lifetime, eligible 7-day trial), replacing the older "5 free actions" wording. Manual export without a Mac unchanged.
+- [x] Sample values unchanged. Inbound links added from the workout-distance and XML export guides. Fitness/Watch wording in step 1 is editorial. No device run.
