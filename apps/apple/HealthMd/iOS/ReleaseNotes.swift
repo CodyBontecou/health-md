@@ -63,48 +63,50 @@ enum HealthMdReleaseNotes {
         ) ?? Bundle.main.bundleURL
     }
 
-    static let notes: [HealthMdVersionNotes] = [
-        .init(
-            version: "4.0.0",
-            items: [
-                // GlassWhatsNewScreen renders only the rows, so each row title carries its message.
-                .list(
-                    title: "A redesigned Health.md",
-                    rows: [
-                        .init(
-                            symbolSystemName: "calendar",
-                            title: "Your Archive",
-                            description: "Each exported day fills a square on the calendar. Open a day to see the file each automation wrote."
-                        ),
-                        .init(
-                            symbolSystemName: "exclamationmark.triangle",
-                            title: "Needs attention",
-                            description: "Problems such as an unavailable folder, an offline Mac or a failing endpoint appear in one list, each with its fix."
-                        ),
-                        .init(
-                            symbolSystemName: "text.badge.checkmark",
-                            title: "Automations you can read",
-                            description: "Each saved export reads as a sentence, with a live preview of the file it will write."
-                        ),
-                        .init(
-                            symbolSystemName: "square.and.arrow.up",
-                            title: "Export now",
-                            description: "Export yesterday, the last 7 or 30 days, or any dates, and see what was written when it finishes."
-                        ),
-                        .init(
-                            symbolSystemName: "moon",
-                            title: "Choose your sleep day",
-                            description: "Keep the noon-to-noon window, or assign each night’s sleep to the day you wake up."
-                        ),
-                        .init(
-                            symbolSystemName: "slider.horizontal.3",
-                            title: "Detail by category",
-                            description: "Export detailed sleep while keeping other categories summarized."
-                        )
-                    ]
+    /// The 4.0 redesign notes. 4.0.1 repeats them so customers updating straight from 3.x still see them;
+    /// `ReviewManager.shouldPresentReleaseNotes` keeps anyone who saw them on 4.0.0 from seeing them again.
+    private static let redesignItems: [HealthMdVersionNotes.Item] = [
+        // GlassWhatsNewScreen renders only the rows, so each row title carries its message.
+        .list(
+            title: "A redesigned Health.md",
+            rows: [
+                .init(
+                    symbolSystemName: "calendar",
+                    title: "Your Archive",
+                    description: "Each exported day fills a square on the calendar. Open a day to see the file each automation wrote."
+                ),
+                .init(
+                    symbolSystemName: "exclamationmark.triangle",
+                    title: "Needs attention",
+                    description: "Problems such as an unavailable folder, an offline Mac or a failing endpoint appear in one list, each with its fix."
+                ),
+                .init(
+                    symbolSystemName: "text.badge.checkmark",
+                    title: "Automations you can read",
+                    description: "Each saved export reads as a sentence, with a live preview of the file it will write."
+                ),
+                .init(
+                    symbolSystemName: "square.and.arrow.up",
+                    title: "Export now",
+                    description: "Export yesterday, the last 7 or 30 days, or any dates, and see what was written when it finishes."
+                ),
+                .init(
+                    symbolSystemName: "moon",
+                    title: "Choose your sleep day",
+                    description: "Keep the noon-to-noon window, or assign each night’s sleep to the day you wake up."
+                ),
+                .init(
+                    symbolSystemName: "slider.horizontal.3",
+                    title: "Detail by category",
+                    description: "Export detailed sleep while keeping other categories summarized."
                 )
             ]
-        ),
+        )
+    ]
+
+    static let notes: [HealthMdVersionNotes] = [
+        .init(version: "4.0.1", items: redesignItems),
+        .init(version: "4.0.0", items: redesignItems),
         .init(
             version: "3.5.0",
             items: [

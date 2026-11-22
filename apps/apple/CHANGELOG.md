@@ -2,6 +2,12 @@
 
 All notable changes to Health.md will be documented in this file.
 
+## [4.0.1] - 2026-11-22
+
+### Changed
+- The App Store page shows screenshots of the redesigned app on iPhone, iPad and Mac.
+- Updating straight from 3.x to 4.0.1 shows the 4.0 What's New sheet. Anyone who already saw it on 4.0.0 doesn't see it again.
+
 ## [4.0.0] - 2026-11-21
 
 ### Added
