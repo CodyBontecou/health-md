@@ -25,6 +25,8 @@ An Obsidian health journal does not have to start on an iPhone. Health.md for An
 
 The read happens on the Android device. The files go to a folder selected through Android's Storage Access Framework. Health.md does not require an account or relay the export through a Health.md health-data cloud.
 
+Coming from a Galaxy phone or watch? See how to [export Samsung Health data](/blog/export-samsung-health-data/) first, then confirm the records reached Health Connect.
+
 ## Get Health.md for Android
 
 Install Health.md on the Android phone that has access to your Health Connect records. Google Play is the current download destination:

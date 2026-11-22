@@ -83,7 +83,7 @@ Once you have the Takeout archive, get ongoing daily files:
 3. Choose **CSV**, **JSON** or **Markdown**.
 4. Export and open the saved file. Compare date, values and units with Health Connect before widening the range.
 
-See the [Android setup guide](/docs/android/) for folder access and history permissions. For daily notes, continue with the [Health Connect to Obsidian guide](/blog/export-health-connect-to-obsidian/). The [fictional Android CSV excerpt](/assets/samples/health-connect-summary-excerpt.csv) shows Health.md output; it is not a Takeout file. See also the [Health Connect export guide](/health-connect-export/) and [format reference](/docs/format/). Absent fields are unavailable data, not zero, and overlapping source and re-exported files should not be added together.
+See the [Android setup guide](/docs/android/) for folder access and history permissions. For daily notes, continue with the [Health Connect to Obsidian guide](/blog/export-health-connect-to-obsidian/). The [fictional Android CSV excerpt](/assets/samples/health-connect-summary-excerpt.csv) shows Health.md output; it is not a Takeout file. Moving to a Galaxy phone? Here is how to [export Samsung Health data](/blog/export-samsung-health-data/). See also the [Health Connect export guide](/health-connect-export/) and [format reference](/docs/format/). Absent fields are unavailable data, not zero, and overlapping source and re-exported files should not be added together.
 
 ## If you started on iPhone
 
