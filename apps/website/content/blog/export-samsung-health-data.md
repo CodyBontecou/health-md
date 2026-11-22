@@ -3,8 +3,8 @@ title: "How to export Samsung Health data (CSV, Excel, GPX)"
 description: "Samsung Health's Download personal data saves your files to My Files → Downloads → Samsung Health. See what the download contains, how to open it in Excel or Sheets, why it may look empty, and how to get daily CSV via Health Connect."
 lead: "Download personal data in Samsung Health is free and needs no extra app. Here is where the files land, how to open them, and when Health Connect plus Health.md gives you cleaner daily CSV."
 date: "2026-10-30"
-updated: "2026-11-20"
-verified: "2026-11-20"
+updated: "2026-11-22"
+verified: "2026-11-22"
 verified_by: "Claude Code (agent)"
 verified_method: traced
 platform: android
@@ -48,12 +48,12 @@ That button is for daily CSV, JSON or Markdown files from Health Connect records
 
 ## What's in Samsung's download, and how to open it
 
-Samsung's page covers the steps and location only; it does not document the file format. The following is **commonly reported by users and not verified in a Health.md test export**, and details vary by version:
+Samsung's page covers the steps and location only; it does not document the file format or contents. Health.md has not run a test export, so nothing below is confirmed for your version. Treat it as a checklist for inspecting your own download, not a description of it:
 
-- The download is typically a folder with a timestamp in its name, containing CSV files (and JSON for some data types) named by data type, with long names that start with a Samsung prefix. File names vary by version; look for names containing `step`, `sleep` or `heart_rate`.
+- Open the Samsung Health folder and see what is in it. File names and formats vary by version; look for names containing `step`, `sleep` or `heart_rate`.
 - **Daily steps vs individual records:** look for a file whose name suggests a daily total or trend (for example, containing `step_daily`) for one row per day. Open a candidate and check whether each row is a day or a shorter record.
-- **Metadata line:** the first line of a file may be a metadata line rather than column headers, so headers may sit on line 2. In Excel's text import or Sheets' import, start the import at row 2, or delete line 1 in a copy.
-- **Time columns:** columns such as `day_time` (or other timestamp columns) may hold epoch milliseconds (a large number) or UTC text. For epoch milliseconds in cell A2, use `=A2/86400000+DATE(1970,1,1)` and format the cell as date and time. The result is UTC; add your offset, for example `+5/24` for UTC+5. Check one known record against the Samsung Health app before trusting a whole column.
+- **Metadata line:** if the first line of a file is not column headers, they may sit on line 2. In Excel's text import or Sheets' import, start the import at row 2, or delete line 1 in a copy.
+- **Time columns:** if a timestamp column holds a large number, it may be epoch milliseconds; it may also be UTC text. For epoch milliseconds in cell A2, use `=A2/86400000+DATE(1970,1,1)` and format the cell as date and time. The result is UTC; add your offset, for example `+5/24` for UTC+5. Check one known record against the Samsung Health app before trusting a whole column.
 - **Columns in one cell:** if everything lands in column A, use Data → Text to Columns (Excel) or Split text to columns (Sheets) with a comma separator, or import the file instead of double-clicking it.
 
 Keep the original download untouched and work on copies.
@@ -66,7 +66,7 @@ These are things to check, not confirmed causes for every device:
 - **Data held only in Samsung's cloud.** If your history was saved to your Samsung account and is not on this device, the download from the phone may not contain it. Check your Samsung account and backup settings; Samsung's download page does not say what is included, so treat this as something to check.
 - **The type you need is in a different file.** Each data type has its own file, so a file for one type will not show another. Search the folder for the type you need.
 - **The CSV opened as one column or looks blank.** See the import steps above; a metadata line or missing column split can make a file look empty or unlike the app.
-- **Numbers differ from the app.** The app shows summaries from several sources; a raw file holds records. Compare a known day.
+- **Numbers differ from the app.** Compare one known day between the app and the file before trusting either; Samsung does not document how the two relate.
 
 <div id="get-clean-daily-csv-through-health-connect"></div>
 
@@ -138,7 +138,7 @@ Yes, in two ways. Download your personal data and open the CSV files in Excel (i
 
 ### Can I export Samsung Health to CSV?
 
-Samsung's download commonly contains CSV files, though its page does not document the format, so check your own download. For one tidy file per day, export CSV from Health Connect with Health.md.
+Samsung's page does not document the file format, so check which file types your own download contains. For one tidy file per day, export CSV from Health Connect with Health.md.
 
 ### Can I export a single workout as GPX?
 

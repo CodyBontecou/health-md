@@ -1,6 +1,6 @@
 # Samsung Health export claim verification
 
-Verified: 2026-11-20 by Claude Code (agent), method: traced.
+Verified: 2026-11-22 by Claude Code (agent), method: traced.
 
 No Samsung device, watch, Health Connect permission flow, app export, spreadsheet interaction or visual QA was executed. Claims trace current official Samsung/Google documentation and the existing Health.md producer, fixtures and user guides. No API, schema, native feature or public capability changed.
 
@@ -18,3 +18,5 @@ No Samsung device, watch, Health Connect permission flow, app export, spreadshee
 - [x] 2026-11-18: one cross-link sentence to /blog/export-fitbit-data/ added; it restates only claims sourced in that guide's ledger (Garmin Health Connect is one-way per this guide; Fitbit Web API retired October 30, 2026 per Google's notice). No other body change.
 
 - [x] 2026-11-20 refresh: short answer box and download steps/location repeat only Samsung's page (ANS10001379). The "What's in Samsung's download" section is explicitly marked commonly reported and not verified in a test export; no exact file names or columns are asserted beyond name fragments (step, sleep, heart_rate, step_daily) given as search hints. The epoch-millisecond formula `=A2/86400000+DATE(1970,1,1)` is standard spreadsheet arithmetic (86,400,000 ms per day, 1970 epoch), not executed here; UTC offset step is stated. Metadata-line-on-row-1, cloud-only data and watch-sync points are labelled as things to check, with watch sync tied to Samsung's setup article. GPX is stated as varying by version, no source claimed, Health.md does not export GPX. Apple Health: no direct path promised. Download frequency: no limit stated. Health Connect, 30-day history, sample CSV and privacy/Cloud pilot wording preserved. Inbound anchor links "export Samsung Health data" added in Garmin, Obsidian, Google Fit guides and /health-connect-export/. No spreadsheet, device or visual run executed.
+
+- [x] 2026-11-22 re-check: removed the "commonly reported" file-layout claims (timestamped folder, CSV/JSON mix, `day_time`, metadata line asserted as typical, "commonly contains CSV"), which had no primary source. The section is now an explicitly conditional checklist ("if the first line is not headers", "if a column holds a large number"). Only Samsung's ANS10001379 page is cited for steps/location. Not executed: no Samsung export was run. Edits stay within allowed paths.
