@@ -80,6 +80,21 @@ cp build/app-store-slides/iphone/*.png build/app-store-slides/ipad/*.png fastlan
 
 The board set has three iPad slides. When you apply it, delete the old `appstore-ipad-slide-4.png`, which has no board, and review the diff before committing. For another locale, capture with that simulator language and pass `--locale` to the compositor, writing into `fastlane/screenshots/<locale>/`.
 
+## Apple Watch
+
+There is no App Store board for the watch: its slide is the real dashboard (WatchDashboardG). Debug builds of `HealthMdWatch` show WatchDashboardG's values as a connected dashboard when launched with `-watch.appStoreFixture YES` (no HealthKit, no status line). Capture on the pool's **Apple Watch Series 11 (46mm)**, which gives 416 × 496 px (`APP_WATCH_SERIES_10`). The watch simulator ignores a global language change, so pass the language at launch, and it ignores the status-bar time override:
+
+```bash
+cd apps/apple
+xcodebuild build -project HealthMd.xcodeproj -scheme HealthMdWatch -configuration Debug \
+  -destination "generic/platform=watchOS Simulator" -derivedDataPath build/watch-dd
+APP=build/watch-dd/Build/Products/Debug-watchsimulator/HealthMdWatch.app
+xcrun simctl install "$WATCH" "$APP"
+xcrun simctl launch "$WATCH" com.codybontecou.obsidianhealth.watchkitapp \
+  -watch.appStoreFixture YES -AppleLanguages "(ja)" -AppleLocale ja_JP
+xcrun simctl io "$WATCH" screenshot fastlane/screenshots/ja/appstore-watch-1.png
+```
+
 ## iPhone Duo
 
 No simulator models the iPhone Duo inner (951 × 669 pt) or outer (466 × 678 pt) display. App Store Connect also has no display type at those sizes (`asc screenshots sizes --all`). An iPad or a landscape iPhone would show a different layout (`GlassWindowClass`), so neither stands in honestly. The Duo slides therefore need captures from a real device:
