@@ -43,7 +43,14 @@ for _ in {1..450}; do
 done
 rg -q "ANDROID_LIVE_LISTENER_READY:$HEALTHMD_LIVE_DIRECT_PORT" "$log"
 cd apps/android
-common=(-Phealthmd.ciAbi="$abi" -PhealthmdInstrumentedTestBuildType=e2e --max-workers=2 --console=plain)
+# Gradle's daemon registry lives in the shared ~/.gradle, so a build would attach to a daemon
+# another job (or sandbox) started; that daemon cannot write this worktree's .gradle/ (fileHashes.lock:
+# Operation not permitted), and another job's `gradlew --stop` stops it mid-build. A worktree-local
+# registry gives this run its own daemon while dependency and build caches stay shared.
+daemon_registry="$repo_root/apps/android/build/ci-gradle-daemon"
+mkdir -p "$daemon_registry"
+common=(-Phealthmd.ciAbi="$abi" -PhealthmdInstrumentedTestBuildType=e2e --max-workers=2 --console=plain
+    -Dorg.gradle.daemon.registry.base="$daemon_registry")
 ./scripts/run-ci-gradle.sh "${common[@]}" :app:testPlayE2eUnitTest \
     --tests com.healthmd.data.health.HealthConnectPinnedZoneRangeTest \
     --tests com.healthmd.domain.exportengine.ExportRepositoryEngineSeamTest \
