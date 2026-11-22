@@ -82,7 +82,7 @@
         },
         "nl-NL": {
           "headline": [
-            "Je gezondheidsgegevens,",
+            "Je gezondheidsdata,",
             "{in platte tekst.}"
           ],
           "caption": "Slaap, hart, activiteit en meer uit Apple Health, bewaard als Markdown-bestanden die van jou zijn."
@@ -290,14 +290,14 @@
         },
         "es-ES": {
           "headline": [
-            "{Más de 225 métricas de salud.}",
+            "{Más de 225 métricas.}",
             "Tú eliges."
           ],
           "caption": "Fases del sueño, corazón, VFC, actividad, constantes vitales, nutrición, medicamentos y más."
         },
         "fr-FR": {
           "headline": [
-            "{Plus de 225 métriques santé.}",
+            "{Plus de 225 métriques.}",
             "À vous de choisir."
           ],
           "caption": "Phases de sommeil, cœur, VFC, activité, signes vitaux, nutrition, médicaments et plus."
@@ -332,7 +332,7 @@
         },
         "pt-BR": {
           "headline": [
-            "{Mais de 225 métricas de saúde.}",
+            "{Mais de 225 métricas.}",
             "Você escolhe."
           ],
           "caption": "Fases do sono, coração, VFC, atividade, sinais vitais, nutrição, medicamentos e mais."
@@ -364,7 +364,7 @@
         },
         "de-DE": {
           "headline": [
-            "Dein Schlaf von letzter Nacht.",
+            "Deine letzte Nacht.",
             "{Vier Formate.}"
           ],
           "caption": null
@@ -743,7 +743,7 @@
         "pt-BR": {
           "headline": [
             "Seus dados de saúde,",
-            "{prontos para suas ferramentas.}"
+            "{prontos para CLI e MCP.}"
           ],
           "caption": "Pareie a CLI healthmd e o MCP com um código QR."
         },

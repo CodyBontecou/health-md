@@ -202,28 +202,28 @@
         },
         "de-DE": {
           "headline": [
-            "{225+ Gesundheitsmetriken,}",
+            "{225+ Messwerte,}",
             "exportiert, wie du willst."
           ],
           "caption": "Notizen, Bases, JSON oder CSV – in deinen Vault, auf den Mac, an CLI oder API."
         },
         "es-ES": {
           "headline": [
-            "{Más de 225 métricas de salud,}",
+            "{Más de 225 métricas,}",
             "exportadas a tu manera."
           ],
           "caption": "Notas, Bases, JSON o CSV: a tu bóveda, Mac, CLI o API."
         },
         "fr-FR": {
           "headline": [
-            "{Plus de 225 métriques santé,}",
+            "{Plus de 225 métriques,}",
             "exportées à votre façon."
           ],
           "caption": "Notes, Bases, JSON ou CSV : vers votre coffre, Mac, CLI ou API."
         },
         "it": {
           "headline": [
-            "{Oltre 225 metriche di salute,}",
+            "{Oltre 225 metriche,}",
             "esportate a modo tuo."
           ],
           "caption": "Note, Bases, JSON o CSV: nel tuo vault, sul Mac, alla CLI o all’API."
@@ -251,7 +251,7 @@
         },
         "pt-BR": {
           "headline": [
-            "{Mais de 225 métricas de saúde,}",
+            "{Mais de 225 métricas,}",
             "exportadas do seu jeito."
           ],
           "caption": "Notas, Bases, JSON ou CSV: para seu cofre, Mac, CLI ou API."

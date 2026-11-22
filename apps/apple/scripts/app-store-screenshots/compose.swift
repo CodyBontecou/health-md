@@ -273,7 +273,55 @@ final class BoardRenderer: NSObject, WKNavigationDelegate {
         webView.navigationDelegate = self
     }
 
-    func render(fileURL: URL, pixelWidth: Int, pixelHeight: Int) async throws -> CGImage {
+    /// Line counts of the board's `<h1>` and caption paragraph as rendered (call after `render`).
+    func textLines(caption: String?) async throws -> (headline: Int, caption: Int) {
+        let result = try await webView.callAsyncJavaScript(Self.textScript + """
+            return [lines(document.querySelector('h1')), lines(captionElement(caption))];
+            """, arguments: ["caption": caption ?? NSNull()], in: nil, contentWorld: .page)
+        let values = (result as? [NSNumber])?.map(\.intValue) ?? [0, 0]
+        return (values[0], values[1])
+    }
+
+    /// Shrinks the `<h1>` and caption font in 2% steps, down to `minimumScale`, until each renders on
+    /// no more lines than `maxLines`. Returns the final line counts and scales.
+    func fitText(caption: String?, maxLines: (headline: Int, caption: Int), minimumScale: Double) async throws -> [Double] {
+        let result = try await webView.callAsyncJavaScript(Self.textScript + """
+            const fit = (element, maximum) => {
+                if (!element || maximum < 1) return [lines(element), 1];
+                const base = parseFloat(getComputedStyle(element).fontSize);
+                let scale = 1;
+                while (lines(element) > maximum && scale - 0.02 >= minimumScale - 1e-9) {
+                    scale -= 0.02;
+                    element.style.fontSize = (base * scale) + 'px';
+                }
+                return [lines(element), scale];
+            };
+            return [...fit(document.querySelector('h1'), maxHeadline), ...fit(captionElement(caption), maxCaption)];
+            """, arguments: [
+                "caption": caption ?? NSNull(), "maxHeadline": maxLines.headline,
+                "maxCaption": maxLines.caption, "minimumScale": minimumScale
+            ], in: nil, contentWorld: .page)
+        return (result as? [NSNumber])?.map(\.doubleValue) ?? []
+    }
+
+    private static let textScript = """
+        const lines = element => {
+            if (!element) return 0;
+            const range = document.createRange();
+            range.selectNodeContents(element);
+            const tops = [];
+            for (const rect of range.getClientRects()) {
+                if (rect.width < 1 || rect.height < 1) continue;
+                if (!tops.some(top => Math.abs(top - rect.top) < rect.height / 2)) tops.push(rect.top);
+            }
+            return tops.length;
+        };
+        const captionElement = text => text == null ? null :
+            Array.from(document.querySelectorAll('p')).find(p => p.children.length === 0 && p.textContent === text) ?? null;
+
+        """
+
+    func load(fileURL: URL) async throws {
         try await withCheckedThrowingContinuation { continuation in
             loadContinuation = continuation
             webView.loadFileURL(fileURL, allowingReadAccessTo: URL(fileURLWithPath: "/"))
@@ -290,6 +338,9 @@ final class BoardRenderer: NSObject, WKNavigationDelegate {
             });
             return true;
             """, arguments: [:], in: nil, contentWorld: .page)
+    }
+
+    func snapshot(pixelWidth: Int, pixelHeight: Int) async throws -> CGImage {
         try await Task.sleep(for: .milliseconds(400))
 
         let configuration = WKSnapshotConfiguration()
@@ -382,6 +433,7 @@ func run() async throws {
     defer { try? FileManager.default.removeItem(at: workURL) }
 
     var missing: [String] = []
+    var overflow: [String] = []
     for slide in slides {
         guard let english = slide.copy["en-US"] else { throw Failure("\(slide.board): no en-US copy") }
         guard let localized = slide.copy[options.locale] else { throw Failure("\(slide.board): no \(options.locale) copy") }
@@ -407,12 +459,45 @@ func run() async throws {
         }
         let htmlURL = workURL.appendingPathComponent("\(slide.board).html")
         try prepared.html.write(to: htmlURL, atomically: true, encoding: .utf8)
+        var fitNote = ""
         let renderer = BoardRenderer(pixelWidth: pixelWidth, pixelHeight: pixelHeight, scale: copy.scale)
-        let image = try await renderer.render(fileURL: htmlURL, pixelWidth: pixelWidth, pixelHeight: pixelHeight)
+        try await renderer.load(fileURL: htmlURL)
+        if options.locale != "en-US" {
+            // A translation may use as many lines as the en-US board renders (some en-US headlines
+            // wrap by design), never more: longer text is shrunk to fit, down to 75%, so it cannot
+            // run into the artwork below it. Text that still does not fit fails the run.
+            let englishBoard = try prepareBoard(
+                html: source, slide: slide, expectedSize: size, english: english, localized: english,
+                capturesURL: nil, assetsURL: assetsURL, placeholder: true
+            )
+            let englishURL = workURL.appendingPathComponent("\(slide.board)-en-US.html")
+            try englishBoard.html.write(to: englishURL, atomically: true, encoding: .utf8)
+            let englishRenderer = BoardRenderer(pixelWidth: pixelWidth, pixelHeight: pixelHeight, scale: copy.scale)
+            try await englishRenderer.load(fileURL: englishURL)
+            let englishLines = try await englishRenderer.textLines(caption: english.caption)
+            let fit = try await renderer.fitText(caption: localized.caption, maxLines: englishLines, minimumScale: 0.75)
+            if fit.count == 4 {
+                let (headlineLines, headlineScale, captionLines, captionScale) = (Int(fit[0]), fit[1], Int(fit[2]), fit[3])
+                if headlineLines > englishLines.headline {
+                    overflow.append("\(slide.board): headline needs \(headlineLines) lines at 75%, en-US uses \(englishLines.headline) (\(localized.headline.joined(separator: " / ")))")
+                }
+                if captionLines > englishLines.caption {
+                    overflow.append("\(slide.board): caption needs \(captionLines) lines at 75%, en-US uses \(englishLines.caption) (\(localized.caption ?? ""))")
+                }
+                var scales: [String] = []
+                if headlineScale < 0.999 { scales.append("headline \(Int((headlineScale * 100).rounded()))%") }
+                if captionScale < 0.999 { scales.append("caption \(Int((captionScale * 100).rounded()))%") }
+                if !scales.isEmpty { fitNote = "  (fitted: \(scales.joined(separator: ", ")))" }
+            }
+        }
+        let image = try await renderer.snapshot(pixelWidth: pixelWidth, pixelHeight: pixelHeight)
         let outputURL = options.outputURL!.appendingPathComponent(slide.output)
         try writePNG(image, to: outputURL)
         let omittedNote = prepared.omitted.isEmpty ? "" : "  (left out: \(prepared.omitted.joined(separator: ", ")))"
-        print("wrote \(slide.board) -> \(outputURL.path) \(pixelWidth)x\(pixelHeight)\(omittedNote)")
+        print("wrote \(slide.board) -> \(outputURL.path) \(pixelWidth)x\(pixelHeight)\(fitNote)\(omittedNote)")
+    }
+    guard overflow.isEmpty else {
+        throw Failure("Copy does not fit even at 75% (shorten it; slides were still written for review):\n  " + overflow.joined(separator: "\n  "))
     }
     guard missing.isEmpty else {
         throw Failure("Missing captures (run the capture step, or pass --placeholder for a layout check only):\n  " + missing.joined(separator: "\n  "))
