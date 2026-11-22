@@ -31,11 +31,11 @@ Apple documents the native route in [Add and log medications with iPhone, iPad, 
 
 Some people report that this PDF shows medication names and strengths but not individual doses and times; see [this Apple Community thread](https://discussions.apple.com/thread/255966235). That is a user report, not Apple documentation, so check the PDF you get on your own device.
 
-| | Apple Export PDF | Health.md daily file | Health.md Individual Entry file |
-| --- | --- | --- | --- |
-| What you get | Current medications (per Apple) | One file per day with dose counts and lists | One file per logged dose |
-| Needs an app | No | Yes, iOS 26+ | Yes, iOS 26+ |
-| Formats | PDF | CSV, JSON, Markdown | Markdown files with frontmatter |
+| Option | What you get |
+| --- | --- |
+| Apple Export PDF | A PDF of current medications (per Apple). No app needed, no dose log. |
+| Health.md daily file | One file per day with dose counts and lists, as CSV, JSON or Markdown. Needs iOS 26+. |
+| Health.md Individual Entry file | One Markdown file per logged dose. Needs iOS 26+. |
 
 <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a> (needs iOS 26 or later for medications)
 
