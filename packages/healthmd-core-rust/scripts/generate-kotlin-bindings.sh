@@ -21,6 +21,8 @@ rustup run 1.88.0 rustc --version >/dev/null 2>&1 || {
     exit 1
 }
 
+. "$workspace_root/scripts/rustc-wrapper-guard.sh"
+healthmd_guard_rustc_wrapper "${CARGO_TARGET_DIR:-$workspace_root/target}" "$(rustup which --toolchain 1.88.0 cargo)"
 cd "$workspace_root"
 rustup run 1.88.0 cargo run --locked -p xtask -- bindings kotlin "$out_dir"
 python3 "$workspace_root/scripts/normalize-kotlin-bindings.py" "$out_dir"

@@ -58,6 +58,8 @@ if ! rustup run "$toolchain" rustc --version >/dev/null 2>&1; then
 fi
 rustc_path=$(rustup which --toolchain "$toolchain" rustc)
 toolchain_bin=$(dirname -- "$rustc_path")
+. "$workspace_root/scripts/rustc-wrapper-guard.sh"
+healthmd_guard_rustc_wrapper "${CARGO_TARGET_DIR:-$workspace_root/target}" "$toolchain_bin/cargo"
 
 temp_dir=$(mktemp -d "${TMPDIR:-/tmp}/healthmd-apple-bindings.XXXXXX")
 trap 'rm -rf "$temp_dir"' EXIT HUP INT TERM

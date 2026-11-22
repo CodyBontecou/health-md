@@ -104,6 +104,8 @@ else
     release_flag=""
 fi
 
+. "$workspace_root/scripts/rustc-wrapper-guard.sh"
+healthmd_guard_rustc_wrapper "${CARGO_TARGET_DIR:-$workspace_root/target}" "$toolchain_cargo"
 cd "$workspace_root"
 # shellcheck disable=SC2086
 set -- --platform "$ANDROID_MIN_API"

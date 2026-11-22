@@ -27,6 +27,10 @@ if [[ -z "${ANDROID_USER_HOME:-}" ]] && ! android_user_home_writable "$HOME/.and
     echo "~/.android is not writable; using ANDROID_USER_HOME=$ANDROID_USER_HOME for the debug keystore" >&2
 fi
 rm -rf apps/android/healthmd-core/build/test-results/testDebugUnitTest apps/android/app/build/test-results/testPlayE2eUnitTest apps/android/direct-protocol/build/test-results/test apps/android/healthmd-core/build/outputs/androidTest-results/connected apps/android/app/build/outputs/androidTest-results/connected
+# A shared rustc wrapper (sccache) started under another sandbox cannot write this
+# checkout's target directories; the guard falls back to plain rustc for this run.
+. packages/healthmd-core-rust/scripts/rustc-wrapper-guard.sh
+healthmd_guard_rustc_wrapper "${CARGO_TARGET_DIR:-$repo_root/apps/cli/target}"
 log="$results/rust-listener.log"
 # Launch the test executable directly so the cleanup PID owns the listener,
 # rather than killing Cargo and leaving its child holding the TCP port.
