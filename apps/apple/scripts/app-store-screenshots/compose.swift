@@ -113,6 +113,9 @@ let acceptedSizes: [String: [(Int, Int)]] = [
     "IPHONE_69": [(1320, 2868), (2868, 1320), (1290, 2796), (2796, 1290), (1260, 2736), (2736, 1260)],
     "IPAD_PRO_3GEN_129": [(2064, 2752), (2752, 2064), (2048, 2732), (2732, 2048)],
     "DESKTOP": [(2880, 1800), (2560, 1600), (1440, 900), (1280, 800)],
+    // Inner display (landscape) and outer display, both accepted in one APP_IPHONE_DUO set
+    // (verified by upload for 4.0.1; asc 5.9.2 does not list the type).
+    "IPHONE_DUO": [(2853, 2007), (1398, 2034)],
 ]
 
 // MARK: - Board HTML

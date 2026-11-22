@@ -3,7 +3,7 @@
   "platform": "duo",
   "boardsDirectory": "../../../../docs/design/liquid-glass/screens",
   "boardPrefix": "AS_Duo_",
-  "appStoreDisplayType": null,
+  "appStoreDisplayType": "IPHONE_DUO",
   "boardSize": {
     "width": 951,
     "height": 669

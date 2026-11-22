@@ -3,7 +3,7 @@ import XCTest
 /// Captures the raw screens behind the App Store boards (`docs/design/liquid-glass/screens/AS_*`).
 /// Runs only when `APPSTORE_SCREENSHOT_DIR` is set; files are named `<device>-<screen>.png`, where
 /// `<device>` is `APPSTORE_DEVICE` or, by default, `iphone`/`ipad` from the running idiom.
-/// `APPSTORE_DEVICE=duo` (a real iPhone Duo) captures the display it runs on: `duo-outer` when
+/// `APPSTORE_DEVICE=duo` (the iPhone Duo simulator or a device) captures the display it runs on: `duo-outer` when
 /// folded, `duo-inner-archive` and `duo-inner-automation` when unfolded.
 ///
 /// The fixtures are deterministic: the four automations of the boards
@@ -48,6 +48,19 @@ final class AppStoreScreenshotUITests: XCTestCase {
     private func save(_ name: String) {
         guard let directory else { return }
         let url = URL(fileURLWithPath: directory).appendingPathComponent("\(deviceName)-\(name).png")
+        // On the iPhone Duo simulator XCUIScreen.main stays the cover panel, which is off when
+        // unfolded. With APPSTORE_EXTERNAL_SCREENSHOT=1 the test asks the host instead: it writes
+        // `<file>.request` and waits for the host to save the PNG (`simctl io <id> screenshot
+        // --display=<inner panel>`; see the App Store screenshot runbook).
+        if ProcessInfo.processInfo.environment["APPSTORE_EXTERNAL_SCREENSHOT"] == "1" {
+            let request = url.appendingPathExtension("request")
+            try? FileManager.default.removeItem(at: url)
+            FileManager.default.createFile(atPath: request.path, contents: nil)
+            let deadline = Date().addingTimeInterval(60)
+            while !FileManager.default.fileExists(atPath: url.path), Date() < deadline { usleep(250_000) }
+            XCTAssertTrue(FileManager.default.fileExists(atPath: url.path), "The host did not save \(url.lastPathComponent)")
+            return
+        }
         try? XCUIScreen.main.screenshot().pngRepresentation.write(to: url)
     }
 
@@ -68,6 +81,15 @@ final class AppStoreScreenshotUITests: XCTestCase {
         // The App Store boards show the ArchiveGlass month; the iPhone opens on Archive B's
         // week strip unless Month was chosen. Argument domain: nothing is persisted.
         app.launchArguments += ["-glass.archive.showsMonth", "YES"]
+        // Optional per-run language (e.g. APPSTORE_LANGUAGE=ja, APPSTORE_LOCALE=ja_JP), so a device
+        // keeps its state, such as the iPhone Duo's fold, across languages without a reboot.
+        let environment = ProcessInfo.processInfo.environment
+        if let language = environment["APPSTORE_LANGUAGE"], !language.isEmpty {
+            app.launchArguments += ["-AppleLanguages", "(\(language))"]
+            if let locale = environment["APPSTORE_LOCALE"], !locale.isEmpty {
+                app.launchArguments += ["-AppleLocale", locale]
+            }
+        }
         if deviceName == "duo" {
             // DuoOuterG's unfold invitation appears once this phone has shown its unfolded
             // layout, so either capture order works. Argument domain: nothing is persisted.

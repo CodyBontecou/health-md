@@ -1,6 +1,6 @@
 # App Store screenshots
 
-This is the runbook for every App Store slide: iPhone, iPad, iPhone Duo and Mac. The slides come from the App Store boards in [`docs/design/liquid-glass/screens/AS_*.dc.html`](../../../../docs/design/liquid-glass/screens) (sizes in the design [README](../../../../docs/design/liquid-glass/README.md), rows 16–19), filled with real captures of the app. (The file lives here because this folder was the original Mac runbook and `.gitignore` already tracks it.)
+This is the runbook for every App Store slide: iPhone, iPad, iPhone Duo, Apple Watch and Mac. The slides come from the App Store boards in [`docs/design/liquid-glass/screens/AS_*.dc.html`](../../../../docs/design/liquid-glass/screens) (sizes in the design [README](../../../../docs/design/liquid-glass/README.md), rows 16–19), filled with real captures of the app. (The file lives here because this folder was the original Mac runbook and `.gitignore` already tracks it.)
 
 Two steps produce a slide:
 
@@ -15,7 +15,7 @@ Nothing here uploads to App Store Connect.
 | --- | --- | --- | --- | --- |
 | `AS_iPhone_1…9` | 440 × 956 × 3 = 1320 × 2868 (`IPHONE_69`) | `scripts/app-store-screenshots/iphone.json` | `iphone-*.png` from `AppStoreScreenshotUITests` on iPhone | `fastlane/screenshots/<locale>/appstore-ios-slide-N.png` |
 | `AS_iPad_1…3` | 1376 × 1032 × 2 = 2752 × 2064 (`IPAD_PRO_3GEN_129`) | `scripts/app-store-screenshots/ipad.json` | `ipad-*.png` from `AppStoreScreenshotUITests` on iPad | `fastlane/screenshots/<locale>/appstore-ipad-slide-N.png` |
-| `AS_Duo_1…3` | 951 × 669 × 3 and 466 × 678 × 3 (no App Store type) | `scripts/app-store-screenshots/duo.json` | `duo-*.png` from a real device | `screenshots/app-store/duo/<locale>/` (not fastlane) |
+| `AS_Duo_1…3` | 951 × 669 × 3 and 466 × 678 × 3 (`IPHONE_DUO`) | `scripts/app-store-screenshots/duo.json` | `duo-*.png` from `AppStoreScreenshotUITests` on the iPhone Duo simulator | `fastlane/screenshots/<locale>/appstore-duo-slide-N.png` |
 | `AS_Mac_1…2` | 1440 × 900 × 2 = 2880 × 1800 (`DESKTOP`) | `screenshots/macos/copy.json` | `sync.png`, `cli.png` from `capture-macos-app-store-screenshots.sh` | `fastlane/screenshots-macos/<locale>/` |
 
 Each JSON maps a board's `<dc-import>` names to capture files and holds per-locale copy. A headline is one string per line, and `{…}` marks the accent-coloured run. The en-US copy is the board's text verbatim. The compositor refuses to render if en-US no longer matches the board, if a board is missing from the JSON (or the reverse), or if the pixel size is not one App Store Connect accepts for the display type. Run the drift check after any board or copy edit:
@@ -97,27 +97,34 @@ xcrun simctl io "$WATCH" screenshot fastlane/screenshots/ja/appstore-watch-1.png
 
 ## iPhone Duo
 
-No simulator models the iPhone Duo inner (951 × 669 pt) or outer (466 × 678 pt) display. App Store Connect also has no display type at those sizes (`asc screenshots sizes --all`). An iPad or a landscape iPhone would show a different layout (`GlassWindowClass`), so neither stands in honestly. The Duo slides therefore need captures from a real device:
+App Store Connect's iPhone Duo slot is the `APP_IPHONE_DUO` display type. It takes the inner display (2853 × 2007, landscape) and the outer display (1398 × 2034) in one set. `asc` 5.9.2 does not know the type (`asc screenshots sizes` omits it and `asc screenshots upload` rejects it), so upload with `scripts/app-store-screenshots/upload_duo.py`, which uses the raw API.
 
-- `duo-outer.png`: Archive on the outer display.
-- `duo-inner-archive.png`: Archive unfolded.
-- `duo-inner-automation.png`: an automation's composer unfolded.
+Capture on the pool's **iPhone Duo** simulator. Fold it with argent's `fold` tool (`closed` shows the cover panel, `open` the inner one); `simctl` has no fold command. `APPSTORE_DEVICE=duo` makes `AppStoreScreenshotUITests` write `duo-outer.png` folded and `duo-inner-archive.png` and `duo-inner-automation.png` unfolded; it picks the display from the window's short side. Pass the language with `TEST_RUNNER_APPSTORE_LANGUAGE`/`TEST_RUNNER_APPSTORE_LOCALE` so the fold survives across languages (a reboot resets it). Set dark appearance and the status bar as for iPhone.
 
-`AppStoreScreenshotUITests` writes these names when `APPSTORE_DEVICE=duo`. It reads the display it runs on from the window's short side, so run it twice on the device, once folded and once unfolded. The launch sets `glass.hasSeenUnfoldedLayout` in the argument domain (nothing is persisted), so the folded capture shows DuoOuterG's unfold invitation in either order. The status bar cannot be overridden on a device; set the clock and battery by hand or retake. Device runs need the same explicit approval as simulator runs.
+Unfolded, `XCUIScreen.main` on the simulator is still the (off) cover panel and captures black. Run unfolded captures with `TEST_RUNNER_APPSTORE_EXTERNAL_SCREENSHOT=1`: the test writes `<file>.request` and waits, and the host saves the inner panel with `xcrun simctl io <id> screenshot --display=3 <file>` (the inner panel's screen id, as argent's `fold` reports it).
 
 ```bash
-# Folded, then again unfolded (DEVICE_ID from `xcrun xctrace list devices`).
-TEST_RUNNER_APPSTORE_SCREENSHOT_DIR="$CAPTURES" TEST_RUNNER_APPSTORE_DEVICE=duo xcodebuild test \
-  -project HealthMd.xcodeproj -scheme HealthMd-UITests-iOS \
-  -destination "platform=iOS,id=$DEVICE_ID" \
+cd apps/apple
+DUO=<iPhone Duo udid>; CAPTURES="$PWD/screenshots/app-store/captures/ja"; mkdir -p "$CAPTURES"
+XCTESTRUN=$(ls <derived>/Build/Products/*.xctestrun)   # build-for-testing on the Duo first
+# Folded (fold: closed):
+TEST_RUNNER_APPSTORE_SCREENSHOT_DIR="$CAPTURES" TEST_RUNNER_APPSTORE_DEVICE=duo \
+  TEST_RUNNER_APPSTORE_LANGUAGE=ja TEST_RUNNER_APPSTORE_LOCALE=ja_JP \
+  xcodebuild test-without-building -xctestrun "$XCTESTRUN" -destination "platform=iOS Simulator,id=$DUO" \
   -only-testing:HealthMdUITests/AppStoreScreenshotUITests
+# Unfolded (fold: open): the same with TEST_RUNNER_APPSTORE_EXTERNAL_SCREENSHOT=1, run in the
+# background while the host answers each request:
+#   for r in "$CAPTURES"/*.request; do xcrun simctl io "$DUO" screenshot --display=3 "${r%.request}"; rm "$r"; done
 ```
 
-Compose them for review outside fastlane:
+Compose and upload:
 
 ```bash
 swift scripts/app-store-screenshots/compose.swift --copy scripts/app-store-screenshots/duo.json \
-  --captures "$CAPTURES" --output screenshots/app-store/duo/en-US
+  --locale ja --captures "$CAPTURES" --output build/app-store-slides/ja/duo
+# fastlane/screenshots/<locale>/appstore-duo-slide-1…3.png keep the published set.
+python3 -I scripts/app-store-screenshots/upload_duo.py <versionLocalizationId> \
+  fastlane/screenshots/ja/appstore-duo-slide-{1,2,3}.png
 ```
 
 ## Mac
