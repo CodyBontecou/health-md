@@ -57,6 +57,8 @@ Per Strava's article (checked November 20, 2026), on the website:
 
 No. Strava says exporting your data is only available on the Strava website. Use a browser on a computer.
 
+Coming from Huawei Health? See [exporting Huawei Health data](/blog/export-huawei-health-data/) for its password-protected ZIP and Strava connection.
+
 ## Open Strava activities in Excel or Google Sheets
 
 1. Unzip the archive and find `activities.csv`.
