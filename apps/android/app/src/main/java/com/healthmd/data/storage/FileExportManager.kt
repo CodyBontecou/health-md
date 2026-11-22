@@ -109,7 +109,10 @@ class FileExportManager(private val context: Context) {
                 existingFileUri != null && writeMode == WriteMode.APPEND -> {
                     val existing = readContent(existingFileUri) ?: ""
                     writeContent(existingFileUri) { stream ->
-                        stream.writeUtf8(existing + "\n")
+                        // Written in two parts so the existing file is not copied into a second,
+                        // larger String before the streamed body.
+                        stream.writeUtf8(existing)
+                        stream.writeUtf8("\n")
                         writeBody(stream)
                     }
                 }
