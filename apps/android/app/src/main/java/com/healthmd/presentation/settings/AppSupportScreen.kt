@@ -45,6 +45,7 @@ import com.healthmd.presentation.common.ConfigurationProtectionTestTags
 import com.healthmd.presentation.common.FeedbackFallback
 import com.healthmd.presentation.common.FeedbackHelper
 import com.healthmd.presentation.common.LocalConfigurationProtection
+import com.healthmd.presentation.common.PlayStoreListing
 import com.healthmd.presentation.theme.GeistRadii
 import com.healthmd.presentation.theme.GeistSpacing
 import com.healthmd.presentation.theme.GeistType
@@ -189,9 +190,25 @@ fun AppSupportScreen(
         }
         SettingsGroup(title = stringResource(R.string.app_support_account), rows = accountRows)
 
+        // Play only: F-Droid users have no Play listing to rate. Opens the listing directly,
+        // never the quota-limited in-app review card.
+        val rateOnPlayRow: (@Composable (Shape) -> Unit)? = if (distributionPolicy.reviewPromptAvailable) {
+            { shape ->
+                SettingsRow(
+                    shape = shape,
+                    title = stringResource(R.string.app_support_rate_on_play),
+                    icon = Icons.Outlined.StarOutline,
+                    onClick = { PlayStoreListing.open(context) },
+                    external = true,
+                    modifier = Modifier.testTag("settings.rateOnPlay"),
+                )
+            }
+        } else {
+            null
+        }
         SettingsGroup(
             title = stringResource(R.string.app_support_help),
-            rows = listOf(
+            rows = listOfNotNull<@Composable (Shape) -> Unit>(
                 { shape ->
                     SettingsRow(
                         shape = shape,
@@ -210,6 +227,7 @@ fun AppSupportScreen(
                         external = true,
                     )
                 },
+                rateOnPlayRow,
                 { shape ->
                     SettingsRow(
                         shape = shape,

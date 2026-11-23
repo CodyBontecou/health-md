@@ -57,6 +57,7 @@ class SettingsRepositoryImpl(
         val REVIEW_SUCCESS_DAY_COUNT = intPreferencesKey("review_success_day_count")
         val REVIEW_LAST_SUCCESS_EPOCH_DAY = longPreferencesKey("review_last_success_epoch_day")
         val LEGACY_HAS_REQUESTED_REVIEW = booleanPreferencesKey("has_requested_review")
+        val SCHEDULED_REVIEW_MOMENT_PENDING = booleanPreferencesKey("scheduled_review_moment_pending")
         val FIRST_HEALTH_PERMISSION_GRANT_DATE = stringPreferencesKey("first_health_permission_grant_date")
         val SELECTED_HEALTH_PROVIDER_ID = stringPreferencesKey("selected_health_provider_id")
         val CONNECTED_HEALTH_PROVIDER_IDS = stringSetPreferencesKey("connected_health_provider_ids")
@@ -235,6 +236,22 @@ class SettingsRepositoryImpl(
 
     override suspend fun recordReviewEligibleSuccess(epochDay: Long) {
         dataStore.edit { prefs -> prefs.recordReviewSuccess(epochDay) }
+    }
+
+    override suspend fun recordScheduledReviewSuccess(epochDay: Long) {
+        dataStore.edit { prefs ->
+            prefs.recordReviewSuccess(epochDay)
+            prefs[Keys.SCHEDULED_REVIEW_MOMENT_PENDING] = true
+        }
+    }
+
+    override suspend fun takeScheduledReviewMoment(): Boolean {
+        var pending = false
+        dataStore.edit { prefs ->
+            pending = prefs[Keys.SCHEDULED_REVIEW_MOMENT_PENDING] ?: false
+            prefs.remove(Keys.SCHEDULED_REVIEW_MOMENT_PENDING)
+        }
+        return pending
     }
 
     private fun MutablePreferences.recordReviewSuccess(epochDay: Long) {

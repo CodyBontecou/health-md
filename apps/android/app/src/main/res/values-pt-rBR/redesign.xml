@@ -475,6 +475,7 @@
     <string name="app_support_privacy_policy">Política de privacidade</string>
     <string name="app_support_help">Ajuda</string>
     <string name="app_support_report_bug">Relatar um erro</string>
+    <string name="app_support_rate_on_play">Avaliar o Health.md no Google Play</string>
     <string name="app_support_replay_onboarding">Repetir a introdução</string>
     <string name="app_support_replay_onboarding_title">Repetir a introdução?</string>
     <string name="app_support_replay_onboarding_body">Suas automações, destinos e arquivos exportados permanecem como estão.</string>

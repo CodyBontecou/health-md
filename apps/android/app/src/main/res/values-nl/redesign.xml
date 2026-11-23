@@ -463,6 +463,7 @@
     <string name="app_support_privacy_policy">Privacybeleid</string>
     <string name="app_support_help">Hulp</string>
     <string name="app_support_report_bug">Een bug melden</string>
+    <string name="app_support_rate_on_play">Beoordeel Health.md op Google Play</string>
     <string name="app_support_replay_onboarding">Introductie opnieuw tonen</string>
     <string name="app_support_replay_onboarding_title">Introductie opnieuw tonen?</string>
     <string name="app_support_replay_onboarding_body">Je automatiseringen, bestemmingen en geëxporteerde bestanden blijven ongewijzigd.</string>

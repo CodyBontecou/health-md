@@ -511,6 +511,7 @@
     <string name="app_support_privacy_policy">Политика конфиденциальности</string>
     <string name="app_support_help">Помощь</string>
     <string name="app_support_report_bug">Сообщить об ошибке</string>
+    <string name="app_support_rate_on_play">Оценить Health.md в Google Play</string>
     <string name="app_support_replay_onboarding">Повторить знакомство с приложением</string>
     <string name="app_support_replay_onboarding_title">Повторить знакомство с приложением?</string>
     <string name="app_support_replay_onboarding_body">Ваши автоматизации, назначения и экспортированные файлы останутся без изменений.</string>

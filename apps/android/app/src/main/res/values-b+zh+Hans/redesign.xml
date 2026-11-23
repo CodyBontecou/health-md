@@ -415,6 +415,7 @@
     <string name="app_support_privacy_policy">隐私政策</string>
     <string name="app_support_help">帮助</string>
     <string name="app_support_report_bug">报告问题</string>
+    <string name="app_support_rate_on_play">在 Google Play 上为 Health.md 评分</string>
     <string name="app_support_replay_onboarding">重新查看入门引导</string>
     <string name="app_support_replay_onboarding_title">重新查看入门引导？</string>
     <string name="app_support_replay_onboarding_body">你的自动化、目标位置和已导出的文件均保持不变。</string>

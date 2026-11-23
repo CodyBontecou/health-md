@@ -9,8 +9,9 @@ import java.time.LocalDate
 import timber.log.Timber
 
 /**
- * Counts a scheduled full success toward the review threshold. Background work never
- * prompts; the next foreground success decides. Counting can never fail the export.
+ * Counts a scheduled full success toward the review threshold and leaves a review moment
+ * for the next foreground Archive visit. Background work never prompts itself. Counting
+ * can never fail the export.
  */
 internal suspend fun SettingsRepository.countScheduledReviewSuccess(
     result: ExportResult,
@@ -19,6 +20,6 @@ internal suspend fun SettingsRepository.countScheduledReviewSuccess(
 ) {
     if (!distributionPolicy.reviewPromptAvailable) return
     if (!ExportAccountingPolicy.shouldCountForReviewPrompt(result)) return
-    runCatchingCancellable { recordReviewEligibleSuccess(today.toEpochDay()) }
+    runCatchingCancellable { recordScheduledReviewSuccess(today.toEpochDay()) }
         .onFailure { Timber.w(it, "Could not count scheduled export toward review prompt") }
 }

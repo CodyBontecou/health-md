@@ -220,6 +220,16 @@ class FakeSettingsRepository(
         if (reviewSuccessDays.add(epochDay)) successDayCount = reviewSuccessDays.size + initialExtraSuccessDays
     }
 
+    var scheduledReviewMomentPending: Boolean = false
+
+    override suspend fun recordScheduledReviewSuccess(epochDay: Long) {
+        recordReviewEligibleSuccess(epochDay)
+        scheduledReviewMomentPending = true
+    }
+
+    override suspend fun takeScheduledReviewMoment(): Boolean =
+        scheduledReviewMomentPending.also { scheduledReviewMomentPending = false }
+
     override suspend fun getReviewPromptState(migrationEpochMillis: Long) =
         com.healthmd.domain.export.ReviewPromptState(
             successfulExportCount = successfulExportCount,

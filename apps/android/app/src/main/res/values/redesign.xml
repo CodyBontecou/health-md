@@ -469,6 +469,7 @@
     <string name="app_support_privacy_policy">Privacy policy</string>
     <string name="app_support_help">Help</string>
     <string name="app_support_report_bug">Report a bug</string>
+    <string name="app_support_rate_on_play">Rate Health.md on Google Play</string>
     <string name="app_support_replay_onboarding">Replay onboarding</string>
     <string name="app_support_replay_onboarding_title">Replay onboarding?</string>
     <string name="app_support_replay_onboarding_body">Your automations, destinations and exported files stay as they are.</string>

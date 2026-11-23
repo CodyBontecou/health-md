@@ -487,6 +487,7 @@
     <string name="app_support_privacy_policy">Politica de confidențialitate</string>
     <string name="app_support_help">Ajutor</string>
     <string name="app_support_report_bug">Raportați o eroare</string>
+    <string name="app_support_rate_on_play">Evaluați Health.md pe Google Play</string>
     <string name="app_support_replay_onboarding">Reluați prezentarea inițială</string>
     <string name="app_support_replay_onboarding_title">Reluați prezentarea inițială?</string>
     <string name="app_support_replay_onboarding_body">Automatizările, destinațiile și fișierele exportate rămân neschimbate.</string>
