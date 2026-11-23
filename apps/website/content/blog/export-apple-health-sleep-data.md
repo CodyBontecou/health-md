@@ -27,6 +27,8 @@ The Health app has no sleep-only export. **Export All Health Data** writes your 
 
 <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
 
+<div id="the-short-answer"></div>
+
 ## The short answer
 
 <div class="article-table-scroll" role="region" aria-label="Choose a sleep export route" tabindex="0">
