@@ -40,6 +40,8 @@ This built-in action is for the archive. It does not offer the metric and date s
 
 The [applehealth2csv project's documentation](https://github.com/muquit/applehealth2csv) describes the native `export.zip` archive and its `export.xml` file. Keep any other extracted files with the archive rather than assuming the XML is the only useful output.
 
+Looking for one specific identifier? The [walking asymmetry guide](/blog/export-apple-health-walking-asymmetry/) lists the `HKQuantityTypeIdentifier` names for the mobility metrics.
+
 - **On iPhone:** find the ZIP in Files and tap it to uncompress it. Open the resulting folder and look for `export.xml`. See [Apple's ZIP instructions](https://support.apple.com/102532).
 - **On Mac:** double-click the ZIP in Finder, then inspect the extracted folder. See [Apple's Mac unzip guide](https://support.apple.com/guide/mac-help/zip-and-unzip-files-and-folders-on-mac-mchlp2528/mac).
 - **On Windows:** right-click the ZIP, choose **Extract All**, and follow the prompts. See [Microsoft's extraction instructions](https://support.microsoft.com/en-us/windows/experience/storage-filemanagement/zip-and-unzip-files).

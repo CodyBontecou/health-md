@@ -7,7 +7,7 @@ updated: "2026-10-27"
 category: "Workflow guide"
 related:
   - apple-health-to-excel
-  - export-apple-health-workouts
+  - export-apple-health-walking-asymmetry
   - apple-health-to-python
 draft: false
 verified: "2026-10-26"
@@ -80,6 +80,8 @@ After applying the exact Steps filter:
 - For a weekly report, use SUM for recorded totals or AVERAGE for average daily steps over recorded numeric days. Report the recorded-day count, missing dates, and partial weeks.
 
 Do not mix daily summaries with weekly/monthly rollups, duplicated exports, or source records. They can describe overlapping activity. Seven daily files also do not establish seven recorded step values if some dates have no Steps row.
+
+Walking metrics such as step length and walking asymmetry export the same way; see [walking asymmetry on iPhone](/blog/export-apple-health-walking-asymmetry/).
 
 ## Why steps can differ between views
 
