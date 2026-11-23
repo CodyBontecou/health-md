@@ -1,0 +1,43 @@
+version: 1
+requires:
+  platform: android
+# android-settings-rate-on-play: Settings › Help & diagnostics (App & support) offers "Rate Health.md
+# on Google Play" on the Play build. Tapping it hands off to Google Play's listing for
+# com.healthmd.android (market://, with an https fallback) and never shows the in-app review card.
+# The card itself can't appear on a sideloaded build; unit tests cover it (ScheduledReviewMomentTest).
+#
+# Prerequisite (fragment): the isolated QA app com.healthmd.android.e2e (playE2e), started UNLOCKED
+# in UI test mode just before the run:
+#   adb shell am force-stop com.healthmd.android.e2e
+#   adb shell am start -S -n com.healthmd.android.e2e/com.healthmd.presentation.MainActivity \
+#     --ez uitesting true --es UITEST_HEALTH_AUTHORIZED true --es UITEST_PURCHASE_UNLOCKED true
+# Side effects: opens the Google Play Store app, or a browser on the web listing, for Health.md;
+# nothing is rated. Leaves the device in Play or the browser (on the whereday-priority-20261111-api35
+# emulator, the web listing in Chrome). Compose testTags aren't exposed as resource ids here, so
+# the checks use the row's fixed English text.
+# Authored from the app's strings and proved by full runner replays: on this emulator the live
+# recorder resolved the bottom-bar taps to a bare ComposeView role and its describe tree was stale
+# (as noted in android-health-connect-status-full.yaml). No coordinate steps.
+executionPrerequisite: "QA app com.healthmd.android.e2e (playE2e) just started UNLOCKED in UI test mode with the adb commands in the header; Archive showing, possibly under the Recover missed scheduled exports dialog."
+steps:
+  - echo: Unlocked QA app on Archive. Dismiss the recovery prompt if shown, then open Settings
+  - when: { visible: { text: Not now } }
+    steps:
+      - tap: { text: Not now }
+  - await: { visible: { text: { matches: '^Archive$' } }, timeout: 8000 }
+  - await: { idle: true }
+  - tap: { text: Settings }
+  - await: { visible: { text: Destinations }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: Help & diagnostics (App & support). Expect the Rate Health.md on Google Play row
+  - scroll-to: { target: { text: Help & diagnostics } }
+  - tap: { text: Help & diagnostics }
+  - await: { visible: { text: { matches: '^App & support$' } }, timeout: 5000 }
+  - await: { idle: true }
+  - scroll-to: { target: { text: Rate Health.md on Google Play } }
+  - await: { visible: { text: Rate Health.md on Google Play }, timeout: 3000 }
+
+  - echo: Tap it. Expect Health.md to hand off to the Play listing (the row leaves the screen)
+  - tap: { text: Rate Health.md on Google Play }
+  - await: { hidden: { text: Rate Health.md on Google Play }, timeout: 8000 }
