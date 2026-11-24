@@ -42,11 +42,14 @@ struct FormatCustomizationView: View {
         ) {
             FormatSelectionRow(
                 title: "Date Format",
-                subtitle: String(localized: "Preview: \(customization.dateFormat.format(date: previewDate))"),
-                selection: $customization.dateFormat,
+                subtitle: String(localized: "Preview: \(customization.formatDate(previewDate))"),
+                selection: dateFormatSelection,
                 options: DateFormatPreference.allCases,
                 optionTitle: { $0.displayName }
             )
+            if customization.dateFormat == .custom {
+                customDatePatternEditor
+            }
             FormatDivider()
             FormatSelectionRow(
                 title: "Time Format",
@@ -63,6 +66,45 @@ struct FormatCustomizationView: View {
                 options: UnitPreference.allCases,
                 optionTitle: { $0.displayName }
             )
+        }
+    }
+
+    /// Choosing Custom for the first time seeds a working DD-MM-YYYY pattern.
+    private var dateFormatSelection: Binding<DateFormatPreference> {
+        Binding(
+            get: { customization.dateFormat },
+            set: { value in
+                if value == .custom, customization.customDatePattern.isEmpty {
+                    customization.customDatePattern = CustomDatePattern.defaultPattern
+                }
+                customization.dateFormat = value
+            }
+        )
+    }
+
+    private var customDatePatternEditor: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            TextField(CustomDatePattern.defaultPattern, text: $customization.customDatePattern)
+                .font(.system(.body, design: .monospaced))
+                .textFieldStyle(.roundedBorder)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                .accessibilityLabel("Date pattern")
+                .accessibilityIdentifier("formatCustomization.customDatePattern")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Spacing.xs) {
+                    ForEach(DatePlaceholderTemplate.tokens, id: \.self) { token in
+                        Button(token) { customization.customDatePattern += token }
+                            .font(.system(.caption, design: .monospaced))
+                            .buttonStyle(.bordered)
+                    }
+                }
+            }
+            if !CustomDatePattern.isValid(customization.customDatePattern) {
+                Text("This date pattern can't be used, so exports write ISO 8601 (2026-01-13). Use placeholders such as {day}-{month}-{year} with letters, digits, spaces, or - . / _ , between them.")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
         }
     }
 
@@ -155,7 +197,7 @@ struct FormatCustomizationView: View {
         let converter = customization.unitConverter
 
         var preview = ""
-        preview += String(localized: "Date: \(customization.dateFormat.format(date: date))") + "\n"
+        preview += String(localized: "Date: \(customization.formatDate(date))") + "\n"
         preview += String(localized: "Time: \(customization.timeFormat.format(date: date))") + "\n"
         preview += String(localized: "Distance: \(converter.formatDistance(5000))") + "\n"
         preview += String(localized: "Weight: \(converter.formatWeight(70))") + "\n"

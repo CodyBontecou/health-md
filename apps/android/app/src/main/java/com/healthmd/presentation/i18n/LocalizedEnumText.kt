@@ -40,6 +40,7 @@ fun DateFormatPreference.localizedDisplayName(): String = when (this) {
     DateFormatPreference.US_LONG -> stringResource(R.string.date_format_display_us_long)
     DateFormatPreference.EU_DOT -> stringResource(R.string.date_format_display_eu_dot)
     DateFormatPreference.EU_SHORT -> stringResource(R.string.date_format_display_eu_short)
+    DateFormatPreference.EU_DASH -> stringResource(R.string.date_format_display_eu_dash)
     DateFormatPreference.EU_LONG -> stringResource(R.string.date_format_display_eu_long)
     DateFormatPreference.COMPACT -> stringResource(R.string.date_format_display_compact)
     DateFormatPreference.FRIENDLY -> stringResource(R.string.date_format_display_friendly)

@@ -338,6 +338,7 @@
     <string name="date_format_display_us_long">Format lung SUA (ianuarie 13, 2026)</string>
     <string name="date_format_display_eu_dot">UE cu puncte (13.01.2026)</string>
     <string name="date_format_display_eu_short">Format scurt UE (13/01/2026)</string>
+    <string name="date_format_display_eu_dash">UE cu cratime (13-01-2026)</string>
     <string name="date_format_display_eu_long">Format lung UE (13 ianuarie 2026)</string>
     <string name="date_format_display_compact">Compact (20260113)</string>
     <string name="date_format_display_friendly">Ușor de citit (lun., ian. 13, 2026)</string>

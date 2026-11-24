@@ -17,7 +17,7 @@ description: "Steuern Sie die Ausgabeformatierung, ohne die Datenerfassung zu ä
 </div>
 
 ## Datum &amp; Uhrzeit
-<p>Wählen Sie Datumsformat, etwa <code>YYYY-MM-DD</code> oder <code>MMM d, yyyy</code>, und Zeitformat mit 12 oder 24 Stunden. Der Vorschaubereich am unteren Rand aktualisiert sich sofort, wenn Sie Einstellungen ändern.</p>
+<p>Wählen Sie Datumsformat, etwa <code>YYYY-MM-DD</code> oder <code>MMM d, yyyy</code>, und Zeitformat mit 12 oder 24 Stunden. Der Vorschaubereich am unteren Rand aktualisiert sich sofort, wenn Sie Einstellungen ändern. Das Datumsformat bestimmt die Frontmatter-Eigenschaft <code>date</code>, etwa auch <code>DD-MM-YYYY</code>. Auf iPhone, iPad und Mac können Sie außerdem <em>Eigenes Muster</em> wählen und das Datum aus den Dateinamen-Platzhaltern bilden, zum Beispiel <code>{day}-{month}-{year}</code>. Ein ungültiges Muster schreibt stattdessen das ISO-Datum.</p>
 
 ## Einheitensystem
 <p>Wechseln Sie zwischen <em>Metrisch</em> und <em>Imperial</em>. Dies wirkt sich unter anderem auf Entfernung (m/km gegenüber ft/mi), Gewicht (kg gegenüber lb) und Temperatur (°C gegenüber °F) aus. HealthKit speichert stets in kanonischen Einheiten; die Umrechnung erfolgt beim Export.</p>
