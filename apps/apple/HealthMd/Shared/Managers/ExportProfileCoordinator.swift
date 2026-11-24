@@ -859,6 +859,8 @@ final class ExportProfileCoordinator: ObservableObject {
         let wasActive = profileStore.activeProfileID == id
         guard profileStore.delete(id: id) else { return false }
         _ = scheduledEntryStore.delete(profileID: id)
+        // Incremental anchors and the sample-day index belong to the deleted profile.
+        IncrementalScheduledExportStore().remove(profileID: id)
         compactSharedSetupV2Sidecar(afterDeleting: id)
         // Deleting another profile leaves the active one alone. Deleting the active one
         // hands over to the next without flushing: the live settings still hold the

@@ -148,6 +148,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "authorization.history-window-detection",
         "automation.api-recovery-authority",
         "automation.include-today",
+        "export.scheduled-incremental-days",
         "automation.run-overlap-policy",
         "direct.cli_agent_push_wake",
         "export.range-summary",

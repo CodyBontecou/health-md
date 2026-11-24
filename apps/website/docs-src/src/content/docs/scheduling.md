@@ -18,6 +18,8 @@ In the subscription-enabled phone release, scheduled and manual exports require 
 
 Daily, Weekly and Custom schedules can have a lookback. Custom cadence repeats every N days, weeks or months from its start date. Each new occurrence re-exports the entire configured completed-day window, including dates exported before. A three-day lookback covers yesterday and the two preceding days; delayed execution keeps the window anchored to the scheduled fire day.
 
+On iPhone, **Only update days that changed** (Schedule → Changes, on for new schedules) rewrites only days whose Health data was added, edited or deleted since the last successful run, days whose file is missing, and today and yesterday; unchanged days are left alone so iCloud or Obsidian Sync do not re-upload identical notes. The first run, a change to the automation's export settings, and **Re-export everything** write the whole window once. The schedule page shows what the last run did, such as "1 changed · Updated 3 days (Nov 18, 22, 23) · 27 unchanged". Android still re-exports the whole window.
+
 Today Refresh is separate current-day work, not a replacement for the completed-day window. Inspect paths and write behavior before overlapping exports; do not add repeated daily snapshots together as new measurements.
 
 ## Choose the correct recovery path

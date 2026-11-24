@@ -212,6 +212,27 @@ enum TestMode {
     }
 
     /// Simulated remote-config state. Supported values: "available" or "offline".
+    /// Incremental scheduled-export status shown on the schedule page in UI tests.
+    /// "incremental" renders a fixed synthetic run (Nov 18, 21, 23 2026, UTC) through the
+    /// real summary formatter, since UI-test launches never run a HealthKit export.
+    static var incrementalStatusFixture: String? {
+        guard isUITesting, env("UITEST_INCREMENTAL_STATUS") == "incremental" else { return nil }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        let days = [18, 21, 23].compactMap {
+            calendar.date(from: DateComponents(year: 2026, month: 11, day: $0))
+        }
+        return IncrementalRunSummary(
+            runAt: days.last ?? Date(),
+            mode: .incremental,
+            fullReason: nil,
+            updatedDays: days,
+            changedDayCount: 1,
+            unchangedDayCount: 27,
+            calendarTimeZoneIdentifier: "UTC"
+        ).statusText
+    }
+
     static var remoteConfig: String {
         env("UITEST_REMOTE_CONFIG") ?? "available"
     }
