@@ -428,6 +428,21 @@ final class IncrementalScheduledExportTests: XCTestCase {
         XCTAssertEqual(summary.statusText, "Exported all 30 days (export settings changed)")
     }
 
+    /// A one-day look-back (the default) exports or updates exactly one day per run;
+    /// found on a physical iPhone as "Exported all 1 days (first run)".
+    func testOneDayRunsUseSingularWording() {
+        let full = IncrementalRunSummary(
+            runAt: day(24), mode: .full, fullReason: .noSavedState,
+            updatedDays: [day(23)], changedDayCount: 1, unchangedDayCount: 0, calendarTimeZoneIdentifier: "UTC")
+        XCTAssertEqual(full.statusText, "Exported 1 day (first run)")
+
+        let incremental = IncrementalRunSummary(
+            runAt: day(25), mode: .incremental, fullReason: nil,
+            updatedDays: [day(24)], changedDayCount: 0, unchangedDayCount: 0, calendarTimeZoneIdentifier: "UTC")
+        XCTAssertTrue(incremental.statusText.hasPrefix("0 changed · Updated 1 day ("), incremental.statusText)
+        XCTAssertTrue(incremental.statusText.hasSuffix(") · 0 unchanged"), incremental.statusText)
+    }
+
     // MARK: - Persistence
 
     func testStagedStateCommitsOnlyForItsRequest() throws {

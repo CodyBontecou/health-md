@@ -155,8 +155,14 @@ struct IncrementalRunSummary: Codable, Equatable {
             return String(localized: "Exported all \(total) days (\(reason))", comment: "Scheduled run status after a full export")
         }
         let days = Self.dayList(updatedDays, timeZoneIdentifier: calendarTimeZoneIdentifier)
+        // The rewritten-days phrase is its own plural string ("Updated 1 day (Nov 24)"),
+        // since a one-day look-back updates exactly one day on every run.
+        let updated = String(
+            localized: "Updated \(updatedDays.count) days (\(days))",
+            comment: "Days a scheduled run rewrote, e.g. Updated 3 days (Nov 18, 22, 23)"
+        )
         return String(
-            localized: "\(changedDayCount) changed · Updated \(updatedDays.count) days (\(days)) · \(unchangedDayCount) unchanged",
+            localized: "\(changedDayCount) changed · \(updated) · \(unchangedDayCount) unchanged",
             comment: "Scheduled run status after an incremental export, e.g. 1 changed · Updated 3 days (Nov 18, 22, 23) · 27 unchanged"
         )
     }

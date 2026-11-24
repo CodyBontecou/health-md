@@ -154491,17 +154491,31 @@
         "zh-Hans": {"stringUnit":{"state":"translated","value":"iPad 文件夹"}}
       }
     },
-    "%lld changed · Updated %lld days (%@) · %lld unchanged" : {
+    "%lld changed · %@ · %lld unchanged" : {
       "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"%lld geändert · %lld Tage aktualisiert (%@) · %lld unverändert"}},
-        "es": {"stringUnit":{"state":"translated","value":"%lld cambiados · %lld días actualizados (%@) · %lld sin cambios"}},
-        "fr": {"stringUnit":{"state":"translated","value":"%lld modifiés · %lld jours mis à jour (%@) · %lld inchangés"}},
-        "it": {"stringUnit":{"state":"translated","value":"%lld modificati · %lld giorni aggiornati (%@) · %lld invariati"}},
-        "ja": {"stringUnit":{"state":"translated","value":"変更%lld件・%lld日を更新（%@）・変更なし%lld日"}},
-        "ko": {"stringUnit":{"state":"translated","value":"%lld개 변경 · %lld일 업데이트(%@) · %lld일 변경 없음"}},
-        "nl": {"stringUnit":{"state":"translated","value":"%lld gewijzigd · %lld dagen bijgewerkt (%@) · %lld ongewijzigd"}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"%lld alterados · %lld dias atualizados (%@) · %lld sem alteração"}},
-        "zh-Hans": {"stringUnit":{"state":"translated","value":"%lld 天有更改 · 已更新 %lld 天（%@）· %lld 天未更改"}}
+        "de": {"stringUnit":{"state":"translated","value":"%lld geändert · %@ · %lld unverändert"}},
+        "es": {"stringUnit":{"state":"translated","value":"%lld cambiados · %@ · %lld sin cambios"}},
+        "fr": {"stringUnit":{"state":"translated","value":"%lld modifiés · %@ · %lld inchangés"}},
+        "it": {"stringUnit":{"state":"translated","value":"%lld modificati · %@ · %lld invariati"}},
+        "ja": {"stringUnit":{"state":"translated","value":"変更%lld件・%@・変更なし%lld日"}},
+        "ko": {"stringUnit":{"state":"translated","value":"%lld개 변경 · %@ · %lld일 변경 없음"}},
+        "nl": {"stringUnit":{"state":"translated","value":"%lld gewijzigd · %@ · %lld ongewijzigd"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"%lld alterados · %@ · %lld sem alteração"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"%lld 天有更改 · %@ · %lld 天未更改"}}
+      }
+    },
+    "Updated %lld days (%@)" : {
+      "localizations" : {
+        "de": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld Tag aktualisiert (%@)"}},"other":{"stringUnit":{"state":"translated","value":"%lld Tage aktualisiert (%@)"}}}}},
+        "en": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"Updated %lld day (%@)"}},"other":{"stringUnit":{"state":"translated","value":"Updated %lld days (%@)"}}}}},
+        "es": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld día actualizado (%@)"}},"other":{"stringUnit":{"state":"translated","value":"%lld días actualizados (%@)"}}}}},
+        "fr": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld jour mis à jour (%@)"}},"other":{"stringUnit":{"state":"translated","value":"%lld jours mis à jour (%@)"}}}}},
+        "it": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld giorno aggiornato (%@)"}},"other":{"stringUnit":{"state":"translated","value":"%lld giorni aggiornati (%@)"}}}}},
+        "ja": {"stringUnit":{"state":"translated","value":"%lld日を更新（%@）"}},
+        "ko": {"stringUnit":{"state":"translated","value":"%lld일 업데이트(%@)"}},
+        "nl": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld dag bijgewerkt (%@)"}},"other":{"stringUnit":{"state":"translated","value":"%lld dagen bijgewerkt (%@)"}}}}},
+        "pt-BR": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld dia atualizado (%@)"}},"other":{"stringUnit":{"state":"translated","value":"%lld dias atualizados (%@)"}}}}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"已更新 %lld 天（%@）"}}
       }
     },
     "Each run also rewrites today and yesterday, any day whose file is missing, and every day after you change export settings." : {
@@ -154519,14 +154533,15 @@
     },
     "Exported all %lld days (%@)" : {
       "localizations" : {
-        "de": {"stringUnit":{"state":"translated","value":"Alle %lld Tage exportiert (%@)"}},
-        "es": {"stringUnit":{"state":"translated","value":"Se exportaron los %lld días (%@)"}},
-        "fr": {"stringUnit":{"state":"translated","value":"Les %lld jours ont été exportés (%@)"}},
-        "it": {"stringUnit":{"state":"translated","value":"Esportati tutti i %lld giorni (%@)"}},
+        "de": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld Tag exportiert (%@)"}},"other":{"stringUnit":{"state":"translated","value":"Alle %lld Tage exportiert (%@)"}}}}},
+        "en": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"Exported %lld day (%@)"}},"other":{"stringUnit":{"state":"translated","value":"Exported all %lld days (%@)"}}}}},
+        "es": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"Se exportó %lld día (%@)"}},"other":{"stringUnit":{"state":"translated","value":"Se exportaron los %lld días (%@)"}}}}},
+        "fr": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld jour exporté (%@)"}},"other":{"stringUnit":{"state":"translated","value":"Les %lld jours ont été exportés (%@)"}}}}},
+        "it": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"Esportato %lld giorno (%@)"}},"other":{"stringUnit":{"state":"translated","value":"Esportati tutti i %lld giorni (%@)"}}}}},
         "ja": {"stringUnit":{"state":"translated","value":"全%lld日を書き出しました（%@）"}},
         "ko": {"stringUnit":{"state":"translated","value":"%lld일 전체를 내보냄(%@)"}},
-        "nl": {"stringUnit":{"state":"translated","value":"Alle %lld dagen geëxporteerd (%@)"}},
-        "pt-BR": {"stringUnit":{"state":"translated","value":"Todos os %lld dias exportados (%@)"}},
+        "nl": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld dag geëxporteerd (%@)"}},"other":{"stringUnit":{"state":"translated","value":"Alle %lld dagen geëxporteerd (%@)"}}}}},
+        "pt-BR": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld dia exportado (%@)"}},"other":{"stringUnit":{"state":"translated","value":"Todos os %lld dias exportados (%@)"}}}}},
         "zh-Hans": {"stringUnit":{"state":"translated","value":"已导出全部 %lld 天（%@）"}}
       }
     },
