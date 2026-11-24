@@ -130,6 +130,14 @@ struct GlassFormatCustomScreen: View {
                     placeholder: CustomDatePattern.defaultPattern,
                     identifier: "glass.formatCustom.customDatePattern"
                 )
+                if !customization.customDatePattern.isEmpty {
+                    Button(String(localized: "Clear pattern")) { customization.customDatePattern = "" }
+                        .glassFont(.rowSubtitle)
+                        .padding(.horizontal, GlassMetrics.panelPadding)
+                        .padding(.bottom, 8)
+                        .frame(minHeight: GlassMetrics.touchTarget)
+                        .accessibilityIdentifier("glass.formatCustom.clearDatePattern")
+                }
             }
             GlassRow(title: String(localized: "Date property preview")) {
                 Text(verbatim: customization.formatDate(TestMode.formatPreviewDate ?? Date()))
