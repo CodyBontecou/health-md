@@ -132,7 +132,7 @@ struct GlassFormatCustomScreen: View {
                 )
             }
             GlassRow(title: String(localized: "Date property preview")) {
-                Text(verbatim: customization.formatDate(Date()))
+                Text(verbatim: customization.formatDate(TestMode.formatPreviewDate ?? Date()))
                     .glassFont(.monoBody)
                     .foregroundStyle(palette.muted)
                     .accessibilityIdentifier("glass.formatCustom.datePreview")
