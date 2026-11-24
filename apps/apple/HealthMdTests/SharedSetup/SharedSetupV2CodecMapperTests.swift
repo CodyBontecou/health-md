@@ -34,6 +34,17 @@ final class SharedSetupV2CodecMapperTests: XCTestCase {
         XCTAssertEqual(try SharedSetupV2Codec.decode(encoded).profiles[0].presentation.dateFormat, .euDot)
     }
 
+    func testEUDashAndCustomDateFormatsAreNotSubstitutedInFrozenSharedSetupV2() throws {
+        for format in [DateFormatPreference.euDash, .custom] {
+            var profile = makeProfile(id: profileID(1), name: "Unportable date")
+            profile.settings.formatCustomization.dateFormat = format
+            profile.settings.formatCustomization.customDatePattern = "{day}-{month}-{year}"
+            XCTAssertThrowsError(try map(profiles: [profile], activeProfileID: profile.id)) { error in
+                XCTAssertTrue(error.localizedDescription.contains("Shared Setup v2"), "\(format)")
+            }
+        }
+    }
+
     func testMinuteSchedulesCannotBeSilentlyRoundedIntoFrozenSharedSetupV2() throws {
         let profile = makeProfile(id: profileID(1), name: "Minute profile", policy: .summary, enabledNativeIDs: ["steps"])
         for minutes in [30, 60] {

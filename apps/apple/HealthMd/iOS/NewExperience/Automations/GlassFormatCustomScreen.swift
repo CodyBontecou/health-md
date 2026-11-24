@@ -100,20 +100,66 @@ struct GlassFormatCustomScreen: View {
 
     private var config: FrontmatterConfiguration { customization.frontmatterConfig }
 
+    /// Choosing Custom for the first time seeds a working DD-MM-YYYY pattern.
+    private var dateFormatSelection: Binding<DateFormatPreference> {
+        Binding(
+            get: { customization.dateFormat },
+            set: { value in
+                if value == .custom, customization.customDatePattern.isEmpty {
+                    customization.customDatePattern = CustomDatePattern.defaultPattern
+                }
+                customization.dateFormat = value
+            }
+        )
+    }
+
     @ViewBuilder private var datesAndUnits: some View {
         GlassPanel {
             GlassMenuRow(
                 title: String(localized: "Date format"),
-                selection: $customization.dateFormat,
+                selection: dateFormatSelection,
                 options: DateFormatPreference.allCases,
-                label: \.displayName
+                label: \.displayName,
+                identifier: "glass.formatCustom.dateFormat"
             )
+            if customization.dateFormat == .custom {
+                GlassTemplateField(
+                    title: String(localized: "Date pattern"),
+                    text: $customization.customDatePattern,
+                    tokens: DatePlaceholderTemplate.tokens,
+                    placeholder: CustomDatePattern.defaultPattern,
+                    identifier: "glass.formatCustom.customDatePattern"
+                )
+                if !customization.customDatePattern.isEmpty {
+                    Button(String(localized: "Clear pattern")) { customization.customDatePattern = "" }
+                        .glassFont(.rowSubtitle)
+                        .padding(.horizontal, GlassMetrics.panelPadding)
+                        .padding(.bottom, 8)
+                        .frame(minHeight: GlassMetrics.touchTarget)
+                        .accessibilityIdentifier("glass.formatCustom.clearDatePattern")
+                }
+            }
+            GlassRow(title: String(localized: "Date property preview")) {
+                Text(verbatim: customization.formatDate(TestMode.formatPreviewDate ?? Date()))
+                    .glassFont(.monoBody)
+                    .foregroundStyle(palette.muted)
+                    .accessibilityIdentifier("glass.formatCustom.datePreview")
+            }
             GlassMenuRow(
                 title: String(localized: "Time format"),
                 selection: $customization.timeFormat,
                 options: TimeFormatPreference.allCases,
                 label: \.displayName
             )
+        }
+        if customization.dateFormat == .custom,
+           !CustomDatePattern.isValid(customization.customDatePattern) {
+            GlassBanner(
+                title: String(localized: "This date pattern can't be used, so exports write ISO 8601 (2026-01-13). Use placeholders such as {day}-{month}-{year} with letters, digits, spaces, or - . / _ , between them."),
+                systemImage: "exclamationmark.triangle",
+                tone: .warning
+            )
+            .accessibilityIdentifier("glass.formatCustom.customDatePatternInvalid")
         }
         GlassSectionLabel(title: String(localized: "Units"))
         GlassSegmentedControl(

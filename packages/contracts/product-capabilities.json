@@ -1422,6 +1422,29 @@
         "apps/android/app/src/main/java/com/healthmd/presentation/schedule/AutomationFacts.kt",
         "packages/healthmd-core-rust/scripts/generate-registry-adapters.py"
       ]
+    },
+    {
+      "id": "export.custom-date-property-pattern",
+      "name": "Date property format: EU Dash and custom pattern",
+      "classification": "planned",
+      "summary": "The frontmatter, JSON and CSV date value can use the EU Dash preset (dd-MM-yyyy, 13-01-2026) on both platforms. Apple also offers a Custom pattern built from the filename date placeholders ({day}-{month}-{year}); an empty or invalid pattern writes ISO 8601. Frozen Shared Setup v2 carries neither EU Dash nor custom patterns, so both platforms refuse to share a profile that uses them instead of substituting another format.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "planned",
+          "target": "Add a custom pattern field with live preview to Format Customization, persisted in ExportSettings and the export-settings snapshot, using the same placeholder grammar and ISO 8601 fallback as Apple."
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Models/FormatPreferences.swift",
+        "apps/apple/HealthMd/iOS/NewExperience/Automations/GlassFormatCustomScreen.swift",
+        "apps/apple/HealthMdTests/Models/DatePropertyFormatTests.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/model/FormatPreferences.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2Mapper.kt"
+      ]
     }
   ]
 }

@@ -505,7 +505,14 @@ class SharedSetupV2Mapper(
         ExportFormat.CSV -> "csv"
     }
 
-    private fun dateWire(value: DateFormatPreference): String = value.name.lowercase()
+    private fun dateWire(value: DateFormatPreference): String {
+        // The frozen v2 contract has no `eu_dash` preset; substituting another
+        // format would silently change the receiver's notes.
+        require(value != DateFormatPreference.EU_DASH) {
+            "Shared Setup v2 cannot represent the EU Dash date format. Choose another date format before sharing this profile."
+        }
+        return value.name.lowercase()
+    }
     private fun timeWire(value: TimeFormatPreference): String = value.name.lowercase()
     private fun folderWire(value: FolderOrganization): String = value.name.lowercase()
 
