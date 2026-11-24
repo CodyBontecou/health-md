@@ -1,0 +1,125 @@
+version: 1
+requires:
+  platform: ios
+# qa-iphone-schedule-only-changed-days (issue #457, physical iPhone, real app data): the
+# Default automation's Schedule page has a Changes section with "Only update days that
+# changed" (glass.schedule.onlyChangedDays). While it is on, the page shows the last-run
+# status (glass.schedule.incrementalStatus) and "Re-export everything"
+# (glass.schedule.reexportEverything); turning it off hides both; the choice survives
+# leaving and re-entering the page.
+#
+# Prerequisites: a Debug build of this branch on a physical iPhone with an automation named
+# Default as the first automation card, and no incremental run committed for it yet (the
+# status reads "Next run exports every day in the window, ..."). No UI-test launch
+# arguments: they would reset the phone's real automations.
+# Side effects: opening the Schedule page saves Default's schedule entry; on a phone where
+# Default had no schedule it becomes "Paused · Every morning at 8:00" (no export runs). The
+# switch ends on. Nothing is exported.
+#
+# Selectors: on the physical iPhone the runner tree is the describe tree, so every tap and
+# check uses an accessibility id, except the two switch taps (see the exception below).
+steps:
+  - echo: Launch Health.md with the phone's real data. Expect the tab bar
+  - launch: com.codybontecou.obsidianhealth
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.tab.automations
+      timeoutMs: 20000
+  - await: { idle: true }
+  - echo: Open Automations. Expect the Default card
+  - tap:
+      id: glass.tab.automations
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.card
+  - await: { idle: true }
+  - echo: Open Default. Expect its Schedule row
+  - tap:
+      id: glass.automation.card
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.schedule
+  - await: { idle: true }
+  - echo: Open Schedule. Expect the switch on, no-run-yet status and Re-export everything
+  - tap:
+      id: glass.automation.schedule
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.schedule.reexportEverything
+  - await: { idle: true }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.schedule.incrementalStatus
+      expectedText: Next run exports every day in the window, then only days that changed
+  - echo: Switch it off. Expect the status and Re-export everything to hide
+  # Coordinate exception: after the switch animates, the runner tree reports a stale,
+  # oversized frame for glass.schedule.onlyChangedDays (seen 0.619+0.248 tall, centre over
+  # the Today header), so an id tap can miss. The row sits at a fixed spot below the When
+  # card (describe frame 0.040,0.633,0.920,0.059 on iPhone 17 Pro); the hard checks after
+  # each tap fail if the switch did not flip.
+  - tap: { x: 0.5, y: 0.6625 } # Only update days that changed switch row
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: glass.schedule.reexportEverything
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: glass.schedule.incrementalStatus
+  - echo: Switch it back on. Expect both again
+  - tap: { x: 0.5, y: 0.6625 } # Only update days that changed switch row (see exception above)
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.schedule.incrementalStatus
+      expectedText: Next run exports every day in the window, then only days that changed
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.schedule.reexportEverything
+  - echo: Leave and re-open Schedule. Expect the switch still on (status and action shown)
+  - tap:
+      id: BackButton
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.schedule
+  - await: { idle: true }
+  - tap:
+      id: glass.automation.schedule
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.schedule.incrementalStatus
+      expectedText: Next run exports every day in the window, then only days that changed
+  - await: { idle: true }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.schedule.reexportEverything
+  - echo: Back to Default
+  - tap:
+      id: BackButton
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.schedule
+  - await: { idle: true }
