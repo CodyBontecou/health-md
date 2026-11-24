@@ -1045,6 +1045,9 @@ nonisolated enum ApplePureRustAuthorityAdmission {
 
 struct FormatCustomizationSnapshot: Codable, Equatable {
     var dateFormat: DateFormatPreference
+    /// Nil when unused, so snapshots saved before custom patterns existed decode
+    /// and re-encode unchanged.
+    var customDatePattern: String? = nil
     var timeFormat: TimeFormatPreference
     var unitPreference: UnitPreference
     var frontmatterConfig: FrontmatterConfigurationSnapshot
@@ -1053,6 +1056,7 @@ struct FormatCustomizationSnapshot: Codable, Equatable {
     static func from(_ customization: FormatCustomization) -> FormatCustomizationSnapshot {
         FormatCustomizationSnapshot(
             dateFormat: customization.dateFormat,
+            customDatePattern: customization.customDatePattern.isEmpty ? nil : customization.customDatePattern,
             timeFormat: customization.timeFormat,
             unitPreference: customization.unitPreference,
             frontmatterConfig: .from(customization.frontmatterConfig),
@@ -1062,6 +1066,7 @@ struct FormatCustomizationSnapshot: Codable, Equatable {
 
     func apply(to customization: FormatCustomization) {
         customization.dateFormat = dateFormat
+        customization.customDatePattern = customDatePattern ?? ""
         customization.timeFormat = timeFormat
         customization.unitPreference = unitPreference
         frontmatterConfig.apply(to: customization.frontmatterConfig)
