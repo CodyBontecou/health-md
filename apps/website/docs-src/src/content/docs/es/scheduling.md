@@ -18,6 +18,8 @@ En la versión de teléfono con suscripción habilitada, las exportaciones progr
 
 Los horarios diarios, semanales y personalizados pueden tener una retrospectiva. La cadencia personalizada se repite cada N días, semanas o meses desde su fecha de inicio. Cada nueva ocurrencia reexporta toda la ventana configurada del día completo, incluidas las fechas exportadas anteriormente. Una mirada retrospectiva de tres días cubre ayer y los dos días anteriores; La ejecución retrasada mantiene la ventana anclada al día programado del incendio.
 
+En iPhone, **Only update days that changed** (Programación → Changes, activado en las programaciones nuevas) solo reescribe los días cuyos datos de Salud se añadieron, editaron o eliminaron desde la última ejecución correcta, los días cuyo archivo falta, y hoy y ayer; los días sin cambios no se tocan, así iCloud u Obsidian Sync no vuelven a subir notas idénticas. La primera ejecución, un cambio en los ajustes de exportación de la automatización y **Re-export everything** escriben una vez toda la ventana. La página de programación muestra lo que hizo la última ejecución, por ejemplo «1 changed · Updated 3 days (Nov 18, 22, 23) · 27 unchanged». Android sigue reexportando toda la ventana.
+
 La actualización de hoy es un trabajo independiente del día actual, no un reemplazo de la ventana del día completo. Inspeccionar rutas y escribir comportamiento antes de superponer exportaciones; No agregue instantáneas diarias repetidas como nuevas mediciones.
 
 ## Elija la ruta de recuperación correcta

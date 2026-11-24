@@ -76,7 +76,8 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
             systemSideEffectsEnabled: Bool = false,
             pendingStoreOverride: PendingExportStoring? = nil,
             notificationSchedulerOverride: ExportNotificationScheduling? = nil,
-            isProfileBlocked: @escaping @MainActor (UUID) -> Bool = { _ in false }
+            isProfileBlocked: @escaping @MainActor (UUID) -> Bool = { _ in false },
+            incrementalRuntime: IncrementalScheduledExportRuntime? = nil
         ) -> SchedulingManager {
             let harness = self
             let manager = SchedulingManager(
@@ -117,7 +118,8 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
                     harness.onAdopt?(profile)
                 },
                 isSharedSetupV2ProfileBlocked: isProfileBlocked,
-                scheduledAPIDestinationResolver: { _ in harness.apiDestination }
+                scheduledAPIDestinationResolver: { _ in harness.apiDestination },
+                incrementalScheduledExport: incrementalRuntime
             )
             SchedulingManagerProfileSchedulingTests.retainedInstances.append(manager)
             return manager
@@ -155,6 +157,108 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         configureEntry(&entry)
         XCTAssertTrue(entryStore.upsert(entry))
         return profile.id
+    }
+
+    // MARK: - Incremental runs (#457)
+
+    func testIncrementalProfileRunExportsWholeWindowFirstThenOnlyChangedDays() async throws {
+        let harness = ProfileSchedulingHarness()
+        var current = date(year: 2026, month: 8, day: 10, hour: 12)
+        let profileID = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: current) {
+            $0.lookbackDays = 7
+            $0.onlyUpdateChangedDays = true
+        }
+        let source = ScriptedIncrementalChangeSource()
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("IncrementalProfileRun-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let runtime = IncrementalScheduledExportRuntime(
+            store: IncrementalScheduledExportStore(directory: directory), changeSource: source)
+        let manager = harness.makeManager(
+            defaults: defaults, keychain: keychain, now: { current }, incrementalRuntime: runtime)
+
+        // First run: no anchors yet, so the whole look-back window (Aug 3–9) is written.
+        source.next = [IncrementalTypeChanges(
+            typeIdentifier: "steps", startedWithoutAnchor: true, added: [], deletedUUIDs: [], newAnchor: Data("a1".utf8))]
+        await manager.performCatchUpExportIfNeeded()
+        XCTAssertEqual(harness.runnerDates.last, (3...9).map { date(year: 2026, month: 8, day: $0) })
+        XCTAssertFalse(runtime.nextRunIsFull(profileID: profileID), "anchors commit after the successful run")
+        XCTAssertEqual(runtime.lastSummary(profileID: profileID)?.mode, .full)
+
+        // Next day: one sample was back-filled on Aug 6. Only Aug 6 plus yesterday (the
+        // safety window) are written out of the Aug 4–10 window.
+        current = date(year: 2026, month: 8, day: 11, hour: 12)
+        source.next = [IncrementalTypeChanges(
+            typeIdentifier: "steps", startedWithoutAnchor: false,
+            added: [IncrementalSampleChange(
+                uuid: UUID(),
+                startDate: date(year: 2026, month: 8, day: 6, hour: 9),
+                endDate: date(year: 2026, month: 8, day: 6, hour: 10))],
+            deletedUUIDs: [], newAnchor: Data("a2".utf8))]
+        await manager.performCatchUpExportIfNeeded()
+        XCTAssertEqual(source.receivedAnchors.last?["steps"], Data("a1".utf8))
+        XCTAssertEqual(harness.runnerDates.count, 2)
+        XCTAssertEqual(harness.runnerDates.last, [
+            date(year: 2026, month: 8, day: 6),
+            date(year: 2026, month: 8, day: 10)
+        ])
+        XCTAssertTrue(try harness.pendingStore.loadAll().isEmpty, "narrowed request clears after success")
+        let summary = try XCTUnwrap(runtime.lastSummary(profileID: profileID))
+        XCTAssertEqual(summary.mode, .incremental)
+        XCTAssertEqual(summary.changedDayCount, 1)
+        XCTAssertEqual(summary.unchangedDayCount, 5)
+        XCTAssertEqual(
+            ScheduledExportEntryStore(userDefaults: defaults).entry(profileID: profileID)?.lastExportDate,
+            date(year: 2026, month: 8, day: 11, hour: 8)
+        )
+    }
+
+    func testIncrementalProfileRunFailureKeepsAnchorsForTheNextRun() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 12)
+        let profileID = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now) {
+            $0.lookbackDays = 3
+        }
+        let source = ScriptedIncrementalChangeSource()
+        source.next = [IncrementalTypeChanges(
+            typeIdentifier: "steps", startedWithoutAnchor: true, added: [], deletedUUIDs: [], newAnchor: Data("a1".utf8))]
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("IncrementalProfileRun-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let runtime = IncrementalScheduledExportRuntime(
+            store: IncrementalScheduledExportStore(directory: directory), changeSource: source)
+        harness.resultProvider = { dates, _ in
+            ExportOrchestrator.ExportResult(
+                successCount: 0, totalCount: dates.count,
+                failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .unknown) },
+                completedDates: [])
+        }
+        let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now }, incrementalRuntime: runtime)
+
+        await manager.performCatchUpExportIfNeeded()
+
+        XCTAssertEqual(harness.runnerDates.last?.count, 3)
+        XCTAssertTrue(runtime.nextRunIsFull(profileID: profileID), "a failed run must not save anchors")
+    }
+
+    func testProfileWithSwitchOffKeepsReExportingTheWholeWindow() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 12)
+        _ = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now) {
+            $0.lookbackDays = 3
+            $0.onlyUpdateChangedDays = false
+        }
+        let source = ScriptedIncrementalChangeSource()
+        let runtime = IncrementalScheduledExportRuntime(
+            store: IncrementalScheduledExportStore(directory: FileManager.default.temporaryDirectory
+                .appendingPathComponent("IncrementalProfileRun-\(UUID().uuidString)", isDirectory: true)),
+            changeSource: source)
+        let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now }, incrementalRuntime: runtime)
+
+        await manager.performCatchUpExportIfNeeded()
+
+        XCTAssertEqual(harness.runnerDates.last?.count, 3)
+        XCTAssertTrue(source.receivedAnchors.isEmpty, "the switch off never queries HealthKit changes")
     }
 
     // MARK: - Wake-up evaluation
@@ -1643,6 +1747,18 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         await manager.drainPendingExportsIfNeeded()
         XCTAssertEqual(harness.runnerDates, [request.dates], "UTC midnight must not expire the owner's still-current day")
         XCTAssertTrue(try harness.pendingStore.loadAll().isEmpty)
+    }
+}
+private final class ScriptedIncrementalChangeSource: IncrementalHealthChangeSource {
+    var next: [IncrementalTypeChanges]?
+    var receivedAnchors: [[String: Data]] = []
+
+    func sampleTypeIdentifiers(for settings: ExportSettingsSnapshot) -> [String] { ["steps"] }
+
+    func changes(typeIdentifiers: [String], anchors: [String: Data], windowStart: Date) async throws -> [IncrementalTypeChanges] {
+        receivedAnchors.append(anchors)
+        guard let next else { throw UnavailableIncrementalHealthChangeSource.Unavailable() }
+        return next
     }
 }
 #endif
