@@ -33,7 +33,7 @@ steps:
     args:
       condition: visible
       selector:
-        text: Standard
+        text: Format / Standard
   - echo: Open Format. Expect the date format choices
   - tap:
       text: Standard
