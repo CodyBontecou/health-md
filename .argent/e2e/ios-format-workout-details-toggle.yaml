@@ -4,11 +4,12 @@ requires:
 # #167: the 4.0 Customize format screen has the "Workout Details and Metadata" switch in its
 # Markdown body section (on by default), with the classic row's label, value and hint; turning
 # it off is autosaved and still off when the screen is reopened. The test turns it back on.
-# Prerequisites: a Debug HealthMd build installed on an iPhone simulator (portrait, iPhone
-# 17/18 Pro size). Synthetic UI-test mode (no HealthKit, test vault, fixture preview data);
-# the default automation "Default" exists on first launch.
+# Prerequisites: a Debug HealthMd build installed on an iPhone simulator or a physical iPhone
+# (portrait, iPhone 17/18 Pro size). Synthetic UI-test mode (no HealthKit, test vault, fixture
+# preview data). Exactly one automation, "Default" (a fresh install creates it), with the switch on.
 # Side effects: toggles markdownTemplate.includeWorkoutDetailsAndMetadata on the "Default"
-# automation of the UI-test profile off and back on; nothing is exported.
+# automation off and back on; nothing is exported. UI-test mode does not isolate profiles, so on
+# a physical iPhone this is the owner's real automation (restored on a full pass).
 # Coordinate exception: on this simulator the runner's native tree does not carry these
 # SwiftUI rows (the recorder derived role-only or wrong-id selectors), so taps are raw
 # gesture-tap points, each preceded by an accessibility-tree wait on the element it hits,
@@ -113,8 +114,10 @@ steps:
       textMatch: equals
       timeoutMs: 5000
   - echo: Go back to the automation (autosaves). Expect the automation detail
-  - tap:
-      id: chevron.backward
+  # Coordinate: centre of the navigation back button. The simulator runner names it
+  # chevron.backward and a physical iPhone names it BackButton, so no one selector fits both.
+  - tool: gesture-tap
+    args: { x: 0.0945, y: 0.096 }
   - tool: await-ui-element
     args:
       condition: visible
