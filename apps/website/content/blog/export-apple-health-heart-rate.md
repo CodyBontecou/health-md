@@ -1,18 +1,19 @@
 ---
-title: "How to export Apple Health heart rate data"
-description: "Export Apple Health heart rate to CSV or JSON with Health.md. Choose daily summaries or timestamped samples, check bpm versus HRV milliseconds, and verify dates and units."
-lead: "Select the heart metrics you need in Health.md, choose Summary for daily statistics or Detailed Time-Series for available timestamped samples, and preview one day before exporting."
+title: "How to export heart rate data from Apple Health"
+description: "The Health app has no heart-rate-only export. Export All Health Data gives export.xml; Health.md exports daily heart-rate stats or timestamped readings as CSV or JSON."
+lead: "Apple Health can't export heart rate alone: its native export is the whole archive. Health.md saves one file per day of heart-rate statistics or timestamped readings."
 date: "2026-10-25"
-updated: "2026-10-25"
+updated: "2026-11-24"
 category: "Workflow guide"
+platform: apple
 related:
   - export-apple-health-hrv
   - export-apple-health-workouts
-  - apple-health-to-excel
+  - apple-health-xml-export
 draft: false
-verified: "2026-10-25"
-verified_by: "Codex (agent)"
-verified_method: traced
+verified: "2026-11-24"
+verified_by: "Claude (agent)"
+verified_method: mixed
 tags:
   - apple-health
   - heart-rate
@@ -20,11 +21,37 @@ tags:
   - export
 ---
 
-You can export heart-rate data already stored in Apple Health to CSV or JSON with Health.md on your iPhone. First decide whether you need a daily statistic, such as average or resting heart rate, or individual timestamped readings. Those are different outputs and require different selections.
+The Health app has **no heart-rate-only export**. **Export All Health Data** writes your whole history as `export.zip` containing `export.xml`, and your heart rate is somewhere inside it. Health.md gives you one file per day instead, with daily heart-rate statistics or timestamped readings, as CSV, JSON or Markdown.
 
 <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
 
-Health.md includes **5 free export actions**, followed by a single lifetime unlock. Manual export needs no Mac. For Apple's native XML archive and the broader export options, see [how to export Apple Health data](/apple-health-export/).
+## The short answer
+
+<div class="article-table-scroll" role="region" aria-label="Choose a heart-rate export route" tabindex="0">
+
+| What you want | Where to get it |
+| --- | --- |
+| All heart-rate history, free, as raw XML | Health app › your profile picture › **Export All Health Data**. You get `export.zip` containing `export.xml`. [Apple's steps](https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios) |
+| Look at individual readings on the phone | Health › Heart › Heart Rate › **Show All Data**. This screen is for viewing; it can't share a file. |
+| ECG recordings | Health › Browse › Heart › Electrocardiograms (ECG) › tap a result › **Export a PDF for Your Doctor**. [Apple's ECG page](https://support.apple.com/en-us/120278) |
+| Daily heart-rate stats or timestamped readings as CSV, JSON or Markdown, one file per day | Health.md on your iPhone; the steps are below |
+
+</div>
+
+Health.md includes **5 free export actions**, followed by a single lifetime unlock. For the whole-archive route and other options, see [how to export Apple Health data](/apple-health-export/); for the general spreadsheet workflow, see [Apple Health to CSV](/apple-health-to-csv/).
+
+## Where heart rate lives in Apple's export.xml
+
+In `export.xml`, heart rate is stored as `Record` elements whose `type` names the HealthKit identifier. Apple documents each one:
+
+- [`HKQuantityTypeIdentifierHeartRate`](https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/heartrate): heart rate readings, unit `count/min`.
+- [`HKQuantityTypeIdentifierRestingHeartRate`](https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/restingheartrate): resting heart rate.
+- [`HKQuantityTypeIdentifierWalkingHeartRateAverage`](https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/walkingheartrateaverage): walking average.
+- [`HKQuantityTypeIdentifierHeartRateVariabilitySDNN`](https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/heartratevariabilitysdnn): HRV as SDNN, in milliseconds (`ms`).
+
+These are separate types, and they sit in one large file mixed with every other record type, so you need to filter by `type`. [The Apple Health XML guide](/blog/apple-health-xml-export/) covers unzipping and converting the archive, and [Apple Health to Python](/blog/apple-health-to-python/) covers scripting it. Check your own file's `Record` attributes (such as `startDate`, `endDate`, `sourceName` and `value`) before relying on them.
+
+ECG is not part of the heart-rate samples. ECG recordings are a separate Apple feature with their own PDF export, and **Health.md files do not contain ECG waveforms**.
 
 ## Choose the heart metric and level of detail
 
@@ -101,6 +128,16 @@ Before combining files, check overlapping dates and re-exports. Keep the intende
 For a weekly summary, state whether you are averaging **daily statistics** or pooling **individual recorded samples**. An average of daily averages is not automatically a pooled-sample or time-weighted average. Report the recorded-day count and missing dates. Do not fill gaps with zeros or interpolate a continuous trace without labeling that transformation.
 
 For import steps and chart setup, use [Apple Health to Excel](/blog/apple-health-to-excel/) or [Google Sheets](/blog/apple-health-to-google-sheets/), replacing the steps/sleep filters with the exact Heart filters above. Workout-specific heart-rate statistics belong to the `Workouts` category and represent another context; see the [workout export guide](/blog/export-apple-health-workouts/).
+
+## Common questions
+
+**Can I export only heart rate from the Health app?** No. The native export is the full archive. Filter it afterwards, or use Health.md to export selected heart metrics.
+
+**Does Apple Watch record heart rate continuously?** Readings are taken periodically, and how often depends on the watch model, your activity and your settings. Apple's [heart rate page](https://support.apple.com/en-us/120277) describes measurement behavior and limitations. An export contains only what was saved.
+
+**Is ECG included?** No. Export ECG recordings as a PDF from the Health app (see the table above). Health.md files contain no ECG waveforms.
+
+**What about Android?** See the [Health Connect export guide](/health-connect-export/). Apple heart metrics don't automatically have identical Android counterparts.
 
 ## Troubleshooting
 

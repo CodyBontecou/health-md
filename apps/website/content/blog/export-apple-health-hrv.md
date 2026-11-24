@@ -30,7 +30,7 @@ Health.md includes **5 free export actions**, followed by a single lifetime unlo
 
 Health.md's Apple HRV selection reads HealthKit's **SDNN** quantity type and exports its values in **milliseconds (ms)**. Apple describes SDNN as the standard deviation of intervals between normal heartbeats in its [HRV type documentation](https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/heartratevariabilitysdnn).
 
-Keep that identity with the file. Do not rename an SDNN value as RMSSD or pool it with another device's HRV score merely because both say “HRV.” WHOOP, for example, calculates RMSSD and does not write HRV to Apple Health at all; its HRV stays in WHOOP's own CSV export, as the [WHOOP export guide](/blog/export-whoop-data/) explains. Heart rate in bpm is another metric, and an HRV value in milliseconds is not itself a raw sequence of beat-to-beat intervals or an ECG waveform.
+Keep that identity with the file. Do not rename an SDNN value as RMSSD or pool it with another device's HRV score merely because both say “HRV.” WHOOP, for example, calculates RMSSD and does not write HRV to Apple Health at all; its HRV stays in WHOOP's own CSV export, as the [WHOOP export guide](/blog/export-whoop-data/) explains. Heart rate in bpm is another metric (see how to [export heart rate data from Apple Health](/blog/export-apple-health-heart-rate/)), and an HRV value in milliseconds is not itself a raw sequence of beat-to-beat intervals or an ECG waveform.
 
 | Goal | Data detail | Exported representation |
 | --- | --- | --- |
