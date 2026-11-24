@@ -248,8 +248,10 @@ struct GlassFormatCustomScreen: View {
                 title: String(localized: "Category emoji"),
                 isOn: $customization.markdownTemplate.useEmoji
             )
+            // #167: the classic editor's switch, with its copy, on the 4.0 page too.
+            GlassWorkoutTableToggleRow(isOn: $customization.markdownTemplate.includeWorkoutDetailsAndMetadata)
         }
-        // Custom template text, workout tables and the live preview stay in the existing editor.
+        // Custom template text and the live preview stay in the existing editor.
         GlassPanel {
             NavigationLink {
                 MarkdownTemplateView(config: $customization.markdownTemplate)
@@ -276,6 +278,28 @@ struct GlassFormatCustomScreen: View {
 
     private func reset() {
         FormatCustomizationSnapshot.from(FormatCustomization()).apply(to: customization)
+    }
+}
+
+/// The workout Details/Metadata switch in glass style. Copy and accessibility come from the
+/// classic row's `WorkoutTableTogglePresentation`, so both screens share one set of strings.
+struct GlassWorkoutTableToggleRow: View {
+    static let identifier = "glass.formatCustom.workoutDetailsAndMetadata"
+
+    @Binding var isOn: Bool
+    @Environment(\.locale) private var locale
+
+    func presentation(bundle: Bundle = .main, locale: Locale = .current) -> WorkoutTableTogglePresentation {
+        WorkoutTableTogglePresentation(isOn: isOn, bundle: bundle, locale: locale)
+    }
+
+    var body: some View {
+        let copy = presentation(locale: locale)
+        GlassToggleRow(title: copy.title, subtitle: copy.subtitle, isOn: $isOn)
+            .accessibilityLabel(copy.accessibilityLabel)
+            .accessibilityHint(copy.accessibilityHint)
+            .accessibilityValue(copy.accessibilityValue)
+            .accessibilityIdentifier(Self.identifier)
     }
 }
 #endif

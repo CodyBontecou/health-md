@@ -2,6 +2,11 @@
 
 All notable changes to Health.md will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- Customize format: the "Workout Details and Metadata" switch is back in the Markdown body section, so you can turn the workout Details and Metadata tables off again (#167). A choice made before 4.0 is kept.
+
 ## [4.0.1] - 2026-11-22
 
 ### Changed

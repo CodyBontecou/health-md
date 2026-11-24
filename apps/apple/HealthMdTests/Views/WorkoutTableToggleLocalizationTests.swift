@@ -57,6 +57,35 @@ nonisolated final class WorkoutTableToggleLocalizationTests: XCTestCase {
         XCTAssertEqual(capabilities.first { $0["id"] as? String == "export.completed-workouts" }?["classification"] as? String, "shared")
     }
 
+    /// A value saved by 3.4.4–3.x (before the 4.0 screen) survives the 4.0 screen's
+    /// load → edit copy → autosave path, and an absent key still means "on".
+    @MainActor
+    func testPreV4SavedWorkoutPreferenceRoundTripsThroughGlassScreenCopy() throws {
+        let saved = try JSONEncoder().encode(FormatCustomizationSnapshot.from(FormatCustomization()))
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: saved) as? [String: Any])
+        var template = try XCTUnwrap(object["markdownTemplate"] as? [String: Any])
+        XCTAssertNil(template["includeWorkoutDetailsAndMetadata"], "Default-on is not encoded")
+
+        for stored in [false, nil] as [Bool?] {
+            template["includeWorkoutDetailsAndMetadata"] = stored
+            object["markdownTemplate"] = template
+            let legacy = try JSONDecoder().decode(
+                FormatCustomizationSnapshot.self,
+                from: JSONSerialization.data(withJSONObject: object)
+            )
+            // GlassFormatCustomScreen.init applies the profile's snapshot to an edit copy;
+            // .glassAutosave writes FormatCustomizationSnapshot.from(copy) back.
+            let copy = FormatCustomization()
+            legacy.apply(to: copy)
+            let expected = stored ?? true
+            XCTAssertEqual(copy.markdownTemplate.includeWorkoutDetailsAndMetadata, expected)
+            let resaved = FormatCustomizationSnapshot.from(copy)
+            XCTAssertEqual(resaved, legacy)
+            let reencoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(resaved)) as? [String: Any]
+            let reTemplate = try XCTUnwrap(reencoded?["markdownTemplate"] as? [String: Any])
+            XCTAssertEqual(reTemplate["includeWorkoutDetailsAndMetadata"] as? Bool, stored)
+        }
+    }
     #if os(iOS)
     @MainActor
     func testActualWorkoutControlUsesLocalizedPresentationAndKeepsItsBinding() throws {
@@ -79,5 +108,30 @@ nonisolated final class WorkoutTableToggleLocalizationTests: XCTestCase {
             }
         }
     }
+
+    /// #167: the 4.0 "Markdown body" row shows the classic row's localized copy and
+    /// writes through to the same setting.
+    @MainActor
+    func testGlassWorkoutRowUsesClassicLocalizedPresentationAndKeepsItsBinding() throws {
+        for (language, title, subtitle, label, enabled, disabled) in expected {
+            let bundle = try localizedResources(language)
+            var value = true
+            let binding = Binding(get: { value }, set: { value = $0 })
+            let row = GlassWorkoutTableToggleRow(isOn: binding)
+            for isOn in [true, false] {
+                binding.wrappedValue = isOn
+                let copy = row.presentation(bundle: bundle, locale: Locale(identifier: language))
+                XCTAssertEqual(copy.title, title)
+                XCTAssertEqual(copy.subtitle, subtitle)
+                XCTAssertEqual(copy.accessibilityLabel, label)
+                XCTAssertEqual(copy.accessibilityHint, subtitle)
+                XCTAssertEqual(copy.accessibilityValue, isOn ? enabled : disabled)
+                row.$isOn.wrappedValue = !isOn
+                XCTAssertEqual(value, !isOn)
+            }
+        }
+        XCTAssertEqual(GlassWorkoutTableToggleRow.identifier, "glass.formatCustom.workoutDetailsAndMetadata")
+    }
+
     #endif
 }
