@@ -52,7 +52,7 @@ Uncompressing a file does not convert its data. A text editor can inspect XML, b
 
 XML stores named fields and can contain nested information. A record's type, unit, source, and start and end times matter when turning it into a table. The converter's [documented record output](https://github.com/muquit/applehealth2csv#how-to-use) illustrates those fields. Workouts are separate `<Workout>` elements whose distance can sit in a child element or an attribute; see [how to find workout distance in export.xml](/blog/apple-health-export-xml-workout-distance/). For sleep records specifically, see the [sleep export guide](/blog/export-apple-health-sleep-data/). For per-workout CSV or JSON instead, see [exporting Apple Fitness and Apple Health workouts](/blog/export-apple-health-workouts/).
 
-For example, an interval with **25 steps**, unit **count**, from **09:00 to 09:05** describes one fictional interval. It is not automatically a daily step total. Preserve the unit and time offset, and decide how records should be grouped before calculating a daily or weekly summary.
+For example, an interval with **25 steps**, unit **count**, from **09:00 to 09:05** describes one fictional interval. It is not automatically a daily step total. Preserve the unit and time offset, and decide how records should be grouped before calculating a daily or weekly summary. For the daily total and why summing overlapping step records double counts, see [how to export steps from Apple Health](/blog/export-apple-health-steps-data/).
 
 Do not combine overlapping sources or repeated exports as if every row were an additional independent measurement. A converted table's row count alone does not establish complete coverage or the same totals shown in the Health app.
 

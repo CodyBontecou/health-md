@@ -1,6 +1,6 @@
 # Apple Health steps export claim verification
 
-Verified: 2026-10-26 by Codex (agent), method: traced.
+Verified: 2026-11-24 by Claude (agent), method: traced (originally 2026-10-26 by Codex).
 
 No device step acquisition/export, spreadsheet click-through, source-priority setting change, or visual QA was performed for this task. Claims are traced to producer source, generated fixtures, product/privacy documentation and Apple documentation. Website tests/build verify publication and links, not a new measured day or exact agreement with every other app's aggregation.
 
@@ -25,3 +25,15 @@ No device step acquisition/export, spreadsheet click-through, source-priority se
 ## WHOOP inbound link — 2026-11-19
 
 - [x] One contextual sentence links to /blog/export-whoop-data/ from "Why steps can differ between views". Claims (WHOOP CSV lacks steps; WHOOP steps follow a wake-to-wake cycle) are sourced in the WHOOP guide's ledger (WHOOP support export table and WHOOP Community step-count announcement, read 2026-11-19). Steps export behavior unchanged; `updated` not bumped because no steps claim changed.
+
+## Native-first refresh — 2026-11-24
+
+- [x] Native route: Health → picture/initials → Export All Health Data producing export.zip, per Apple's Share your health data guide (https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios), cited for that action only. No steps-only export is claimed to exist because the guide documents none. export.xml name follows the verified XML guide.
+- [x] HKQuantityTypeIdentifierStepCount is Apple's step count identifier, cumulative count data (https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/stepcount); it maps to the Steps metric per `HealthMetrics.swift`. Each Record is an interval count, not one footstep or a daily total.
+- [x] Record attributes type, sourceName, unit, creationDate, startDate, endDate, value come from the DTD copies traced in `_review/apple-health-export-xml-workout-distance.md`. The two XML lines are fictional, labeled as invented, and no real export was created or inspected. Date format follows that ledger.
+- [x] Double counting: multiple sources write StepCount records with overlapping intervals; Health shows a total using source priority (https://support.apple.com/en-us/108779). Stated as an expectation from Apple's source model; no frequency or magnitude claim, and no promise Health.md equals Health.
+- [x] Health.md daily steps: `HealthKitManager.swift` fetchActivityData -> store.querySum(.stepCount); `SystemHealthStoreAdapter.swift` querySum uses cumulativeSum under the selected-day statistics predicate; Apple's HKStatisticsQuery documents cumulative-sum options (https://developer.apple.com/documentation/healthkit/hkstatisticsquery). Described as a statistic, not guaranteed to match every view or app.
+- [x] The "5 free export actions" sentence is removed: `paywall.md` no longer describes a free-export allowance. No pricing claim remains.
+- [x] Table merged from the two prior tables; CSV/JSON samples and Detailed Time-Series statement unchanged. Added `platform: apple`; Apple-only App Store button right after the opening answer.
+- [x] Internal links: this page to apple-health-xml-export, apple-health-export-xml-workout-distance, export-apple-health-weight-data (plus existing Excel, Sheets, walking asymmetry, WHOOP, export hub and CSV links); apple-health-xml-export gained a sentence linking here. related changed to apple-health-xml-export, apple-health-to-excel, export-apple-health-walking-asymmetry. Protected pages unchanged; no weight-guide edit.
+- [x] Privacy section unchanged: local folder workflow, separate opt-in single-owner pilot not generally available; no "no cloud" claim.

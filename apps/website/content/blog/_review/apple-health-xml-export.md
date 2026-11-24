@@ -22,3 +22,7 @@ This is the next documented acquisition experiment, not a claim of verified sear
 ## Workout distance inbound link — 2026-11-19
 
 - [x] One contextual sentence links to /blog/apple-health-export-xml-workout-distance/ from "3. Understand what an XML record means". The linked tutorial's format claims are traced in its own ledger (`_review/apple-health-export-xml-workout-distance.md`). This page's existing claims are unchanged; `updated` not bumped. The first `related` recommendation changes from apple-health-to-excel (still a related recommendation on 11 other guides) to the workout distance tutorial, which needs an inbound related link.
+
+## Steps inbound link — 2026-11-24
+
+- [x] One sentence after the "25 steps" example links to /blog/export-apple-health-steps-data/ for the daily total and the double-count explanation, both traced in that guide's ledger. Existing claims unchanged; `updated` not bumped.

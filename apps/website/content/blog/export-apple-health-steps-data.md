@@ -1,17 +1,18 @@
 ---
-title: "How to export Apple Health steps data"
-description: "Export Apple Health steps to CSV or JSON with Health.md. Verify daily totals, import dates into a spreadsheet, and understand source records, duplicates, and missing days."
-lead: "Enable Steps in Health.md, preview one known day, and export its daily total as CSV or JSON. Use the daily summary for trends and the canonical archive when source-record identity matters."
+title: "How to export steps from Apple Health (export.xml or daily CSV)"
+description: "Apple Health has no steps-only export. Filter export.xml for StepCount records, or save one steps total per day as CSV or JSON with Health.md."
+lead: "Apple's export is all-or-nothing, and its step records overlap. Find them in export.xml, or save one total per day."
 date: "2026-10-26"
-updated: "2026-10-27"
+updated: "2026-11-24"
 category: "Workflow guide"
+platform: apple
 related:
+  - apple-health-xml-export
   - apple-health-to-excel
   - export-apple-health-walking-asymmetry
-  - apple-health-to-python
 draft: false
-verified: "2026-10-26"
-verified_by: "Codex (agent)"
+verified: "2026-11-24"
+verified_by: "Claude (agent)"
 verified_method: traced
 tags:
   - apple-health
@@ -20,26 +21,38 @@ tags:
   - export
 ---
 
-To export step counts already stored in Apple Health, authorize Health.md on your iPhone, enable **Steps**, select a date range, and save CSV or JSON files. Start with one known day, check the saved total, then export a longer range for a spreadsheet or daily journal.
+**Apple Health has no export for steps alone.** Its native route is **Health → your picture or initials → Export All Health Data**, which creates `export.zip`. Inside, `export.xml` holds steps as `<Record>` elements whose `type` is `HKQuantityTypeIdentifierStepCount`. If you want one daily total per day as CSV or JSON without parsing XML, Health.md writes daily files from the Apple Health data you authorize.
 
 <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
 
-Health.md includes **5 free export actions**, followed by a single lifetime unlock. Manual export needs no Mac. For Apple's native XML archive and the broader format choices, see [how to export Apple Health data](/apple-health-export/).
+Apple's [Health data instructions](https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios) document Export All Health Data. Health.md does not import that XML archive, and manual export needs no Mac.
 
-## Choose daily totals or source records
+## Choose every step record or one total per day
 
-| Goal | Starting choice | What you get |
-| --- | --- | --- |
-| Compare daily step counts | CSV, Summary | One `Activity / Steps` daily value with Unit `count`, when available. |
-| Process steps in a script | JSON, Summary | The daily numeric value at `activity.steps`, when available. |
-| Put steps beside a journal entry | Markdown or Obsidian Bases | A readable daily projection or structured note properties. |
-| Inspect selected public HealthKit source records | JSON or CSV with Lossless Health Records | An Apple-only canonical archive with record identity, source intervals, provenance and capture diagnostics. |
+| What you need | Export route |
+| --- | --- |
+| Every interval record, with its source and times | Apple's native archive: Health → profile → Export All Health Data, then filter `export.xml` for StepCount records |
+| One total per day for a spreadsheet or script | Health.md Summary export with Steps selected, as CSV or JSON (`Activity / Steps`, `activity.steps`) |
+| Selected source records with identity and diagnostics | The separate Apple-only Lossless Health Records profile; review its coverage and warnings |
 
-**Detailed Time-Series does not add step-sample or hourly-step rows to the current daily steps export.** Other metrics support their own sample arrays; their behavior should not be assumed for Steps. Use the daily total for a daily trend, or review the canonical source-record path when you need more than that projection.
+Health.md can also write steps into Markdown or Obsidian Bases daily notes. **Detailed Time-Series does not add step-sample or hourly-step rows to the daily steps export.** The archive represents selected public HealthKit API results, not Apple's private database; read the [format guide](/docs/format/) and [canonical Apple Health records reference](/docs/reference/canonical-healthkit-records/) before treating it as a source-record dataset.
 
-The archive represents selected public HealthKit API results, not Apple's private database. Read the [format guide](/docs/format/) and [canonical Apple Health records reference](/docs/reference/canonical-healthkit-records/) before treating it as a source-record dataset.
+## Find steps in Apple's export.xml
 
-## 1. Select Steps and preview one day
+Apple's [step count type](https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/stepcount) is cumulative count data, and each `<Record>` is an interval count: not one footstep, and not a daily total. This fictional excerpt uses only attributes that the export DTDs declare for `Record` (`type`, `sourceName`, `unit`, `creationDate`, `startDate`, `endDate`, `value`), with an iPhone-like and a Watch-like source whose intervals overlap:
+
+```xml
+<Record type="HKQuantityTypeIdentifierStepCount" sourceName="Example iPhone" unit="count" creationDate="2026-03-15 09:06:00 +0000" startDate="2026-03-15 09:00:00 +0000" endDate="2026-03-15 09:05:00 +0000" value="25"/>
+<Record type="HKQuantityTypeIdentifierStepCount" sourceName="Example Watch" unit="count" creationDate="2026-03-15 09:06:30 +0000" startDate="2026-03-15 09:01:00 +0000" endDate="2026-03-15 09:05:30 +0000" value="24"/>
+```
+
+The values are invented, and they are not a real person's steps. Both records describe the same walk.
+
+**Adding up every row can double count.** iPhone, Apple Watch and other apps each write their own StepCount records, and those intervals can overlap. Apple Health shows a total that uses [source priority](https://support.apple.com/en-us/108779) for the data type. A naive sum of every row in the XML would count the overlapping walk twice, so it can come out higher than Health shows. Health.md's daily value instead comes from a HealthKit cumulative-sum statistics query ([HKStatisticsQuery](https://developer.apple.com/documentation/healthkit/hkstatisticsquery)), which matches the daily statistic rather than a naive sum. It is still not guaranteed to match every view or app.
+
+To pull steps out, filter rows where `type` equals `HKQuantityTypeIdentifierStepCount`. Read your own file's inline DTD (`<!DOCTYPE HealthData [ … ]>`) for the attributes your export version declares; the [DTD copies cited in the workout-distance guide](/blog/apple-health-export-xml-workout-distance/) show how to check. For unzipping and finding `export.xml`, see the [Apple Health XML guide](/blog/apple-health-xml-export/). The [weight guide](/blog/export-apple-health-weight-data/) follows the same native-first pattern for another metric.
+
+## Export one known day first
 
 1. Confirm that steps appear in Apple Health on this iPhone. Health.md reads authorized HealthKit data; it does not create missing step measurements.
 2. In Health.md, authorize the relevant health categories. Open **Health Metrics → Activity** and enable **Steps**.
@@ -51,7 +64,7 @@ Follow [your first iPhone export](/docs/iphone-first-export/) for setup and fold
 
 Choose a completed day for the first comparison. Today's count can change as the phone, watch, or another source writes more data. If records arrive later, re-export the affected date and keep the intended version rather than adding both exports together.
 
-## 2. Verify the CSV and JSON fields
+## Verify the CSV and JSON fields
 
 Download the [synthetic daily CSV](/docs/reference/generated/core/summary-day.csv) to test an import without personal records. It contains fictional values and metadata generated by the exporter. Its header is `Date,Category,Metric,Value,Unit,Timestamp`, and its steps row is:
 
@@ -67,7 +80,7 @@ The [synthetic daily JSON](/docs/reference/generated/core/summary-day.json) repr
 
 An omitted step field or row is unavailable data in that export, not automatically zero. Preserve any explicitly recorded numeric zero separately from missing data.
 
-## 3. Make a daily or weekly spreadsheet view
+## Make a daily or weekly spreadsheet view
 
 A longer range produces **one file per day**, not one combined workbook. Import the daily CSV files into one source table with a single header, keeping the columns in order and checking that every intended date appears. Follow the [Excel walkthrough](/blog/apple-health-to-excel/) or [Google Sheets walkthrough](/blog/apple-health-to-google-sheets/) for the import and combination steps.
 
@@ -85,11 +98,7 @@ Walking metrics such as step length and walking asymmetry export the same way; s
 
 ## Why steps can differ between views
 
-Health.md's daily Steps value comes from a HealthKit cumulative-sum query for the selected calendar day. It is a statistic, not a manual sum of every row visible in a source-record list.
-
-Apple documents that Health can receive data from several sources and [prioritizes sources for a data type](https://support.apple.com/en-us/108779). The [HealthKit step-count type](https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/stepcount) uses cumulative count samples, which HealthKit can condense or coalesce. A source record is not necessarily one physical footstep.
-
-If two views disagree, compare the same completed date, timezone/calendar, source availability, and synchronization state. Inspect the data sources contributing to Steps in Apple Health. Do not assume that a raw sum across phone, watch, and app records reproduces a displayed daily total, or that this guide guarantees equality with every third-party app's reduction. Some wearables also count steps on their own schedule and leave them out of their native export; the [WHOOP export guide](/blog/export-whoop-data/) covers a strap whose CSV has no step count and whose steps follow a wake-to-wake cycle.
+If two views disagree, compare the same completed date, timezone/calendar, source availability, and synchronization state. Inspect the data sources contributing to Steps in Apple Health, and see the double-counting explanation above for raw XML sums. Do not assume this guide guarantees equality with every third-party app's reduction. Some wearables also count steps on their own schedule and leave them out of their native export; the [WHOOP export guide](/blog/export-whoop-data/) covers a strap whose CSV has no step count and whose steps follow a wake-to-wake cycle.
 
 For canonical source records, preserve the original UUID, type, exact start/end intervals, source information, units, capture status and warnings. Repeated copies of the same source UUID are different from two independently recorded objects that overlap in time. Do not deduplicate different source records merely because a value or timestamp matches, and do not add the canonical records to the daily total.
 
@@ -100,6 +109,7 @@ Daily statistics and source-record ownership also use different query semantics.
 - **No Steps row:** check the source records, selected day, Steps toggle, source synchronization, and read authorization. Absence does not establish zero or identify a particular permission-denial state.
 - **No hourly rows after enabling detail:** the current daily Steps output remains a total; Detailed Time-Series does not create an hourly series for it.
 - **A recent total changed:** source data may have arrived since the earlier export. Inspect the original records and keep the intended replacement file.
+- **My XML total is much higher than Health shows:** overlapping sources. iPhone, Watch and apps each write StepCount records, and Health applies source priority; see "Find steps in Apple's export.xml" above.
 - **Weekly total looks too high:** check duplicate dates, repeated headers, other count metrics, rollups, and raw records mixed with summaries.
 - **Preview works but no file is saved:** reselect the folder and check its provider's availability. See [export troubleshooting](/docs/troubleshooting/).
 
