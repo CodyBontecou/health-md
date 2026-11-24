@@ -18,14 +18,16 @@ steps:
       selector:
         text: Archive
       timeoutMs: 15000
+  - await: { idle: true }
   - echo: Open the Automations tab. Expect the automations list
-  - tap:
-      text: Automations
+  # Scope to the bottom tab: Archive also has an "Automations" card heading higher up.
+  - tap: { text: Automations, after: { text: counts a day complete } }
   - tool: await-ui-element
     args:
       condition: visible
       selector:
         text: New automation
+  - await: { idle: true }
   - echo: Open the Default automation. Expect its settings
   - tap:
       text: Writes 106 metrics to HealthMD-E2E-QA
@@ -34,6 +36,7 @@ steps:
       condition: visible
       selector:
         text: Format / Standard
+  - await: { idle: true }
   - echo: Open Format. Expect the date format choices
   - tap:
       text: Standard
