@@ -781,6 +781,29 @@
       ]
     },
     {
+      "id": "export.scheduled-incremental-days",
+      "name": "Scheduled exports rewrite only days that changed",
+      "classification": "planned",
+      "summary": "An opt-in per-profile schedule switch, 'Only update days that changed', makes each completed-day run rewrite only look-back days whose health data was added, edited or deleted since the last successful run, days whose daily file is missing, and a trailing safety window of today and yesterday; every other day in the window is left untouched so sync services do not re-upload identical notes. A change to output-affecting settings (template, formats, metrics, folder, destination, timezone, look-back) or lost change tokens fall back to one full export of the window, and a 'Re-export everything' action forces one. The v9 range summary is rebuilt from the full window whenever any day is written. On iPhone, change detection uses HealthKit anchored object queries with anchors saved per profile and data type only after the export succeeds; new profiles opt in and schedules saved before the switch existed keep re-exporting the whole window. Manual exports are unchanged.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "planned",
+          "target": "Use Health Connect changes tokens (getChangesToken/getChanges) per profile and record type with the same day mapping, settings fingerprint, missing-file check and safety window."
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Export/Incremental/IncrementalScheduledExportPlanner.swift",
+        "apps/apple/HealthMd/Shared/Export/Incremental/IncrementalScheduledExportStore.swift",
+        "apps/apple/HealthMd/iOS/SchedulingManager.swift",
+        "apps/apple/HealthMdTests/Export/IncrementalScheduledExportTests.swift",
+        "apps/apple/docs/features/scheduled-exports.md"
+      ]
+    },
+    {
       "id": "automation.discard-pending-recovery",
       "name": "Discard pending scheduled recovery per profile",
       "classification": "shared",
@@ -1421,6 +1444,29 @@
         "apps/android/app/src/main/java/com/healthmd/domain/model/MetricSelectionFrontmatter.kt",
         "apps/android/app/src/main/java/com/healthmd/presentation/schedule/AutomationFacts.kt",
         "packages/healthmd-core-rust/scripts/generate-registry-adapters.py"
+      ]
+    },
+    {
+      "id": "export.custom-date-property-pattern",
+      "name": "Date property format: EU Dash and custom pattern",
+      "classification": "planned",
+      "summary": "The frontmatter, JSON and CSV date value can use the EU Dash preset (dd-MM-yyyy, 13-01-2026) on both platforms. Apple also offers a Custom pattern built from the filename date placeholders ({day}-{month}-{year}); an empty or invalid pattern writes ISO 8601. Frozen Shared Setup v2 carries neither EU Dash nor custom patterns, so both platforms refuse to share a profile that uses them instead of substituting another format.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "planned",
+          "target": "Add a custom pattern field with live preview to Format Customization, persisted in ExportSettings and the export-settings snapshot, using the same placeholder grammar and ISO 8601 fallback as Apple."
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Models/FormatPreferences.swift",
+        "apps/apple/HealthMd/iOS/NewExperience/Automations/GlassFormatCustomScreen.swift",
+        "apps/apple/HealthMdTests/Models/DatePropertyFormatTests.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/model/FormatPreferences.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2Mapper.kt"
       ]
     }
   ]

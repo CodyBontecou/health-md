@@ -1634,7 +1634,7 @@ struct ExportTabView: View {
     private var formatCustomizationSummary: String {
         let fc = advancedSettings.formatCustomization
         var parts: [String] = []
-        parts.append(fc.dateFormat.format(date: Date()))
+        parts.append(fc.formatDate(Date()))
         parts.append(fc.unitPreference.rawValue)
         parts.append(fc.timeFormat == .hour12 || fc.timeFormat == .hour12WithSeconds ? "12h" : "24h")
         return parts.joined(separator: " · ")

@@ -1,0 +1,162 @@
+version: 1
+requires:
+  platform: ios
+# #167: the 4.0 Customize format screen has the "Workout Details and Metadata" switch in its
+# Markdown body section (on by default), with the classic row's label, value and hint; turning
+# it off is autosaved and still off when the screen is reopened. The test turns it back on.
+# Prerequisites: a Debug HealthMd build installed on an iPhone simulator or a physical iPhone
+# (portrait, iPhone 17/18 Pro size). Synthetic UI-test mode (no HealthKit, test vault, fixture
+# preview data). Exactly one automation, "Default" (a fresh install creates it), with the switch on.
+# Side effects: toggles markdownTemplate.includeWorkoutDetailsAndMetadata on the "Default"
+# automation off and back on; nothing is exported. UI-test mode does not isolate profiles, so on
+# a physical iPhone this is the owner's real automation (restored on a full pass).
+# Coordinate exception: on this simulator the runner's native tree does not carry these
+# SwiftUI rows (the recorder derived role-only or wrong-id selectors), so taps are raw
+# gesture-tap points, each preceded by an accessibility-tree wait on the element it hits,
+# and waits stay raw await-ui-element steps on that tree (as in frontmatter-ownership-iphone).
+steps:
+  - echo: Launch Health.md in synthetic UI-test mode. Expect Archive
+  - launch:
+      native: com.codybontecou.obsidianhealth
+      ios:
+        app: com.codybontecou.obsidianhealth
+        args:
+          - --uitesting
+          - -UITEST_HEALTH_AUTHORIZED
+          - "true"
+          - -UITEST_VAULT_SELECTED
+          - "true"
+          - -UITEST_PURCHASE_UNLOCKED
+          - "true"
+          - -UITEST_HEALTHKIT_EXPORT_PREVIEW_FIXTURES
+          - "true"
+          - -UITEST_SUPPRESSED_UPGRADE_PROMPTS
+          - 1,3
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.archive.sentence
+      timeoutMs: 30000
+  - await: { idle: true }
+  - echo: Open the Automations tab. Expect the automation list
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.tab.automations
+  # Coordinate: centre of glass.tab.automations (the runner tree resolves a different id).
+  - tool: gesture-tap
+    args: { x: 0.405, y: 0.895 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.card
+      timeoutMs: 10000
+  - await: { idle: true }
+  - echo: Open the Default automation. Expect its detail
+  # Coordinate: the first (only) glass.automation.card.
+  - tool: gesture-tap
+    args: { x: 0.5, y: 0.27 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.editSentence
+      timeoutMs: 10000
+  - await: { idle: true }
+  - echo: Open Format. Expect Customize format
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.formatCustom
+  # Coordinate: centre of glass.automation.formatCustom.
+  - tool: gesture-tap
+    args: { x: 0.5, y: 0.686 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.formatCustom.reset
+      timeoutMs: 10000
+  - await: { idle: true }
+  - echo: Jump to the Markdown body section. Expect the Workout Details and Metadata switch, on by default
+  # Coordinate: the "Markdown body" segment of the Section control pinned under the title.
+  - tool: gesture-tap
+    args: { x: 0.5, y: 0.163 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.formatCustom.workoutDetailsAndMetadata
+      timeoutMs: 10000
+  - await: { idle: true }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.formatCustom.workoutDetailsAndMetadata
+      expectedText: Include workout Details and Metadata tables Enabled
+      textMatch: equals
+      timeoutMs: 5000
+  - echo: Turn the workout tables switch off. Expect Disabled
+  # Coordinate: centre of glass.formatCustom.workoutDetailsAndMetadata after the section jump.
+  - tool: gesture-tap
+    args: { x: 0.501, y: 0.74 }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.formatCustom.workoutDetailsAndMetadata
+      expectedText: Include workout Details and Metadata tables Disabled
+      textMatch: equals
+      timeoutMs: 5000
+  - echo: Go back to the automation (autosaves). Expect the automation detail
+  # Coordinate: centre of the navigation back button. The simulator runner names it
+  # chevron.backward and a physical iPhone names it BackButton, so no one selector fits both.
+  - tool: gesture-tap
+    args: { x: 0.0945, y: 0.096 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.formatCustom
+      timeoutMs: 10000
+  - await: { idle: true }
+  - echo: Reopen Format and its Markdown body section. Expect the switch still Disabled (saved)
+  # Coordinate: centre of glass.automation.formatCustom.
+  - tool: gesture-tap
+    args: { x: 0.5, y: 0.686 }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.formatCustom.reset
+      timeoutMs: 10000
+  - await: { idle: true }
+  # Coordinate: the "Markdown body" segment.
+  - tool: gesture-tap
+    args: { x: 0.5, y: 0.163 }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.formatCustom.workoutDetailsAndMetadata
+      expectedText: Include workout Details and Metadata tables Disabled
+      textMatch: equals
+      timeoutMs: 10000
+  - await: { idle: true }
+  - echo: Turn the switch back on to restore the default. Expect Enabled
+  # Coordinate: centre of glass.formatCustom.workoutDetailsAndMetadata.
+  - tool: gesture-tap
+    args: { x: 0.501, y: 0.74 }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.formatCustom.workoutDetailsAndMetadata
+      expectedText: Include workout Details and Metadata tables Enabled
+      textMatch: equals
+      timeoutMs: 5000

@@ -43,13 +43,16 @@ for _ in {1..450}; do
 done
 rg -q "ANDROID_LIVE_LISTENER_READY:$HEALTHMD_LIVE_DIRECT_PORT" "$log"
 cd apps/android
-# Gradle's daemon registry lives in the shared ~/.gradle, so a build would attach to a daemon
-# another job (or sandbox) started; that daemon cannot write this worktree's .gradle/ (fileHashes.lock:
-# Operation not permitted), and another job's `gradlew --stop` stops it mid-build. A worktree-local
-# registry gives this run its own daemon while dependency and build caches stay shared.
+# Gradle and Kotlin daemons are shared through ~/.gradle and keep the sandbox of
+# the job that started them. Reusing one started for another worktree makes this
+# worktree's .gradle and build directories unwritable ("Cannot create directory"),
+# so each invocation compiles in its own processes.
+# --no-daemon can still fork a single-use daemon; registering it in a worktree-local
+# registry keeps another job's `gradlew --stop` from stopping it mid-build.
 daemon_registry="$repo_root/apps/android/build/ci-gradle-daemon"
 mkdir -p "$daemon_registry"
 common=(-Phealthmd.ciAbi="$abi" -PhealthmdInstrumentedTestBuildType=e2e --max-workers=2 --console=plain
+    --no-daemon -Pkotlin.compiler.execution.strategy=in-process
     -Dorg.gradle.daemon.registry.base="$daemon_registry")
 ./scripts/run-ci-gradle.sh "${common[@]}" :app:testPlayE2eUnitTest \
     --tests com.healthmd.data.health.HealthConnectPinnedZoneRangeTest \

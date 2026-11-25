@@ -184,6 +184,10 @@ class SchedulingManager: ObservableObject {
     private let scheduledProfileDestinationAdopter: @MainActor (ExportProfile?) -> Void
     private let isSharedSetupV2ProfileBlocked: @MainActor (UUID) -> Bool
     private let scheduledAPIDestinationResolver: @MainActor (ExportProfile?) -> APIExportDestinationSnapshot?
+    /// "Only update days that changed" (issue #457): anchors, plans and run status.
+    let incrementalScheduledExport: IncrementalScheduledExportRuntime
+    /// Changes when a profile's incremental run status changes, so the schedule page refreshes.
+    @MainActor @Published private(set) var incrementalStatusRevision = 0
     @MainActor private var activeProfileRequests: [UUID: PendingExportRequest] = [:]
     @MainActor @Published private(set) var pendingRecoveryProfileIDs: Set<UUID> = []
     private static let apiRecoveryDestinationChangedMessage = String(
@@ -292,8 +296,12 @@ class SchedulingManager: ObservableObject {
         scheduledGoogleDriveDestinationStore: GoogleDriveDestinationStore? = nil,
         scheduledProfileDestinationAdopter: (@MainActor (ExportProfile?) -> Void)? = nil,
         isSharedSetupV2ProfileBlocked: (@MainActor (UUID) -> Bool)? = nil,
-        scheduledAPIDestinationResolver: (@MainActor (ExportProfile?) -> APIExportDestinationSnapshot?)? = nil
+        scheduledAPIDestinationResolver: (@MainActor (ExportProfile?) -> APIExportDestinationSnapshot?)? = nil,
+        incrementalScheduledExport: IncrementalScheduledExportRuntime? = nil
     ) {
+        self.incrementalScheduledExport = incrementalScheduledExport ?? (TestMode.isUnitTesting
+            ? .unavailableForTests()
+            : IncrementalScheduledExportRuntime())
         self.pendingExportStore = pendingExportStore
         self.exportNotificationScheduler = exportNotificationScheduler
         self.shortcutExportRunner = shortcutExportRunner
@@ -3399,6 +3407,99 @@ class SchedulingManager: ObservableObject {
         )
     }
 
+    /// Narrows a fresh completed-day request to the days that need rewriting and
+    /// persists the narrowed residual dates, so completion and retries see exactly
+    /// the planned work. The immutable original window still drives range summaries.
+    @MainActor private func planIncrementalProfileRun(
+        profile: ExportProfile,
+        entry: ScheduledExportEntry,
+        request: PendingExportRequest
+    ) async -> (request: PendingExportRequest, rollupDates: [Date])? {
+        guard request.source == .scheduled, !request.dates.isEmpty else { return nil }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = request.originalCalendarTimeZoneIdentifier
+            .flatMap(TimeZone.init(identifier:)) ?? .current
+        let settings = request.settingsSnapshot ?? profile.settings
+        let prepared = await incrementalScheduledExport.prepare(
+            profile: profile,
+            entry: entry,
+            settings: settings,
+            requestID: request.id,
+            windowDates: request.dates,
+            calendar: calendar,
+            now: now(),
+            missingFileDays: { [weak self] daysWithData in
+                guard let self, profile.target == .localIPhoneFolder, !daysWithData.isEmpty else { return [] }
+                return await self.missingLocalFileDays(
+                    profile: profile, settings: settings, days: daysWithData, calendar: calendar)
+            }
+        )
+        let plan = prepared.plan
+        logger.info("Incremental scheduled run: \(plan.mode.rawValue, privacy: .public) \(plan.datesToExport.count)/\(request.dates.count) days")
+        guard plan.mode == .incremental, plan.datesToExport.count < request.dates.count else {
+            return (request, prepared.rollupDates)
+        }
+        guard let stored = try? pendingExportStore.loadAll().first(where: { $0.id == request.id }) else {
+            return nil
+        }
+        let narrowed = stored.replacingResidualDates(plan.datesToExport, attemptedAt: stored.attemptedAt ?? now())
+        do {
+            try pendingExportStore.upsert(narrowed)
+        } catch {
+            logger.error("Failed to save incremental scheduled dates: \(error.localizedDescription)")
+            return nil
+        }
+        return (narrowed, prepared.rollupDates)
+    }
+
+    /// Days whose daily files are missing from the profile's folder. Runs under the
+    /// folder gate because destination adoption is process-global.
+    @MainActor private func missingLocalFileDays(
+        profile: ExportProfile,
+        settings: ExportSettingsSnapshot,
+        days: Set<Date>,
+        calendar: Calendar
+    ) async -> Set<Date> {
+        await profileFolderRunGate.withPermit {
+            await self.missingLocalFileDaysWithPermit(
+                profile: profile, settings: settings, days: days, calendar: calendar)
+        }
+    }
+
+    @MainActor private func missingLocalFileDaysWithPermit(
+        profile: ExportProfile,
+        settings: ExportSettingsSnapshot,
+        days: Set<Date>,
+        calendar: Calendar
+    ) -> Set<Date> {
+        do {
+            scheduledProfileDestinationAdopter(profile)
+            defer { scheduledProfileDestinationAdopter(scheduledProfileStore.activeProfile) }
+            let vaultManager = VaultManager()
+            vaultManager.refreshVaultAccess()
+            guard let lease = vaultManager.beginVaultAccess(), let vaultURL = vaultManager.vaultURL else {
+                // Unknown folder state: let the export itself report access problems.
+                return []
+            }
+            defer { lease.stop() }
+            let advanced = settings.makeAdvancedExportSettings()
+            return IncrementalExportMissingFiles.missingDays(
+                windowDates: days.sorted(),
+                daysWithData: days,
+                settings: advanced,
+                vaultURL: vaultURL,
+                healthSubfolder: settings.healthSubfolder ?? vaultManager.healthSubfolder,
+                fileExists: { FileManager.default.fileExists(atPath: $0.path(percentEncoded: false)) }
+            )
+        }
+    }
+
+    /// "Re-export everything": the profile's next scheduled run exports its whole window.
+    @MainActor func resetIncrementalExport(profileID: UUID) throws {
+        try incrementalScheduledExport.reset(profileID: profileID)
+        incrementalStatusRevision &+= 1
+    }
+
     @MainActor private func runProfileOccurrence(
         _ due: ScheduledExportEntryStore.DueEntryOccurrence
     ) async {
@@ -3469,9 +3570,9 @@ class SchedulingManager: ObservableObject {
             enabledAt: entry.enabledAt,
             apiDestinationIdentity: profile.target == .apiEndpoint ? apiIdentity(for: profile) : nil
         )
-        let pendingRequest: PendingExportRequest
+        let preparedRequest: PendingExportRequest
         do {
-            pendingRequest = try await scheduledExportCoordinator.preparePendingScheduledExport(
+            preparedRequest = try await scheduledExportCoordinator.preparePendingScheduledExport(
                 schedule: entry.dateMathProjection,
                 fireDate: due.fireDate,
                 kind: due.kind,
@@ -3483,8 +3584,19 @@ class SchedulingManager: ObservableObject {
             logger.error("Failed to prepare profile scheduled export: \(error.localizedDescription)")
             return
         }
-        cancelPendingExportFallbackNotification(for: pendingRequest)
-        markPendingExportRequestAttempted(pendingRequest)
+        cancelPendingExportFallbackNotification(for: preparedRequest)
+        // Only a fresh occurrence is planned; a retry keeps its exact residual dates
+        // and its staged incremental state.
+        let isFreshOccurrence = preparedRequest.attemptedAt == nil
+        markPendingExportRequestAttempted(preparedRequest)
+
+        var pendingRequest = preparedRequest
+        var rollupDates = pendingRequest.originalRequestedDates
+        if isFreshOccurrence, due.kind == .completedDay, entry.onlyUpdateChangedDays,
+           let narrowed = await planIncrementalProfileRun(profile: profile, entry: entry, request: pendingRequest) {
+            pendingRequest = narrowed.request
+            rollupDates = narrowed.rollupDates
+        }
 
         // The coordinator creates the full occurrence window once, then reuses
         // exact unresolved dates on retries, including after lookback edits.
@@ -3499,7 +3611,7 @@ class SchedulingManager: ObservableObject {
         let result = await runCancellableNotificationExport(operationID: pendingRequest.id) {
             await self.runProfileScopedExport(
                 profile: profile, dates: dates, target: target, settings: settings,
-                originalRequestedDates: pendingRequest.originalRequestedDates,
+                originalRequestedDates: rollupDates,
                 originalCalendarTimeZoneIdentifier: pendingRequest.originalCalendarTimeZoneIdentifier,
                 quotaJobID: pendingRequest.id,
                 notificationOperationID: pendingRequest.id,
@@ -3508,6 +3620,12 @@ class SchedulingManager: ObservableObject {
         }
 
         let completion = await completePendingScheduledExport(pendingRequest, result: result)
+        if completion == .clearedAfterSuccess, due.kind == .completedDay {
+            // Anchors advance only after every planned day was written.
+            if incrementalScheduledExport.commit(requestID: pendingRequest.id, profileID: profile.id) != nil {
+                incrementalStatusRevision &+= 1
+            }
+        }
         if completion == .clearedAfterSuccess, canRecordScheduledProgress(pendingRequest) {
             scheduledEntryStore.recordSuccess(
                 profileID: due.profileID,

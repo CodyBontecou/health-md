@@ -13,7 +13,7 @@ description: "Contrôlez la mise en forme des sorties sans modifier les données
 <div class="callout"><strong>Besoin du contrat exact ?</strong><p style="margin-top:6px;">Consultez la <a href="/fr/docs/reference/export-formats/">référence des formats</a> issue de la production, les <a href="/fr/docs/reference/generated/core/csv-row-contracts/">contrats des lignes CSV</a> et les fixtures complètes téléchargeables.</p></div>
 
 ## Date et heure
-<p>Choisissez le format de date (par ex. <code>YYYY-MM-DD</code>, <code>MMM d, yyyy</code>) et celui de l’heure (sur 12 ou 24 heures). Le bloc d’aperçu au bas de l’écran s’actualise à mesure que vous modifiez les réglages.</p>
+<p>Choisissez le format de date (par ex. <code>YYYY-MM-DD</code>, <code>MMM d, yyyy</code>) et celui de l’heure (sur 12 ou 24 heures). Le bloc d’aperçu au bas de l’écran s’actualise à mesure que vous modifiez les réglages. Le format de date définit la propriété <code>date</code> du frontmatter, y compris <code>DD-MM-YYYY</code>. Sur iPhone, iPad et Mac, vous pouvez aussi choisir un motif personnalisé et composer la date avec les espaces réservés du nom de fichier, par ex. <code>{day}-{month}-{year}</code>. Un motif non valide écrit la date ISO.</p>
 
 ## Système d’unités
 <p>Basculez entre <em>Métrique</em> et <em>Impérial</em>. Ce réglage concerne notamment la distance (m/km ou ft/mi), le poids (kg ou lb) et la température (°C ou °F). HealthKit conserve toujours les unités canoniques ; la conversion intervient lors de l’export.</p>

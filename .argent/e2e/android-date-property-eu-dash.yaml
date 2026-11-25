@@ -1,0 +1,42 @@
+version: 1
+requires:
+  platform: android
+# PARTIAL (navigation only). Pixel QA path for the EU Dash date preset (#452) on the separate
+# com.healthmd.android.e2e QA app (assemblePlayE2e), so the main com.healthmd.android install is
+# untouched. Needs an onboarded "Default" automation.
+# Known gap: the Format Customization screen is not in the Argent accessibility tree on this
+#   device (describe stays on the previous screen), so the EU Dash selection and its checked state
+#   were verified with `adb shell uiautomator dump` + `input tap` outside this test (see PR
+#   comment). Extend this test once the runner can read that screen.
+# Side effects: none (navigation only).
+steps:
+  - echo: Launch the Health.md e2e QA app. Expect its home screen
+  - launch: com.healthmd.android.e2e
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Archive
+      timeoutMs: 15000
+  - await: { idle: true }
+  - echo: Open the Automations tab. Expect the automations list
+  # Scope to the bottom tab: Archive also has an "Automations" card heading higher up.
+  - tap: { text: Automations, after: { text: counts a day complete } }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: New automation
+  - await: { idle: true }
+  - echo: Open the Default automation. Expect its settings
+  - tap:
+      text: Writes 106 metrics to HealthMD-E2E-QA
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Format / Standard
+  - await: { idle: true }
+  - echo: Open Format. Expect the date format choices
+  - tap:
+      text: Standard
