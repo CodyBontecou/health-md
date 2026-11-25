@@ -28,7 +28,7 @@ tags:
 | --- | --- | --- | --- |
 | One workout as GPX | Older watches (Amazfit Stratos 3, Pace): export on the watch, then connect it to a computer. Other watches: connect Strava or Relive in Zepp, then download from Strava | A GPX file for that activity | [Amazfit support](https://support.amazfit.com/it/amazfit_stratos_3/docs/CQCWdRLxEoJhw8x9UcLcsMESnsq), [Amazfit GTS 2 mini support](https://support.amazfit.com/en/amazfit_gts_2_mini/docs/N6cUdJxDRo6rbfxiLs1cJDBrnRd) |
 | Full account data | Zepp's personal-data export (Exercising user rights) | A download from Zepp; format and timing are not documented | [Zepp privacy support](https://www.zepp.com/privacy-support) |
-| Daily files on iPhone | Share Zepp to Apple Health, verify, then export with Health.md | Markdown, CSV or JSON per day | [Amazfit support](https://support.amazfit.com/en/amazfit_gts_2_mini/docs/N6cUdJxDRo6rbfxiLs1cJDBrnRd), [Apple iPhone User Guide](https://support.apple.com/guide/iphone/welcome/ios) |
+| Daily files on iPhone | Share Zepp to Apple Health, verify, then export with Health.md | Markdown, CSV or JSON per day | [Amazfit support](https://support.amazfit.com/en/amazfit_gts_2_mini/docs/N6cUdJxDRo6rbfxiLs1cJDBrnRd), [Apple: Share your data in Health](https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios) |
 
 Health.md reads authorized Apple Health records and saves them to a folder. It does not sign in to Zepp, import Zepp's archive or recover records Zepp has not shared. Nothing below documents a Zepp importer or full-history backfill.
 
@@ -53,7 +53,7 @@ Zepp's [September 2026 announcement](https://zepp.com/blog/your-data-your-storag
 Amazfit's [Zepp sharing instructions](https://support.amazfit.com/en/amazfit_gts_2_mini/docs/N6cUdJxDRo6rbfxiLs1cJDBrnRd) cover Apple Health sharing for one device; other watches may differ.
 
 1. Sync your watch with the Zepp app and enable the Apple Health connection where your watch offers it.
-2. On the iPhone, open Apple Health, tap your profile picture, then **Apps → Zepp**, and turn on the categories you want. See the Health section of the [Apple iPhone User Guide](https://support.apple.com/guide/iphone/welcome/ios).
+2. On the iPhone, open Apple Health, tap your profile picture, then **Privacy → Apps → Zepp**, and turn on the categories you want. Apple describes this in [Share your data in Health on iPhone](https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios).
 3. Open a known day in Apple Health and confirm Zepp records are there.
 4. Compare dates and detail before choosing an export range.
 
