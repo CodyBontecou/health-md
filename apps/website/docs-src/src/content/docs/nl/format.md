@@ -17,7 +17,7 @@ description: "Bepaal de opmaak van de uitvoer zonder te wijzigen welke gegevens 
 </div>
 
 ## Datum en tijd
-<p>Kies een datumnotatie, bijvoorbeeld <code>YYYY-MM-DD</code>, <code>MMM d, yyyy</code> of <code>DD-MM-YYYY</code>, en een 12-uurs- of 24-uursnotatie voor tijden. Het voorbeeld onderaan het scherm verandert direct als je de instellingen aanpast. De datumnotatie bepaalt de frontmatter-eigenschap <code>date</code>. Op iPhone, iPad en Mac kun je ook een eigen patroon kiezen en de datum opbouwen uit de bestandsnaam-plaatshouders, bijvoorbeeld <code>{day}-{month}-{year}</code>. Een ongeldig patroon schrijft de ISO-datum.</p>
+<p>Kies een datumnotatie, bijvoorbeeld <code>YYYY-MM-DD</code> of <code>MMM d, yyyy</code>, en een 12-uurs- of 24-uursnotatie voor tijden. Het voorbeeld onderaan het scherm verandert direct als je de instellingen aanpast. De datumnotatie bepaalt de frontmatter-eigenschap <code>date</code>, ook <code>DD-MM-YYYY</code>. Op iPhone, iPad en Mac kun je ook een eigen patroon kiezen en de datum opbouwen uit de bestandsnaam-plaatshouders, bijvoorbeeld <code>{day}-{month}-{year}</code>. Een ongeldig patroon schrijft de ISO-datum.</p>
 
 ## Eenhedensysteem
 <p>Schakel tussen <em>Metrisch</em> en <em>Imperiaal</em>. Dit beïnvloedt onder meer afstand (m/km tegenover ft/mi), gewicht (kg tegenover lb) en temperatuur (°C tegenover °F). HealthKit bewaart gegevens altijd in canonieke eenheden; Health.md rekent ze tijdens de export om.</p>
