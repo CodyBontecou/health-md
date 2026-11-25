@@ -26,7 +26,7 @@ tags:
 
 | Task | Route | What you get | Source |
 | --- | --- | --- | --- |
-| One workout as GPX | Older watches (Amazfit Stratos 3, Pace): export on the watch, copy over USB. Other watches: connect Strava or Relive in Zepp, then download from Strava | A GPX file for that activity | [Amazfit support](https://support.amazfit.com/it/amazfit_stratos_3/docs/CQCWdRLxEoJhw8x9UcLcsMESnsq), [Amazfit GTS 2 mini support](https://support.amazfit.com/en/amazfit_gts_2_mini/docs/N6cUdJxDRo6rbfxiLs1cJDBrnRd) |
+| One workout as GPX | Older watches (Amazfit Stratos 3, Pace): export on the watch, then connect it to a computer. Other watches: connect Strava or Relive in Zepp, then download from Strava | A GPX file for that activity | [Amazfit support](https://support.amazfit.com/it/amazfit_stratos_3/docs/CQCWdRLxEoJhw8x9UcLcsMESnsq), [Amazfit GTS 2 mini support](https://support.amazfit.com/en/amazfit_gts_2_mini/docs/N6cUdJxDRo6rbfxiLs1cJDBrnRd) |
 | Full account data | Zepp's personal-data export (Exercising user rights) | A download from Zepp; format and timing are not documented | [Zepp privacy support](https://www.zepp.com/privacy-support) |
 | Daily files on iPhone | Share Zepp to Apple Health, verify, then export with Health.md | Markdown, CSV or JSON per day | [Amazfit support](https://support.amazfit.com/en/amazfit_gts_2_mini/docs/N6cUdJxDRo6rbfxiLs1cJDBrnRd), [Apple iPhone User Guide](https://support.apple.com/guide/iphone/welcome/ios) |
 
@@ -34,7 +34,7 @@ Health.md reads authorized Apple Health records and saves them to a folder. It d
 
 ## Export one workout as a GPX file
 
-**Older watches (Amazfit Stratos 3, Pace).** Amazfit's [Stratos 3 support document](https://support.amazfit.com/it/amazfit_stratos_3/docs/CQCWdRLxEoJhw8x9UcLcsMESnsq) describes exporting an activity record from the watch as a GPX file. In short: open the activity record on the watch, swipe left, tap **Export**, connect the watch to a computer over USB and find the file in the GPX folder. That page is written for those older models (the Pace has its own FAQ entry, [FAQ 658](https://support.amazfit.com/en/faq/658); see also [FAQ 992](https://support.amazfit.com/en/faq/992)). Do not assume your watch has the same menu.
+**Older watches (Amazfit Stratos 3, Pace).** Amazfit's [Stratos 3 support document](https://support.amazfit.com/it/amazfit_stratos_3/docs/CQCWdRLxEoJhw8x9UcLcsMESnsq) describes exporting an activity record from the watch as a GPX file. In short: open the activity record on the watch, swipe left, tap **Export**, connect the watch to a computer and find the file in the GPX date folder. That page is written for those older models (the Pace has its own FAQ entry, [FAQ 658](https://support.amazfit.com/en/faq/658); see also [FAQ 992](https://support.amazfit.com/en/faq/992)). Do not assume your watch has the same menu.
 
 **Other watches.** Amazfit's [GTS 2 mini support page](https://support.amazfit.com/en/amazfit_gts_2_mini/docs/N6cUdJxDRo6rbfxiLs1cJDBrnRd) documents connecting Strava and Relive under **Profile → Add accounts** in the Zepp app. Once activities have synced to Strava, download the original or GPX from strava.com using the [Strava export guide](/blog/export-strava-data/). Only activities that reached Strava can be downloaded there, and a GPX needs recorded GPS points.
 
@@ -57,7 +57,7 @@ Amazfit's [Zepp sharing instructions](https://support.amazfit.com/en/amazfit_gts
 3. Open a known day in Apple Health and confirm Zepp records are there.
 4. Compare dates and detail before choosing an export range.
 
-Check the data you need, not just that the switch is on. A visible workout does not prove its route or continuous heart-rate stream was shared. Sleep entries do not carry proprietary scores such as PAI or a sleep score. Enabling sharing does not backfill your complete Zepp history.
+Check the data you need, not just that the switch is on. A visible workout does not prove its route or continuous heart-rate stream was shared. A sleep entry does not establish that a proprietary sleep score is present. Enabling sharing does not backfill your complete Zepp history.
 
 If you use a Zepp Life scale, check that weight reached Apple Health, then see the [Apple Health weight export guide](/blog/export-apple-health-weight-data/).
 
