@@ -59,7 +59,7 @@ The phone and CLI bind the immutable request, source, scope, and committed trans
 
 ## Keep the artifact private
 
-A corpus can contain exact times, routes, clinical text, medications, symptoms, and attachments. Write it to a private path, verify checksums or receipts where provided, and do not paste it into a model conversation.
+A corpus can contain exact times, routes, clinical text, medications, symptoms, and attachments. Write it to a private path, verify checksums or receipts where provided, and do not paste it into a model conversation. For the medication dose log specifically, see [exporting Apple Health medications](/blog/export-apple-health-medications/).
 
 Current development MCP source also contains two approval-gated corpus tools, but they belong only to the complete local stdio profile. Release documentation must continue to separate those tools from the published 19-tool alpha.6 package and the unpublished alpha.7 candidate.
 

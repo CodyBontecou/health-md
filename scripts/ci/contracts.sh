@@ -9,6 +9,7 @@ python3 -m unittest discover -s apps/apple/scripts/tests -p 'test_daily_note_loc
 python3 -m unittest discover -s apps/apple/scripts/tests -p 'test_individual_tracking_localizations.py'
 python3 -m unittest discover -s apps/apple/scripts/tests -p 'test_apple_localization_*.py'
 python3 -m unittest discover -s apps/apple/scripts/tests -p 'test_merge_reviewed_localizations.py'
+python3 -m unittest discover -s apps/apple/scripts/tests -p 'test_info_plist_development_region.py'
 # All manifests, fixtures and producer/consumer mirrors; source-only checkout omits media links.
 python3 packages/contracts/validate.py --product-parity-only
 python3 -m unittest discover -s packages/contracts -p 'test_validate_manifest.py'

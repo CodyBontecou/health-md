@@ -296,7 +296,7 @@ extension HealthData {
     func exportSnapshot(customization: FormatCustomization) -> ExportDataSnapshot {
         let converter = customization.unitConverter
         let calendarTimeZone = timeContext.calendarTimeZone
-        let dateString = customization.dateFormat.format(date: date, timeZone: calendarTimeZone)
+        let dateString = customization.formatDate(date, timeZone: calendarTimeZone)
 
         let mindfulnessDerivation = ExportFrontmatterMetricBuilder.deriveMindfulness(from: mindfulness)
 

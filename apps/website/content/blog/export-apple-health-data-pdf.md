@@ -39,6 +39,8 @@ This is a document workflow in **Settings**, rather than another format in the d
 
 If you only need a PDF of a completed **Apple Blood Pressure Log**, Apple provides its own **Export PDF** option. Check [Apple's log instructions](https://support.apple.com/en-nz/122995) for requirements and availability. You do not need Health.md for that workflow; the steps below create a separately selected report in Health.md.
 
+For the medication dose log rather than the list, see [how to export your Apple Health medication log](/blog/export-apple-health-medications/).
+
 Clinician Report is available on **iPhone and Android**; the Apple PDF workflow described here is on iPhone, not the Mac app. Android uses Health Connect and its own native controls; start from Settings → Clinician Report and the [report documentation](/docs/clinician-report/).
 
 ## 1. Open Clinician Report and choose a period

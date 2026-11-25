@@ -2,11 +2,22 @@
 
 All notable changes to Health.md will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- Date property format: a new EU Dash preset (13-01-2026), and a Custom pattern built from the filename placeholders, such as `{day}-{month}-{year}`, with a live preview. It sets the frontmatter `date` value and the date in JSON and CSV exports. An empty or invalid pattern writes the ISO date (2026-01-13), and existing settings don't change (#452).
+
+### Fixed
+- Customize format: the "Workout Details and Metadata" switch is back in the Markdown body section, so you can turn the workout Details and Metadata tables off again (#167). A choice made before 4.0 is kept.
+
 ## [4.0.1] - 2026-11-22
 
 ### Changed
 - The App Store page shows screenshots of the redesigned app on iPhone, iPad and Mac.
 - Updating straight from 3.x to 4.0.1 shows the 4.0 What's New sheet. Anyone who already saw it on 4.0.0 doesn't see it again.
+
+### Fixed
+- Apple Watch: the dashboard showed German labels when the watch language was English.
 
 ## [4.0.0] - 2026-11-21
 

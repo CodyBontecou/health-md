@@ -64,6 +64,18 @@ final class WatchDashboardViewModel: ObservableObject {
     }
 
     func refresh() async {
+        #if DEBUG
+        // App Store captures (Debug builds only): launch with `-watch.appStoreFixture YES` to show
+        // WatchDashboardG's values as a connected dashboard, without HealthKit or a status line.
+        if UserDefaults.standard.bool(forKey: "watch.appStoreFixture") {
+            snapshot = .appStoreFixture
+            accessState = .connected
+            errorMessage = nil
+            statusMessage = nil
+            isLoading = false
+            return
+        }
+        #endif
         isLoading = true
         errorMessage = nil
         statusMessage = nil

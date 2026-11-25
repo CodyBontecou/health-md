@@ -15,6 +15,7 @@ enum class DateFormatPreference(val pattern: String) {
     US_LONG("MMMM d, yyyy"),
     EU_DOT("dd.MM.yyyy"),
     EU_SHORT("dd/MM/yyyy"),
+    EU_DASH("dd-MM-yyyy"),
     EU_LONG("d MMMM yyyy"),
     COMPACT("yyyyMMdd"),
     FRIENDLY("EEE, MMM d, yyyy");

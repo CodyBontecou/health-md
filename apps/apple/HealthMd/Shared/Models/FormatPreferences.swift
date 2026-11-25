@@ -16,10 +16,15 @@ enum DateFormatPreference: String, CaseIterable, Codable {
     case usLong = "MMMM d, yyyy"          // January 13, 2026
     case euDot = "dd.MM.yyyy"             // 13.01.2026
     case euShort = "dd/MM/yyyy"           // 13/01/2026
+    case euDash = "dd-MM-yyyy"            // 13-01-2026
     case euLong = "d MMMM yyyy"           // 13 January 2026
     case compact = "yyyyMMdd"             // 20260113
     case friendly = "EEE, MMM d, yyyy"    // Mon, Jan 13, 2026
-    
+    /// A user pattern built from the filename date placeholders, stored in
+    /// `FormatCustomization.customDatePattern`. The raw value is a marker, not a
+    /// DateFormatter pattern.
+    case custom = "custom"
+
     var displayName: String {
         switch self {
         case .iso8601: return String(localized: "ISO 8601 (2026-01-13)", comment: "Date format option")
@@ -27,17 +32,143 @@ enum DateFormatPreference: String, CaseIterable, Codable {
         case .usLong: return String(localized: "US Long (January 13, 2026)", comment: "Date format option")
         case .euDot: return String(localized: "EU Dot (13.01.2026)", comment: "Date format option")
         case .euShort: return String(localized: "EU Short (13/01/2026)", comment: "Date format option")
+        case .euDash: return String(localized: "EU Dash (13-01-2026)", comment: "Date format option")
         case .euLong: return String(localized: "EU Long (13 January 2026)", comment: "Date format option")
         case .compact: return String(localized: "Compact (20260113)", comment: "Date format option")
         case .friendly: return String(localized: "Friendly (Mon, Jan 13, 2026)", comment: "Date format option")
+        case .custom: return String(localized: "Custom pattern", comment: "Date format option")
         }
     }
-    
-    func format(date: Date, timeZone: TimeZone = .current) -> String {
+
+    /// Decodes a stored raw value. Values this build does not know (for example a
+    /// preset added by a newer version) fall back to ISO 8601 instead of failing the
+    /// whole settings document.
+    static func decodeTolerantly<Key: CodingKey>(
+        from container: KeyedDecodingContainer<Key>,
+        forKey key: Key
+    ) throws -> DateFormatPreference {
+        guard let raw = try container.decodeIfPresent(String.self, forKey: key) else { return .iso8601 }
+        return DateFormatPreference(rawValue: raw) ?? .iso8601
+    }
+
+    /// Formats a preset. `.custom` renders `customPattern`; an empty or invalid
+    /// custom pattern falls back to ISO 8601 so an export never fails or writes
+    /// an unsafe frontmatter value.
+    func format(date: Date, timeZone: TimeZone = .current, customPattern: String? = nil) -> String {
+        if self == .custom {
+            if let customPattern,
+               let rendered = CustomDatePattern.format(customPattern, date: date, timeZone: timeZone) {
+                return rendered
+            }
+            return DateFormatPreference.iso8601.format(date: date, timeZone: timeZone)
+        }
         let formatter = DateFormatter()
         formatter.dateFormat = self.rawValue
         formatter.timeZone = timeZone
         return formatter.string(from: date)
+    }
+}
+
+// MARK: - Date placeholders
+
+/// The `{year}`-style date placeholders shared by filename, folder, and custom
+/// date-property templates.
+enum DatePlaceholderTemplate {
+    /// Every placeholder `apply` replaces.
+    static let tokens = [
+        "{date}", "{year}", "{YR}", "{month}", "{day}", "{weekday}",
+        "{monthName}", "{quarter}", "{week}", "{weekYear}"
+    ]
+
+    static func apply(to template: String, for date: Date, timeZone: TimeZone) -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.timeZone = timeZone
+        var result = ISOWeekDateTokens.apply(to: template, for: date, timeZone: timeZone)
+
+        // {date} -> yyyy-MM-dd
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        result = result.replacingOccurrences(of: "{date}", with: dateFormatter.string(from: date))
+
+        // {year} -> yyyy
+        dateFormatter.dateFormat = "yyyy"
+        result = result.replacingOccurrences(of: "{year}", with: dateFormatter.string(from: date))
+
+        // {YR} -> yy
+        dateFormatter.dateFormat = "yy"
+        result = result.replacingOccurrences(of: "{YR}", with: dateFormatter.string(from: date))
+
+        // {month} -> MM
+        dateFormatter.dateFormat = "MM"
+        result = result.replacingOccurrences(of: "{month}", with: dateFormatter.string(from: date))
+
+        // {day} -> dd
+        dateFormatter.dateFormat = "dd"
+        result = result.replacingOccurrences(of: "{day}", with: dateFormatter.string(from: date))
+
+        // {weekday} -> Monday, Tuesday, etc.
+        dateFormatter.dateFormat = "EEEE"
+        result = result.replacingOccurrences(of: "{weekday}", with: dateFormatter.string(from: date))
+
+        // {monthName} -> January, February, etc.
+        dateFormatter.dateFormat = "MMMM"
+        result = result.replacingOccurrences(of: "{monthName}", with: dateFormatter.string(from: date))
+
+        // {quarter} -> Q1, Q2, Q3, Q4
+        var calendar = Calendar.current
+        calendar.timeZone = timeZone
+        let month = calendar.component(.month, from: date)
+        let quarter = "Q\((month - 1) / 3 + 1)"
+        result = result.replacingOccurrences(of: "{quarter}", with: quarter)
+
+        return result
+    }
+}
+
+/// A custom frontmatter `date` pattern, written with the filename placeholders,
+/// e.g. `{day}-{month}-{year}`.
+///
+/// The value is written unquoted into YAML frontmatter, JSON, and CSV, so the
+/// grammar is deliberately narrow: known placeholders plus letters, digits,
+/// spaces, and `- . / _ ,`. It must start with a placeholder, letter, or digit
+/// and contain at least one placeholder. Anything else is invalid and renders
+/// as ISO 8601 instead.
+enum CustomDatePattern {
+    static let maximumLength = 64
+    static let defaultPattern = "{day}-{month}-{year}"
+    private static let literalPunctuation: Set<Character> = [" ", "-", ".", "/", "_", ","]
+    private static let knownTokens = Set(DatePlaceholderTemplate.tokens)
+
+    static func isValid(_ pattern: String) -> Bool {
+        guard !pattern.isEmpty,
+              pattern.count <= maximumLength,
+              let first = pattern.first,
+              first == "{" || first.isLetter || (first.isASCII && first.isNumber),
+              pattern.last != " " else { return false }
+        var placeholderCount = 0
+        var index = pattern.startIndex
+        while index < pattern.endIndex {
+            let character = pattern[index]
+            if character == "{" {
+                guard let close = pattern[index...].firstIndex(of: "}") else { return false }
+                guard knownTokens.contains(String(pattern[index...close])) else { return false }
+                placeholderCount += 1
+                index = pattern.index(after: close)
+                continue
+            }
+            // Letters from any script are safe; only ASCII digits count as digits.
+            let isSafeLiteral = character.isLetter
+                || (character.isASCII && character.isNumber)
+                || literalPunctuation.contains(character)
+            guard isSafeLiteral else { return false }
+            index = pattern.index(after: index)
+        }
+        return placeholderCount > 0
+    }
+
+    /// The rendered value, or nil when the pattern is invalid.
+    static func format(_ pattern: String, date: Date, timeZone: TimeZone) -> String? {
+        guard isValid(pattern) else { return nil }
+        return DatePlaceholderTemplate.apply(to: pattern, for: date, timeZone: timeZone)
     }
 }
 

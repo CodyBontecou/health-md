@@ -7,8 +7,8 @@ updated: "2026-10-30"
 category: "Workflow guide"
 related:
   - export-apple-health-data-pdf
+  - export-apple-health-medications
   - export-omron-connect-data
-  - export-health-data-without-the-cloud
 draft: false
 verified: "2026-10-30"
 verified_by: "Codex (agent)"

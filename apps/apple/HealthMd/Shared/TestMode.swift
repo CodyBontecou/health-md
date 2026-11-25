@@ -134,6 +134,21 @@ enum TestMode {
         env("UITEST_MAC_DESTINATION_PATH") ?? "/tmp/TestMacVault"
     }
 
+    /// Fixed "today" (yyyy-MM-dd, UTC noon) for format-customization date previews, so
+    /// UI tests can assert exact preview strings. Unavailable in Release.
+    static var formatPreviewDate: Date? {
+        #if DEBUG
+        guard isUITesting, let value = env("UITEST_FORMAT_PREVIEW_DATE") else { return nil }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        return formatter.date(from: value + " 12:00")
+        #else
+        return nil
+        #endif
+    }
+
     /// Whether export preview should use deterministic in-app HealthKit fixtures.
     static var useHealthKitExportPreviewFixtures: Bool {
         env("UITEST_HEALTHKIT_EXPORT_PREVIEW_FIXTURES") == "true"
@@ -197,6 +212,27 @@ enum TestMode {
     }
 
     /// Simulated remote-config state. Supported values: "available" or "offline".
+    /// Incremental scheduled-export status shown on the schedule page in UI tests.
+    /// "incremental" renders a fixed synthetic run (Nov 18, 21, 23 2026, UTC) through the
+    /// real summary formatter, since UI-test launches never run a HealthKit export.
+    static var incrementalStatusFixture: String? {
+        guard isUITesting, env("UITEST_INCREMENTAL_STATUS") == "incremental" else { return nil }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        let days = [18, 21, 23].compactMap {
+            calendar.date(from: DateComponents(year: 2026, month: 11, day: $0))
+        }
+        return IncrementalRunSummary(
+            runAt: days.last ?? Date(),
+            mode: .incremental,
+            fullReason: nil,
+            updatedDays: days,
+            changedDayCount: 1,
+            unchangedDayCount: 27,
+            calendarTimeZoneIdentifier: "UTC"
+        ).statusText
+    }
+
     static var remoteConfig: String {
         env("UITEST_REMOTE_CONFIG") ?? "available"
     }

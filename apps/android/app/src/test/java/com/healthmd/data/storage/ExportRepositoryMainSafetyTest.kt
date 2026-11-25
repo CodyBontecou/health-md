@@ -9,6 +9,7 @@ import com.healthmd.data.storage.FileExportManager.Companion.writeUtf8
 import com.healthmd.domain.exportengine.LocalDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.LocalDailyAggregatePlanningResult
 import com.healthmd.domain.model.ActivityData
+import com.healthmd.domain.model.DailyNoteInjectionSettings
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthData
@@ -71,6 +72,41 @@ class ExportRepositoryMainSafetyTest {
         assertThat(writeThreads).hasSize(2)
         assertThat(callerThread[0]).isNotNull()
         assertThat(writeThreads).doesNotContain(callerThread[0])
+    }
+
+    /**
+     * Play ANR (issue #432, version code 41): the main thread blocked in a SAF binder call from
+     * `findChildFolder` <- `ensureSubfolders` <- `writeFile` <- `writeFileAtRelativePath` <-
+     * `exportLegacy`, the daily-note side-effect write. That lookup and write must run off the
+     * caller's thread too.
+     */
+    @Test
+    fun legacyDailyNoteSideEffectReadsAndWritesOffTheCallingThread() = runBlocking {
+        val sideEffectThreads = mutableListOf<Thread>()
+        val manager = mockk<FileExportManager>(relaxed = true)
+        every { manager.writeFile(any(), any(), any(), any(), any(), any()) } returns true
+        every { manager.readFileAtRelativePath(any(), any()) } answers {
+            sideEffectThreads += Thread.currentThread()
+            null
+        }
+        every { manager.writeFileAtRelativePath(any(), any(), any(), any()) } answers {
+            sideEffectThreads += Thread.currentThread()
+            true
+        }
+        val repository = repository(manager)
+        val settings = settings(ExportFormat.MARKDOWN).copy(
+            dailyNoteInjection = DailyNoteInjectionSettings(enabled = true, folderPath = "Daily/2026"),
+        )
+
+        val success = withContext(callerDispatcher) { repository.exportHealthData(day, settings) }
+
+        assertThat(success).isTrue()
+        verify(exactly = 1) {
+            manager.writeFileAtRelativePath(folderUri, "Daily/2026/2026-03-15.md", any(), any())
+        }
+        assertThat(sideEffectThreads).hasSize(2)
+        assertThat(callerThread[0]).isNotNull()
+        assertThat(sideEffectThreads).doesNotContain(callerThread[0])
     }
 
     /**

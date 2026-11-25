@@ -92,6 +92,21 @@ class SharedSetupV2ProfileTransactionTest {
     }
 
     @Test
+    fun `EU Dash is never substituted into frozen shared setup v2`() {
+        val base = baseSettings()
+        val profile = nativeProfile(
+            EXISTING_ONE_ID, "EU Dash",
+            settings = base.copy(formatCustomization = base.formatCustomization.copy(dateFormat = DateFormatPreference.EU_DASH)),
+        )
+        val error = runCatching {
+            SharedSetupV2Mapper(EmptyRegistry).export(listOf(profile), profile.id, emptyList(), "test")
+        }.exceptionOrNull()
+        assertThat(error).isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(error!!.message).contains("Shared Setup v2")
+        assertThat(DateFormatPreference.EU_DASH.format(LocalDate.of(2026, 1, 13))).isEqualTo("13-01-2026")
+    }
+
+    @Test
     fun `add normalizes selection preserves existing order schedules and active then materializes blocked profiles`() = runTest {
         val existing = listOf(
             nativeProfile(EXISTING_ONE_ID, "Daily"),

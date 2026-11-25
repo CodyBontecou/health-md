@@ -66,6 +66,13 @@ struct GlassScheduleSheet: View {
                 section(String(localized: "When")) { whenRows }
 
                 VStack(alignment: .leading, spacing: 6) {
+                    section(String(localized: "Changes")) { changedDaysRows }
+                    if draft.onlyUpdateChangedDays {
+                        footnote(String(localized: "Each run also rewrites today and yesterday, any day whose file is missing, and every day after you change export settings."))
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
                     section(String(localized: "Today")) { todayRows }
                     // Today Refresh resends the current day's complete snapshot
                     // (docs/features/api-endpoint-export.md), so receivers must upsert.
@@ -226,6 +233,65 @@ struct GlassScheduleSheet: View {
             subtitle: String(localized: "End each range on today instead of yesterday"),
             isOn: $draft.includeToday
         )
+    }
+
+    // MARK: - Changed days
+
+    @ViewBuilder private var changedDaysRows: some View {
+        GlassToggleRow(
+            title: String(localized: "Only update days that changed"),
+            subtitle: String(localized: "Skips days whose Health data is unchanged since the last run"),
+            isOn: $draft.onlyUpdateChangedDays
+        )
+        .accessibilityIdentifier("glass.schedule.onlyChangedDays")
+
+        if draft.onlyUpdateChangedDays {
+            divider
+            VStack(alignment: .leading, spacing: 4) {
+                Text(String(localized: "Last run"))
+                    .glassFont(.body)
+                    .foregroundStyle(palette.text)
+                Text(incrementalStatusText)
+                    .font(.system(size: 14))
+                    .foregroundStyle(palette.sec)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("glass.schedule.incrementalStatus")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, GlassMetrics.panelPadding)
+            .padding(.vertical, 12)
+            .accessibilityElement(children: .combine)
+
+            divider
+            Button {
+                configurationProtection.performConfigurationChange(reexportEverything)
+            } label: {
+                GlassRow(
+                    title: String(localized: "Re-export everything"),
+                    subtitle: String(localized: "The next run rewrites every day in the look-back window")
+                ) { EmptyView() }
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("glass.schedule.reexportEverything")
+        }
+    }
+
+    private var incrementalStatusText: String {
+        _ = schedulingManager.incrementalStatusRevision
+        if let fixture = TestMode.incrementalStatusFixture { return fixture }
+        // One read of the profile's state file per render.
+        let record = schedulingManager.incrementalScheduledExport.store.record(for: profile.id)
+        if record.committed == nil {
+            if let summary = record.lastSummary {
+                return summary.statusText + " · " + String(localized: "Next run re-exports every day")
+            }
+            return String(localized: "Next run exports every day in the window, then only days that changed")
+        }
+        return record.lastSummary?.statusText ?? String(localized: "No run yet")
+    }
+
+    private func reexportEverything() {
+        try? schedulingManager.resetIncrementalExport(profileID: profile.id)
     }
 
     // MARK: - Today

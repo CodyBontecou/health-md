@@ -154490,6 +154490,203 @@
         "pt-BR": {"stringUnit":{"state":"translated","value":"Pasta do iPad"}},
         "zh-Hans": {"stringUnit":{"state":"translated","value":"iPad 文件夹"}}
       }
+    },
+    "%lld changed · %@ · %lld unchanged" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"%lld geändert · %@ · %lld unverändert"}},
+        "es": {"stringUnit":{"state":"translated","value":"%lld cambiados · %@ · %lld sin cambios"}},
+        "fr": {"stringUnit":{"state":"translated","value":"%lld modifiés · %@ · %lld inchangés"}},
+        "it": {"stringUnit":{"state":"translated","value":"%lld modificati · %@ · %lld invariati"}},
+        "ja": {"stringUnit":{"state":"translated","value":"変更%lld件・%@・変更なし%lld日"}},
+        "ko": {"stringUnit":{"state":"translated","value":"%lld개 변경 · %@ · %lld일 변경 없음"}},
+        "nl": {"stringUnit":{"state":"translated","value":"%lld gewijzigd · %@ · %lld ongewijzigd"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"%lld alterados · %@ · %lld sem alteração"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"%lld 天有更改 · %@ · %lld 天未更改"}}
+      }
+    },
+    "Updated %lld days (%@)" : {
+      "localizations" : {
+        "de": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld Tag aktualisiert (%@)"}},"other":{"stringUnit":{"state":"translated","value":"%lld Tage aktualisiert (%@)"}}}}},
+        "en": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"Updated %lld day (%@)"}},"other":{"stringUnit":{"state":"translated","value":"Updated %lld days (%@)"}}}}},
+        "es": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld día actualizado (%@)"}},"other":{"stringUnit":{"state":"translated","value":"%lld días actualizados (%@)"}}}}},
+        "fr": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld jour mis à jour (%@)"}},"other":{"stringUnit":{"state":"translated","value":"%lld jours mis à jour (%@)"}}}}},
+        "it": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld giorno aggiornato (%@)"}},"other":{"stringUnit":{"state":"translated","value":"%lld giorni aggiornati (%@)"}}}}},
+        "ja": {"stringUnit":{"state":"translated","value":"%lld日を更新（%@）"}},
+        "ko": {"stringUnit":{"state":"translated","value":"%lld일 업데이트(%@)"}},
+        "nl": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld dag bijgewerkt (%@)"}},"other":{"stringUnit":{"state":"translated","value":"%lld dagen bijgewerkt (%@)"}}}}},
+        "pt-BR": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld dia atualizado (%@)"}},"other":{"stringUnit":{"state":"translated","value":"%lld dias atualizados (%@)"}}}}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"已更新 %lld 天（%@）"}}
+      }
+    },
+    "Each run also rewrites today and yesterday, any day whose file is missing, and every day after you change export settings." : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Jeder Lauf schreibt außerdem heute und gestern neu, jeden Tag, dessen Datei fehlt, und nach einer Änderung der Exporteinstellungen jeden Tag."}},
+        "es": {"stringUnit":{"state":"translated","value":"Cada ejecución también reescribe hoy y ayer, cualquier día cuyo archivo falte y todos los días después de cambiar los ajustes de exportación."}},
+        "fr": {"stringUnit":{"state":"translated","value":"Chaque exécution réécrit aussi aujourd’hui et hier, tout jour dont le fichier manque, et tous les jours après une modification des réglages d’export."}},
+        "it": {"stringUnit":{"state":"translated","value":"Ogni esecuzione riscrive anche oggi e ieri, ogni giorno il cui file manca e tutti i giorni dopo una modifica alle impostazioni di esportazione."}},
+        "ja": {"stringUnit":{"state":"translated","value":"各実行では今日と昨日、ファイルが見つからない日も書き直し、書き出し設定を変更した後はすべての日を書き直します。"}},
+        "ko": {"stringUnit":{"state":"translated","value":"각 실행은 오늘과 어제, 파일이 없는 날도 다시 쓰며, 내보내기 설정을 변경한 후에는 모든 날을 다시 씁니다."}},
+        "nl": {"stringUnit":{"state":"translated","value":"Elke run herschrijft ook vandaag en gisteren, elke dag waarvan het bestand ontbreekt, en elke dag nadat je de exportinstellingen wijzigt."}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Cada execução também regrava hoje e ontem, qualquer dia cujo arquivo esteja faltando e todos os dias depois que você altera os ajustes de exportação."}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"每次运行还会重写今天和昨天、文件缺失的日期，并在你更改导出设置后重写所有日期。"}}
+      }
+    },
+    "Exported all %lld days (%@)" : {
+      "localizations" : {
+        "de": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld Tag exportiert (%@)"}},"other":{"stringUnit":{"state":"translated","value":"Alle %lld Tage exportiert (%@)"}}}}},
+        "en": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"Exported %lld day (%@)"}},"other":{"stringUnit":{"state":"translated","value":"Exported all %lld days (%@)"}}}}},
+        "es": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"Se exportó %lld día (%@)"}},"other":{"stringUnit":{"state":"translated","value":"Se exportaron los %lld días (%@)"}}}}},
+        "fr": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld jour exporté (%@)"}},"other":{"stringUnit":{"state":"translated","value":"Les %lld jours ont été exportés (%@)"}}}}},
+        "it": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"Esportato %lld giorno (%@)"}},"other":{"stringUnit":{"state":"translated","value":"Esportati tutti i %lld giorni (%@)"}}}}},
+        "ja": {"stringUnit":{"state":"translated","value":"全%lld日を書き出しました（%@）"}},
+        "ko": {"stringUnit":{"state":"translated","value":"%lld일 전체를 내보냄(%@)"}},
+        "nl": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld dag geëxporteerd (%@)"}},"other":{"stringUnit":{"state":"translated","value":"Alle %lld dagen geëxporteerd (%@)"}}}}},
+        "pt-BR": {"variations":{"plural":{"one":{"stringUnit":{"state":"translated","value":"%lld dia exportado (%@)"}},"other":{"stringUnit":{"state":"translated","value":"Todos os %lld dias exportados (%@)"}}}}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"已导出全部 %lld 天（%@）"}}
+      }
+    },
+    "Health changes were unavailable" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Health-Änderungen nicht verfügbar"}},
+        "es": {"stringUnit":{"state":"translated","value":"los cambios de Salud no estaban disponibles"}},
+        "fr": {"stringUnit":{"state":"translated","value":"les modifications Santé n’étaient pas disponibles"}},
+        "it": {"stringUnit":{"state":"translated","value":"le modifiche di Salute non erano disponibili"}},
+        "ja": {"stringUnit":{"state":"translated","value":"ヘルスケアの変更を取得できなかったため"}},
+        "ko": {"stringUnit":{"state":"translated","value":"건강 변경 사항을 가져올 수 없음"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Gezondheid-wijzigingen waren niet beschikbaar"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"as alterações do Saúde não estavam disponíveis"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"无法获取健康数据的更改"}}
+      }
+    },
+    "Last run" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Letzter Lauf"}},
+        "es": {"stringUnit":{"state":"translated","value":"Última ejecución"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Dernière exécution"}},
+        "it": {"stringUnit":{"state":"translated","value":"Ultima esecuzione"}},
+        "ja": {"stringUnit":{"state":"translated","value":"前回の実行"}},
+        "ko": {"stringUnit":{"state":"translated","value":"마지막 실행"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Laatste run"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Última execução"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"上次运行"}}
+      }
+    },
+    "Next run exports every day in the window, then only days that changed" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Der nächste Lauf exportiert jeden Tag im Zeitraum, danach nur geänderte Tage"}},
+        "es": {"stringUnit":{"state":"translated","value":"La próxima ejecución exporta todos los días del periodo y después solo los días que cambien"}},
+        "fr": {"stringUnit":{"state":"translated","value":"La prochaine exécution exporte tous les jours de la période, puis seulement les jours modifiés"}},
+        "it": {"stringUnit":{"state":"translated","value":"La prossima esecuzione esporta ogni giorno del periodo, poi solo i giorni modificati"}},
+        "ja": {"stringUnit":{"state":"translated","value":"次回は期間内のすべての日を書き出し、その後は変更された日だけを書き出します"}},
+        "ko": {"stringUnit":{"state":"translated","value":"다음 실행에서 기간 내 모든 날을 내보낸 후 변경된 날만 내보냅니다"}},
+        "nl": {"stringUnit":{"state":"translated","value":"De volgende run exporteert elke dag in de periode, daarna alleen gewijzigde dagen"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"A próxima execução exporta todos os dias do período e depois só os dias que mudarem"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"下次运行将导出期间内的每一天，之后只导出有变化的日期"}}
+      }
+    },
+    "Next run re-exports every day" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Nächster Lauf exportiert jeden Tag neu"}},
+        "es": {"stringUnit":{"state":"translated","value":"La próxima ejecución vuelve a exportar todos los días"}},
+        "fr": {"stringUnit":{"state":"translated","value":"La prochaine exécution réexporte tous les jours"}},
+        "it": {"stringUnit":{"state":"translated","value":"La prossima esecuzione riesporta ogni giorno"}},
+        "ja": {"stringUnit":{"state":"translated","value":"次回はすべての日を再書き出しします"}},
+        "ko": {"stringUnit":{"state":"translated","value":"다음 실행에서 모든 날을 다시 내보냅니다"}},
+        "nl": {"stringUnit":{"state":"translated","value":"De volgende run exporteert elke dag opnieuw"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"A próxima execução reexporta todos os dias"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"下次运行将重新导出每一天"}}
+      }
+    },
+    "No run yet" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Noch kein Lauf"}},
+        "es": {"stringUnit":{"state":"translated","value":"Aún no hay ejecuciones"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Aucune exécution pour l’instant"}},
+        "it": {"stringUnit":{"state":"translated","value":"Nessuna esecuzione"}},
+        "ja": {"stringUnit":{"state":"translated","value":"まだ実行されていません"}},
+        "ko": {"stringUnit":{"state":"translated","value":"아직 실행 없음"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Nog geen run"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Nenhuma execução ainda"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"尚未运行"}}
+      }
+    },
+    "Only update days that changed" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Nur geänderte Tage aktualisieren"}},
+        "es": {"stringUnit":{"state":"translated","value":"Actualizar solo los días que cambiaron"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Ne mettre à jour que les jours modifiés"}},
+        "it": {"stringUnit":{"state":"translated","value":"Aggiorna solo i giorni modificati"}},
+        "ja": {"stringUnit":{"state":"translated","value":"変更された日だけ更新"}},
+        "ko": {"stringUnit":{"state":"translated","value":"변경된 날만 업데이트"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Alleen gewijzigde dagen bijwerken"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Atualizar só os dias que mudaram"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"仅更新有变化的日期"}}
+      }
+    },
+    "Re-export everything" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Alles neu exportieren"}},
+        "es": {"stringUnit":{"state":"translated","value":"Volver a exportar todo"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Tout réexporter"}},
+        "it": {"stringUnit":{"state":"translated","value":"Riesporta tutto"}},
+        "ja": {"stringUnit":{"state":"translated","value":"すべて再書き出し"}},
+        "ko": {"stringUnit":{"state":"translated","value":"모두 다시 내보내기"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Alles opnieuw exporteren"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Reexportar tudo"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"全部重新导出"}}
+      }
+    },
+    "Skips days whose Health data is unchanged since the last run" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Überspringt Tage, deren Health-Daten seit dem letzten Lauf unverändert sind"}},
+        "es": {"stringUnit":{"state":"translated","value":"Omite los días cuyos datos de Salud no cambiaron desde la última ejecución"}},
+        "fr": {"stringUnit":{"state":"translated","value":"Ignore les jours dont les données Santé n’ont pas changé depuis la dernière exécution"}},
+        "it": {"stringUnit":{"state":"translated","value":"Salta i giorni i cui dati Salute non sono cambiati dall’ultima esecuzione"}},
+        "ja": {"stringUnit":{"state":"translated","value":"前回の実行以降ヘルスケアデータに変更がない日をスキップします"}},
+        "ko": {"stringUnit":{"state":"translated","value":"마지막 실행 이후 건강 데이터가 변경되지 않은 날은 건너뜁니다"}},
+        "nl": {"stringUnit":{"state":"translated","value":"Slaat dagen over waarvan de Gezondheid-gegevens sinds de laatste run niet zijn gewijzigd"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"Ignora os dias cujos dados do Saúde não mudaram desde a última execução"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"跳过自上次运行以来健康数据未更改的日期"}}
+      }
+    },
+    "The next run rewrites every day in the look-back window" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Der nächste Lauf schreibt jeden Tag im Rückblickzeitraum neu"}},
+        "es": {"stringUnit":{"state":"translated","value":"La próxima ejecución reescribe todos los días del periodo retrospectivo"}},
+        "fr": {"stringUnit":{"state":"translated","value":"La prochaine exécution réécrit tous les jours de la période rétrospective"}},
+        "it": {"stringUnit":{"state":"translated","value":"La prossima esecuzione riscrive ogni giorno del periodo retrospettivo"}},
+        "ja": {"stringUnit":{"state":"translated","value":"次回の実行で振り返り期間のすべての日を書き直します"}},
+        "ko": {"stringUnit":{"state":"translated","value":"다음 실행에서 되돌아보기 기간의 모든 날을 다시 씁니다"}},
+        "nl": {"stringUnit":{"state":"translated","value":"De volgende run herschrijft elke dag in de terugblikperiode"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"A próxima execução regrava todos os dias do período retroativo"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"下次运行将重写回顾期内的每一天"}}
+      }
+    },
+    "export settings changed" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"Exporteinstellungen geändert"}},
+        "es": {"stringUnit":{"state":"translated","value":"los ajustes de exportación cambiaron"}},
+        "fr": {"stringUnit":{"state":"translated","value":"les réglages d’export ont changé"}},
+        "it": {"stringUnit":{"state":"translated","value":"le impostazioni di esportazione sono cambiate"}},
+        "ja": {"stringUnit":{"state":"translated","value":"書き出し設定が変更されたため"}},
+        "ko": {"stringUnit":{"state":"translated","value":"내보내기 설정이 변경됨"}},
+        "nl": {"stringUnit":{"state":"translated","value":"exportinstellingen gewijzigd"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"os ajustes de exportação mudaram"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"导出设置已更改"}}
+      }
+    },
+    "first run" : {
+      "localizations" : {
+        "de": {"stringUnit":{"state":"translated","value":"erster Lauf"}},
+        "es": {"stringUnit":{"state":"translated","value":"primera ejecución"}},
+        "fr": {"stringUnit":{"state":"translated","value":"première exécution"}},
+        "it": {"stringUnit":{"state":"translated","value":"prima esecuzione"}},
+        "ja": {"stringUnit":{"state":"translated","value":"初回実行"}},
+        "ko": {"stringUnit":{"state":"translated","value":"첫 실행"}},
+        "nl": {"stringUnit":{"state":"translated","value":"eerste run"}},
+        "pt-BR": {"stringUnit":{"state":"translated","value":"primeira execução"}},
+        "zh-Hans": {"stringUnit":{"state":"translated","value":"首次运行"}}
+      }
     }
   },
   "version" : "1.0"

@@ -25,7 +25,7 @@ It is Tuesday morning. Your watch shows a completed night of sleep, but today's 
 
 Daily sleep summaries use a local **noon-to-noon journal window**. Monday’s window runs from Monday 12:00 to Tuesday 12:00. Sleep from Monday 23:45 to Tuesday 07:30 belongs to Monday; so does sleep from Tuesday 01:00 to 07:30. A Tuesday afternoon nap belongs to Tuesday. See the complete [sleep-date examples](/docs/sleep-date-attribution/#sleep-date-examples).
 
-For the complete metric-selection, preview, and CSV workflow, follow [how to export Apple Health sleep data](/blog/export-apple-health-sleep-data/).
+For the complete metric-selection, preview, and CSV workflow, follow [how to export sleep data from Apple Health](/blog/export-apple-health-sleep-data/).
 
 ## What to export in the morning
 
