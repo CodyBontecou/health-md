@@ -8,7 +8,7 @@ category: "Workflow guide"
 related:
   - export-apple-health-hrv
   - export-apple-health-workouts
-  - apple-health-to-excel
+  - export-apple-watch-vo2-max
 draft: false
 verified: "2026-10-25"
 verified_by: "Codex (agent)"
@@ -101,6 +101,8 @@ Before combining files, check overlapping dates and re-exports. Keep the intende
 For a weekly summary, state whether you are averaging **daily statistics** or pooling **individual recorded samples**. An average of daily averages is not automatically a pooled-sample or time-weighted average. Report the recorded-day count and missing dates. Do not fill gaps with zeros or interpolate a continuous trace without labeling that transformation.
 
 For import steps and chart setup, use [Apple Health to Excel](/blog/apple-health-to-excel/) or [Google Sheets](/blog/apple-health-to-google-sheets/), replacing the steps/sleep filters with the exact Heart filters above. Workout-specific heart-rate statistics belong to the `Workouts` category and represent another context; see the [workout export guide](/blog/export-apple-health-workouts/).
+
+Looking for Apple Watch VO2 max? See [Cardio Fitness: why it isn't updating and how to export it](/blog/export-apple-watch-vo2-max/).
 
 ## Troubleshooting
 

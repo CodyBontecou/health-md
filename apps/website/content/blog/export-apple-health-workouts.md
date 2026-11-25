@@ -120,6 +120,8 @@ Keep the workout ID and exact timestamps when combining daily JSON files. Review
 
 JSON uses nested fields and arrays rather than CSV columns. Inspect the `units` and `time_context` metadata and the actual fields present. An omitted field is unavailable in that export, not automatically zero. Formatted distance or pace strings are display helpers; use numeric fields with their documented units for calculations.
 
+Outdoor walk, run and hiking workouts are also what Apple Watch uses to estimate VO2 max; see [Apple Watch VO2 max (Cardio Fitness)](/blog/export-apple-watch-vo2-max/).
+
 ## Routes, laps, and detailed records
 
 A workout total, a route, and a stream of heart-rate samples are different data. Apple's [workout route documentation](https://developer.apple.com/documentation/healthkit/hkworkoutroute) describes route data as location samples associated with a workout. A distance total is not enough to rebuild those coordinates. Want the GPX route itself? Apple's native archive keeps recorded routes as GPX files in `workout-routes/`; Health.md does not write GPX. Parsing distance out of Apple's own `export.xml` instead? See [where workout distance lives in export.xml](/blog/apple-health-export-xml-workout-distance/).
