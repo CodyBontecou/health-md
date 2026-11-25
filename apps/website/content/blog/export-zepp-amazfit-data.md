@@ -49,6 +49,8 @@ Zepp's [September 2026 announcement](https://zepp.com/blog/your-data-your-storag
 
 Amazfit's [Zepp sharing instructions](https://support.amazfit.com/en/amazfit_gts_2_mini/docs/N6cUdJxDRo6rbfxiLs1cJDBrnRd) document Apple Health sharing and adding Zepp as a data source. Those instructions belong to a specific device support page; they do not establish an identical field list or menu for every Amazfit device.
 
+If you use Zepp Life for a scale, check that weight reached Apple Health, then see the [Apple Health weight export guide](/blog/export-apple-health-weight-data/) for every-weigh-in and daily-file routes.
+
 1. Sync your watch with the Zepp app and enable its Apple Health connection where available.
 2. In Apple Health, review Zepp's permission to write the categories you want.
 3. Open a known day's relevant records and check that Zepp actually contributed data.

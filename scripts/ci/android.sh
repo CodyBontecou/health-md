@@ -47,7 +47,12 @@ for _ in {1..450}; do
 done
 rg -q "ANDROID_LIVE_LISTENER_READY:$HEALTHMD_LIVE_DIRECT_PORT" "$log"
 cd apps/android
-common=(-Phealthmd.ciAbi="$abi" -PhealthmdInstrumentedTestBuildType=e2e --max-workers=2 --console=plain)
+# Gradle and Kotlin daemons are shared through ~/.gradle and keep the sandbox of
+# the job that started them. Reusing one started for another worktree makes this
+# worktree's .gradle and build directories unwritable ("Cannot create directory"),
+# so each invocation compiles in its own processes.
+common=(-Phealthmd.ciAbi="$abi" -PhealthmdInstrumentedTestBuildType=e2e --max-workers=2 --console=plain
+    --no-daemon -Pkotlin.compiler.execution.strategy=in-process)
 ./scripts/run-ci-gradle.sh "${common[@]}" :app:testPlayE2eUnitTest \
     --tests com.healthmd.data.health.HealthConnectPinnedZoneRangeTest \
     --tests com.healthmd.domain.exportengine.ExportRepositoryEngineSeamTest \

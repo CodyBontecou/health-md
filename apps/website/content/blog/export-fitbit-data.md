@@ -96,7 +96,7 @@ Every destination accepts different files, and a Takeout archive is a backup, no
 
 Health Connect does not move your history either. It is a shared store on your Android phone where each app chooses whether to write data, read data or both. Garmin, for example, documents a one-way connection: [Garmin Connect writes to Health Connect](/blog/export-garmin-connect-data/) but does not read data back through it. Your old Fitbit records will not appear in a Garmin account because both apps use Health Connect.
 
-For a fresh start, keep your Takeout archive as your Fitbit record, export the workouts you care about as TCX, and let your new device write new data from now on. Our [Garmin Connect export guide](/blog/export-garmin-connect-data/) covers Garmin's own downloads.
+For a fresh start, keep your Takeout archive as your Fitbit record, export the workouts you care about as TCX, and let your new device write new data from now on. Our [Garmin Connect export guide](/blog/export-garmin-connect-data/) covers Garmin's own downloads. If you also use Polar, the [Polar Flow export guide](/blog/export-polar-flow-data/) covers combining its files with Fitbit exports.
 
 ## Ongoing daily files on Android: Health Connect → Health.md
 

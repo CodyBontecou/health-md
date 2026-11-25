@@ -18,6 +18,8 @@ In der abonnementaktivierten Telefonversion erfordern geplante und manuelle Expo
 
 Tägliche, wöchentliche und benutzerdefinierte Zeitpläne können einen Rückblick haben. Die benutzerdefinierte Kadenz wird ab dem Startdatum alle N Tage, Wochen oder Monate wiederholt. Bei jedem neuen Vorkommen wird das gesamte konfigurierte Fenster für den abgeschlossenen Tag erneut exportiert, einschließlich der zuvor exportierten Daten. Ein dreitägiger Rückblick umfasst den gestrigen Tag und die beiden vorangegangenen Tage. Durch die verzögerte Ausführung bleibt das Fenster am geplanten Brandtag verankert.
 
+Auf dem iPhone schreibt **Only update days that changed** (Zeitplan → Changes, bei neuen Zeitplänen aktiv) nur Tage neu, deren Health-Daten seit dem letzten erfolgreichen Lauf hinzugefügt, bearbeitet oder gelöscht wurden, Tage, deren Datei fehlt, sowie heute und gestern; unveränderte Tage bleiben unberührt, sodass iCloud oder Obsidian Sync keine identischen Notizen erneut hochladen. Der erste Lauf, eine Änderung der Exporteinstellungen der Automation und **Re-export everything** schreiben einmal das ganze Fenster. Die Zeitplanseite zeigt, was der letzte Lauf getan hat, etwa „1 changed · Updated 3 days (Nov 18, 22, 23) · 27 unchanged“. Android exportiert weiterhin das ganze Fenster.
+
 „Heute aktualisieren“ ist eine separate Arbeit für den aktuellen Tag und kein Ersatz für das Fenster für den abgeschlossenen Tag. Überprüfen Sie Pfade und Schreibverhalten, bevor sich Exporte überschneiden. Fügen Sie wiederholte tägliche Schnappschüsse nicht als neue Messungen hinzu.
 
 ## Wählen Sie den richtigen Wiederherstellungspfad

@@ -18,6 +18,8 @@ Dans la version téléphonique avec abonnement, les exportations planifiées et 
 
 Les plannings quotidiens, hebdomadaires et personnalisés peuvent avoir un aperçu. La cadence personnalisée se répète tous les N jours, semaines ou mois à compter de sa date de début. Chaque nouvelle occurrence réexporte l'intégralité de la fenêtre de jour terminée configurée, y compris les dates exportées auparavant. Une analyse rétrospective de trois jours couvre hier et les deux jours précédents ; l'exécution retardée maintient la fenêtre ancrée au jour d'incendie prévu.
 
+Sur iPhone, **Only update days that changed** (Planification → Changes, activé pour les nouvelles planifications) ne réécrit que les jours dont les données Santé ont été ajoutées, modifiées ou supprimées depuis la dernière exécution réussie, les jours dont le fichier manque, ainsi qu’aujourd’hui et hier ; les jours inchangés ne sont pas touchés, donc iCloud ou Obsidian Sync ne renvoient pas de notes identiques. La première exécution, une modification des réglages d’export de l’automatisation et **Re-export everything** écrivent une fois toute la fenêtre. La page de planification indique ce qu’a fait la dernière exécution, par exemple « 1 changed · Updated 3 days (Nov 18, 22, 23) · 27 unchanged ». Android réexporte toujours toute la fenêtre.
+
 Today Refresh est un travail distinct de la journée en cours et ne remplace pas la fenêtre de la journée terminée. Inspectez les chemins et le comportement d'écriture avant de chevaucher les exportations ; n’ajoutez pas de clichés quotidiens répétés en tant que nouvelles mesures.
 
 ## Choisissez le bon chemin de récupération

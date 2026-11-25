@@ -81,6 +81,9 @@ enum ExportFormat: String, CaseIterable, Codable, Sendable {
 
 class FormatCustomization: ObservableObject, Codable {
     @Published var dateFormat: DateFormatPreference
+    /// The placeholder pattern used when `dateFormat` is `.custom`. Kept when another
+    /// preset is chosen so switching back restores it.
+    @Published var customDatePattern: String
     @Published var timeFormat: TimeFormatPreference
     @Published var unitPreference: UnitPreference
     @Published var frontmatterConfig: FrontmatterConfiguration
@@ -92,11 +95,12 @@ class FormatCustomization: ObservableObject, Codable {
     private var frontmatterCancellable: AnyCancellable?
     
     enum CodingKeys: String, CodingKey {
-        case dateFormat, timeFormat, unitPreference, frontmatterConfig, markdownTemplate
+        case dateFormat, customDatePattern, timeFormat, unitPreference, frontmatterConfig, markdownTemplate
     }
     
     init() {
         self.dateFormat = .iso8601
+        self.customDatePattern = ""
         self.timeFormat = .hour24
         self.unitPreference = .metric
         self.frontmatterConfig = FrontmatterConfiguration()
@@ -115,7 +119,8 @@ class FormatCustomization: ObservableObject, Codable {
     
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        dateFormat = try container.decodeIfPresent(DateFormatPreference.self, forKey: .dateFormat) ?? .iso8601
+        dateFormat = try DateFormatPreference.decodeTolerantly(from: container, forKey: .dateFormat)
+        customDatePattern = try container.decodeIfPresent(String.self, forKey: .customDatePattern) ?? ""
         timeFormat = try container.decodeIfPresent(TimeFormatPreference.self, forKey: .timeFormat) ?? .hour24
         unitPreference = try container.decodeIfPresent(UnitPreference.self, forKey: .unitPreference) ?? .metric
         frontmatterConfig = try container.decodeIfPresent(FrontmatterConfiguration.self, forKey: .frontmatterConfig) ?? FrontmatterConfiguration()
@@ -126,14 +131,25 @@ class FormatCustomization: ObservableObject, Codable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(dateFormat, forKey: .dateFormat)
+        // Omitted while unused so documents saved before custom patterns existed
+        // re-encode byte-for-byte.
+        if !customDatePattern.isEmpty {
+            try container.encode(customDatePattern, forKey: .customDatePattern)
+        }
         try container.encode(timeFormat, forKey: .timeFormat)
         try container.encode(unitPreference, forKey: .unitPreference)
         try container.encode(frontmatterConfig, forKey: .frontmatterConfig)
         try container.encode(markdownTemplate, forKey: .markdownTemplate)
     }
     
+    /// The frontmatter/JSON/CSV `date` value for `date`, honoring a custom pattern.
+    func formatDate(_ date: Date, timeZone: TimeZone = .current) -> String {
+        dateFormat.format(date: date, timeZone: timeZone, customPattern: customDatePattern)
+    }
+
     func reset() {
         dateFormat = .iso8601
+        customDatePattern = ""
         timeFormat = .hour24
         unitPreference = .metric
         frontmatterConfig.reset()
@@ -570,46 +586,7 @@ class AdvancedExportSettings: ObservableObject {
 
     /// Common method to apply date placeholders to a template string
     private func applyDatePlaceholders(to template: String, for date: Date) -> String {
-        let dateFormatter = DateFormatter()
-        dateFormatter.timeZone = exportTimeZoneOverride ?? .current
-        var result = ISOWeekDateTokens.apply(to: template, for: date, timeZone: exportTimeZoneOverride ?? .current)
-
-        // {date} -> yyyy-MM-dd
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        result = result.replacingOccurrences(of: "{date}", with: dateFormatter.string(from: date))
-
-        // {year} -> yyyy
-        dateFormatter.dateFormat = "yyyy"
-        result = result.replacingOccurrences(of: "{year}", with: dateFormatter.string(from: date))
-
-        // {YR} -> yy
-        dateFormatter.dateFormat = "yy"
-        result = result.replacingOccurrences(of: "{YR}", with: dateFormatter.string(from: date))
-
-        // {month} -> MM
-        dateFormatter.dateFormat = "MM"
-        result = result.replacingOccurrences(of: "{month}", with: dateFormatter.string(from: date))
-
-        // {day} -> dd
-        dateFormatter.dateFormat = "dd"
-        result = result.replacingOccurrences(of: "{day}", with: dateFormatter.string(from: date))
-
-        // {weekday} -> Monday, Tuesday, etc.
-        dateFormatter.dateFormat = "EEEE"
-        result = result.replacingOccurrences(of: "{weekday}", with: dateFormatter.string(from: date))
-
-        // {monthName} -> January, February, etc.
-        dateFormatter.dateFormat = "MMMM"
-        result = result.replacingOccurrences(of: "{monthName}", with: dateFormatter.string(from: date))
-
-        // {quarter} -> Q1, Q2, Q3, Q4
-        var calendar = Calendar.current
-        calendar.timeZone = exportTimeZoneOverride ?? .current
-        let month = calendar.component(.month, from: date)
-        let quarter = "Q\((month - 1) / 3 + 1)"
-        result = result.replacingOccurrences(of: "{quarter}", with: quarter)
-
-        return result
+        DatePlaceholderTemplate.apply(to: template, for: date, timeZone: exportTimeZoneOverride ?? .current)
     }
 
     /// Reconstructs request-scoped export settings without replaying every
@@ -1174,6 +1151,7 @@ class AdvancedExportSettings: ObservableObject {
         selection.enabledCategories = [] // Categories are derived UI state, never import authority.
         let customization = FormatCustomization()
         customization.dateFormat = snapshot.dateFormat
+        customization.customDatePattern = snapshot.customDatePattern ?? ""
         customization.timeFormat = snapshot.timeFormat
         customization.unitPreference = snapshot.unitPreference
         snapshot.frontmatter.apply(to: customization.frontmatterConfig)

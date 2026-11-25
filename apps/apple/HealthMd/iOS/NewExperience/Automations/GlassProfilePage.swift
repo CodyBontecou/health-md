@@ -337,6 +337,8 @@ struct GlassMenuRow<Value: Hashable>: View {
     @Binding var selection: Value
     let options: [Value]
     let label: (Value) -> String
+    /// The picker's accessibility identifier, for UI automation.
+    var identifier: String?
     @Environment(\.glassPalette) private var palette
 
     var body: some View {
@@ -349,6 +351,7 @@ struct GlassMenuRow<Value: Hashable>: View {
             .pickerStyle(.menu)
             .labelsHidden()
             .tint(palette.accent)
+            .accessibilityIdentifier(identifier ?? "")
         }
         .padding(.horizontal, GlassMetrics.panelPadding)
         .frame(minHeight: GlassMetrics.rowMinHeight)

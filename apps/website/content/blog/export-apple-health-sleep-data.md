@@ -1,18 +1,18 @@
 ---
-title: "How to export Apple Health sleep data"
-description: "Export Apple Health sleep data to CSV with Health.md. Choose sleep metrics and the right date, preview a day, and understand summaries, stages, and missing data."
-lead: "To export Apple Health sleep data, authorize Sleep in Health.md, select the sleep metrics you need, choose the sleep journal day, and preview a one-day CSV export before saving it."
+title: "How to export sleep data from Apple Health"
+description: "The Health app has no sleep-only export. Export All Health Data gives you export.xml with every record; Health.md exports one CSV, JSON, or Markdown file per night with sleep stages kept apart."
+lead: "The Health app cannot export only sleep. Export All Health Data writes your whole history as export.zip, with sleep stored as SleepAnalysis records in export.xml. For one file per night with Deep, REM, and Core kept apart, export from your iPhone with Health.md."
 date: "2026-10-25"
-updated: "2026-10-27"
+updated: "2026-11-23"
 category: "Workflow guide"
 related:
   - why-sleep-is-in-yesterdays-note
   - export-apple-health-data-to-obsidian
   - export-apple-health-hrv
 draft: false
-verified: "2026-10-27"
+verified: "2026-11-23"
 verified_by: "Codex (agent)"
-verified_method: traced
+verified_method: mixed
 image: "/assets/guides/first-csv-export/sleep-enabled.webp"
 imageAlt: "Health.md Sleep metrics expanded with Total Sleep, Bedtime, Wake Time, Deep Sleep, REM Sleep, and Core Sleep enabled"
 showCover: false
@@ -23,11 +23,59 @@ tags:
   - export
 ---
 
-This guide takes you from sleep data already stored in Apple Health to a file you can open in a spreadsheet or keep beside your journal. Start with one known night, verify the output, then export a longer range.
+The Health app has no sleep-only export. **Export All Health Data** writes your entire history, sleep included, as an `export.zip` containing `export.xml`. If you want one readable file per night with Deep, REM, and Core kept apart, export from your iPhone with Health.md. Both routes are below; start with one known night and verify it before exporting a longer range.
 
 <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
 
-The iPhone app includes **5 free export actions**, followed by a single lifetime unlock. For the general spreadsheet workflow, use the [Apple Health to CSV guide](/apple-health-to-csv/).
+<div id="the-short-answer"></div>
+
+## The short answer
+
+<div class="article-table-scroll" role="region" aria-label="Choose a sleep export route" tabindex="0">
+
+| What you want | Where to get it |
+| --- | --- |
+| All sleep history, any format, free | Health app › your profile picture › **Export All Health Data**. You get `export.zip` containing `export.xml`. [Apple's steps](https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios) |
+| One file per night with selected metrics (Total, Bedtime, Wake, Deep, REM, Core) as CSV, JSON, or Markdown | Health.md on your iPhone; the steps are below |
+| A sleep app's own report | Check that app's own export options |
+
+</div>
+
+The native archive is free and complete. Use Health.md when you want one readable file per night, with stages kept separate, in a folder you choose. It includes **5 free export actions**, followed by a single lifetime unlock. For the general spreadsheet workflow, use the [Apple Health to CSV guide](/apple-health-to-csv/).
+
+## Where sleep lives in the native export.xml
+
+In Apple's archive, sleep entries are `Record` elements whose `type` is `HKCategoryTypeIdentifierSleepAnalysis` ([Apple's identifier reference](https://developer.apple.com/documentation/healthkit/hkcategorytypeidentifier/sleepanalysis)). Each record has `startDate`, `endDate`, `sourceName`, and a `value` naming the category. Apple's [HKCategoryValueSleepAnalysis](https://developer.apple.com/documentation/healthkit/hkcategoryvaluesleepanalysis) lists these cases, and the archive spells them with an `HKCategoryValueSleepAnalysis` prefix:
+
+- `HKCategoryValueSleepAnalysisInBed`
+- `HKCategoryValueSleepAnalysisAsleepUnspecified`
+- `HKCategoryValueSleepAnalysisAsleepCore`
+- `HKCategoryValueSleepAnalysisAsleepDeep`
+- `HKCategoryValueSleepAnalysisAsleepREM`
+- `HKCategoryValueSleepAnalysisAwake`
+
+This is a **fictional, illustrative** excerpt, not a real person's records:
+
+```xml
+<Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Example Watch"
+        startDate="2026-03-14 23:10:00 -0500" endDate="2026-03-15 06:45:00 -0500"
+        value="HKCategoryValueSleepAnalysisInBed"/>
+<Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Example Watch"
+        startDate="2026-03-14 23:25:00 -0500" endDate="2026-03-15 00:40:00 -0500"
+        value="HKCategoryValueSleepAnalysisAsleepCore"/>
+<Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Example Watch"
+        startDate="2026-03-15 00:40:00 -0500" endDate="2026-03-15 01:30:00 -0500"
+        value="HKCategoryValueSleepAnalysisAsleepDeep"/>
+```
+
+**How do I get sleep start and end time?** Keep these points in mind:
+
+- Each record is one interval, so a single night is many rows.
+- In-bed intervals can overlap stage intervals, as the snippet shows.
+- Several sources can record the same night.
+- Do not sum every row; filter to one source and one night first.
+
+For unzipping and converting, see the [Apple Health XML export guide](/blog/apple-health-xml-export/). The [workout distance tutorial](/blog/apple-health-export-xml-workout-distance/) shows how to parse another element in the same file. Stage names such as Core, Deep, and REM come from [Apple Watch sleep tracking](https://support.apple.com/guide/watch/track-your-sleep-apd830528336/watchos).
 
 ## Before you start
 
@@ -135,15 +183,27 @@ For recurring exports, follow the [scheduling guide](/docs/scheduling/). iOS con
 
 On Android, use the [Health Connect export guide](/health-connect-export/). Health.md shares the noon-to-noon sleep-summary window, but available records, stage identities, and export profiles differ. Apple Core sleep and Android Light sleep are not interchangeable labels to merge without checking their semantics.
 
-## Privacy and the native Apple export alternative
+## Privacy and where your files go
 
 This folder workflow reads authorized Apple Health data on the iPhone and writes to the destination you select. It requires no Health.md account and creates no Health.md server copy by default. Your selected file or sync provider governs its copy.
 
 The separate, optional single-owner Health.md Cloud pilot retains only API exports intentionally uploaded to it. There is no public signup and no automatic device sync; this folder workflow does not upload to it. See the [privacy policy](/privacy-policy.html#retention) for retention, deletion, and storage limits.
 
-If you want Apple's native archive instead, Health offers **Export All Health Data** in XML. It does not provide this selected-date CSV workflow; a compatible converter is needed to make a spreadsheet from that archive. See the [Apple Health export guide](/apple-health-export/) to choose the appropriate route.
+For the native archive route, see [the short answer](#the-short-answer) and the [Apple Health export guide](/apple-health-export/).
 
 ## Common questions
+
+### Can I export only sleep from the Health app?
+
+No. The native export covers all your Health data, and you filter sleep out of `export.xml` afterward. Health.md lets you select sleep metrics and export just those.
+
+### How do I get bedtime and wake time from the export?
+
+For one source, take the earliest start and latest end among the night's asleep intervals, using the [journal-day rule](/docs/sleep-date-attribution/) to decide which night each interval belongs to. Exclude in-bed intervals if you want sleep time rather than time in bed.
+
+### Why does my export show more sleep than the Sleep chart?
+
+Be careful when adding rows. In-bed and stage intervals can overlap, and multiple sources can record the same night ([Apple's documentation](https://developer.apple.com/documentation/healthkit/hkcategoryvaluesleepanalysis) describes these values). We can't say how Apple's chart combines them, so don't expect a raw sum to match it.
 
 ### Can I export sleep data without an Apple Watch?
 

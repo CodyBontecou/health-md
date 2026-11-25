@@ -30,3 +30,17 @@ Scope: website guidance, existing exported examples, and source/documentation tr
 ## Oura cross-link — 2026-11-19
 
 - [x] One sentence added to "Before you start" linking /blog/export-oura-data/ for ring or other wearable sources. It claims only that the wearable's app must write sleep to Apple Health and that the Oura guide lists what Oura shares; Oura's Apple Health Integration page (read 2026-11-19) lists Sleep as exported to Apple Health. No other body or frontmatter change.
+
+## Native-answer refresh — 2026-11-23
+
+Verified: 2026-11-23. Method: mixed (source-traced; Apple pages checked, no device run). Scope: title, description, lead, new "short answer" table, new native export.xml section, three FAQ entries, one privacy-paragraph edit.
+
+- [x] The Health app has no sleep-only export; Export All Health Data covers all data and yields export.zip with export.xml. Evidence: Apple Support https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios. The "no sleep-only option" statement is an absence claim based on that page describing only the all-data export.
+- [x] Sleep records are `Record` elements with type `HKCategoryTypeIdentifierSleepAnalysis` and startDate/endDate/sourceName/value attributes. Evidence: https://developer.apple.com/documentation/healthkit/hkcategorytypeidentifier/sleepanalysis for the identifier; attribute names are the Apple Health export.xml Record format, also described in /blog/apple-health-xml-export/. The snippet is fictional.
+- [x] Value names InBed, AsleepUnspecified, AsleepCore, AsleepDeep, AsleepREM, Awake correspond to HKCategoryValueSleepAnalysis cases inBed, asleepUnspecified, asleepCore, asleepDeep, asleepREM, awake. Evidence: https://developer.apple.com/documentation/healthkit/hkcategoryvaluesleepanalysis. That page is script-rendered and the fetch tool returned only the title, so the case list comes from the API as known, not a page excerpt. The `HKCategoryValueSleepAnalysis` prefix in XML is the export spelling. Only these six names are used.
+- [x] In-bed intervals can overlap stage intervals; several sources can record one night; do not sum every row. Evidence: same Apple page (existing 2026-10-25 claim); the multi-source point is general HealthKit sample behavior and is phrased as a caution. No claim about how Apple's Sleep chart deduplicates.
+- [x] Stage names Core, Deep, REM. Evidence: https://support.apple.com/guide/watch/track-your-sleep-apd830528336/watchos.
+- [x] Bedtime/wake guidance (earliest start, latest end of asleep intervals for one source, journal-day rule). Evidence: /docs/sleep-date-attribution/ and the Health.md Bedtime/Wake definitions in `apps/apple/HealthMd/Shared/Models/HealthMetrics.swift`. This is guidance for the native XML, not a claim about converter output.
+- [x] Health.md exports the selected sleep metrics, 5 free export actions then a single lifetime unlock; native archive is free (Apple provides it without charge as a Health feature, no price on the Apple page). Evidence unchanged from earlier entries.
+- [x] Privacy paragraph keeps the local folder workflow and the separate, opt-in, single-owner, not-generally-available Cloud pilot wording; only the native-archive sentence changed to a pointer.
+- [x] Internal links added: /blog/apple-health-xml-export/, /blog/apple-health-export-xml-workout-distance/ (existing posts). Reciprocal sentence added to /blog/apple-health-xml-export/; /blog/why-sleep-is-in-yesterdays-note/ already links here.

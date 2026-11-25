@@ -1,0 +1,167 @@
+version: 1
+requires:
+  platform: ios
+# Physical-iPhone QA for the date property format (#452) on REAL app data. No --uitesting:
+# UI-test mode would reset onboarding and profile state.
+# Prerequisites: a Debug build of this branch installed over Health.md, unlocked and cabled
+#   iPhone, and an on-demand automation named "ProfilePR182 Synthetic QA" whose date format
+#   is ISO 8601.
+# Side effects: temporarily changes that automation's date format (EU Dash, then Custom with a
+#   pattern), then clears the pattern and sets ISO 8601 again. No exports run; scheduled
+#   automations are not touched. If a run fails midway, restore by hand: Format > Dates & units,
+#   choose Custom pattern, tap Clear pattern, choose ISO 8601.
+# The restore goes Custom -> EU Dash -> ISO: an iOS menu aligns its selected item over the
+#   picker, so with Custom (last item) selected the ISO row can sit under the status bar or a
+#   notification banner; from EU Dash it is mid-screen.
+# Preview checks use anchored regexes so they do not depend on the run date.
+steps:
+  - echo: Launch Health.md on the physical iPhone (real data, no --uitesting).
+      Expect Archive
+  - launch: com.codybontecou.obsidianhealth
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.tab.automations
+      timeoutMs: 15000
+  - echo: Open the Automations tab. Expect the automations list
+  - tap:
+      id: glass.tab.automations
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automations
+  - await: { idle: true }
+  - echo: Open the on-demand ProfilePR182 Synthetic QA automation. Expect its
+      settings page
+  - tap:
+      text: ProfilePR182 Synthetic QA
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.formatCustom
+  - await: { idle: true }
+  - echo: Open Format. Expect Customize format
+  - tap:
+      id: glass.automation.formatCustom
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.formatCustom.reset
+  - await: { idle: true }
+  - echo: Jump to Dates & units. Expect ISO 8601 selected
+  - tap:
+      text: Dates & units
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.formatCustom.dateFormat
+      expectedText: ISO 8601 (2026-01-13)
+  - assert: { text: { in: { id: glass.formatCustom.datePreview }, matches: '^\d{4}-\d{2}-\d{2}$' } }
+  - echo: Choose EU Dash from the Date format menu. Expect a DD-MM-YYYY preview
+  - tap:
+      text: ISO 8601 (2026-01-13)
+  - tap:
+      text: EU Dash (13-01-2026)
+  - assert: { text: { in: { id: glass.formatCustom.datePreview }, matches: '^\d{2}-\d{2}-\d{4}$' } }
+  - echo: Choose Custom pattern. Expect the field seeded with {day}-{month}-{year}
+  - tap:
+      text: EU Dash (13-01-2026)
+  - tap:
+      text: Custom pattern
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.formatCustom.customDatePattern
+      expectedText: "{day}-{month}-{year}"
+      textMatch: equals
+  - assert: { text: { in: { id: glass.formatCustom.datePreview }, matches: '^\d{2}-\d{2}-\d{4}$' } }
+  - echo: Tap the {YR} chip. Expect it appended to the pattern and the preview to
+      update
+  - tap:
+      text: "{YR}"
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.formatCustom.customDatePattern
+      expectedText: "{day}-{month}-{year}{YR}"
+      textMatch: equals
+  - assert: { text: { in: { id: glass.formatCustom.datePreview }, matches: '^\d{2}-\d{2}-\d{6}$' } }
+  - echo: Clear the pattern. Expect an empty field, the warning, and an ISO preview
+  - tap:
+      id: glass.formatCustom.clearDatePattern
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: glass.formatCustom.clearDatePattern
+  - assert: { text: { in: { id: glass.formatCustom.datePreview }, matches: '^\d{4}-\d{2}-\d{2}$' } }
+  - echo: "Type '{day}: x' (a YAML key separator) into the empty pattern. Expect the
+      warning and an ISO preview"
+  - tap:
+      id: glass.formatCustom.customDatePattern
+  - tool: keyboard
+    args:
+      text: "{day}: x"
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.formatCustom.customDatePattern
+      expectedText: "{day}: x"
+      textMatch: equals
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.formatCustom.customDatePatternInvalid
+  - assert: { text: { in: { id: glass.formatCustom.datePreview }, matches: '^\d{4}-\d{2}-\d{2}$' } }
+  - echo: "Restore: dismiss the keyboard, clear the pattern, and choose ISO 8601.
+      Expect no pattern field and no warning"
+  - tool: keyboard
+    args:
+      key: enter
+  - tap:
+      id: glass.formatCustom.clearDatePattern
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: glass.formatCustom.clearDatePattern
+  - tap:
+      text: Custom pattern
+  - tap:
+      text: EU Dash (13-01-2026)
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.formatCustom.dateFormat
+      expectedText: EU Dash (13-01-2026)
+  - tap:
+      text: EU Dash (13-01-2026)
+  - tap:
+      text: ISO 8601 (2026-01-13)
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.formatCustom.dateFormat
+      expectedText: ISO 8601 (2026-01-13)
+  - assert: { text: { in: { id: glass.formatCustom.datePreview }, matches: '^\d{4}-\d{2}-\d{2}$' } }
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: glass.formatCustom.customDatePattern
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: glass.formatCustom.customDatePatternInvalid

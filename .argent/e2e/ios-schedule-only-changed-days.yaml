@@ -1,0 +1,120 @@
+version: 1
+requires:
+  platform: ios
+# ios-schedule-only-changed-days (issue #457): the automation Schedule page has a Changes
+# section with "Only update days that changed" (glass.schedule.onlyChangedDays), on by
+# default for a new schedule. While on, it shows the last run's status
+# (glass.schedule.incrementalStatus) and a "Re-export everything" action
+# (glass.schedule.reexportEverything); turning it off hides both. This opens Default's
+# Schedule page, checks the status text and action, switches off, checks they hide, and
+# switches back on.
+#
+# Prerequisites: an iPhone simulator with a Debug build of Health.md installed. The UI-test
+# launch arguments reset automations to Default, select a synthetic TestVault and unlock the
+# app; no Health data is needed. Answer the system notification prompt once after installing
+# (the first launch after install shows it over the app and blocks the first check). UI-test launches never run a HealthKit export, so
+# -UITEST_INCREMENTAL_STATUS incremental renders a fixed synthetic run (Nov 18, 21, 23 2026,
+# UTC; 1 changed, 27 unchanged) through the real IncrementalRunSummary formatter. Real runs
+# (anchors, day mapping, missing files, commit-after-success) are covered by
+# IncrementalScheduledExportTests and SchedulingManagerProfileSchedulingTests.
+# Side effects: Default's schedule entry is autosaved with the switch on and the schedule
+# itself off (no export is scheduled). The next UI-test launch resets automations.
+#
+# Coordinate exception: on this iOS 27 simulator the runner tree carries none of the app's
+# SwiftUI ids or labels (every recorded check warned that it does NOT hold against the
+# runner tree; the recorder derived the tab tap as `id: glass.archive` and the other taps as
+# a bare `role: AXScrollArea`). So checks stay raw `tool: await-ui-element` steps (they read
+# the accessibility tree, where the ids exist) and taps are points taken from `describe`
+# frames. Each point tap names its target and is followed by a hard check.
+steps:
+  - echo: Launch Health.md in UI-test mode (automations reset to Default, unlocked,
+      vault selected, synthetic incremental run status). Expect the tab bar
+  - launch:
+      native: com.codybontecou.obsidianhealth
+      ios:
+        app: com.codybontecou.obsidianhealth
+        args:
+          - --uitesting
+          - -UITEST_HAS_COMPLETED_ONBOARDING
+          - "true"
+          - -UITEST_PURCHASE_UNLOCKED
+          - "true"
+          - -UITEST_HEALTH_AUTHORIZED
+          - "true"
+          - -UITEST_VAULT_SELECTED
+          - "true"
+          - -UITEST_INCREMENTAL_STATUS
+          - incremental
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.tab.automations
+      timeoutMs: 20000
+  - await: { idle: true }
+  - echo: "Archive: open the Automations tab. Expect the list with New automation"
+  - tap: { x: 0.405, y: 0.895 } # Automations tab (glass.tab.automations, frame 0.289,0.867,0.232,0.057)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: New automation
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: Open the Default automation card. Expect its detail page
+  - tap: { x: 0.4, y: 0.3 } # Default automation card (only card, glass.automation.card, frame 0.040,0.235,0.920,0.172)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.schedule
+      timeoutMs: 8000
+  - await: { idle: true }
+  - echo: On Default's detail page; open Schedule. Expect the schedule page with the
+      Changes section
+  - tap: { x: 0.5, y: 0.851 } # Schedule row (glass.automation.schedule, frame 0.040,0.824,0.920,0.055)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.schedule.enabled
+      timeoutMs: 8000
+  - await: { idle: true }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.schedule.incrementalStatus
+      expectedText: 1 changed · Updated 3 days (Nov 18, 21, 23) · 27 unchanged
+      timeoutMs: 5000
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.schedule.reexportEverything
+      timeoutMs: 5000
+  - echo: New schedules default the switch on. Turn Only update days that changed
+      off; expect the run status and Re-export everything to hide
+  - tap: { x: 0.5, y: 0.6625 } # Only update days that changed, on (glass.schedule.onlyChangedDays, frame 0.080,0.633,0.841,0.059)
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: glass.schedule.incrementalStatus
+      timeoutMs: 5000
+  - tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        identifier: glass.schedule.reexportEverything
+      timeoutMs: 5000
+  - echo: Switch is off and the status is gone. Turn it back on; expect the run
+      status to return
+  - tap: { x: 0.5, y: 0.6625 } # Only update days that changed, off (glass.schedule.onlyChangedDays, frame 0.040,0.619,0.920,0.087)
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.schedule.incrementalStatus
+      expectedText: 27 unchanged
+      timeoutMs: 5000

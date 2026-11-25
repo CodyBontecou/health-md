@@ -287,6 +287,17 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         ),
     ]
 
+    // Custom date-property patterns were added after the v5 ledger froze (#452). Frozen
+    // Shared Setup v2 has no pattern field, so a profile using one is refused for sharing.
+    private static let customDatePatternFields: [CoverageLedger.Field] = [
+        .init(
+            sourceType: "FormatCustomizationSnapshot", field: "customDatePattern",
+            fieldKind: .stored, serializedKey: "customDatePattern",
+            disposition: .prohibited, contractPath: nil,
+            reason: "Frozen Shared Setup v2 date_format has no custom pattern; exporting a profile that uses one fails instead of substituting a preset."
+        ),
+    ]
+
     private func loadLedger() throws -> CoverageLedger {
         let historical = try JSONDecoder().decode(
             CoverageLedger.self,
@@ -297,7 +308,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             targetContract: historical.targetContract, fieldKinds: historical.fieldKinds,
             dispositions: historical.dispositions,
             fields: historical.fields + Self.sleepCapturePersistenceFields.filter { extra in !historical.fields.contains { $0.sourceType == extra.sourceType && $0.field == extra.field } } + Self.localSchedulePreferenceFields
-                + Self.perGroupDetailFields
+                + Self.perGroupDetailFields + Self.customDatePatternFields
         )
     }
 
@@ -370,6 +381,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
 
         let formatCustomization = FormatCustomizationSnapshot(
             dateFormat: .friendly,
+            customDatePattern: "{day}-{month}-{year}",
             timeFormat: .hour12WithSeconds,
             unitPreference: .imperial,
             frontmatterConfig: frontmatter,

@@ -499,7 +499,7 @@ enum SharedSetupV2Mapper {
             ),
             metrics: .init(enabledIDs: enabledSemanticIDs),
             presentation: .init(
-                dateFormat: sharedDate(settings.formatCustomization.dateFormat),
+                dateFormat: try sharedDate(settings.formatCustomization.dateFormat),
                 timeFormat: sharedTime(settings.formatCustomization.timeFormat),
                 units: settings.formatCustomization.unitPreference == .metric ? .metric : .imperial,
                 frontmatter: .init(
@@ -757,8 +757,14 @@ enum SharedSetupV2Mapper {
         }
     }
 
-    private nonisolated static func sharedDate(_ value: DateFormatPreference) -> SharedSetupV2.DateFormat {
+    private nonisolated static func sharedDate(_ value: DateFormatPreference) throws -> SharedSetupV2.DateFormat {
         switch value {
+        case .euDash, .custom:
+            // The frozen v2 contract has no `eu_dash` preset and no custom patterns.
+            // Substituting another format would silently change the receiver's notes.
+            throw SharedSetupV2Error.invalid(
+                "Shared Setup v2 cannot represent the EU Dash or custom date format. Choose another date format before sharing this profile."
+            )
         case .iso8601: .iso8601
         case .usShort: .usShort
         case .usLong: .usLong

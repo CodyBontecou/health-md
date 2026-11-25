@@ -18,6 +18,8 @@ Na versão do telefone com assinatura habilitada, as exportações programadas e
 
 As programações diárias, semanais e personalizadas podem ter uma retrospectiva. A cadência personalizada se repete a cada N dias, semanas ou meses a partir da data de início. Cada nova ocorrência reexporta toda a janela configurada de dias concluídos, incluindo as datas exportadas anteriormente. Uma retrospectiva de três dias cobre ontem e os dois dias anteriores; a execução atrasada mantém a janela ancorada no dia do incêndio programado.
 
+No iPhone, **Only update days that changed** (Agendamento → Changes, ativado em novos agendamentos) reescreve apenas os dias cujos dados do Saúde foram adicionados, editados ou excluídos desde a última execução bem-sucedida, os dias cujo arquivo está faltando, além de hoje e ontem; os dias sem alterações não são tocados, então o iCloud ou o Obsidian Sync não reenviam notas idênticas. A primeira execução, uma alteração nos ajustes de exportação da automação e **Re-export everything** gravam a janela inteira uma vez. A página de agendamento mostra o que a última execução fez, por exemplo “1 changed · Updated 3 days (Nov 18, 22, 23) · 27 unchanged”. O Android continua reexportando a janela inteira.
+
 A atualização de hoje é um trabalho separado do dia atual e não um substituto para a janela do dia concluído. Inspecione caminhos e comportamento de gravação antes de exportar sobreposições; não adicione instantâneos diários repetidos como novas medições.
 
 ## Escolha o caminho de recuperação correto
