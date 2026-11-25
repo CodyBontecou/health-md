@@ -9,7 +9,7 @@ platform: apple
 related:
   - export-apple-health-steps-data
   - export-apple-health-heart-rate
-  - export-strava-data
+  - export-apple-watch-activity-rings
 draft: false
 verified: "2026-11-22"
 verified_by: "Claude (agent)"

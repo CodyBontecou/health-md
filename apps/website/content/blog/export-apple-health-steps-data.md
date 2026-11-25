@@ -8,7 +8,7 @@ category: "Workflow guide"
 related:
   - apple-health-to-excel
   - export-apple-health-walking-asymmetry
-  - apple-health-to-python
+  - export-apple-watch-activity-rings
 draft: false
 verified: "2026-10-26"
 verified_by: "Codex (agent)"
