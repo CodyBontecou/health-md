@@ -17,7 +17,7 @@ description: "Control output formatting without changing the collected data. Sel
 </div>
 
 ## Date &amp; time
-<p>Pickers for date format (e.g. <code>YYYY-MM-DD</code>, <code>MMM d, yyyy</code>, <code>DD-MM-YYYY</code>) and time format (12-hour, 24-hour). The date format sets the frontmatter <code>date</code> property. On iPhone, iPad and Mac you can also choose <em>Custom pattern</em> and build the date from the filename placeholders, for example <code>{day}-{month}-{year}</code>; an invalid pattern writes the ISO date instead. The preview updates live as you change settings.</p>
+<p>Pickers for date format (e.g. <code>YYYY-MM-DD</code>, <code>MMM d, yyyy</code>) and time format (12-hour, 24-hour). The date format sets the frontmatter <code>date</code> property, including <code>DD-MM-YYYY</code>. On iPhone, iPad and Mac you can also choose <em>Custom pattern</em> and build the date from the filename placeholders, for example <code>{day}-{month}-{year}</code>; an invalid pattern writes the ISO date instead. The preview updates live as you change settings.</p>
 
 ## Unit system
 <p>Toggle between <em>Metric</em> and <em>Imperial</em>. Affects distance (m/km vs ft/mi), weight (kg vs lb), temperature (°C vs °F), and a few others. HealthKit always stores in canonical units. Conversion happens at export time.</p>
