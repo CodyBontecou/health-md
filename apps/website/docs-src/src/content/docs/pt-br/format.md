@@ -14,7 +14,7 @@ description: "Controle a formatação da saída sem alterar o que é coletado. E
 <div class="callout"><strong>Precisa do contrato exato?</strong><p style="margin-top:6px;">Consulte a <a href="/pt-br/docs/reference/export-formats/">referência de formatos</a> baseada em produção, os <a href="/pt-br/docs/reference/generated/core/csv-row-contracts/">contratos de linhas CSV</a> e os fixtures completos para download.</p></div>
 
 ## Data e hora
-<p>Seletores de formato de data (por exemplo, <code>YYYY-MM-DD</code>, <code>MMM d, yyyy</code>) e de hora (12 ou 24 horas). O bloco de prévia no fim da tela é atualizado em tempo real. O formato de data define a propriedade <code>date</code> do frontmatter, inclusive <code>DD-MM-YYYY</code>. No iPhone, iPad e Mac você também pode escolher um padrão personalizado e montar a data com os marcadores do nome do arquivo, por exemplo <code>{day}-{month}-{year}</code>. Um padrão inválido grava a data ISO.</p>
+<p>Seletores de formato de data (por exemplo, <code>YYYY-MM-DD</code>, <code>MMM d, yyyy</code>, <code>DD-MM-YYYY</code>) e de hora (12 ou 24 horas). O bloco de prévia no fim da tela é atualizado em tempo real. O formato de data define a propriedade <code>date</code> do frontmatter. No iPhone, iPad e Mac você também pode escolher um padrão personalizado e montar a data com os marcadores do nome do arquivo, por exemplo <code>{day}-{month}-{year}</code>. Um padrão inválido grava a data ISO.</p>
 
 ## Sistema de unidades
 <p>Alterne entre <em>Métrico</em> e <em>Imperial</em>. Isso afeta distância (m/km ou ft/mi), peso (kg ou lb), temperatura (°C ou °F) e algumas outras medidas. O HealthKit sempre armazena unidades canônicas; a conversão ocorre durante a exportação.</p>
