@@ -23,7 +23,7 @@ tags:
 
 **You can't export Strava data from the Strava mobile app; use strava.com in a browser.** For everything: **Settings → My Account → Download your account → Get Started → Request download**, then use the link Strava emails you. For one activity: open it on the website and choose **Export Original** or **Export GPX** from the ellipsis menu, or add `/export_tcx` to its URL.
 
-Strava's own export covers these tasks. Health.md only matters later, if you want activities shared to Apple Health or Health Connect in daily files next to your other health data.
+Zepp/Amazfit users can connect Strava under **Profile → Add accounts** in the Zepp app; see the [Zepp and Amazfit export guide](/blog/export-zepp-amazfit-data/). Strava's own export covers these tasks. Health.md only matters later, if you want activities shared to Apple Health or Health Connect in daily files next to your other health data.
 
 ## Download all your Strava data (bulk export)
 
