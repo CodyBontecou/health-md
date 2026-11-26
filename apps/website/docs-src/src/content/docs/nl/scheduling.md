@@ -18,6 +18,8 @@ In de telefoonversie met abonnement vereisen geplande en handmatige exports een 
 
 Dagelijkse, wekelijkse en aangepaste schema's kunnen terugkijken. Aangepaste cadans wordt elke N dagen, weken of maanden vanaf de startdatum herhaald. Bij elk nieuw exemplaar wordt het gehele geconfigureerde voltooide-dagvenster opnieuw geëxporteerd, inclusief eerder geëxporteerde datums. Een driedaagse terugblik beslaat gisteren en de twee voorgaande dagen; vertraagde uitvoering zorgt ervoor dat het venster verankerd blijft op de geplande branddag.
 
+Op de iPhone herschrijft **Only update days that changed** (Schema → Changes, aan bij nieuwe schema’s) alleen dagen waarvan Gezondheid-gegevens sinds de laatste geslaagde run zijn toegevoegd, bewerkt of verwijderd, dagen waarvan het bestand ontbreekt, en vandaag en gisteren; ongewijzigde dagen blijven onaangeroerd, zodat iCloud of Obsidian Sync geen identieke notities opnieuw uploaden. De eerste run, een wijziging in de exportinstellingen van de automatisering en **Re-export everything** schrijven het hele venster één keer. De schemapagina toont wat de laatste run deed, bijvoorbeeld „1 changed · Updated 3 days (Nov 18, 22, 23) · 27 unchanged”. Android exporteert nog steeds het hele venster opnieuw.
+
 Today Refresh is afzonderlijk werk voor de huidige dag en geen vervanging voor het voltooide-dagvenster. Inspecteer paden en schrijfgedrag voordat exporten elkaar overlappen; Voeg geen herhaalde dagelijkse momentopnamen toe als nieuwe metingen.
 
 ## Kies het juiste herstelpad

@@ -1,18 +1,18 @@
 ---
-title: "Export Apple Health weight data to CSV or JSON"
-description: "Export daily Apple Health weight values to CSV or JSON with Health.md. Check units, missing days and the latest-record rule, or choose an archive for original readings."
-lead: "Save a daily weight value from Apple Health, check its units, and understand when you need original measurement records instead."
+title: "How to export weight data from Apple Health (every weigh-in or daily CSV)"
+description: "Apple Health can't export weight alone. Filter its export.xml for every weigh-in, or save one value per day as CSV or JSON with Health.md."
+lead: "Apple's export is all-or-nothing. Find every weigh-in in export.xml, or save one weight per day as CSV or JSON."
 date: "2026-10-30"
-updated: "2026-10-30"
-verified: "2026-10-30"
-verified_by: "Codex (agent)"
+updated: "2026-11-24"
+verified: "2026-11-24"
+verified_by: "Claude (agent)"
 verified_method: traced
 platform: apple
 category: "Workflow guide"
 related:
-  - export-renpho-data
-  - export-health-data-without-the-cloud
+  - apple-health-xml-export
   - export-withings-data
+  - export-renpho-data
 draft: false
 tags:
   - apple-health
@@ -21,21 +21,37 @@ tags:
   - export
 ---
 
-To export Apple Health weight data, first choose between a daily table and original measurement records. Health.md can save the latest available weight from each selected day's query as CSV or JSON. That daily value is not an average or a list of every weigh-in.
+**Apple Health has no export for weight alone.** Its native route is **Health → your picture or initials → Export All Health Data**, which creates `export.zip`. Inside, each weigh-in is a `<Record>` element whose `type` is `HKQuantityTypeIdentifierBodyMass`, with its own `value`, `unit` and dates. If you want one weight per day as CSV or JSON without parsing XML, Health.md writes daily files from the Apple Health data you authorize.
 
-## Choose daily values or original records
+## Choose every weigh-in or one value per day
 
 | What you need | Export route |
 | --- | --- |
-| A daily weight table for a spreadsheet or script | Health.md Summary export with Weight selected |
-| Apple's native archive, without installing an exporter | Apple Health → profile → Export All Health Data; the archive contains XML |
+| Every weigh-in, with its own time, source and unit | Apple's native archive: Health → profile → Export All Health Data, then filter `export.xml` for BodyMass records |
+| One weight per day for a spreadsheet or script | Health.md Summary export with Weight selected, as CSV or JSON |
 | Selected source records, identity and capture diagnostics | The separate Apple-only Lossless Health Records profile; review its coverage and warnings |
 
-Apple's [Health data instructions](https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios) explain its native export. Health.md does not import that XML archive. See the [Apple Health XML guide](/blog/apple-health-xml-export/) for that route, or the [format guide](/docs/format/) and [canonical record reference](/docs/reference/canonical-healthkit-records/) before relying on a source-record archive.
-
-For a daily CSV or JSON workflow:
+Apple's [Health data instructions](https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios) document Export All Health Data. Health.md does not import that XML archive. For a daily CSV or JSON workflow:
 
 <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
+
+For source-record archives, read the [format guide](/docs/format/) and [canonical record reference](/docs/reference/canonical-healthkit-records/) first.
+
+## Find weight in Apple's export.xml
+
+Apple defines [body mass](https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/bodymass) as discrete measurements, and they appear in the archive as `<Record>` elements. This fictional excerpt uses only attributes that the export DTDs declare for `Record` (`type`, `sourceName`, `unit`, `creationDate`, `startDate`, `endDate`, `value`):
+
+```xml
+<Record type="HKQuantityTypeIdentifierBodyMass" sourceName="Example Scale App" unit="kg" creationDate="2026-03-15 07:31:10 +0000" startDate="2026-03-15 07:30:00 +0000" endDate="2026-03-15 07:30:00 +0000" value="75.0"/>
+<Record type="HKQuantityTypeIdentifierBodyMass" sourceName="Example Manual Entry" unit="lb" creationDate="2026-03-15 20:05:00 +0000" startDate="2026-03-15 20:04:00 +0000" endDate="2026-03-15 20:04:00 +0000" value="165.4"/>
+```
+
+The values are invented. They are not a real person's weigh-ins, and nothing here says how many weigh-ins a real export holds. Two things to expect:
+
+- **Several sources.** One person can have BodyMass records from a scale app, manual entry and apps paired with a Watch. Each source writes its own records, so `sourceName` can differ row to row.
+- **Mixed units.** The `unit` is per record, so one file can hold both `kg` and `lb` rows. Read `unit` on every row before charting.
+
+To pull weight out, filter rows where `type` equals `HKQuantityTypeIdentifierBodyMass`. Read your own file's inline DTD (`<!DOCTYPE HealthData [ … ]>`) for the attributes your export version declares; the [DTD copies cited in the workout-distance guide](/blog/apple-health-export-xml-workout-distance/) show how to check. That guide covers the same XML for another metric. For unzipping and finding `export.xml`, see the [Apple Health XML guide](/blog/apple-health-xml-export/), and for opening the result in a spreadsheet, the [Apple Health to Excel guide](/blog/apple-health-to-excel/).
 
 ## Export one known day first
 
@@ -85,12 +101,19 @@ This is a **small excerpt**, not a complete document, from the [fictional daily 
 
 Use `body.weight` with the unit metadata in your actual file. The example uses Metric units; do not infer units from a bare number or assume every export contains the same optional fields. Preserve the file's date and time context separately when combining daily files.
 
+## Weight from a scale app that's missing in Apple Health
+
+If a scale app (Withings, RENPHO, Zepp Life and others) never shared a reading to Apple Health, neither Apple's archive nor a Health.md export will contain it. Use that app's own export instead:
+
+- Withings: [sharing eligibility and export guide](/blog/export-withings-data/)
+- RENPHO: [RENPHO export guide](/blog/export-renpho-data/)
+- Zepp Life and Amazfit: [Zepp and Amazfit export guide](/blog/export-zepp-amazfit-data/)
+
 ## Check missing or unexpected values
 
 - **No weight output:** check the selected day, Weight selection, read access and actual Apple Health records. An absent row or field is unavailable data, not zero.
-- **A scale app shows more history:** verify that those records reached Apple Health. For Withings, check the [sharing eligibility and export guide](/blog/export-withings-data/) before expecting the phone's health store to contain them.
 - **A daily value differs from another app:** compare available sources, units, dates and reduction rules. A latest record, daily average and source-specific view answer different questions.
-- **You need several weigh-ins per day:** choose a source-record route above. A daily value cannot reconstruct the measurements that were not included in it.
+- **You need several weigh-ins per day:** choose the native archive or a source-record route above. A daily value cannot reconstruct the measurements that were not included in it.
 - **Preview works but saving fails:** reselect the destination folder and check its file provider using [export troubleshooting](/docs/troubleshooting/).
 
 Leave missing days visible instead of filling them with zero or an assumed carried-forward weight. This guide explains file contents and selection rules; it does not interpret weight changes or provide a healthy-weight target.

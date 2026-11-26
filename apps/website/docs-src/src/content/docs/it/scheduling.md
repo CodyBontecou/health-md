@@ -18,6 +18,8 @@ Nella versione del telefono abilitata all'abbonamento, le esportazioni pianifica
 
 Le pianificazioni giornaliere, settimanali e personalizzate possono avere una visione retrospettiva. La cadenza personalizzata si ripete ogni N giorni, settimane o mesi dalla data di inizio. Ogni nuova occorrenza riesporta l'intera finestra di giorni completati configurata, comprese le date esportate in precedenza. Una ricerca di tre giorni copre ieri e i due giorni precedenti; l'esecuzione ritardata mantiene la finestra ancorata al giorno dell'incendio previsto.
 
+Su iPhone, **Only update days that changed** (Pianificazione → Changes, attivo per le nuove pianificazioni) riscrive solo i giorni i cui dati Salute sono stati aggiunti, modificati o eliminati dall’ultima esecuzione riuscita, i giorni il cui file manca, più oggi e ieri; i giorni invariati non vengono toccati, così iCloud o Obsidian Sync non ricaricano note identiche. La prima esecuzione, una modifica alle impostazioni di esportazione dell’automazione e **Re-export everything** scrivono una volta l’intera finestra. La pagina della pianificazione mostra cosa ha fatto l’ultima esecuzione, ad esempio «1 changed · Updated 3 days (Nov 18, 22, 23) · 27 unchanged». Android continua a riesportare l’intera finestra.
+
 Oggi l'aggiornamento è un lavoro giornaliero separato e non sostituisce la finestra del giorno completato. Ispeziona i percorsi e scrivi il comportamento prima di sovrapporre le esportazioni; non aggiungere insieme istantanee giornaliere ripetute come nuove misurazioni.
 
 ## Scegli il percorso di ripristino corretto

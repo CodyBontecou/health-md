@@ -1,0 +1,55 @@
+version: 1
+requires:
+  platform: ios
+# qa-iphone-schedule-real-run-result (issue #457, physical iPhone, real app data): after a
+# real scheduled completed-day run of Default with "Only update days that changed" on and a
+# 1-day look-back, the Schedule page shows the persisted first-run summary
+# "Exported 1 day (first run)" (singular; this run first showed the "1 days" bug) and keeps
+# Re-export everything available. Relaunching proves the summary and committed state were
+# saved, not just held in memory.
+#
+# Prerequisites: a Debug build of this branch on the phone; Default (first automation card)
+# with Run on a schedule on, a 1-day look-back, and its first scheduled run already done
+# today with no later run (qa-iphone-schedule-real-run-enable sets the schedule up; the run
+# fires at the preferred time while the app is open, or on the next launch after it).
+# After the next day's run the status becomes "N changed · Updated 1 day (...) · ..." and this
+# test no longer applies.
+# Side effects: none (read-only navigation).
+# Selectors: on the physical iPhone the runner tree is the describe tree; every tap is an id.
+steps:
+  - launch: com.codybontecou.obsidianhealth
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.tab.automations
+      timeoutMs: 20000
+  - tap:
+      id: glass.tab.automations
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.card
+  - await: { idle: true }
+  - tap:
+      id: glass.automation.card
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.automation.schedule
+  - await: { idle: true }
+  - tap:
+      id: glass.automation.schedule
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        identifier: glass.schedule.incrementalStatus
+      expectedText: Exported 1 day (first run)
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: glass.schedule.reexportEverything

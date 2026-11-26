@@ -50,6 +50,12 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
         }
     }
 
+    /// "Only update days that changed" (issue #457): completed-day runs rewrite only
+    /// days whose HealthKit data changed, whose files are missing, or that fall in the
+    /// trailing safety window. New entries opt in; entries saved before this setting
+    /// existed decode as off and keep re-exporting the whole look-back window.
+    var onlyUpdateChangedDays: Bool
+
     /// Logical occurrence of the most recent successful completed-day run.
     var lastExportDate: Date?
     /// Scheduled fire date of the most recent successful Today Refresh.
@@ -75,6 +81,7 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
         todayRefreshEnabled: Bool = false,
         todayRefreshIntervalHours: Int = ExportSchedule.defaultTodayRefreshIntervalHours,
         todayRefreshIntervalMinutes: Int? = nil,
+        onlyUpdateChangedDays: Bool = true,
         lastExportDate: Date? = nil,
         lastTodayRefreshDate: Date? = nil,
         enabledAt: Date? = nil
@@ -103,6 +110,7 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
             todayRefreshIntervalHours
         )
         self.todayRefreshIntervalMinutes = todayRefreshIntervalMinutes
+        self.onlyUpdateChangedDays = onlyUpdateChangedDays
         self.lastExportDate = lastExportDate
         self.lastTodayRefreshDate = lastTodayRefreshDate
     }
@@ -131,6 +139,7 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
         case todayRefreshIntervalMinutes
         case todayRefreshRequestedV2
         case todayRefreshPersistenceVersion
+        case onlyUpdateChangedDays
     }
 
     func encode(to encoder: Encoder) throws {
@@ -153,6 +162,7 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
         try c.encode(lastTodayRefreshDate, forKey: .lastTodayRefreshDate)
         try c.encode(recoveryGeneration, forKey: .recoveryGeneration)
         try c.encode(recoveryDiscardedAt, forKey: .recoveryDiscardedAt)
+        try c.encode(onlyUpdateChangedDays, forKey: .onlyUpdateChangedDays)
         try c.encode(2, forKey: .todayRefreshPersistenceVersion)
         try c.encode(todayRefreshIntervalMinutes == nil ? todayRefreshEnabled : false, forKey: .todayRefreshEnabled)
         try c.encode(todayRefreshIntervalMinutes, forKey: .todayRefreshIntervalMinutes)
@@ -188,6 +198,7 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
         lastTodayRefreshDate = try c.decodeIfPresent(Date.self, forKey: .lastTodayRefreshDate)
         recoveryGeneration = try c.decodeIfPresent(Int.self, forKey: .recoveryGeneration) ?? 0
         recoveryDiscardedAt = try c.decodeIfPresent(Date.self, forKey: .recoveryDiscardedAt)
+        onlyUpdateChangedDays = try c.decodeIfPresent(Bool.self, forKey: .onlyUpdateChangedDays) ?? false
     }
 
     /// Projects this entry onto the legacy schedule shape so every shipped
@@ -452,6 +463,8 @@ final class ScheduledExportEntryStore: ObservableObject {
             todayRefreshEnabled: legacy.todayRefreshEnabled,
             todayRefreshIntervalHours: legacy.todayRefreshIntervalHours,
             todayRefreshIntervalMinutes: legacy.todayRefreshIntervalMinutes,
+            // A migrated legacy schedule is existing behavior, not a new profile.
+            onlyUpdateChangedDays: false,
             lastExportDate: legacy.lastExportDate,
             lastTodayRefreshDate: legacy.lastTodayRefreshDate,
             enabledAt: legacy.enabledAt

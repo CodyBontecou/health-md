@@ -100,20 +100,66 @@ struct GlassFormatCustomScreen: View {
 
     private var config: FrontmatterConfiguration { customization.frontmatterConfig }
 
+    /// Choosing Custom for the first time seeds a working DD-MM-YYYY pattern.
+    private var dateFormatSelection: Binding<DateFormatPreference> {
+        Binding(
+            get: { customization.dateFormat },
+            set: { value in
+                if value == .custom, customization.customDatePattern.isEmpty {
+                    customization.customDatePattern = CustomDatePattern.defaultPattern
+                }
+                customization.dateFormat = value
+            }
+        )
+    }
+
     @ViewBuilder private var datesAndUnits: some View {
         GlassPanel {
             GlassMenuRow(
                 title: String(localized: "Date format"),
-                selection: $customization.dateFormat,
+                selection: dateFormatSelection,
                 options: DateFormatPreference.allCases,
-                label: \.displayName
+                label: \.displayName,
+                identifier: "glass.formatCustom.dateFormat"
             )
+            if customization.dateFormat == .custom {
+                GlassTemplateField(
+                    title: String(localized: "Date pattern"),
+                    text: $customization.customDatePattern,
+                    tokens: DatePlaceholderTemplate.tokens,
+                    placeholder: CustomDatePattern.defaultPattern,
+                    identifier: "glass.formatCustom.customDatePattern"
+                )
+                if !customization.customDatePattern.isEmpty {
+                    Button(String(localized: "Clear pattern")) { customization.customDatePattern = "" }
+                        .glassFont(.rowSubtitle)
+                        .padding(.horizontal, GlassMetrics.panelPadding)
+                        .padding(.bottom, 8)
+                        .frame(minHeight: GlassMetrics.touchTarget)
+                        .accessibilityIdentifier("glass.formatCustom.clearDatePattern")
+                }
+            }
+            GlassRow(title: String(localized: "Date property preview")) {
+                Text(verbatim: customization.formatDate(TestMode.formatPreviewDate ?? Date()))
+                    .glassFont(.monoBody)
+                    .foregroundStyle(palette.muted)
+                    .accessibilityIdentifier("glass.formatCustom.datePreview")
+            }
             GlassMenuRow(
                 title: String(localized: "Time format"),
                 selection: $customization.timeFormat,
                 options: TimeFormatPreference.allCases,
                 label: \.displayName
             )
+        }
+        if customization.dateFormat == .custom,
+           !CustomDatePattern.isValid(customization.customDatePattern) {
+            GlassBanner(
+                title: String(localized: "This date pattern can't be used, so exports write ISO 8601 (2026-01-13). Use placeholders such as {day}-{month}-{year} with letters, digits, spaces, or - . / _ , between them."),
+                systemImage: "exclamationmark.triangle",
+                tone: .warning
+            )
+            .accessibilityIdentifier("glass.formatCustom.customDatePatternInvalid")
         }
         GlassSectionLabel(title: String(localized: "Units"))
         GlassSegmentedControl(
@@ -248,8 +294,10 @@ struct GlassFormatCustomScreen: View {
                 title: String(localized: "Category emoji"),
                 isOn: $customization.markdownTemplate.useEmoji
             )
+            // #167: the classic editor's switch, with its copy, on the 4.0 page too.
+            GlassWorkoutTableToggleRow(isOn: $customization.markdownTemplate.includeWorkoutDetailsAndMetadata)
         }
-        // Custom template text, workout tables and the live preview stay in the existing editor.
+        // Custom template text and the live preview stay in the existing editor.
         GlassPanel {
             NavigationLink {
                 MarkdownTemplateView(config: $customization.markdownTemplate)
@@ -276,6 +324,28 @@ struct GlassFormatCustomScreen: View {
 
     private func reset() {
         FormatCustomizationSnapshot.from(FormatCustomization()).apply(to: customization)
+    }
+}
+
+/// The workout Details/Metadata switch in glass style. Copy and accessibility come from the
+/// classic row's `WorkoutTableTogglePresentation`, so both screens share one set of strings.
+struct GlassWorkoutTableToggleRow: View {
+    static let identifier = "glass.formatCustom.workoutDetailsAndMetadata"
+
+    @Binding var isOn: Bool
+    @Environment(\.locale) private var locale
+
+    func presentation(bundle: Bundle = .main, locale: Locale = .current) -> WorkoutTableTogglePresentation {
+        WorkoutTableTogglePresentation(isOn: isOn, bundle: bundle, locale: locale)
+    }
+
+    var body: some View {
+        let copy = presentation(locale: locale)
+        GlassToggleRow(title: copy.title, subtitle: copy.subtitle, isOn: $isOn)
+            .accessibilityLabel(copy.accessibilityLabel)
+            .accessibilityHint(copy.accessibilityHint)
+            .accessibilityValue(copy.accessibilityValue)
+            .accessibilityIdentifier(Self.identifier)
     }
 }
 #endif

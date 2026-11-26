@@ -14,7 +14,10 @@ Date/Time settings control human-readable formatting. Unit settings control Mark
 ## Setup
 
 1. Open **Export → Format Customization**.
-2. Pick a date format (ISO is best for sorting).
+2. Pick a date format (ISO is best for sorting). It sets the frontmatter `date` property and the date in JSON and CSV files.
+   - Presets include ISO 8601, US, EU Dot (`13.01.2026`), EU Short (`13/01/2026`), EU Dash (`13-01-2026`), long, compact, and friendly forms.
+   - **Custom pattern** (Apple) builds the value from the filename placeholders: `{date}`, `{year}`, `{YR}`, `{month}`, `{day}`, `{weekday}`, `{monthName}`, `{quarter}`, `{week}`, `{weekYear}`. For example `{day}-{month}-{year}` writes `13-01-2026`. Between placeholders, use letters, digits, spaces, or `- . / _ ,`. A pattern needs at least one placeholder and must start with a placeholder, letter, or digit. An empty or invalid pattern writes the ISO date instead, so exports never fail or write broken YAML.
+   - Shared Setup v2 files cannot carry EU Dash or a custom pattern. Choose another date format before sharing that automation.
 3. Pick 12/24-hour time and optional seconds.
 4. Pick Metric or Imperial display units.
 5. Preview, then re-export dates that should use the new presentation.

@@ -92,3 +92,5 @@ Core folder exports require no Health.md account and create no Health.md server 
 Use the [local destination guide](/blog/export-health-data-without-the-cloud/) and [retention policy](/privacy-policy.html#retention) when choosing storage. For Strava activities, see the [Strava export guide](/blog/export-strava-data/). Keep original COROS files until you have checked the representation and coverage of any derived daily files.
 
 Garmin users: see the [Garmin export guide](/blog/export-garmin-connect-data/) for its archive, CSV and FIT downloads.
+
+Polar users: see the [Polar Flow export guide](/blog/export-polar-flow-data/) for its session files and account download.
