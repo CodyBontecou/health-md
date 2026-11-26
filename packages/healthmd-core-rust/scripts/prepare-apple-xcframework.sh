@@ -7,6 +7,9 @@ package_root="$repo_root/apps/apple/Packages/HealthMdCoreRust"
 xcframework=${1:-"$package_root/Artifacts/HealthmdCore.xcframework"}
 stamp="$(dirname -- "$xcframework")/.healthmd-core-source.sha256"
 
+. "$workspace_root/scripts/rustc-wrapper-guard.sh"
+healthmd_guard_rustc_wrapper "${CARGO_TARGET_DIR:-$workspace_root/target}"
+
 "$workspace_root/scripts/generate-apple-bindings.sh" --check
 
 source_digest=$("$workspace_root/scripts/apple-source-digest.sh")
