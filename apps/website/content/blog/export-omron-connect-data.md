@@ -1,10 +1,10 @@
 ---
-title: "Export OMRON connect data: reports or Apple Health CSV"
-description: "Save OMRON connect reports, or export readings already shared to Apple Health as daily CSV or JSON. Check regional menus, history and paired-reading limits."
-lead: "Start with OMRON's own report for its measurements. Use Health.md for daily files only after checking the actual records in Apple Health."
+title: "Export OMRON connect data: Excel, PDF or CSV (both apps)"
+description: "OMRON connect US/CAN/EMEA: History → Share for Excel/PDF. OMRON Connect: ･･･ → Export measurement data for CSV. Plus the Apple Health route."
+lead: "OMRON ships two apps with different export menus. Find yours, follow its steps, and fix a missing Share, History or ･･･ button."
 date: "2026-10-30"
-updated: "2026-10-30"
-verified: "2026-10-30"
+updated: "2026-11-26"
+verified: "2026-11-26"
 verified_by: "Codex (agent)"
 verified_method: traced
 platform: apple
@@ -21,24 +21,51 @@ tags:
   - csv
 ---
 
-**OMRON connect already provides report exports. You do not need Health.md for OMRON's own files.** Use the native report when it contains the measurements and format you need.
+**OMRON has two different apps, and the export lives in a different place in each.** Check which one you have, then use its route. You do not need Health.md for OMRON's own Excel, PDF or CSV file.
 
-Health.md offers a separate iPhone workflow: daily Markdown, CSV or JSON from selected, authorized Apple Health records. It does not connect directly to an OMRON account, read a monitor over Bluetooth or import an OMRON report.
+| App (App Store name / seller) | Where the export is | What you get |
+| --- | --- | --- |
+| **OMRON connect US/CAN/EMEA** (Omron Healthcare, Inc.) | **History** tab → **Share** icon → (**Standard Report**, if offered) → data type and date range → format → send | Excel or PDF report |
+| **OMRON Connect** (OMRON HEALTHCARE Co., Ltd., the app used in Asia-Pacific and other regions) | Graph screen → **･･･** menu → **Export measurement data** | CSV file |
 
-## Export an OMRON report first
+**Which app do you have?** Look at the app's name and seller in its App Store listing ([OMRON connect US/CAN/EMEA](https://apps.apple.com/us/app/omron-connect/id1166317885), [OMRON Connect](https://apps.apple.com/au/app/omron-connect/id1003177043)). The US/CAN/EMEA app's bottom tab bar has a **History** tab; if you have no History tab, you are probably on the other app.
 
-OMRON's [UK support guide](https://www.omron-healthcare.co.uk/omronconnect-support), checked **October 30, 2026**, describes:
+Menu labels below are per OMRON's documentation, checked November 26, 2026; labels can vary by version and region, and neither route is promised for every account or plan.
 
-1. Open **History** and its **Share** control.
-2. Choose **Standard Report** if you are not a Premium subscriber, then select the data type and date range.
-3. Select an offered **Excel or PDF** format.
-4. Follow the recipient and send prompts, checking the destination before sending.
+## Export from OMRON connect US/CAN/EMEA (Excel or PDF)
 
-These are documented OMRON connect US/CAN/EMEA instructions. Check your regional app and its offered choices; report features and menus can differ. OMRON's [US app overview](https://omronhealthcare.com/omron-connect-app) distinguishes basic reports from Premium report features. Do not assume every report option is available on every plan.
+OMRON's [UK support guide](https://www.omron-healthcare.co.uk/omronconnect-support) (last read October 30, 2026) describes:
 
-Keep the original download. Its columns and grouping are not Health.md's daily-file contract, even when both outputs are CSV.
+1. Open **History**, then tap **Share**.
+2. Choose **Standard Report** when it is shown (it is described for users who are not Premium subscribers).
+3. Select the data type and the date range.
+4. Select **Excel** or **PDF**.
+5. Choose **Send to me** or **Send to other**, and check the destination before sending.
 
-## Understand the native export's scope
+OMRON's [US app overview](https://omronhealthcare.com/omron-connect-app) distinguishes basic reports from Premium report features, so Premium reports are a plan feature, not something every account has.
+
+This route produces Excel or PDF, not CSV. If you need a CSV, open the Excel file and use **Save as CSV** there. Never rename a PDF to .csv.
+
+## Export from OMRON Connect (CSV)
+
+OMRON's [Connect renewal page](https://www.omronconnect.com/renewal/en_def/), read November 26, 2026, says to tap the **･･･** button on the graph screen and then **Export measurement data** to output a CSV file.
+
+1. Open the graph screen.
+2. Tap **･･･**.
+3. Tap **Export measurement data**.
+4. Save or send the CSV file.
+
+Open the CSV and check its date coverage before you rely on it.
+
+## Can't find Share, History or the ･･･ button?
+
+- You may be on the other app. Compare with the table above.
+- Update the app from the App Store.
+- Sync the monitor first. Readings not yet synced to your account are not in a cloud export (see the scope notice below).
+- Report options can differ by plan and region.
+- Don't delete readings or reset the app because a report looks short.
+
+## What the native export does and does not include
 
 OMRON's [EMEA data-porting notice](https://www.omron-healthcare.com/notice-for-data-act) describes measurement exports and excludes app settings and account information. It also limits the described export to stored account measurements, excluding data not yet synchronized to the cloud.
 
@@ -46,17 +73,22 @@ The notice describes CSV/PDF output, but this does not establish that CSV appear
 
 That scope statement is not a promise about every local-only record or every regional app. Inspect the actual file and its date coverage. Do not delete a monitor's readings or reset an app merely because an exported report looks incomplete.
 
-## Verify OMRON to Apple Health sharing
+## Put OMRON readings in Apple Health
 
-The same UK support guide uses **Profile → App settings → Share data with other apps → Apple Health → Link**, then category authorization. Its outgoing list includes blood-pressure readings. Enable the relevant available categories, let synchronization finish and inspect a known day's source records in Apple Health.
+For OMRON connect US/CAN/EMEA, the same UK support guide uses **Profile → App settings → Share data with other apps → Apple Health → Link**, then category authorization. Its outgoing list includes blood-pressure readings. Enable the relevant available categories, let synchronization finish and inspect a known day's source records in Apple Health.
 
-The native report, OMRON's dashboard and Apple Health can contain different representations or coverage. A linked app does not establish that every old reading, ECG, note, calculated insight or account setting has been copied. Start with records you can actually find on the phone.
+The native report, OMRON's dashboard and Apple Health can contain different representations or coverage. A linked app does not establish that every old reading, ECG, note, calculated insight or account setting has been copied. For OMRON Connect, its [App Store listing](https://apps.apple.com/au/app/omron-connect/id1003177043) says data can be shared with Apple's Health; this guide gives no menu path for it. Either way, open Apple Health and verify one known day's readings before relying on them. Start with records you can actually find on the phone.
 
 This walkthrough qualifies the **iPhone Apple Health route**. Older references to Google Fit or Samsung Health do not establish current direct Health Connect menus, fields or history. If your Android phone already has the records in Health Connect, use the separate [Health Connect export guide](/health-connect-export/); this article does not supply an OMRON-specific Android setup.
 
-## Make one daily export with Health.md
 
-Once the required records are present, [get Health.md for iPhone](https://apps.apple.com/us/app/health-md/id6757763969) and use the [blood-pressure CSV and JSON walkthrough](/blog/export-apple-health-blood-pressure/).
+To turn the readings in Apple Health into daily CSV, JSON or Markdown files in a folder you choose, [get Health.md for iPhone](https://apps.apple.com/us/app/health-md/id6757763969). It is not a replacement for OMRON's own report.
+
+For other routes: [Apple Health to Excel](/blog/apple-health-to-excel/), [a PDF from Apple Health](/blog/export-apple-health-data-pdf/).
+
+## Make one daily export with Health.md (iPhone)
+
+Once the required records are present, use the [blood-pressure CSV and JSON walkthrough](/blog/export-apple-health-blood-pressure/).
 
 1. Grant Health.md separate read permissions. OMRON's permission to write does not authorize another app to read.
 2. Select **Blood Pressure (Systolic)** and **Blood Pressure (Diastolic)** under **Vitals**.
