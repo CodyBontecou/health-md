@@ -17,7 +17,7 @@ description: "Controlla la formattazione dell'output senza modificare i dati rac
 </div>
 
 ## Data e ora
-<p>Scegli il formato della data (ad es. <code>YYYY-MM-DD</code>, <code>MMM d, yyyy</code>) e quello dell'ora (12 o 24 ore). Il riquadro di anteprima in fondo alla schermata si aggiorna in tempo reale quando modifichi le impostazioni. Il formato della data imposta la proprietà <code>date</code> del frontmatter, anche <code>DD-MM-YYYY</code>. Su iPhone, iPad e Mac puoi anche scegliere uno schema personalizzato e comporre la data con i segnaposto del nome file, ad es. <code>{day}-{month}-{year}</code>. Uno schema non valido scrive la data ISO.</p>
+<p>Scegli il formato della data (ad es. <code>YYYY-MM-DD</code>, <code>MMM d, yyyy</code>, <code>DD-MM-YYYY</code>) e quello dell'ora (12 o 24 ore). Il riquadro di anteprima in fondo alla schermata si aggiorna in tempo reale quando modifichi le impostazioni. Il formato della data imposta la proprietà <code>date</code> del frontmatter. Su iPhone, iPad e Mac puoi anche scegliere uno schema personalizzato e comporre la data con i segnaposto del nome file, ad es. <code>{day}-{month}-{year}</code>. Uno schema non valido scrive la data ISO.</p>
 
 ## Sistema di unità
 <p>Passa da <em>Metrico</em> a <em>Imperiale</em>. Questa impostazione influisce su distanza (m/km rispetto a ft/mi), peso (kg rispetto a lb), temperatura (°C rispetto a °F) e alcune altre misure. HealthKit archivia sempre i dati in unità canoniche; la conversione avviene al momento dell'esportazione.</p>
