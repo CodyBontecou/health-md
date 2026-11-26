@@ -18,7 +18,11 @@ import com.healthmd.domain.repository.SettingsRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.spyk
 import io.mockk.verify
+import java.io.OutputStream
+import com.healthmd.export.ExportFixtures
 import java.io.ByteArrayOutputStream
 import java.time.LocalDate
 import java.util.concurrent.Executors
@@ -105,6 +109,37 @@ class ExportRepositoryMainSafetyTest {
         assertThat(sideEffectThreads).doesNotContain(callerThread[0])
     }
 
+    /**
+     * Play vitals #421: `JsonExporter.render` grew one pretty-printed String for a whole granular
+     * day (`JsonToStringWriter.ensureTotalCapacity` -> OutOfMemoryError) when the folder export
+     * called `export(...)` from `contentForFormat`. The folder JSON must reach the destination
+     * only through the streamed writer, never as one String, with the historical bytes.
+     */
+    @Test
+    fun legacyFolderJsonIsStreamedInsteadOfRenderedAsOneString() = runBlocking {
+        val manager = mockk<FileExportManager>(relaxed = true)
+        val body = slot<(OutputStream) -> Unit>()
+        every { manager.writeStreamedFile(any(), any(), any(), any(), any(), capture(body)) } returns true
+        val jsonExporter = spyk(JsonExporter())
+        val repository = repository(manager, jsonExporter = jsonExporter)
+        val granular = settings(ExportFormat.JSON).copy(includeGranularData = true)
+        val data = ExportFixtures.fullDayGranular
+
+        val success = withContext(callerDispatcher) { repository.exportHealthData(data, granular) }
+
+        assertThat(success).isTrue()
+        verify(exactly = 0) { jsonExporter.export(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { manager.writeFile(any(), any(), any(), any(), any(), any()) }
+        val streamed = ByteArrayOutputStream().also { body.captured(it) }.toByteArray()
+        val historical = JsonExporter().export(
+            data = data,
+            customization = granular.formatCustomization,
+            includeGranularData = true,
+            detail = granular.exportDetailSelection(),
+        )
+        assertThat(streamed).isEqualTo(historical.toByteArray(Charsets.UTF_8))
+    }
+
     @Test
     fun previewReadsDestinationOffTheCallingThread() = runBlocking {
         val readThreads = mutableListOf<Thread>()
@@ -158,13 +193,14 @@ class ExportRepositoryMainSafetyTest {
     private fun repository(
         manager: FileExportManager,
         markdownExporter: MarkdownExporter = MarkdownExporter(),
+        jsonExporter: JsonExporter = JsonExporter(),
     ): ExportRepositoryImpl {
         val settingsRepository = mockk<SettingsRepository>()
         coEvery { settingsRepository.getExportFolderUri() } returns folderUri
         return ExportRepositoryImpl(
             fileExportManager = manager,
             markdownExporter = markdownExporter,
-            jsonExporter = JsonExporter(),
+            jsonExporter = jsonExporter,
             csvExporter = CsvExporter(),
             obsidianBasesExporter = ObsidianBasesExporter(),
             settingsRepository = settingsRepository,
