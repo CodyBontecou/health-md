@@ -1,43 +1,36 @@
-# Sourced by the shared-core build scripts; POSIX sh.
-#
-# A configured rustc wrapper (for example sccache via `build.rustc-wrapper` in
-# ~/.cargo/config.toml) may write compiler outputs from a long-lived server
-# process. When that server was started under another sandbox it cannot write
-# this checkout's target directory, and every crate fails with "Operation not
-# permitted". Probe once with a throwaway crate in the real target directory,
-# built non-incrementally because sccache hands incremental builds to a local
-# rustc and would skip the server. If only the wrapped build fails, build
-# without the wrapper. Compilation errors are unaffected: the probe crate is
-# empty, and a probe that fails without the wrapper too changes nothing.
+# shellcheck shell=sh
+# Sourced by the shared-core build entry points. A developer's cargo config may set
+# build.rustc-wrapper (for example a shared sccache). A wrapper server started outside the
+# current sandbox cannot write this worktree's target directory, which fails every crate with
+# "Operation not permitted" (sccache exit 254). Probe once with a throwaway crate in the real
+# target directory and disable only an unusable wrapper. An explicit RUSTC_WRAPPER (including
+# an empty one) is respected; HEALTHMD_SKIP_RUSTC_WRAPPER_PROBE=1 skips the probe.
 #
 # Usage: healthmd_guard_rustc_wrapper TARGET_DIR [CARGO]
+# CARGO defaults to the cargo on PATH; pass the toolchain cargo the caller builds with.
+
 healthmd_guard_rustc_wrapper() {
-    [ "${HEALTHMD_RUSTC_WRAPPER_CHECKED:-}" = "1" ] && return 0
-    HEALTHMD_RUSTC_WRAPPER_CHECKED=1
-    export HEALTHMD_RUSTC_WRAPPER_CHECKED
-    # An explicitly empty wrapper is already the no-wrapper configuration.
-    if [ "${RUSTC_WRAPPER+set}" = "set" ] && [ -z "$RUSTC_WRAPPER" ]; then return 0; fi
+    probe_parent=$1
+    probe_cargo=${2:-cargo}
+    [ "${HEALTHMD_SKIP_RUSTC_WRAPPER_PROBE:-0}" = 1 ] && return 0
+    [ -n "${RUSTC_WRAPPER+set}" ] && return 0
+    command -v "$probe_cargo" >/dev/null 2>&1 || return 0
 
-    guard_cargo=${2:-cargo}
-    guard_dir="$1/.rustc-wrapper-probe"
-    rm -rf "$guard_dir"
-    mkdir -p "$guard_dir/src" 2>/dev/null || return 0
-    printf '[package]\nname = "rustc-wrapper-probe"\nversion = "0.0.0"\nedition = "2021"\npublish = false\n\n[lib]\npath = "src/lib.rs"\n\n[workspace]\n' \
-        > "$guard_dir/Cargo.toml"
-    : > "$guard_dir/src/lib.rs"
+    probe_src=$(mktemp -d "${TMPDIR:-/tmp}/healthmd-rustc-wrapper-probe.XXXXXX") || return 0
+    probe_target="$probe_parent/.rustc-wrapper-probe"
+    mkdir -p "$probe_src/src" "$probe_parent" 2>/dev/null || true
+    printf '[package]\nname = "healthmd_rustc_wrapper_probe"\nversion = "0.0.0"\nedition = "2021"\n\n[workspace]\n' > "$probe_src/Cargo.toml"
+    : > "$probe_src/src/lib.rs"
 
-    if (cd "$guard_dir" && CARGO_INCREMENTAL=0 "$guard_cargo" build --quiet --offline --target-dir "$guard_dir/target") \
-        > "$guard_dir/wrapped.log" 2>&1; then
-        rm -rf "$guard_dir"
-        return 0
-    fi
-    if (cd "$guard_dir" && CARGO_INCREMENTAL=0 RUSTC_WRAPPER='' "$guard_cargo" build --quiet --offline --target-dir "$guard_dir/target-unwrapped") \
-        > "$guard_dir/unwrapped.log" 2>&1; then
-        echo "warning: the configured rustc wrapper cannot write $1; building without it" >&2
-        sed -n '1,3p' "$guard_dir/wrapped.log" >&2
+    # A wrapper only changes the result when it cannot write the target directory; a probe
+    # that fails both ways (no toolchain, offline) leaves the configuration alone.
+    # Incremental (path-crate) compiles bypass sccache, so probe the non-incremental path the
+    # registry dependencies take.
+    if ! CARGO_INCREMENTAL=0 "$probe_cargo" build --quiet --offline --manifest-path "$probe_src/Cargo.toml" --target-dir "$probe_target" >/dev/null 2>&1 \
+        && RUSTC_WRAPPER='' CARGO_INCREMENTAL=0 "$probe_cargo" build --quiet --offline --manifest-path "$probe_src/Cargo.toml" --target-dir "$probe_target" >/dev/null 2>&1; then
+        echo "warning: the configured rustc wrapper cannot write $probe_parent; building without it (RUSTC_WRAPPER='')" >&2
         RUSTC_WRAPPER=''
         export RUSTC_WRAPPER
     fi
-    rm -rf "$guard_dir"
-    return 0
+    rm -rf "$probe_src" "$probe_target"
 }

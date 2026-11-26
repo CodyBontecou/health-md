@@ -3133,10 +3133,11 @@ class HealthConnectManager(
         preserveExactIntervals: Boolean = false,
     ): WorkoutData {
         val duration = java.time.Duration.between(session.startTime, session.endTime)
-        val heartSamples = sources.heartRateRecords
-            .flatMap { record -> record.samples.map { sample -> record to sample } }
-            .filter { (_, sample) -> sample.time.isWithin(session.startTime, session.endTime) }
-            .map { (record, sample) ->
+        // Sources span the whole read chunk (up to 30 days, millions of heart-rate samples).
+        // Narrow to the records overlapping this session before touching any sample (#431).
+        val sessionSeries = sources.seriesOverlapping(session.startTime, session.endTime)
+        val heartSamples = sessionSeries.heartRateRecords
+            .samplesWithin(session.startTime, session.endTime, { it.samples }, { it.time }) { record, sample ->
                 TimestampedSample(
                     LocalDateTime.ofInstant(sample.time, zone),
                     sample.beatsPerMinute.toDouble(),
@@ -3146,10 +3147,8 @@ class HealthConnectManager(
                     identity = record.metadata.toSyntheticChildIdentity("heart_rate_sample", record.metadata.id, sample.time, sample.beatsPerMinute),
                 )
             }.sortedBy { it.time }
-        val speedSamples = sources.speedRecords
-            .flatMap { record -> record.samples.map { sample -> record to sample } }
-            .filter { (_, sample) -> sample.time.isWithin(session.startTime, session.endTime) }
-            .map { (record, sample) ->
+        val speedSamples = sessionSeries.speedRecords
+            .samplesWithin(session.startTime, session.endTime, { it.samples }, { it.time }) { record, sample ->
                 TimestampedSample(
                     LocalDateTime.ofInstant(sample.time, zone), sample.speed.inMetersPerSecond,
                     source = record.metadata.dataOrigin.packageName, metadata = record.metadata.toExportMetadata(),
@@ -3157,10 +3156,8 @@ class HealthConnectManager(
                     identity = record.metadata.toSyntheticChildIdentity("speed_sample", record.metadata.id, sample.time, sample.speed.inMetersPerSecond),
                 )
             }.sortedBy { it.time }
-        val cyclingCadenceSamples = sources.cyclingCadenceRecords
-            .flatMap { record -> record.samples.map { sample -> record to sample } }
-            .filter { (_, sample) -> sample.time.isWithin(session.startTime, session.endTime) }
-            .map { (record, sample) ->
+        val cyclingCadenceSamples = sessionSeries.cyclingCadenceRecords
+            .samplesWithin(session.startTime, session.endTime, { it.samples }, { it.time }) { record, sample ->
                 TimestampedSample(
                     LocalDateTime.ofInstant(sample.time, zone), sample.revolutionsPerMinute,
                     source = record.metadata.dataOrigin.packageName, metadata = record.metadata.toExportMetadata(),
@@ -3168,10 +3165,8 @@ class HealthConnectManager(
                     identity = record.metadata.toSyntheticChildIdentity("cycling_cadence_sample", record.metadata.id, sample.time, sample.revolutionsPerMinute),
                 )
             }.sortedBy { it.time }
-        val stepsCadenceSamples = sources.stepsCadenceRecords
-            .flatMap { record -> record.samples.map { sample -> record to sample } }
-            .filter { (_, sample) -> sample.time.isWithin(session.startTime, session.endTime) }
-            .map { (record, sample) ->
+        val stepsCadenceSamples = sessionSeries.stepsCadenceRecords
+            .samplesWithin(session.startTime, session.endTime, { it.samples }, { it.time }) { record, sample ->
                 TimestampedSample(
                     LocalDateTime.ofInstant(sample.time, zone), sample.rate,
                     source = record.metadata.dataOrigin.packageName, metadata = record.metadata.toExportMetadata(),
@@ -3179,10 +3174,8 @@ class HealthConnectManager(
                     identity = record.metadata.toSyntheticChildIdentity("steps_cadence_sample", record.metadata.id, sample.time, sample.rate),
                 )
             }.sortedBy { it.time }
-        val powerSamples = sources.powerRecords
-            .flatMap { record -> record.samples.map { sample -> record to sample } }
-            .filter { (_, sample) -> sample.time.isWithin(session.startTime, session.endTime) }
-            .map { (record, sample) ->
+        val powerSamples = sessionSeries.powerRecords
+            .samplesWithin(session.startTime, session.endTime, { it.samples }, { it.time }) { record, sample ->
                 TimestampedSample(
                     LocalDateTime.ofInstant(sample.time, zone), sample.power.inWatts,
                     source = record.metadata.dataOrigin.packageName, metadata = record.metadata.toExportMetadata(),
@@ -3327,11 +3320,11 @@ class HealthConnectManager(
                 }
                 putIds("distance", sources.distanceRecords.filter { it.overlaps(session.startTime, session.endTime) }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
                 putIds("calories", sources.calorieRecords.filter { it.overlaps(session.startTime, session.endTime) }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
-                putIds("heart_rate", sources.heartRateRecords.filter { record -> record.samples.any { it.time.isWithin(session.startTime, session.endTime) } }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
-                putIds("speed", sources.speedRecords.filter { record -> record.samples.any { it.time.isWithin(session.startTime, session.endTime) } }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
-                putIds("cycling_cadence", sources.cyclingCadenceRecords.filter { record -> record.samples.any { it.time.isWithin(session.startTime, session.endTime) } }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
-                putIds("steps_cadence", sources.stepsCadenceRecords.filter { record -> record.samples.any { it.time.isWithin(session.startTime, session.endTime) } }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
-                putIds("power", sources.powerRecords.filter { record -> record.samples.any { it.time.isWithin(session.startTime, session.endTime) } }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
+                putIds("heart_rate", sessionSeries.heartRateRecords.filter { record -> record.samples.any { it.time.isWithin(session.startTime, session.endTime) } }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
+                putIds("speed", sessionSeries.speedRecords.filter { record -> record.samples.any { it.time.isWithin(session.startTime, session.endTime) } }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
+                putIds("cycling_cadence", sessionSeries.cyclingCadenceRecords.filter { record -> record.samples.any { it.time.isWithin(session.startTime, session.endTime) } }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
+                putIds("steps_cadence", sessionSeries.stepsCadenceRecords.filter { record -> record.samples.any { it.time.isWithin(session.startTime, session.endTime) } }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
+                putIds("power", sessionSeries.powerRecords.filter { record -> record.samples.any { it.time.isWithin(session.startTime, session.endTime) } }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
                 putIds("elevation", sources.elevationRecords.filter { it.overlaps(session.startTime, session.endTime) }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
             },
         )
@@ -3539,6 +3532,39 @@ class HealthConnectManager(
 
     private fun overlaps(recordStart: Instant, recordEnd: Instant, start: Instant, end: Instant): Boolean =
         recordStart.isBefore(end) && recordEnd.isAfter(start)
+
+    /**
+     * Series records that can hold a sample inside [start, end] (inclusive, like [isWithin]).
+     * A record's samples all lie within its own interval, so a record outside the window is
+     * skipped without expanding its samples.
+     */
+    private fun WorkoutSourceRecords.seriesOverlapping(start: Instant, end: Instant) = copy(
+        heartRateRecords = heartRateRecords.filter { mayHaveSampleWithin(it.startTime, it.endTime, start, end) },
+        speedRecords = speedRecords.filter { mayHaveSampleWithin(it.startTime, it.endTime, start, end) },
+        cyclingCadenceRecords = cyclingCadenceRecords.filter { mayHaveSampleWithin(it.startTime, it.endTime, start, end) },
+        stepsCadenceRecords = stepsCadenceRecords.filter { mayHaveSampleWithin(it.startTime, it.endTime, start, end) },
+        powerRecords = powerRecords.filter { mayHaveSampleWithin(it.startTime, it.endTime, start, end) },
+    )
+
+    private fun mayHaveSampleWithin(recordStart: Instant, recordEnd: Instant, start: Instant, end: Instant): Boolean =
+        !recordStart.isAfter(end) && !recordEnd.isBefore(start)
+
+    /** Builds one sample per series point inside [start, end] without per-sample pair allocations. */
+    private inline fun <R, S> List<R>.samplesWithin(
+        start: Instant,
+        end: Instant,
+        samples: (R) -> List<S>,
+        sampleTime: (S) -> Instant,
+        build: (R, S) -> TimestampedSample,
+    ): List<TimestampedSample> {
+        val result = ArrayList<TimestampedSample>()
+        for (record in this) {
+            for (sample in samples(record)) {
+                if (sampleTime(sample).isWithin(start, end)) result += build(record, sample)
+            }
+        }
+        return result
+    }
 
     private fun mapSegmentType(type: Int): String = when (type) {
         ExerciseSegment.EXERCISE_SEGMENT_TYPE_SWIMMING_BACKSTROKE -> "swimming backstroke"
