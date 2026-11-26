@@ -76,6 +76,7 @@ import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.common.LocalFloatingActionClearance
 import com.healthmd.presentation.common.LocalUsesNavigationRail
 import com.healthmd.presentation.common.PrimaryButton
+import com.healthmd.presentation.review.ScheduledReviewPromptEffect
 import com.healthmd.presentation.schedule.ScheduleViewModel
 import com.healthmd.presentation.theme.GeistBreakpoints
 import com.healthmd.presentation.theme.GeistColors
@@ -134,6 +135,9 @@ fun ArchiveScreen(
         viewModel.refreshHealthConnect()
         onPauseOrDispose { }
     }
+    // The Archive shows what scheduled exports wrote: after one fully succeeds, the next calm
+    // visit here may ask for a Play rating (ScheduledReviewMoment decides).
+    ScheduledReviewPromptEffect()
     val context = LocalContext.current
     val protection = LocalConfigurationProtection.current
     val openHealthConnect: () -> Unit = {

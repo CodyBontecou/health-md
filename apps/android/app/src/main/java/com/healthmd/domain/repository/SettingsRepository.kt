@@ -71,6 +71,13 @@ interface SettingsRepository {
     suspend fun getSuccessfulExportCount(): Int
     /** Counts one full success toward the review threshold, and its calendar day. */
     suspend fun recordReviewEligibleSuccess(epochDay: Long)
+    /**
+     * Counts one scheduled full success like [recordReviewEligibleSuccess] and leaves a
+     * review moment for the next foreground Archive visit (see [takeScheduledReviewMoment]).
+     */
+    suspend fun recordScheduledReviewSuccess(epochDay: Long)
+    /** Whether a scheduled success is waiting for a foreground review moment; clears it. */
+    suspend fun takeScheduledReviewMoment(): Boolean
     /** Atomically persists one success and its opaque operation receipt across retries. */
     suspend fun recordSuccessfulExportOnce(operationId: String): Boolean
     /** Resolves review-request inputs, migrating the legacy one-shot flag to a timestamp. */

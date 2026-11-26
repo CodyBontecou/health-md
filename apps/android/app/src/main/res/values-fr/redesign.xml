@@ -475,6 +475,7 @@
     <string name="app_support_privacy_policy">Politique de confidentialité</string>
     <string name="app_support_help">Aide</string>
     <string name="app_support_report_bug">Signaler un bogue</string>
+    <string name="app_support_rate_on_play">Noter Health.md sur Google Play</string>
     <string name="app_support_replay_onboarding">Revoir l’introduction</string>
     <string name="app_support_replay_onboarding_title">Revoir l’introduction ?</string>
     <string name="app_support_replay_onboarding_body">Vos automatisations, destinations et fichiers exportés restent inchangés.</string>

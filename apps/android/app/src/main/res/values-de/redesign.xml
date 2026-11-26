@@ -463,6 +463,7 @@
     <string name="app_support_privacy_policy">Datenschutzerklärung</string>
     <string name="app_support_help">Hilfe</string>
     <string name="app_support_report_bug">Fehler melden</string>
+    <string name="app_support_rate_on_play">Health.md bei Google Play bewerten</string>
     <string name="app_support_replay_onboarding">Einführung erneut anzeigen</string>
     <string name="app_support_replay_onboarding_title">Einführung erneut anzeigen?</string>
     <string name="app_support_replay_onboarding_body">Ihre Automationen, Ziele und exportierten Dateien bleiben unverändert.</string>

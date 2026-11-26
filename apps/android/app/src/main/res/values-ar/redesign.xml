@@ -529,6 +529,7 @@
 <string name="app_support_privacy_policy">سياسة الخصوصية</string>
 <string name="app_support_help">المساعدة</string>
 <string name="app_support_report_bug">الإبلاغ عن خطأ</string>
+<string name="app_support_rate_on_play">قيّم Health.md على Google Play</string>
 <string name="app_support_replay_onboarding">إعادة عرض الإعداد الأولي</string>
 <string name="app_support_replay_onboarding_title">إعادة عرض الإعداد الأولي؟</string>
 <string name="app_support_replay_onboarding_body">تبقى عمليات الأتمتة والوجهات والملفات المصدّرة كما هي.</string>

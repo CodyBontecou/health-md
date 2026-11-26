@@ -463,6 +463,7 @@
     <string name="app_support_privacy_policy">Құпиялық саясаты</string>
     <string name="app_support_help">Анықтама</string>
     <string name="app_support_report_bug">Ақау туралы хабарлау</string>
+    <string name="app_support_rate_on_play">Google Play-де Health.md-ге баға беру</string>
     <string name="app_support_replay_onboarding">Бастапқы таныстыруды қайталау</string>
     <string name="app_support_replay_onboarding_title">Бастапқы таныстыруды қайталау керек пе?</string>
     <string name="app_support_replay_onboarding_body">Автоматтандырулар, мақсаттар және экспортталған файлдар өзгеріссіз қалады.</string>

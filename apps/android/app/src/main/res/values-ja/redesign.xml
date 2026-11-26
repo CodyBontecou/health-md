@@ -415,6 +415,7 @@
     <string name="app_support_privacy_policy">プライバシーポリシー</string>
     <string name="app_support_help">ヘルプ</string>
     <string name="app_support_report_bug">不具合を報告</string>
+    <string name="app_support_rate_on_play">Google Play で Health.md を評価</string>
     <string name="app_support_replay_onboarding">初回ガイドをもう一度見る</string>
     <string name="app_support_replay_onboarding_title">初回ガイドをもう一度見ますか？</string>
     <string name="app_support_replay_onboarding_body">オートメーション、保存先、エクスポート済みのファイルは変更されません。</string>

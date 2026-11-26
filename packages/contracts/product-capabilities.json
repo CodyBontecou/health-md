@@ -107,7 +107,7 @@
       "id": "support.native-review-introduction",
       "name": "Native store review requests",
       "classification": "shared",
-      "summary": "Health.md asks the system review API directly (StoreKit on iPhone and iPad, Google Play In-App Review on the Play build), with no custom pre-prompt. Every full successful export counts, including scheduled, background and Shortcut exports; partial, failed and cancelled exports never count. Requests become eligible after 3 full successes on at least 2 distinct days and repeat only after 120 days and a new app version. Only the foreground app asks: after a visible manual success or a dismissed scheduled-export result, when no paywall, error, partial notice, alert, onboarding or free-export upgrade flow is showing. Cooldowns record request attempts, never submitted ratings; a failed Play request waits 7 days. No health data or new analytics are collected. The F-Droid build and the macOS companion never request reviews; Settings keeps an explicit review screen.",
+      "summary": "Health.md asks the system review API directly (StoreKit on iPhone and iPad, Google Play In-App Review on the Play build), with no custom pre-prompt. Every full successful export counts, including scheduled, background and Shortcut exports; partial, failed and cancelled exports never count. Requests become eligible after 3 full successes on at least 2 distinct days and repeat only after 120 days and a new app version. Only the foreground app asks: after a visible manual success or a seen scheduled-export success (iOS: dismissing its result; Android: the next settled Archive visit after a scheduled full success, with paid access), when no paywall, error, partial notice, alert, dialog, onboarding or free-export upgrade flow is showing. Play requests also require a Google Play install. Cooldowns record request attempts, never submitted ratings; a failed Play request waits 7 days. No health data or new analytics are collected. The F-Droid build and the macOS companion never request reviews; Settings keeps an explicit review entry (iOS review screen; Android \"Rate Health.md on Google Play\" opens the Play listing).",
       "profiles": [],
       "platforms": {
         "apple": {
@@ -122,7 +122,9 @@
         "apps/apple/HealthMd/iOS/Views/ReviewPromptModifier.swift",
         "apps/apple/HealthMdTests/Utilities/ReviewManagerTests.swift",
         "apps/android/app/src/main/java/com/healthmd/domain/export/ReviewPromptPolicy.kt",
-        "apps/android/app/src/test/java/com/healthmd/domain/export/ReviewPromptPolicyTest.kt"
+      "apps/android/app/src/main/java/com/healthmd/presentation/review/ScheduledReviewMoment.kt",
+        "apps/android/app/src/test/java/com/healthmd/domain/export/ReviewPromptPolicyTest.kt",
+      "apps/android/app/src/test/java/com/healthmd/presentation/review/ScheduledReviewMomentTest.kt"
       ]
     },
     {

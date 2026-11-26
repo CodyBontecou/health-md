@@ -1,5 +1,6 @@
 package com.healthmd.di
 
+import android.content.Context
 import com.healthmd.distribution.DistributionRuntime
 import com.healthmd.distribution.PlayDistributionRuntime
 import com.healthmd.domain.distribution.DistributionPolicy
@@ -8,6 +9,7 @@ import com.healthmd.review.PlayReviewPrompter
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -20,7 +22,7 @@ object DistributionModule {
 
     @Provides
     @Singleton
-    fun provideReviewPrompter(): ReviewPrompter = PlayReviewPrompter()
+    fun provideReviewPrompter(@ApplicationContext context: Context): ReviewPrompter = PlayReviewPrompter(context)
 
     @Provides
     @Singleton

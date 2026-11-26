@@ -178,7 +178,7 @@ The **F-Droid build** includes full access with no payment, counter, paywall, pu
 | DataStore Preferences | Export settings, folder URIs, purchase state, and local flags |
 | Room | Export history database and retry diagnostics |
 | Google Play Billing (Play only) | One-time lifetime unlock |
-| Play In-App Review (Play only) | User-initiated review prompt after successful exports |
+| Play In-App Review (Play only) | Review card after full successful exports (a visible manual success, or the next settled Archive visit after a scheduled success); Settings › App & support also links to the Play listing |
 | Google Play Install Referrer (Play only) | First-party campaign-install attribution without a general analytics SDK |
 | kotlinx.serialization | JSON export contracts and persisted settings models |
 | Timber | Debug logging |
