@@ -10,12 +10,12 @@ final class V4ParityCopyTests: XCTestCase {
     // MARK: - X-03 price labels
 
     func testEveryPlanPriceNamesItsBillingPeriod() {
-        XCTAssertEqual(HealthMdPurchaseOption.weekly.priceLabel(displayPrice: "$0.99"), "$0.99" + String(localized: "/week"))
-        XCTAssertEqual(HealthMdPurchaseOption.familyWeekly.priceLabel(displayPrice: "$1.99"), "$1.99" + String(localized: "/week"))
+        XCTAssertEqual(HealthMdPurchaseOption.weekly.priceLabel(displayPrice: "$2.99"), "$2.99" + String(localized: "/week"))
+        XCTAssertEqual(HealthMdPurchaseOption.familyWeekly.priceLabel(displayPrice: "$4.99"), "$4.99" + String(localized: "/week"))
         XCTAssertEqual(HealthMdPurchaseOption.yearly.priceLabel(displayPrice: "$29.99"), "$29.99" + String(localized: "/year"))
         XCTAssertEqual(HealthMdPurchaseOption.familyYearly.priceLabel(displayPrice: "$49.99"), "$49.99" + String(localized: "/year"))
         for lifetime in [HealthMdPurchaseOption.individual, .family, .familyUpgrade] {
-            XCTAssertEqual(lifetime.priceLabel(displayPrice: "$49.99"), "$49.99" + String(localized: " one-time"), "\(lifetime)")
+            XCTAssertEqual(lifetime.priceLabel(displayPrice: "$79.99"), "$79.99" + String(localized: " one-time"), "\(lifetime)")
         }
     }
 

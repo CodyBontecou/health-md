@@ -6,19 +6,23 @@ This guide covers the `play` Android variant. F-Droid does not compile Billing a
 
 **Signal candidate:** Android 3.5.0 build 46 adds the three-slide Signal paywall (archive, eligible trial, plans) on top of the build-45 entitlement fixes. Build 45 was uploaded to Internal Testing through the [protected workflow](https://github.com/CodyBontecou/health-md/actions/runs/41232644269). Build 46 must pass the updated carousel/accessibility checks and exact-tag release workflow before its Internal Testing upload is considered complete. Real Play prices, purchase sheets, and lifecycle behavior must be checked on the Play-installed replacement; synthetic UI offers do not qualify billing. Production promotion and the Lifetime price cutover remain separate.
 
-The approved future US Individual launch targets are **$0.99 weekly**, **$29.99 yearly**, and **$49.99 Lifetime**. Live Lifetime remains **$19.99 US** under the hold below, although Apple moved its Lifetime to $49.99 US (observed November 3, 2026). Eligible subscriptions include a **seven-day free trial**. Lifetime is charged immediately. Android offers no Family plans and no monthly subscription. The cross-platform decision and Apple setup are recorded in the [paid-access rollout](../apple/docs/experiments/subscription-pricing-rollout.md).
+### Current US prices (checked 2026-11-26)
+
+Verified live on November 26, 2026 through the Google Play Publisher API (US): **Weekly $2.99**, **Yearly $29.99**, **Lifetime $79.99**. Android has no Family plans. These prices were raised in the store after the launch; the launch targets, hold and cutover described below are kept as the dated record.
+
+At launch the approved US Individual targets were **$0.99 weekly**, **$29.99 yearly**, and **$49.99 Lifetime**, while Lifetime was held at **$19.99 US** under the hold below (Apple moved its Lifetime to $49.99 US, observed November 3, 2026). Eligible subscriptions include a **seven-day free trial**. Lifetime is charged immediately. Android offers no Family plans and no monthly subscription. The cross-platform decision and Apple setup are recorded in the [paid-access rollout](../apple/docs/experiments/subscription-pricing-rollout.md).
 
 **Build-45 Internal Testing evidence (October 31, 2026):** Android 3.5.0 build 45 was delivered through Internal Testing for the qualification recorded below. It retains build 44's seven-day trial phase fix and corrects refunded-Lifetime revocation and asynchronous automation results. Upload through the protected `android-release.yml` workflow, then qualify real Play purchases with license-test accounts before production promotion. The Internal Testing upload does not activate subscription products or change any product price. Production promotion remains on hold.
 
-**Live-price hold:** these are launch targets. Leave the existing live lifetime product's price and regional pricing unchanged until the subscription-containing app is live and the owner explicitly approves the coordinated cutover. Draft subscription products, prices, and trials may be prepared in advance; do not activate, submit, publish, or release as a side effect of setup. Follow the rollout guide's live-price hold when resuming Console work.
+**Live-price hold (launch period, now historical):** these were launch targets. Leave the existing live lifetime product's price and regional pricing unchanged until the subscription-containing app is live and the owner explicitly approves the coordinated cutover. Draft subscription products, prices, and trials may be prepared in advance; do not activate, submit, publish, or release as a side effect of setup. Follow the rollout guide's live-price hold when resuming Console work.
 
 Configure draft products in Google Play Console under Monetize → Products:
 
-| Product ID | Type | Base-plan period | US launch target |
-|---|---|---|---:|
-| `health_md_premium_weekly` | Auto-renewing subscription | `P1W` | $0.99 |
-| `health_md_premium_yearly` | Auto-renewing subscription | `P1Y` | $29.99 |
-| `health_md_premium_lifetime` | Non-consumable INAPP | — | $49.99 |
+| Product ID | Type | Base-plan period | Launch target (US) | Live US price (2026-11-26) |
+|---|---|---|---:|---:|
+| `health_md_premium_weekly` | Auto-renewing subscription | `P1W` | $0.99 | $2.99 |
+| `health_md_premium_yearly` | Auto-renewing subscription | `P1Y` | $29.99 | $29.99 |
+| `health_md_premium_lifetime` | Non-consumable INAPP | — | $49.99 | $79.99 |
 
 On October 30, 2026 (October 31 UTC), the owner-authorized Android Internal Testing and Pixel 7 license-test preparation activated both subscription products: `health_md_premium_weekly` has active base plan `weekly` at US $0.99, and `health_md_premium_yearly` has active base plan `yearly` at US $29.99. Both `trial-7d` offers are **Active**. Fresh Console readback showed one active base plan and one offer per product. Each plan/offer retains its 175-country/region configuration. Trial eligibility remains **New customer acquisition → Never had any subscription** in this app, with one **Free trial → 7 days** phase before the recurring base price. Activation makes these products purchasable; it does not establish successful purchase qualification or publish a new app binary.
 

@@ -73,7 +73,7 @@ class OnboardingFlowTest {
 
     @Test
     fun trialUsesTheLiveYearlyTrialOffer() {
-        val weekly = PurchaseOffer("w", "$1.99", PurchasePlan.WEEKLY)
+        val weekly = PurchaseOffer("w", "$2.99", PurchasePlan.WEEKLY)
         val yearly = PurchaseOffer("y", "$29.99", PurchasePlan.YEARLY, hasSevenDayTrial = true)
         assertThat(OnboardingFlow.trialOffer(listOf(weekly, yearly))).isEqualTo(yearly)
         assertThat(OnboardingFlow.trialOffer(listOf(weekly))).isNull()

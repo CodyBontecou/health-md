@@ -7,9 +7,9 @@ import com.healthmd.domain.repository.PurchasePlan
 import org.junit.Test
 
 class PaywallCarouselTest {
-    private val weekly = PurchaseOffer("w", "$0.99", PurchasePlan.WEEKLY, hasSevenDayTrial = true)
+    private val weekly = PurchaseOffer("w", "$2.99", PurchasePlan.WEEKLY, hasSevenDayTrial = true)
     private val yearly = PurchaseOffer("y", "$29.99", PurchasePlan.YEARLY, hasSevenDayTrial = true)
-    private val lifetime = PurchaseOffer("l", "$49.99", PurchasePlan.LIFETIME)
+    private val lifetime = PurchaseOffer("l", "$79.99", PurchasePlan.LIFETIME)
 
     @Test
     fun plansShowYearlyThenWeeklyThenLifetime() {

@@ -27,11 +27,10 @@ Canonical metadata lives under `play-console/`. `play-console/locales.json` dete
 
 In-app product prices are managed in Play Console, not in this repository — the
 release service accounts intentionally hold no pricing permission. The
-`health_md_premium_lifetime` one-time price is USD 19.99. It intentionally
-differs from the iOS individual lifetime unlock (USD 49.99 as of the Apple cutover
-observed November 3, 2026) until the subscription-containing Android app is in
-production and the owner approves the Play cutover; see the
-[paid-access rollout](../apple/docs/experiments/subscription-pricing-rollout.md).
+`health_md_premium_lifetime` one-time price is USD 79.99, matching the iOS
+individual lifetime unlock (both checked live on 2026-11-26). Weekly is USD 2.99
+and Yearly USD 29.99. See the
+[paid-access rollout](../apple/docs/experiments/subscription-pricing-rollout.md#current-us-prices-checked-2026-11-26).
 To change it, update the Play listing manually in Play Console under Monetize → Products → In-app
 products, and update the documented price in
 `app/src/play/java/com/healthmd/data/billing/BillingRepositoryImpl.kt`.

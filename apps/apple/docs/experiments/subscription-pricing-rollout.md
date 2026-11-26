@@ -1,8 +1,24 @@
 # Health.md paid-access rollout
 
-> Source integration is authorized for main. Apple, Android production, website and Worker releases remain on hold. Android 3.5.0 Internal Testing preparation and Pixel 7 license-test QA are authorized. The owner applied the Apple Lifetime launch prices (readback November 3, 2026; see [Apple Lifetime cutover](#apple-lifetime-cutover--november-3-2026)). Keep Google Play's Lifetime price unchanged until its own cutover is approved; future price targets in historical proposals are not authorization to apply them. Apple physical-device and multi-account Family Sharing acceptance are deferred.
+> Source integration is authorized for main. Apple, Android production, website and Worker releases remain on hold. Android 3.5.0 Internal Testing preparation and Pixel 7 license-test QA are authorized. The owner applied the Apple Lifetime launch prices (readback November 3, 2026; see [Apple Lifetime cutover](#apple-lifetime-cutover--november-3-2026)). Both stores have since raised their prices; see [Current US prices](#current-us-prices-checked-2026-11-26). Future price targets in historical proposals are not authorization to apply them. Apple physical-device and multi-account Family Sharing acceptance are deferred.
 
-> Unpublished candidate update: custom in-app analytics and attribution have been removed. Historical analytics below describe earlier builds/services. Essential services remain. Apple Lifetime prices moved to the launch targets on the owner's instruction; Google Play Lifetime is unchanged. Android subscription activation and Internal Testing preparation are recorded below; no production app, website or Worker release is included.
+> Unpublished candidate update: custom in-app analytics and attribution have been removed. Historical analytics below describe earlier builds/services. Essential services remain. Apple Lifetime prices moved to the launch targets on the owner's instruction; Google Play Lifetime was unchanged at that point. Android subscription activation and Internal Testing preparation are recorded below; no production app, website or Worker release is included.
+
+## Current US prices (checked 2026-11-26)
+
+Verified live on November 26, 2026 from App Store Connect and the Google Play Publisher API (US storefront). Prices were raised in the stores after the launch; the launch targets and cutovers below are kept as the dated record.
+
+| Product | Apple | Google Play |
+|---|---:|---:|
+| Individual Weekly | $2.99 | $2.99 |
+| Individual Yearly | $29.99 | $29.99 |
+| Individual Lifetime | $79.99 | $79.99 |
+| Family Weekly | $4.99 | — |
+| Family Yearly | $49.99 | — |
+| Family Lifetime | $129.99 | — |
+| Family Upgrade | $49.99 | — |
+
+Google Play has no Family plans.
 
 ## Status and scope
 
@@ -16,7 +32,7 @@ The same outcome applies on iOS/iPadOS and Google Play Android: a store-backed t
 
 The owner selected **3.5.0** as the next iOS/iPadOS and Android phone release version. Source version names and draft release notes are aligned, and the 3.5.0 iOS store draft is prepared; upload-safe build-number checks, exact-build qualification, app-version review attachment, and publication remain separate release gates. Android Wear remains deferred; this alignment does not publish it or synchronize CLI releases.
 
-## Approved US launch targets (live on Apple; Google Play Lifetime pending)
+## Approved US launch targets (superseded; see current prices above)
 
 | Audience | Weekly | Yearly | Lifetime |
 |---|---:|---:|---:|
@@ -27,7 +43,7 @@ The approved US Family Upgrade launch target is **$40.00**, the difference betwe
 
 Eligible subscriptions have a **seven-day free trial**, then auto-renew at the displayed localized price and cadence. Trial eligibility comes from the store; returning/ineligible users see the paid terms without a trial promise. Lifetime is charged immediately and has no trial. Monthly products are not offered.
 
-Apple's Lifetime products now use these launch prices; see [Apple Lifetime cutover](#apple-lifetime-cutover--november-3-2026). Google Play's existing lifetime product stays at $19.99 US, with its regional prices unchanged, until the subscription-containing Android app is in production and the owner explicitly approves that cutover. Until then Android Lifetime intentionally differs from Apple. Draft/unsubmitted subscription product prices may be configured in advance; do not activate, submit, publish, release, or raise existing live prices as a side effect of setup.
+Apple's Lifetime products moved to these launch prices; see [Apple Lifetime cutover](#apple-lifetime-cutover--november-3-2026). Google Play's existing lifetime product was held at $19.99 US, with its regional prices unchanged, until the subscription-containing Android app was in production and the owner approved that cutover. Both stores have since raised their prices; see [Current US prices](#current-us-prices-checked-2026-11-26). Draft/unsubmitted subscription product prices may be configured in advance; do not activate, submit, publish, release, or raise existing live prices as a side effect of setup.
 
 These base-price decisions do not approve a new regional pricing algorithm. `docs/pricing-20261025.md` retains the earlier production schedules; a local StoreKit catalog describes launch/test targets and does not change live prices.
 
@@ -47,7 +63,7 @@ Each schedule lists 175 manual territory prices with no start or end date. The r
 
 On the owner's instruction, the protected [Android Promote production workflow](https://github.com/CodyBontecou/health-md/actions/runs/41649394400) promoted the exact Internal Testing artifact for `android/v3.5.0+45` (`a296ffeae821b6f94291ac8fed605d3f32153c5a`, version 3.5.0, code 45) to the production track at full rollout and submitted it for review. Its verification step read back `RELEASE_LIFECYCLE_STATE_IN_REVIEW`; the promotion receipt is retained with that run. Managed publishing is on: Play Console showed production last published on October 9, 2026 (1.9.3, free exports plus a $19.99 Lifetime only), with an approved but unpublished 1.9.4 under Changes ready to publish. An approved 3.5.0 therefore stays unpublished until the owner, or an agent on the owner's instruction, publishes it from Publishing overview.
 
-The owner accepted the remaining code-45 qualification gaps recorded in the [Android billing guide](../../../android/GOOGLE_PLAY_BILLING_SETUP.md) and [PR #289](https://github.com/CodyBontecou/health-md/pull/289): genuine pre-cutoff grandfathered installations, older paid Lifetime owner upgrades, and injected ownership-query failures were not exercised on a device. After 3.5.0 is approved and published, raise `health_md_premium_lifetime` to $49.99 US using Play's automatic conversion for other countries (owner decision, replacing the current regional prices); record that readback here when it lands.
+The owner accepted the remaining code-45 qualification gaps recorded in the [Android billing guide](../../../android/GOOGLE_PLAY_BILLING_SETUP.md) and [PR #289](https://github.com/CodyBontecou/health-md/pull/289): genuine pre-cutoff grandfathered installations, older paid Lifetime owner upgrades, and injected ownership-query failures were not exercised on a device. After 3.5.0 is approved and published, raise `health_md_premium_lifetime` to $49.99 US using Play's automatic conversion for other countries (owner decision, replacing the current regional prices); record that readback here when it lands. (As of 2026-11-26, Play Lifetime is live at $79.99 US; see [Current US prices](#current-us-prices-checked-2026-11-26).)
 
 ## Entitlement preservation
 
@@ -59,7 +75,7 @@ Never rename or replace these Apple non-consumables:
 - `com.codybontecou.obsidianhealth.unlock.family`
 - `com.codybontecou.obsidianhealth.unlock.family.upgrade`
 
-The existing Family Upgrade remains available only to eligible individual lifetime/legacy owners. Its approved US launch target was $40.00; the live US price is $39.99 after the November 3 cutover. Preserve the product ID, eligibility, and all existing Family Upgrade entitlements. Subscription ownership alone does not qualify for that non-consumable upgrade.
+The existing Family Upgrade remains available only to eligible individual lifetime/legacy owners. Its approved US launch target was $40.00; the US price was $39.99 after the November 3 cutover and is $49.99 live as of 2026-11-26. Preserve the product ID, eligibility, and all existing Family Upgrade entitlements. Subscription ownership alone does not qualify for that non-consumable upgrade.
 
 Apple restore history fallback is limited to non-consumables. Expired, revoked, and upgraded subscription transactions never create permanent access. Reconcile current entitlements on transaction updates and foregrounding; recheck expiration at export admission.
 
