@@ -74,7 +74,7 @@ steps:
       condition: text
       selector:
         identifier: paywall-option-weekly
-      expectedText: $0.99/week
+      expectedText: $2.99/week
   - echo: Point tap on Close (paywall.dismissButton). Expect the paywall gone and Settings back
   - tap: { x: 0.807, y: 0.113 }
   - tool: await-ui-element

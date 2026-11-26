@@ -294,12 +294,12 @@ struct PaywallView: View {
         #if DEBUG
         if MarketingCapture.usesStaticPurchasePrices {
             switch option {
-            case .individual: return "$49.99"
-            case .family: return "$89.99"
-            case .familyUpgrade: return "$40.00"
-            case .weekly: return "$0.99"
+            case .individual: return "$79.99"
+            case .family: return "$129.99"
+            case .familyUpgrade: return "$49.99"
+            case .weekly: return "$2.99"
             case .yearly: return "$29.99"
-            case .familyWeekly: return "$1.99"
+            case .familyWeekly: return "$4.99"
             case .familyYearly: return "$49.99"
             }
         }
