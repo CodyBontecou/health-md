@@ -17,6 +17,7 @@ import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.drive.GoogleDriveDestinationStore
 import com.healthmd.data.drive.GoogleDriveSelectionStore
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotException
 import com.healthmd.domain.exportengine.ExportEnginePinPlanner
 import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.ExportSettings
@@ -656,10 +657,16 @@ class ExportScheduler @Inject constructor(
             // its frozen context against today's setting to detect an explicit configuration edit.
             val context = if (persistedSnapshot.sleepCaptureContext == null) null else
                 com.healthmd.domain.model.AndroidCaptureContext(zone, settingsRepository.getSleepDayAttribution())
-            AndroidExportSettingsSnapshot.capture(settings.copy(
-                executionProviderCaptureAuthority = persistedSnapshot.providerCaptureAuthority), persisted.enginePin, zone, context)
-                .takeIf { it == persistedSnapshot }
-                ?: return null
+            // Today's settings may not be freezable with the accepted pin at all, e.g. a Night
+            // acceptance after the user switched sleep days to Morning (#440). That is a settings
+            // change, not a fault: return null so reconcile accepts a fresh occurrence.
+            val recaptured = try {
+                AndroidExportSettingsSnapshot.capture(settings.copy(
+                    executionProviderCaptureAuthority = persistedSnapshot.providerCaptureAuthority), persisted.enginePin, zone, context)
+            } catch (_: AndroidExportSettingsSnapshotException) {
+                return null
+            }
+            recaptured.takeIf { it == persistedSnapshot } ?: return null
         }
         return ScheduledExportConfiguration.from(
             settings = settings,

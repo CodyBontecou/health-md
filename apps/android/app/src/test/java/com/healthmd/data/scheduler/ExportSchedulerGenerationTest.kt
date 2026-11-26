@@ -794,6 +794,72 @@ class ExportSchedulerGenerationTest {
         assertThat(acceptances).isEqualTo(2)
     }
 
+    /**
+     * #440: a Night schedule was accepted, then the user switched sleep days to Morning. Re-freezing
+     * today's settings with the persisted Night pin is structurally invalid; that is a settings
+     * change, so boot reconciliation must mint a Morning generation instead of throwing.
+     */
+    @Test
+    fun switchingNightScheduleToMorningReplacesGenerationInsteadOfThrowing() = runTest {
+        val zone = ZoneId.of("UTC")
+        val current = settings(ExportTarget.DEVICE_FOLDER).copy(
+            exportFormat = com.healthmd.domain.model.ExportFormat.JSON,
+            exportFormats = setOf(com.healthmd.domain.model.ExportFormat.JSON),
+        )
+        val source = object : com.healthmd.domain.repository.HealthRepository by mockk(relaxed = true),
+            com.healthmd.domain.repository.RestorableHealthRepository {
+            override suspend fun captureProviderAuthority() =
+                com.healthmd.domain.model.HealthProviderCaptureAuthority(selectedProviderId = "whoop",
+                    providerIds = listOf("whoop"), connectionIds = mapOf("whoop" to "00000000-0000-4000-8000-000000000401"))
+                    .validatedCopy()
+            override suspend fun restoreProviderAuthority(authority: com.healthmd.domain.model.HealthProviderCaptureAuthority): com.healthmd.domain.repository.HealthRepository =
+                error("Reconciliation must not read health")
+        }
+        stateStore.markGenerationMigrationComplete()
+        scheduler(workManager(), { current }, generations = listOf("generation-night"), providerRepository = source)
+            .reconcile()
+        val night = requireNotNull(stateStore.load())
+        assertThat(night.settingsSnapshot?.sleepCaptureContext?.sleepDayAttribution)
+            .isEqualTo(com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS)
+
+        val morningScheduler = scheduler(
+            workManager(),
+            { current },
+            generations = listOf("generation-morning"),
+            attribution = com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS,
+            providerRepository = source,
+            pin = sleepPin(zone),
+            stateStore = ScheduledExportStateStore(context),
+        )
+        morningScheduler.reconcile()
+
+        val morning = requireNotNull(stateStore.load())
+        assertThat(morning.generation).isEqualTo("generation-morning")
+        assertThat(morning.settingsSnapshot?.sleepCaptureContext?.sleepDayAttribution)
+            .isEqualTo(com.healthmd.domain.model.SleepDayAttribution.MORNING_ENDS)
+        assertThat(morning.settingsSnapshot?.exportProfile)
+            .isEqualTo(com.healthmd.domain.exportengine.AndroidExportProfile.android_sleep_v6)
+    }
+
+    /** A structurally valid wake-date pin built from the shipped contract constants (no native core). */
+    private fun sleepPin(zone: ZoneId) = com.healthmd.domain.exportengine.ExportEnginePin(
+        engine = com.healthmd.domain.exportengine.ExportEngineMode.rust,
+        profile = com.healthmd.domain.exportengine.AndroidExportProfile.android_sleep_v6,
+        publicSchema = com.healthmd.domain.exportengine.ExportEnginePin.PUBLIC_SCHEMA,
+        publicSchemaVersion = com.healthmd.domain.exportengine.AndroidExportProfile.android_sleep_v6.publicSchemaVersion,
+        coreApiVersion = com.healthmd.core.HealthMdCoreService.EXPECTED_CORE_API_VERSION,
+        semanticInputVersion = 2u,
+        canonicalModelVersion = 2u,
+        renderInputVersion = 2u,
+        artifactPlanVersion = 2u,
+        registryVersion = 2u,
+        registrySha256 = com.healthmd.core.HEALTHMD_SLEEP_REGISTRY_SHA256,
+        semanticProfileRevision = com.healthmd.domain.exportengine.ExportEnginePin.EXPECTED_SEMANTIC_PROFILE_REVISION,
+        renderProfileRevision = 2u,
+        coreSourceRevision = "synthetic-issue-440",
+        ianaTimeZone = zone.id,
+    )
+
     private fun scheduler(
         workManager: WorkManager,
         currentSettings: () -> ExportSettings,
