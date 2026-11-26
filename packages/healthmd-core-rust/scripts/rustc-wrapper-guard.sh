@@ -5,12 +5,16 @@
 # "Operation not permitted" (sccache exit 254). Probe once with a throwaway crate in the real
 # target directory and disable only an unusable wrapper. An explicit RUSTC_WRAPPER (including
 # an empty one) is respected; HEALTHMD_SKIP_RUSTC_WRAPPER_PROBE=1 skips the probe.
+#
+# Usage: healthmd_guard_rustc_wrapper TARGET_DIR [CARGO]
+# CARGO defaults to the cargo on PATH; pass the toolchain cargo the caller builds with.
 
 healthmd_guard_rustc_wrapper() {
     probe_parent=$1
+    probe_cargo=${2:-cargo}
     [ "${HEALTHMD_SKIP_RUSTC_WRAPPER_PROBE:-0}" = 1 ] && return 0
     [ -n "${RUSTC_WRAPPER+set}" ] && return 0
-    command -v cargo >/dev/null 2>&1 || return 0
+    command -v "$probe_cargo" >/dev/null 2>&1 || return 0
 
     probe_src=$(mktemp -d "${TMPDIR:-/tmp}/healthmd-rustc-wrapper-probe.XXXXXX") || return 0
     probe_target="$probe_parent/.rustc-wrapper-probe"
@@ -22,8 +26,8 @@ healthmd_guard_rustc_wrapper() {
     # that fails both ways (no toolchain, offline) leaves the configuration alone.
     # Incremental (path-crate) compiles bypass sccache, so probe the non-incremental path the
     # registry dependencies take.
-    if ! CARGO_INCREMENTAL=0 cargo build --quiet --offline --manifest-path "$probe_src/Cargo.toml" --target-dir "$probe_target" >/dev/null 2>&1 \
-        && RUSTC_WRAPPER='' CARGO_INCREMENTAL=0 cargo build --quiet --offline --manifest-path "$probe_src/Cargo.toml" --target-dir "$probe_target" >/dev/null 2>&1; then
+    if ! CARGO_INCREMENTAL=0 "$probe_cargo" build --quiet --offline --manifest-path "$probe_src/Cargo.toml" --target-dir "$probe_target" >/dev/null 2>&1 \
+        && RUSTC_WRAPPER='' CARGO_INCREMENTAL=0 "$probe_cargo" build --quiet --offline --manifest-path "$probe_src/Cargo.toml" --target-dir "$probe_target" >/dev/null 2>&1; then
         echo "warning: the configured rustc wrapper cannot write $probe_parent; building without it (RUSTC_WRAPPER='')" >&2
         RUSTC_WRAPPER=''
         export RUSTC_WRAPPER

@@ -103,6 +103,8 @@ if [ "$mode" != assemble ]; then
     rustc_path=$(rustup which --toolchain "$toolchain" rustc)
     toolchain_bin=$(dirname -- "$rustc_path")
     cargo_path="$toolchain_bin/cargo"
+    . "$workspace_root/scripts/rustc-wrapper-guard.sh"
+    healthmd_guard_rustc_wrapper "$target_dir" "$cargo_path"
 fi
 source_revision=${HEALTHMD_CORE_SOURCE_REVISION:-$(git -C "$repo_root" rev-parse HEAD 2>/dev/null || printf development)}
 if [ "$source_revision" != development ] && [ -n "$(git -C "$repo_root" status --porcelain -- packages/healthmd-core-rust 2>/dev/null)" ]; then

@@ -35,8 +35,10 @@ import java.time.Instant
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -156,21 +158,38 @@ abstract class BaseHealthWidgetReceiver : GlanceAppWidgetReceiver() {
         settleDelayMillis: Long = 0,
         scheduleIfWidgetsRemain: Boolean = true,
     ) {
-        val pendingResult = goAsync()
-        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            try {
-                if (settleDelayMillis > 0) delay(settleDelayMillis)
-                runCatching {
-                    context.healthWidgetEntryPoint()
-                        .lifecycleCoordinator()
-                        .onInstancesChanged(
-                            deletedAppWidgetIds = deletedAppWidgetIds,
-                            scheduleIfWidgetsRemain = scheduleIfWidgetsRemain,
-                        )
-                }
-            } finally {
-                pendingResult.finish()
+        launchReceiverWork {
+            if (settleDelayMillis > 0) delay(settleDelayMillis)
+            runCatching {
+                context.healthWidgetEntryPoint()
+                    .lifecycleCoordinator()
+                    .onInstancesChanged(
+                        deletedAppWidgetIds = deletedAppWidgetIds,
+                        scheduleIfWidgetsRemain = scheduleIfWidgetsRemain,
+                    )
             }
+        }
+    }
+}
+
+/**
+ * Runs [block] off the main thread, holding the broadcast open with [BroadcastReceiver.goAsync]
+ * when it is still available.
+ *
+ * A broadcast has a single pending result. [GlanceAppWidgetReceiver] claims it in its own
+ * callbacks (for example `super.onDeleted` and `super.onUpdate`), after which `goAsync()` returns
+ * null. The work still runs; it just cannot extend the broadcast a second time.
+ */
+internal fun BroadcastReceiver.launchReceiverWork(
+    dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    block: suspend CoroutineScope.() -> Unit,
+): Job {
+    val pendingResult: BroadcastReceiver.PendingResult? = goAsync()
+    return CoroutineScope(SupervisorJob() + dispatcher).launch {
+        try {
+            block()
+        } finally {
+            pendingResult?.finish()
         }
     }
 }
@@ -204,21 +223,16 @@ class HealthWidgetLocaleChangeReceiver : BroadcastReceiver() {
             intent.action == Intent.ACTION_TIMEZONE_CHANGED
         if (!localeChanged && !clockChanged) return
 
-        val pendingResult = goAsync()
-        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            try {
-                runCatching {
-                    if (localeChanged) {
-                        HealthWidgetLocaleRefresher.rerenderForCurrentLocale(context.applicationContext)
-                    } else {
-                        HealthWidgetLocaleRefresher.rerenderAll(context.applicationContext)
-                    }
+        launchReceiverWork {
+            runCatching {
+                if (localeChanged) {
+                    HealthWidgetLocaleRefresher.rerenderForCurrentLocale(context.applicationContext)
+                } else {
+                    HealthWidgetLocaleRefresher.rerenderAll(context.applicationContext)
                 }
-                // Archive squares, month names and run times follow the date, zone and locale.
-                runCatching { ArchiveGlanceWidget.refresh(context.applicationContext) }
-            } finally {
-                pendingResult.finish()
             }
+            // Archive squares, month names and run times follow the date, zone and locale.
+            runCatching { ArchiveGlanceWidget.refresh(context.applicationContext) }
         }
     }
 
