@@ -19,6 +19,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -280,6 +281,13 @@ class DailyAggregateRustPlannerInstrumentationTest {
                 for (item in result.plan.items) {
                     val text = item.content.decodeToString()
                     assertTrue(text.contains("android-sleep-v6"))
+                    // #465: a customized Workouts group keeps the record (every workout property)
+                    // out of Bases frontmatter; JSON, CSV and the Markdown body keep it.
+                    if (!visibleOwners && item.relativePath.endsWith("-bases.md")) {
+                        assertFalse(text.contains("native_workout_details"))
+                        assertFalse(text.contains("synthetic-device-workout"))
+                        continue
+                    }
                     assertTrue(text.contains("synthetic-device-workout"))
                     assertTrue(text.contains("160.125"))
                     assertTrue(text.contains("178.625"))

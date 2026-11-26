@@ -530,6 +530,7 @@
     <string name="export_result_retry_note">Аяқталған күндер аяқталған күйде қалады. Қайталау %1$s жазады.</string>
     <string name="export_result_show_in_files">«Файлдар» ішінде көрсету</string>
     <string name="export_result_open_in_obsidian">Obsidian ішінде ашу</string>
-    <string name="composer_fields_frontmatter_note">Бұл жазба жинайтын деректерді таңдайды. Frontmatter қасиеттері Барлық параметрлер → Пішім бөлімінде орнатылады.</string>
-    <string name="frontmatter_fields_ownership_note">Мұнда қосылған өрістер ғана Frontmatter-ге жазылады. Деректер болуы үшін өрістің көрсеткіші де қосулы болуы керек.</string>
+    <string name="composer_fields_frontmatter_note">Осы автоматтандыру экспорттайтын көрсеткіштерді таңдайды. «Барлық параметрлер» → «Формат» тек олардың өріс атауларын береді және frontmatter-ге қайсысы кіретінін таңдайды.</string>
+    <string name="frontmatter_fields_ownership_note">Тек экспортталатын көрсеткіштердің өрістері көрсетіледі; көрсеткіштерді «Көрсеткіштер» бөлімінде таңдаңыз. Мұнда өшірілген өріс frontmatter-ге кірмейді, ал оның деректері жазба мәтінінде қалады.</string>
+    <string name="composer_field_body_only">Тек мәтінде</string>
 </resources>

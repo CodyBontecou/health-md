@@ -586,6 +586,7 @@
     <string name="export_result_retry_note">Готовые даты останутся готовыми. Повторная попытка запишет %1$s.</string>
     <string name="export_result_show_in_files">Показать в «Файлах»</string>
     <string name="export_result_open_in_obsidian">Открыть в Obsidian</string>
-    <string name="composer_fields_frontmatter_note">Выбирает данные, которые собирает эта заметка. Свойства Frontmatter задаются в разделе Все настройки → Формат.</string>
-    <string name="frontmatter_fields_ownership_note">В Frontmatter попадают только поля, включённые здесь. Чтобы у поля были данные, должна быть включена и его метрика.</string>
+    <string name="composer_fields_frontmatter_note">Выбирает показатели, которые экспортирует эта автоматизация. «Все настройки» → «Формат» только задаёт имена их полей и выбирает, какие попадут во frontmatter.</string>
+    <string name="frontmatter_fields_ownership_note">Показаны только поля экспортируемых показателей; показатели выбираются в разделе «Показатели». Поле, выключенное здесь, не попадает во frontmatter, а его данные остаются в тексте заметки.</string>
+    <string name="composer_field_body_only">Только в тексте</string>
 </resources>

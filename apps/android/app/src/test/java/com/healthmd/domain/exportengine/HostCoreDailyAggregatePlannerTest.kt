@@ -1442,7 +1442,8 @@ class HostCoreDailyAggregatePlannerTest {
     /**
      * #353 migration pin for existing users who had already switched some Format → Custom fields
      * off while each native record family kept an owner on: "Morning ends" output in every format
-     * is byte-for-byte what the exporter wrote before this change.
+     * is byte-for-byte what the exporter wrote before this change, except the
+     * native_workout_details block #465 removes from a customized Workouts group.
      * Fixtures: src/test/resources/issue353-morning-ends-partly-off/, generated from the pre-#353
      * sources (commit cfdceb3b6) with HEALTHMD_WRITE_353_GOLDEN=partly-off.
      */
@@ -1453,7 +1454,9 @@ class HostCoreDailyAggregatePlannerTest {
         val frontmatter = bases.substringBefore("\n---\n")
         val keys = frontmatter.lines().filter { it.isNotEmpty() && !it.first().isWhitespace() }.map { it.substringBefore(':') }
         for (key in disabled) assertWithMessage("switched-off $key stays out of frontmatter").that(keys).doesNotContain(key)
-        assertThat(keys).containsAtLeast("average_heart_rate", "workout_count", "native_workout_details", "native_quantity_details")
+        assertThat(keys).containsAtLeast("average_heart_rate", "workout_count", "native_quantity_details")
+        // #465: Workouts is customized here, so its record block (which holds calories) is left out.
+        assertThat(keys).doesNotContain("native_workout_details")
     }
 
     /**
@@ -1590,7 +1593,7 @@ class HostCoreDailyAggregatePlannerTest {
     }
 
     @Test
-    fun anySelectedWorkoutOutputOwnsDetailsWithoutRequiringVisibleCountOrDuration() = runTest {
+    fun anySelectedWorkoutOutputOwnsDetailsAndCustomWorkoutsAddNoOtherFrontmatterKeys() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
         val date = LocalDate.of(2026, 11, 1)
         val start = Instant.parse("2026-11-01T01:30:00Z")
@@ -1625,9 +1628,25 @@ class HostCoreDailyAggregatePlannerTest {
             val document = Json.parseToJsonElement(plan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString()).jsonObject
             assertThat(document.getValue("workouts").jsonArray.single().jsonObject.getValue("identity").jsonObject.getValue("nativeId").jsonPrimitive.content)
                 .isEqualTo("synthetic-selected-workout")
-            assertThat(plan.items.single { it.relativePath.endsWith("-bases.md") }.content.decodeToString()).contains("native_workout_details:")
+            // #465: a customized Workouts group (one field on) writes that field and no other
+            // frontmatter key: the record block, which holds every workout property, stays out.
+            for (item in plan.items.filter { it.relativePath.endsWith(".md") }) {
+                val frontmatter = item.content.decodeToString().removePrefix("---\n").substringBefore("\n---")
+                val written = frontmatter.lines().filter { it.isNotEmpty() && !it.first().isWhitespace() }.map { it.substringBefore(':') }
+                assertWithMessage("${item.relativePath} with only $key on").that(written.filter { it == "workouts" || it.startsWith("workout_") })
+                    .containsNoneIn(keys - key)
+                assertThat(written).doesNotContain("native_workout_details")
+            }
             assertThat(plan.items.single { it.relativePath.endsWith(".md") && !it.relativePath.endsWith("-bases.md") }.content.decodeToString()).contains("Workout Details")
         }
+        // Every Workouts field on (the default) keeps the block, so existing output is unchanged.
+        val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(),
+            metricSelection = MetricSelectionState(enabledMetrics = setOf("workouts")),
+            executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+        val plan = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("no ambient clock") }).plan(
+            FrozenDailyAggregateExportRequest.capture(data, settings, AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+                DailyAggregateExportIds("selected-all", "selected-session-all"))).plan
+        assertThat(plan.items.single { it.relativePath.endsWith("-bases.md") }.content.decodeToString()).contains("native_workout_details:")
     }
 
     @Test

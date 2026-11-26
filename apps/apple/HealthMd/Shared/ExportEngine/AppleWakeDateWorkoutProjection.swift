@@ -8,7 +8,7 @@ nonisolated struct AppleWakeDateWorkoutProjection: Sendable {
     let captureContext: AppleSleepCaptureContext
     let timeFormatIdentifier: String
     let hasSelectedOwner: Bool
-    /// The Bases block shows while any Workouts field is on in Format → Custom (#353).
+    /// The Bases block shows only while every Workouts field is on in Format → Custom (#465).
     let includesFrontmatterBlock: Bool
     /// Records need an accepted Workouts owner; without one they are left out of every format (#353).
     var hasRecords: Bool { hasSelectedOwner && !source.workouts.isEmpty }

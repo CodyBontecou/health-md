@@ -108,12 +108,14 @@ class NativeBasesFrontmatterOwnershipTest {
     }
 
     @Test
-    fun workoutBlockShowsWhileAnyWorkoutFieldIsOn() {
+    fun workoutBlockShowsOnlyWhileEveryWorkoutFieldIsOn() {
         val source = root("""{"workouts":[{"startTimeISO":"2026-11-01T01:00:00Z","endTimeISO":"2026-11-01T01:30:00Z"}]}""")
         val selected = listOf("workout_count", "workout_minutes", "workouts")
         assertThat(bases(adapter.workoutDetails(source, date, selected)).keys).containsExactly("native_workout_details")
-        assertThat(bases(adapter.workoutDetails(source, date, selected, off("workout_count", "workouts"))).keys)
-            .containsExactly("native_workout_details")
+        // #465: each record holds every workout property, so any Workouts field off drops the block.
+        assertThat(bases(adapter.workoutDetails(source, date, selected, off("workout_calories")))).isEmpty()
+        assertThat(bases(adapter.workoutDetails(source, date, selected, off("workout_count", "workouts")))).isEmpty()
+        assertThat(NativeFrontmatterOwners.workoutFieldKeys).containsAtLeast("workouts", "workout_count", "workout_calories")
         val hidden = adapter.workoutDetails(source, date, selected) { !(it == "workouts" || it.startsWith("workout_")) }
         assertThat(bases(hidden)).isEmpty()
         assertThat(csvRows(hidden)).isEqualTo(1)
@@ -146,6 +148,7 @@ class NativeBasesFrontmatterOwnershipTest {
         assertThat(NativeFrontmatterOwners.medicalResources).isEqualTo(list(android.getValue("medical_resources")))
         assertThat(NativeFrontmatterOwners.androidRecords).isEqualTo(listMap(android.getValue("android_records")))
         assertThat(list(android.getValue("workouts"))).containsExactly("workouts", "workout_*")
+        assertThat(json.getValue("workouts_rule").jsonPrimitive.content).isEqualTo("all_owners_on")
 
         // Every owner is a field Format → Custom lists, so its switch exists.
         val owners = NativeFrontmatterOwners.quantity.values.flatten() + NativeFrontmatterOwners.correlation +

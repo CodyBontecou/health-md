@@ -1893,7 +1893,9 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
 
     /// #353 migration pin for existing users who had already switched some fields off in
     /// Format → Custom while each native record family kept at least one owner on: their
-    /// "Morning ends" output in every format is byte-for-byte what the exporter wrote before.
+    /// "Morning ends" output in every format is byte-for-byte what the exporter wrote before,
+    /// except the `native_workout_details` block #465 removes from a customized Workouts group
+    /// (see issue353-morning-ends-PROVENANCE.md).
     /// (Before #353, switching off every owner of a record family failed the export, so there is
     /// no earlier output to keep; the omission tests above cover that case.)
     /// Fixtures: HealthMdTests/Fixtures/Export/issue353-morning-ends-partly-off/, generated from the
@@ -1908,9 +1910,11 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
             .compactMap { $0.components(separatedBy: ":").first })
         for key in disabled { XCTAssertFalse(keys.contains(key), "switched-off \(key) stays out of frontmatter") }
         for key in ["average_heart_rate", "workout_count", "native_quantity_details", "sleep_stage_details",
-                    "native_correlation_details", "native_workout_details", "native_mindfulness_details"] {
+                    "native_correlation_details", "native_mindfulness_details"] {
             XCTAssertTrue(keys.contains(key), "\(key) keeps an owner that is on")
         }
+        // #465: Workouts is customized here, so its record block (which holds calories) is left out.
+        XCTAssertFalse(keys.contains("native_workout_details"))
     }
 
     /// Plans one synthetic "Morning ends" day with every native record family and compares each
@@ -2051,12 +2055,12 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
     }
 
-    /// #353: one rule on Apple and Android. The native workout block in "Morning ends" Bases
-    /// frontmatter belongs to the Workouts fields in Format → Custom: it shows while any of them is
-    /// on. The default configuration keeps it, so existing output is unchanged; switching off only
-    /// `workout_details` keeps it too, because the other Workouts fields still own it. (Every
-    /// Workouts field off: see testNativeWorkoutsWithoutAcceptedOwnerAreOmittedAndUnselectedInvalidSourceIgnored.)
-    func testNativeWorkoutDetailsFollowTheWorkoutsFieldsInBasesFrontmatter() async throws {
+    /// #465: one rule on Apple and Android. Each record in the native workout block holds every
+    /// workout property, so "Morning ends" Bases frontmatter carries the block only while every
+    /// Workouts field in Format → Custom is on. The default configuration keeps it, so existing
+    /// output is unchanged. A customized Workouts group (Format → Custom → Workouts) writes the
+    /// fields switched on and no other frontmatter key; the body table keeps the records.
+    func testCustomWorkoutsAddNoFrontmatterKeysBeyondTheFieldsSwitchedOn() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
         let workout = WorkoutData(sourceUUID: UUID(uuidString: "00000000-0000-4000-8000-000000000139"),
@@ -2065,23 +2069,57 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         let day = HealthData(date: ExportFixtures.referenceDate,
             timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
             activity: ActivityData(steps: 0), workouts: [workout])
-        for detailsOn in [true, false] {
+        func isWorkoutKey(_ key: String) -> Bool { key == "workouts" || key.hasPrefix("workout_") }
+        func plan(switchedOn: Set<String>?) async throws -> (bases: String, markdown: String) {
             var snapshot = try acceptedSnapshot(context: context, formats: [.markdown, .obsidianBases],
                 selectionIDs: ["workouts", "steps"])
-            let index = try XCTUnwrap(snapshot.formatCustomization.frontmatterConfig.fields
-                .firstIndex(where: { $0.originalKey == "workout_details" }), "workout_details is listed in Format → Custom")
-            snapshot.formatCustomization.frontmatterConfig.fields[index].isEnabled = detailsOn
+            if let switchedOn {
+                for index in snapshot.formatCustomization.frontmatterConfig.fields.indices {
+                    let key = snapshot.formatCustomization.frontmatterConfig.fields[index].originalKey
+                    if isWorkoutKey(key) {
+                        snapshot.formatCustomization.frontmatterConfig.fields[index].isEnabled = switchedOn.contains(key)
+                    }
+                }
+            }
             let resolution = try await AppleLooseDailyExportPlanner().plan(healthData: day,
                 settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects)
-            guard case .planned(let operation) = resolution else { return XCTFail("Selected workouts must plan") }
-            let bases = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .obsidianBases })
-                .artifact.inlineData, as: UTF8.self)
-            let markdown = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .markdown })
-                .artifact.inlineData, as: UTF8.self)
-            XCTAssertTrue(bases.contains("native_workout_details:"), "workout_details on: \(detailsOn)")
-            XCTAssertTrue(bases.contains("workout_count"))
-            XCTAssertTrue(markdown.contains("Workout Details"), "The body table is not frontmatter")
+            guard case .planned(let operation) = resolution else {
+                XCTFail("Selected workouts must plan")
+                return ("", "")
+            }
+            func text(_ format: ExportFormat) throws -> String {
+                String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == format }).artifact.inlineData, as: UTF8.self)
+            }
+            return (try text(.obsidianBases), try text(.markdown))
         }
+        func frontmatterKeys(_ text: String) -> Set<String> {
+            let lines = text.components(separatedBy: "\n")
+            return Set(lines.dropFirst().prefix { $0 != "---" }
+                .filter { !$0.isEmpty && !($0.first?.isWhitespace ?? true) && $0.contains(":") }
+                .compactMap { $0.components(separatedBy: ":").first })
+        }
+
+        let defaults = try await plan(switchedOn: nil)
+        XCTAssertTrue(defaults.bases.contains("\nnative_workout_details:"), "Default output keeps the block")
+
+        let chosen: Set<String> = ["workout_count", "workout_minutes"]
+        let custom = try await plan(switchedOn: chosen)
+        for output in [custom.bases, custom.markdown] {
+            let keys = frontmatterKeys(output)
+            XCTAssertEqual(keys.filter(isWorkoutKey), chosen)
+            XCTAssertFalse(keys.contains("native_workout_details"))
+            XCTAssertEqual(keys.subtracting(frontmatterKeys(defaults.bases)).filter { !$0.hasPrefix("units") }, [],
+                "Customizing Workouts adds no key")
+        }
+        XCTAssertFalse(custom.bases.components(separatedBy: "\n---").first?.contains("\"calories\"") ?? true,
+            "workout_calories is off, so no frontmatter value holds the calories")
+        XCTAssertTrue(custom.markdown.contains("Workout Details"), "The body table is not frontmatter")
+
+        // workout_details alone off: the block goes too, as on Night begins.
+        let allButDetails = Set(FrontmatterConfiguration.defaultFields.map(\.originalKey).filter(isWorkoutKey))
+            .subtracting(["workout_details"])
+        let withoutDetails = try await plan(switchedOn: allButDetails)
+        XCTAssertFalse(withoutDetails.bases.contains("native_workout_details"))
     }
 
     func testExplicitWorkoutRangeAuthorityUsesMeasuredDurationsAndTrueExtremaAcrossAllFormats() async throws {

@@ -29,6 +29,10 @@ nonisolated enum WakeDateNativeFrontmatterOwners {
     /// The Workouts group owns the workout block: `workouts` and every `workout_*` key, which
     /// includes the structured `workout_details` block. A rule rather than a list, as on Android, so
     /// a new workout field joins it without an edit here.
+    ///
+    /// Each record in the block holds every workout property (calories, heart rate, distance, …),
+    /// so the block shows only while *every* Workouts field is on (#465). A customized Workouts
+    /// group writes exactly the fields switched on and no record block with the others.
     static func isWorkoutField(_ key: String) -> Bool { key == "workouts" || key.hasPrefix("workout_") }
 
     static func showsQuantity(field: String, _ isEnabled: (String) -> Bool) -> Bool {
@@ -43,7 +47,8 @@ nonisolated enum WakeDateNativeFrontmatterOwners {
     static func showsMindfulness(_ isEnabled: (String) -> Bool) -> Bool { mindfulness.contains(where: isEnabled) }
     /// `fieldKeys` are the keys Format → Custom lists (see `FrontmatterConfiguration.nativeOwnerCandidateKeys`).
     static func showsWorkouts(fieldKeys: [String], _ isEnabled: (String) -> Bool) -> Bool {
-        fieldKeys.contains { isWorkoutField($0) && isEnabled($0) }
+        let workoutKeys = fieldKeys.filter(isWorkoutField)
+        return !workoutKeys.isEmpty && workoutKeys.allSatisfy(isEnabled)
     }
 }
 
@@ -52,5 +57,11 @@ extension FrontmatterConfiguration {
     /// configuration lacks (those read as switched on).
     var nativeOwnerCandidateKeys: [String] {
         fields.map(\.originalKey) + Self.defaultFields.map(\.originalKey)
+    }
+
+    /// Whether per-workout record blocks (`workout_details`, `native_workout_details`) may enter
+    /// frontmatter: only while every Workouts field is on (#465).
+    var writesWorkoutRecordBlocks: Bool {
+        WakeDateNativeFrontmatterOwners.showsWorkouts(fieldKeys: nativeOwnerCandidateKeys, isFieldEnabled)
     }
 }

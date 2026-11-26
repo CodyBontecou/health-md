@@ -359,6 +359,26 @@ object HealthDataFields {
     /** The frontmatter keys [metricId] writes; empty for a metric without frontmatter. */
     fun frontmatterKeys(metricId: String): List<String> = metricIdToFrontmatterKeys[metricId].orEmpty()
 
+    private val frontmatterKeyOwners: Map<String, Set<String>> by lazy {
+        buildMap<String, MutableSet<String>> {
+            metricIdToFrontmatterKeys.forEach { (metricId, keys) -> keys.forEach { getOrPut(it) { mutableSetOf() } += metricId } }
+        }
+    }
+
+    /** Metrics whose data a Format → Custom field holds. Empty for fields no metric owns. */
+    fun owningMetricIds(frontmatterKey: String): Set<String> = frontmatterKeyOwners[frontmatterKey].orEmpty()
+
+    /**
+     * Whether a profile exporting [enabledMetricIds] can write this Format → Custom field (#465). The
+     * profile's metric selection alone decides which metrics a note holds; Format → Custom lists
+     * only the fields of those metrics, plus fields no metric owns (iOS
+     * `HealthMetricExportMapping.profileExportsFrontmatterField`).
+     */
+    fun profileExportsFrontmatterField(frontmatterKey: String, enabledMetricIds: Set<String>): Boolean {
+        val owners = owningMetricIds(frontmatterKey)
+        return owners.isEmpty() || owners.any(enabledMetricIds::contains)
+    }
+
     /**
      * Extracts all health fields from [data], formatting values and converting units via
      * [converter]. Timestamps (bedtime/wake) are formatted using [timeFormat].

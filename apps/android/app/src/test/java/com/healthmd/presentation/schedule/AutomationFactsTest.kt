@@ -201,21 +201,39 @@ class AutomationFactsTest {
         )),
     )
 
+    /**
+     * #465: the composer's checks are the profile's metric selection, the one switch per metric.
+     * Steps is selected with its only field off in Format → Custom (body only): it shows checked, a
+     * tap deselects it and leaves Format → Custom alone; checking an unselected metric selects it
+     * and turns its fields on.
+     */
     @Test
-    fun composerFieldIsCheckedOnlyWhenTheNoteWritesIt() {
-        // Steps is selected but its only field is off in Format → Custom: the note drops it.
-        val saved = savedWith(setOf("steps", "resting_hr"), disabledKeys = setOf("steps"))
+    fun composerFieldChecksAreTheProfileMetricSelection() {
+        val saved = savedWith(setOf("steps"), disabledKeys = setOf("steps", "resting_heart_rate"))
         assertThat(saved.writesFrontmatter("steps")).isFalse()
-        assertThat(saved.writesFrontmatter("resting_hr")).isTrue()
 
-        // The row shows unchecked, so a tap stages "on" (not "off").
-        val draft = ComposerDraft().toggleField("steps", saved)
-        assertThat(draft.fields).containsExactly("steps", true)
-        assertThat(draft.toggleField("steps", saved).isEmpty).isTrue()
+        val draft = ComposerDraft().toggleField("steps", saved).toggleField("resting_hr", saved)
+        assertThat(draft.fields).containsExactly("steps", false, "resting_hr", true)
+        assertThat(draft.toggleField("steps", saved).fields).doesNotContainKey("steps")
 
         val applied = draft.applyTo(saved)
-        assertThat(applied.metricSelection.isEnabled("steps")).isTrue()
-        assertThat(applied.writesFrontmatter("steps")).isTrue()
+        assertThat(applied.metricSelection.isEnabled("steps")).isFalse()
+        assertThat(applied.metricSelection.isEnabled("resting_hr")).isTrue()
+        assertThat(applied.writesFrontmatter("resting_hr")).isTrue()
+        assertThat(applied.formatCustomization.frontmatterConfig.isFieldEnabled("steps")).isFalse()
+    }
+
+    /** #465: Format → Custom lists only the fields of the profile's metrics (and unowned fields). */
+    @Test
+    fun formatCustomListsOnlyTheProfileMetricsFields() {
+        val selected = setOf("steps", "workouts")
+        assertThat(HealthDataFields.profileExportsFrontmatterField("steps", selected)).isTrue()
+        assertThat(HealthDataFields.profileExportsFrontmatterField("workout_calories", selected)).isTrue()
+        assertThat(HealthDataFields.profileExportsFrontmatterField("resting_heart_rate", selected)).isFalse()
+        val hidden = HealthDataFields.allKeys.filterNot { HealthDataFields.profileExportsFrontmatterField(it, selected) }
+        assertThat(hidden).isNotEmpty()
+        val exported = selected.flatMap(HealthDataFields::frontmatterKeys).toSet()
+        assertThat(hidden.toSet().intersect(exported)).isEmpty()
     }
 
     @Test

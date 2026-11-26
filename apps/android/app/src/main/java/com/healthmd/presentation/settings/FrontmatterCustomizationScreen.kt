@@ -35,6 +35,12 @@ fun FrontmatterCustomizationScreen(
     onConfigurationChanged: (FrontmatterConfiguration) -> Unit,
     onBack: () -> Unit,
     initialFocusTag: String? = null,
+    /**
+     * The profile's metrics. When set, only their fields are listed (#465): the profile's metric
+     * selection alone decides which metrics a note holds, so switching on a field of a metric it
+     * does not export could not add the metric. Null lists every field.
+     */
+    exportedMetricIds: Set<String>? = null,
 ) {
     var search by remember { mutableStateOf("") }
     var customFieldKey by remember { mutableStateOf("") }
@@ -237,7 +243,7 @@ fun FrontmatterCustomizationScreen(
                     },
                 )
 
-                // These switches alone decide frontmatter properties, for every category (#353).
+                // Metrics are chosen per profile only; these switches place their fields (#465).
                 Text(
                     stringResource(R.string.frontmatter_fields_ownership_note),
                     style = GeistType.copy13,
@@ -247,7 +253,8 @@ fun FrontmatterCustomizationScreen(
                 )
                 val metricGroup = stringResource(R.string.frontmatter_metric_fields_section)
                 val filteredFields = normalizedConfiguration.fields.filter { field ->
-                    search.isBlank() || field.originalKey.contains(search, ignoreCase = true) || field.customKey.contains(search, ignoreCase = true)
+                    (exportedMetricIds == null || HealthDataFields.profileExportsFrontmatterField(field.originalKey, exportedMetricIds)) &&
+                        (search.isBlank() || field.originalKey.contains(search, ignoreCase = true) || field.customKey.contains(search, ignoreCase = true))
                 }
                 SettingsGroup(
                     title = metricGroup,

@@ -25,6 +25,15 @@ How they were generated:
 The CSV and JSON files are the same in both folders: on Android, Format → Custom changes only
 Markdown and Bases frontmatter.
 
+## Intentional change in #465
+
+`issue353-morning-ends-partly-off/2026-11-01-bases.md` no longer holds the
+`native_workout_details` block (three lines, the block and its blank separator, removed by hand;
+nothing else changed). Each record in that block holds every workout property, so with
+`workout_calories` and `workout_avg_heart_rate` off a customized Workouts group still added those
+values to frontmatter. Since #465 the block is written only while every Workouts field is on. The
+other partly-off files and every `default` file are unchanged.
+
 SHA-256 of the committed files:
 
 ```
@@ -34,7 +43,7 @@ issue353-morning-ends-default/
     60b39d5f864b93154bb5f99bce507fd6fd540439f5801ab41b16b821a806a148  2026-11-01.json
     aa8dbc6bdabd23cefc1af1577534f7d6565411cdbebca4dc5113c793c85f559c  2026-11-01.md
 issue353-morning-ends-partly-off/
-    5469c58197ae7012630d4f846d771909c73646a341b58bdbddd166cad83b3554  2026-11-01-bases.md
+    9b14f549cf119adc7166761782c073422780010bed8f3bf4726e2624bc6d9345  2026-11-01-bases.md
     fed83c00849af153c8178085f1515a3c54f4d034fad9f5dce6575bb95ffd1cf0  2026-11-01.csv
     60b39d5f864b93154bb5f99bce507fd6fd540439f5801ab41b16b821a806a148  2026-11-01.json
     626d3625b9327b21611b5132932059aecf14f780648a330a5eec63998ea696df  2026-11-01.md

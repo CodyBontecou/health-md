@@ -822,9 +822,12 @@ fun HealthMdNavigation(
             composable("${SubRoutes.FRONTMATTER_CUSTOMIZATION}?focus={focus}",
                 arguments = listOf(navArgument("focus") { type = NavType.StringType; nullable = true; defaultValue = null }),
             ) { entry ->
+                val focus = entry.arguments?.getString("focus")
                 FrontmatterCustomizationScreen(
                     configuration = settings.formatCustomization.frontmatterConfig,
-                    initialFocusTag = entry.arguments?.getString("focus"),
+                    initialFocusTag = focus,
+                    // A key-conflict review lists every field, so the conflicting key is reachable.
+                    exportedMetricIds = settings.metricSelection.enabledMetrics.takeIf { focus == null },
                     onConfigurationChanged = { config ->
                         settingsViewModel.performConfigurationChange {
                             settingsViewModel.updateFormatCustomization(

@@ -532,7 +532,7 @@ enum HealthMdRenderInputAdapter {
         if captureContext?.sleepDayAttribution != .morningEnds,
            let snapshot = presentationSnapshot,
            !snapshot.workouts.isEmpty,
-           presentationCustomization.frontmatterConfig.isFieldEnabled("workout_details") {
+           presentationCustomization.frontmatterConfig.writesWorkoutRecordBlocks {
             let outputKey = presentationCustomization.frontmatterConfig.outputKey(for: "workout_details") ?? "workout_details"
             basesFrontmatterBlocks.append([
                 "key": outputKey,
@@ -683,7 +683,7 @@ enum HealthMdRenderInputAdapter {
         }
     }
 
-    /// The Bases frontmatter block shows while any Workouts field is on in Format → Custom (#353);
+    /// The Bases frontmatter block shows only while every Workouts field is on in Format → Custom (#465);
     /// the Markdown table and CSV rows are body content.
     private static func workoutDetails(_ root: [String: Any], ownerDate: String,
                                        selectedOutputKeys: [String],

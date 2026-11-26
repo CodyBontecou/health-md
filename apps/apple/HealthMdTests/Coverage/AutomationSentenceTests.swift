@@ -207,32 +207,50 @@ final class AutomationSentenceTests: XCTestCase {
         XCTAssertEqual(draft.settings(from: saved), saved)
     }
 
-    /// Discord report (v4.0 TestFlight): Steps and Resting Heart Rate showed checked in
-    /// "Fields in this note" but never reached the note, because Format → Custom had their
-    /// fields off. A row is checked only when the note writes it, and checking it turns the
-    /// fields on, so the composer is the one switch.
-    func testComposerFieldCheckTurnsOnFieldsSwitchedOffInFormatCustom() {
+    /// #465: the composer's checks are the profile's metric selection, the one switch per metric.
+    /// A metric selected with every field off in Format → Custom stays checked (it is exported
+    /// and shown in the body); unchecking it removes the metric, and checking a metric that is
+    /// off selects it and turns its fields on.
+    func testComposerFieldChecksAreTheProfileMetricSelection() {
         var saved = settings(formats: [], metricCount: 0, note: true)
-        saved.metricSelection.enabledMetricIDs = ["sleep_total", "steps", "resting_heart_rate"]
+        saved.metricSelection.enabledMetricIDs = ["sleep_total", "steps"]
         for index in saved.formatCustomization.frontmatterConfig.fields.indices
             where ["steps", "resting_heart_rate"].contains(saved.formatCustomization.frontmatterConfig.fields[index].originalKey) {
             saved.formatCustomization.frontmatterConfig.fields[index].isEnabled = false
         }
-        XCTAssertTrue(saved.writesFrontmatter(forMetric: "sleep_total"))
-        XCTAssertFalse(saved.writesFrontmatter(forMetric: "steps"), "Shown unchecked, as the note omits it")
+        XCTAssertFalse(saved.writesFrontmatter(forMetric: "steps"), "Placed in the body only by Format → Custom")
 
         var draft = ComposerDraft()
         draft.toggleField("steps", saved: saved)
+        XCTAssertEqual(draft.fields["steps"], false, "Steps is selected, so its check is on and the tap turns it off")
         draft.toggleField("resting_heart_rate", saved: saved)
+        XCTAssertEqual(draft.fields["resting_heart_rate"], true)
         let next = draft.settings(from: saved)
-        XCTAssertTrue(next.writesFrontmatter(forMetric: "steps"))
-        XCTAssertTrue(next.writesFrontmatter(forMetric: "resting_heart_rate"))
-        let state = MetricSelectionState()
-        next.metricSelection.apply(to: state)
-        let keys = DailyNoteInjector.frontmatterKeys(enabledIn: state)
-            .filter { key in next.formatCustomization.frontmatterConfig.fields.first { $0.originalKey == key }?.isEnabled ?? true }
-        XCTAssertEqual(Set(keys).intersection(["sleep_total_hours", "steps", "resting_heart_rate"]),
-            ["sleep_total_hours", "steps", "resting_heart_rate"])
+        XCTAssertEqual(next.metricSelection.enabledMetricIDs, ["sleep_total", "resting_heart_rate"])
+        XCTAssertTrue(next.writesFrontmatter(forMetric: "resting_heart_rate"), "A newly selected metric gets its fields")
+        XCTAssertEqual(next.formatCustomization.frontmatterConfig.fields.first { $0.originalKey == "steps" }?.isEnabled,
+            false, "Unchecking a metric leaves Format → Custom alone")
+
+        draft.toggleField("steps", saved: saved)
+        XCTAssertNil(draft.fields["steps"], "A second tap back to the saved selection unstages it")
+    }
+
+    /// #465: Format → Custom lists only the fields of the profile's metrics (and fields no metric
+    /// owns), so it cannot add or keep a metric the profile does not export.
+    func testFormatCustomListsOnlyTheProfileMetricsFields() {
+        let selected: Set<String> = ["steps", "workouts"]
+        XCTAssertTrue(HealthMetricExportMapping.profileExportsFrontmatterField("steps", enabledMetricIDs: selected))
+        XCTAssertTrue(HealthMetricExportMapping.profileExportsFrontmatterField("workout_calories", enabledMetricIDs: selected))
+        XCTAssertTrue(HealthMetricExportMapping.profileExportsFrontmatterField("workout_details", enabledMetricIDs: selected))
+        XCTAssertFalse(HealthMetricExportMapping.profileExportsFrontmatterField("resting_heart_rate", enabledMetricIDs: selected))
+        XCTAssertFalse(HealthMetricExportMapping.profileExportsFrontmatterField("workout_details", enabledMetricIDs: ["steps"]))
+        // Every listed field of an unselected metric is one the export would never write.
+        let listed = FrontmatterConfiguration.defaultFields.map(\.originalKey)
+        let hidden = listed.filter { !HealthMetricExportMapping.profileExportsFrontmatterField($0, enabledMetricIDs: selected) }
+        XCTAssertFalse(hidden.isEmpty)
+        let selectionState = MetricSelectionState()
+        selectionState.enabledMetrics = selected
+        XCTAssertTrue(Set(hidden).isDisjoint(with: HealthMetricExportMapping.enabledFrontmatterKeySet(in: selectionState)))
     }
 
     /// Selecting a metric (composer or the metrics page) turns its fields on; a metric that

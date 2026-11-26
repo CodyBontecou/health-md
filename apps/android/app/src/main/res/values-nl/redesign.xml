@@ -530,6 +530,7 @@
     <string name="export_result_retry_note">Voltooide datums blijven voltooid. Opnieuw proberen schrijft %1$s.</string>
     <string name="export_result_show_in_files">Tonen in Bestanden</string>
     <string name="export_result_open_in_obsidian">Openen in Obsidian</string>
-    <string name="composer_fields_frontmatter_note">Kiest de gegevens die deze notitie verzamelt. Frontmatter-eigenschappen stel je in bij Alle instellingen → Formaat.</string>
-    <string name="frontmatter_fields_ownership_note">Alleen velden die hier aanstaan komen in de frontmatter. Een veld bevat alleen gegevens als de bijbehorende meting ook aanstaat.</string>
+    <string name="composer_fields_frontmatter_note">Kiest de meetwaarden die deze automatisering exporteert. Alle instellingen → Formaat geeft alleen hun velden een naam en kiest welke in de frontmatter komen.</string>
+    <string name="frontmatter_fields_ownership_note">Alleen velden van de meetwaarden die je exporteert staan hier; kies meetwaarden bij Meetwaarden. Een veld dat hier uitstaat blijft uit de frontmatter, en de gegevens blijven in de tekst van de notitie.</string>
+    <string name="composer_field_body_only">Alleen in tekst</string>
 </resources>

@@ -26,6 +26,9 @@ private struct GlassFieldPage<Content: View>: View {
 struct GlassFrontmatterGroupScreen: View {
     @ObservedObject var config: FrontmatterConfiguration
     let group: FrontmatterFieldGroup
+    /// The profile's metrics. When set, only their fields are listed (#465); nil lists every
+    /// field, as the conflict review does so a conflicting key is always reachable.
+    var exportedMetricIDs: Set<String>? = nil
 
     @Environment(\.glassPalette) private var palette
     @State private var query = ""
@@ -33,7 +36,12 @@ struct GlassFrontmatterGroupScreen: View {
     @State private var renameText = ""
 
     private var fields: [CustomFrontmatterField] {
-        config.fields.filter { FrontmatterFieldGroup.group(for: $0.originalKey) == group }
+        config.fields.filter { field in
+            FrontmatterFieldGroup.group(for: field.originalKey) == group
+                && exportedMetricIDs.map {
+                    HealthMetricExportMapping.profileExportsFrontmatterField(field.originalKey, enabledMetricIDs: $0)
+                } ?? true
+        }
     }
 
     private var visibleFields: [CustomFrontmatterField] {

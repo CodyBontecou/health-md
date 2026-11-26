@@ -499,9 +499,10 @@ private fun ComposerFields(
             }
         }
         fields.forEach { metric ->
-            // Checked only when the note will hold the field: selected here and not switched off
-            // in Format → Custom, which the export also requires.
-            val on = pending[metric.id] ?: saved.writesFrontmatter(metric.id)
+            // The profile's metric selection alone decides what the note holds (#465). A selected
+            // metric whose fields are all off in Format → Custom says it is in the body only.
+            val on = pending[metric.id] ?: saved.metricSelection.isEnabled(metric.id)
+            val bodyOnly = pending[metric.id] == null && on && !saved.writesFrontmatter(metric.id)
             HorizontalDivider(color = colors.gray.c400)
             Row(
                 Modifier
@@ -517,6 +518,14 @@ private fun ComposerFields(
                     color = colors.primary,
                     modifier = Modifier.weight(1f),
                 )
+                if (bodyOnly) {
+                    Text(
+                        stringResource(R.string.composer_field_body_only),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.secondary,
+                        modifier = Modifier.testTag("composer.field.bodyOnly.${metric.id}"),
+                    )
+                }
                 Box(
                     Modifier
                         .size(24.dp)
@@ -531,7 +540,7 @@ private fun ComposerFields(
                 }
             }
         }
-        // The checks choose collected data; Format owns frontmatter properties (#353).
+        // The checks are the profile's metric selection; Format only names and places fields (#465).
         HorizontalDivider(color = colors.gray.c400)
         Text(
             stringResource(R.string.composer_fields_frontmatter_note),

@@ -56,9 +56,6 @@ sleep_stage_details:
 native_correlation_details:
   - {"metric":"blood_pressure","sample":{"diastolic":76,"endDate":"2026-03-14T23:56:40.000000000Z","systolic":118,"timestamp":"2026-03-14T23:56:40.000000000Z","unit":"mmHg"},"unit":"mmHg"}
 
-native_workout_details:
-  - {"metric":"workout","sample":{"avgHeartRate":150,"avgPaceFormatted":"6:00 \/km","avgPacePerKmFormatted":"6:00 \/km","avgPacePerMiFormatted":"9:39 \/mi","calories":300,"distance":5000,"distanceFormatted":"5.00 km","distanceKm":5,"distanceMi":3.1068559611866697,"duration":1800,"durationFormatted":"30m","elapsedDuration":1800,"endTimeISO":"2026-03-14T23:30:00.000000000Z","id":"00000000-0000-4000-8000-000000000354","speedKmh":10,"speedMph":6.2137119223733395,"sport":"running","startTime":"23:00","startTimeISO":"2026-03-14T23:00:00.000000000Z","type":"Running"}}
-
 native_mindfulness_details:
   - {"metric":"state_of_mind","sample":{"associations":["Health"],"displayTime":"23:58","endDate":"2026-03-14T23:58:20.000000000Z","id":"00000000-0000-4000-8000-000000000353","kind":"Daily Mood","labels":["Calm"],"timestamp":"2026-03-14T23:58:20.000000000Z","valence":0.5,"valenceDescription":"Pleasant","valencePercent":75}}
 

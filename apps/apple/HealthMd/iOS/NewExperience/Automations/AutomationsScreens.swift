@@ -1079,13 +1079,18 @@ struct ComposerFieldList: View {
     }
 
     private func isOn(_ field: HealthMetricDefinition) -> Bool {
-        // Checked only when the note will hold the field: selected here and not switched off
-        // in Format → Custom, which the export also requires.
-        pending[field.id] ?? settings.writesFrontmatter(forMetric: field.id)
+        // The profile's metric selection alone decides what the note holds (#465).
+        pending[field.id] ?? settings.metricSelection.enabledMetricIDs.contains(field.id)
     }
 
-    /// The field's first frontmatter key, renamed if the profile customized it.
+    /// The field's first frontmatter key, renamed if the profile customized it. A selected metric
+    /// whose fields are all switched off in Format → Custom says it is in the body only.
     private func key(_ field: HealthMetricDefinition) -> String? {
+        if pending[field.id] == nil,
+           settings.metricSelection.enabledMetricIDs.contains(field.id),
+           !settings.writesFrontmatter(forMetric: field.id) {
+            return String(localized: "Body only")
+        }
         guard let canonical = HealthMetricExportMapping.frontmatterKeys(for: field.id).first else { return nil }
         return settings.formatCustomization.frontmatterConfig.fields
             .first { $0.originalKey == canonical }?.outputKey ?? canonical
@@ -1139,9 +1144,9 @@ struct ComposerFieldList: View {
                 .accessibilityValue(on ? String(localized: "On") : String(localized: "Off"))
                 .accessibilityIdentifier("glass.composer.field.\(field.id)")
             }
-            // The checks choose collected data; Format owns frontmatter properties (#353).
+            // The checks are the profile's metric selection, the one switch per metric (#465).
             Rectangle().fill(palette.line).frame(height: 1)
-            Text(String(localized: "Picks the data this note collects. Frontmatter properties are set in All settings → Format."))
+            Text(String(localized: "Picks the metrics this automation exports. All settings → Format only names their fields and chooses which go into frontmatter."))
                 .glassFont(.rowSubtitle)
                 .foregroundStyle(palette.muted)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1180,11 +1185,8 @@ struct ComposerDraft: Equatable {
             let state = MetricSelectionState()
             saved.metricSelection.apply(to: state)
             for (metricID, enabled) in fields { state.setMetric(metricID, enabled: enabled) }
+            // A newly selected metric also gets its frontmatter fields switched on.
             settings.setMetricSelection(MetricSelectionSnapshot.from(state))
-            // A metric already selected but with every field off in Format → Custom shows
-            // unchecked; checking it turns its fields on (setMetricSelection only does that
-            // for metrics it newly selects).
-            settings.enableFrontmatterFields(forMetrics: fields.filter(\.value).map(\.key))
         }
         if let note {
             settings.dailyNoteInjection.enabled = note
@@ -1196,7 +1198,7 @@ struct ComposerDraft: Equatable {
 
     /// A second toggle back to the saved value unstages the choice.
     mutating func toggleField(_ metricID: String, saved: ExportSettingsSnapshot) {
-        let wasOn = saved.writesFrontmatter(forMetric: metricID)
+        let wasOn = saved.metricSelection.enabledMetricIDs.contains(metricID)
         let next = !(fields[metricID] ?? wasOn)
         fields[metricID] = next == wasOn ? nil : next
     }

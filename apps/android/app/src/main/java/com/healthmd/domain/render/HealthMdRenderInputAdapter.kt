@@ -633,8 +633,9 @@ object HealthMdRenderInputAdapter {
         val workouts = root["workouts"]?.jsonArray ?: JsonArray(emptyList())
         val owner = listOf("workout_count", "workouts", "workout_minutes").firstOrNull(selected::contains)
             ?: selected.sorted().firstOrNull { it.startsWith("workout_") }
-        // The Bases block shows with any workout field still on in Format → Custom (#353).
-        val inFrontmatter = selected.any { NativeFrontmatterOwners.isWorkoutField(it) && frontmatter(it) }
+        // The Bases block shows only while every Workouts field is on in Format → Custom (#465).
+        val inFrontmatter = selected.any(NativeFrontmatterOwners::isWorkoutField) &&
+            NativeFrontmatterOwners.showsWorkouts(frontmatter)
         if (workouts.isNotEmpty() && owner == null) throw AdapterException("wake-date native workout selection is incompatible")
         val rows = mutableListOf<JsonObject>()
         val lines = mutableListOf("| Native Record (JSON) |", "|---|")
