@@ -1,0 +1,66 @@
+version: 1
+requires:
+  platform: android
+# android-automation-broadcast-history: an export started by an automation app (Tasker, adb, an
+# app shortcut) through the exported AutomationReceiver runs while Health.md's process is dead,
+# writes the file, and shows up in History as a successful "Shortcut" run of the automation.
+# This is Android's counterpart to Apple's App Intents (ledger C-06/C-07); the receiver's actions
+# and extras are unchanged since android/v3.5.0.
+#
+# Prerequisite (fragment). Argent cannot send broadcasts, so stage the run with adb first:
+#   QA app com.healthmd.android.e2e with full access (fdroidE2e build, or playE2e with access),
+#   NOT in UI test mode, Health Connect read access granted, a folder chosen for Default.
+#   adb shell input keyevent HOME
+#   adb shell am kill com.healthmd.android.e2e          # process dead, app not force-stopped
+#   adb shell am broadcast -n com.healthmd.android.e2e/com.healthmd.automation.AutomationReceiver \
+#     -a com.healthmd.android.action.EXPORT_DATE --es com.healthmd.android.extra.DATE 2026-11-18
+#   -> "Broadcast completed: result=1, data="1/1 days exported""
+#   then open the app (it lands on Archive).
+# Side effects: none from the test itself (read-only). The staged broadcast writes or overwrites
+# <folder>/health/<date>.md and adds a History row.
+#
+# Selector notes: the History row is tapped by its status line regex because the visible
+# timestamp changes per run; the first match in reading order is the newest run. Step "Success
+# contains 1/1 day" stays a raw await-ui-element: the runner's tree elects the status line, not
+# the row container, for that text check.
+executionPrerequisite: 'QA app com.healthmd.android.e2e (fdroidE2e or playE2e with access) in
+  the foreground on Archive, NOT in UI test mode, with a folder chosen for Default and Health
+  Connect read access granted, and the newest export run being an adb/Tasker broadcast sent
+  while the app process was dead (see the header comment; result "1/1 days exported").'
+steps:
+  - echo: On Archive after a background automation broadcast. Open Automations; expect New automation
+  - tap: { text: Automations }
+  - await: { visible: { text: New automation }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: On Automations. Open History; expect the run list
+  - tap: { text: History }
+  - await: { visible: { text: Clear History }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: "On History. The newest run is the broadcast: a successful Shortcut-sourced run of Default that wrote 1/1 day"
+  - await: { text: { in: { text: Success }, contains: Shortcut }, timeout: 5000 }
+  - tool: await-ui-element
+    args:
+      condition: text
+      selector:
+        text: Success
+      expectedText: 1/1 day
+      timeoutMs: 5000
+
+  - echo: Open the newest run; expect its detail page with Retry Export
+  - tap: { text: { matches: '^Success · .* · Shortcut$' } }
+  - await: { visible: { text: Export details }, timeout: 8000 }
+  - await: { idle: true }
+
+  - echo: On Export details. Expect Source Shortcut, Days 1/1 day, Destination Device folder, 1 file
+  - assert: { text: { in: { text: Shortcut }, equals: Shortcut } }
+  - assert: { visible: { text: 1/1 day } }
+  - assert: { visible: { text: Device folder } }
+  - assert: { visible: { text: 1 file } }
+  - assert: { visible: { text: Retry Export } }
+
+  - echo: Close the details; expect History again
+  - tap: { text: Close }
+  - await: { visible: { text: Clear History }, timeout: 8000 }
+  - await: { idle: true }
