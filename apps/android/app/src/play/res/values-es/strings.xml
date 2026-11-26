@@ -52,7 +52,7 @@
     <string name="health_provider_polar_summary">Entrenamiento Polar, dispositivos de frecuencia cardíaca, sueño y actividad mediante AccessLink.</string>
     <string name="health_provider_polar_setup_description">La importación histórica de Polar debe utilizar Polar AccessLink OAuth. La compatibilidad con sensores BLE es una función independiente para futuras sesiones en vivo, no un reemplazo de la exportación del historial.</string>
     <string name="health_provider_whoop_summary">WHOOP: recuperación, esfuerzo, sueño, entrenamientos y fisiología.</string>
-    <string name="health_provider_whoop_setup_description">La importación directa de WHOOP utiliza WHOOP API con permisos OAuth para ciclos, recuperación, sueño, entrenamientos y datos de perfil.</string>
+    <string name="health_provider_whoop_setup_description">La importación directa de WHOOP utiliza WHOOP API con permisos OAuth para ciclos, recuperación, sueño, entrenamientos y medidas corporales.</string>
     <string name="health_provider_integration_health_connect_source">Fuente de Health Connect</string>
     <string name="health_provider_integration_vendor_sdk">SDK del proveedor</string>
     <string name="health_provider_integration_cloud_api">API de la nube</string>
