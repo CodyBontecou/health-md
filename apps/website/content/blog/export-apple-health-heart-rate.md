@@ -8,7 +8,7 @@ category: "Workflow guide"
 related:
   - export-apple-health-hrv
   - export-apple-health-workouts
-  - apple-health-to-excel
+  - export-apple-watch-ecg
 draft: false
 verified: "2026-10-25"
 verified_by: "Codex (agent)"
@@ -88,7 +88,7 @@ The [synthetic daily JSON](/docs/reference/generated/core/summary-day.json) cont
 
 Inspect the actual fields and the export's `units` and `time_context` metadata. An omitted field or array does not mean zero. The sample has a resting heart rate of **58 bpm**, daily average heart rate of **72 bpm**, and HRV of **42 ms**; those labels and units must remain distinct.
 
-The compatibility sample arrays are convenient timestamped projections, not a full source-identity archive. If you need selected public HealthKit record UUIDs, source provenance, exact intervals, and capture diagnostics, review the Apple-only **Lossless Health Records** option in the [format guide](/docs/format/) and [canonical record reference](/docs/reference/canonical-healthkit-records/). It is Health.md's representation of selected public API results, not Apple's private database. A heart-rate sample value is not an ECG waveform or a beat-to-beat interval series.
+The compatibility sample arrays are convenient timestamped projections, not a full source-identity archive. If you need selected public HealthKit record UUIDs, source provenance, exact intervals, and capture diagnostics, review the Apple-only **Lossless Health Records** option in the [format guide](/docs/format/) and [canonical record reference](/docs/reference/canonical-healthkit-records/). It is Health.md's representation of selected public API results, not Apple's private database. A heart-rate sample value is not an ECG waveform or a beat-to-beat interval series; to export ECG recordings, see the [Apple Watch ECG export guide](/blog/export-apple-watch-ecg/).
 
 ## 4. Check dates, coverage, and aggregation
 
