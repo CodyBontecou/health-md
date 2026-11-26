@@ -105,6 +105,8 @@ else
 fi
 
 cd "$workspace_root"
+. "$workspace_root/scripts/rustc-wrapper-guard.sh"
+healthmd_guard_rustc_wrapper "${CARGO_TARGET_DIR:-$workspace_root/target}"
 # shellcheck disable=SC2086
 set -- --platform "$ANDROID_MIN_API"
 for abi in $ABIS; do
