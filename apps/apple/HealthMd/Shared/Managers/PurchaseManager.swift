@@ -815,33 +815,65 @@ final class PurchaseManager: ObservableObject {
             return
         }
 
-        concludeNoEntitlement()
+        concludeNoEntitlement(cachedEntitlementRevoked: await cachedEntitlementWasRevoked())
     }
 
     /// Final refresh outcome when no access path matched.
     ///
-    /// A reliable read (device unlocked) is authoritative: access is locked and
-    /// the cached entitlement is replaced with a confirmed "none", so a refund
-    /// is honored. An unreliable read (protected data unavailable, typically a
-    /// locked background launch) cannot prove absence, so a still-valid cached
-    /// entitlement is restored instead of downgrading a paid owner.
-    private func concludeNoEntitlement() {
-        guard !entitlementReadIsReliable() else {
-            isUnlocked = false
-            recordConfirmedNoEntitlement()
+    /// An empty read cannot end a still-valid cached entitlement:
+    /// `Transaction.currentEntitlements` and `AppTransaction` can come back
+    /// empty on a background launch, even on an unlocked device. A cached
+    /// entitlement ends only when its term does (`expiresAt`, which already
+    /// covers a cancelled subscription) or on evidence that it was revoked —
+    /// a refund or a family-sharing removal — seen by a reliable read.
+    ///
+    /// With nothing valid cached, a reliable read (device unlocked) records a
+    /// confirmed "none"; an unreliable one locks without recording anything.
+    private func concludeNoEntitlement(cachedEntitlementRevoked: Bool) {
+        let reliable = entitlementReadIsReliable()
+        if case .entitlement(let cached) = lastKnownAccess(), cached.isValid(at: Date()),
+           !(reliable && cachedEntitlementRevoked) {
+            restoreLastKnownEntitlement(cached)
             return
         }
-        switch lastKnownAccess() {
-        case .entitlement(let cached) where cached.isValid(at: Date()):
-            restoreLastKnownEntitlement(cached)
-        default:
-            isUnlocked = false
+        isUnlocked = false
+        if reliable { recordConfirmedNoEntitlement() }
+    }
+
+    /// True when StoreKit history shows the cached product was revoked and
+    /// holds no active transaction for it (for example after a re-purchase).
+    /// For a subscription only a revocation of the cached period counts, so a
+    /// refund of an earlier period does not end a later one.
+    private func cachedEntitlementWasRevoked() async -> Bool {
+        guard case .entitlement(let cached) = lastKnownAccess(),
+              cached.productID != Self.legacyEntitlementMarker else { return false }
+        var revoked = false
+        for await result in Transaction.all {
+            guard case .verified(let transaction) = result,
+                  transaction.productID == cached.productID else { continue }
+            if transaction.revocationDate != nil {
+                if Self.revocationEndsCachedTerm(cachedExpiresAt: cached.expiresAt,
+                                                 revokedExpiresAt: transaction.expirationDate) {
+                    revoked = true
+                }
+            } else if entitlementCandidate(from: transaction, source: "transactionHistory") != nil {
+                return false
+            }
         }
+        return revoked
+    }
+
+    /// A lifetime revocation always applies; a subscription revocation applies
+    /// when it covers the cached period's end.
+    static func revocationEndsCachedTerm(cachedExpiresAt: Date?, revokedExpiresAt: Date?) -> Bool {
+        guard let cachedExpiresAt else { return true }
+        guard let revokedExpiresAt else { return false }
+        return revokedExpiresAt >= cachedExpiresAt
     }
 
     /// Test-only: apply the "no entitlement found" refresh outcome without StoreKit.
-    func concludeNoEntitlementForTesting() {
-        concludeNoEntitlement()
+    func concludeNoEntitlementForTesting(cachedEntitlementRevoked: Bool = false) {
+        concludeNoEntitlement(cachedEntitlementRevoked: cachedEntitlementRevoked)
     }
 
     /// The one way a grandfathered owner is unlocked, so every legacy path
