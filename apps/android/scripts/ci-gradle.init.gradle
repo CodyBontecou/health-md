@@ -6,5 +6,11 @@ allprojects {
     tasks.withType(Test).configureEach {
         outputs.doNotCacheIf('CI JVM tests must execute against current repository files') { true }
         outputs.upToDateWhen { false }
+        // scripts/ci/android.sh sets these when ~ is not writable (sandboxed check runners).
+        def robolectricHome = System.getenv('HEALTHMD_CI_ROBOLECTRIC_HOME')
+        if (robolectricHome) {
+            systemProperty 'user.home', robolectricHome
+            systemProperty 'maven.repo.local', System.getenv('HEALTHMD_CI_ROBOLECTRIC_REPO')
+        }
     }
 }

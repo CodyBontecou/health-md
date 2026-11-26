@@ -26,6 +26,20 @@ if [[ -z "${ANDROID_USER_HOME:-}" ]] && ! android_user_home_writable "$HOME/.and
     mkdir -p "$ANDROID_USER_HOME"
     echo "~/.android is not writable; using ANDROID_USER_HOME=$ANDROID_USER_HOME for the debug keystore" >&2
 fi
+# Robolectric JVM tests take a download lock in ~ (user.home) and keep their Android
+# framework jars in ~/.m2. Where ~ is not writable, give the test JVM a build-local
+# user.home for the lock and a shared, writable jar cache under the Gradle home so
+# the jars are not downloaded again for each worktree (ci-gradle.init.gradle).
+if [[ -z "${HEALTHMD_CI_ROBOLECTRIC_HOME:-}" ]] && ! android_user_home_writable "$HOME"; then
+    export HEALTHMD_CI_ROBOLECTRIC_HOME="$repo_root/apps/android/build/ci-robolectric-home"
+    if android_user_home_writable "$HOME/.m2/repository"; then
+        export HEALTHMD_CI_ROBOLECTRIC_REPO="$HOME/.m2/repository"
+    else
+        export HEALTHMD_CI_ROBOLECTRIC_REPO="${GRADLE_USER_HOME:-$HOME/.gradle}/caches/healthmd-robolectric-m2"
+    fi
+    mkdir -p "$HEALTHMD_CI_ROBOLECTRIC_HOME" "$HEALTHMD_CI_ROBOLECTRIC_REPO"
+    echo "~ is not writable; Robolectric uses user.home=$HEALTHMD_CI_ROBOLECTRIC_HOME and $HEALTHMD_CI_ROBOLECTRIC_REPO" >&2
+fi
 rm -rf apps/android/healthmd-core/build/test-results/testDebugUnitTest apps/android/app/build/test-results/testPlayE2eUnitTest apps/android/direct-protocol/build/test-results/test apps/android/healthmd-core/build/outputs/androidTest-results/connected apps/android/app/build/outputs/androidTest-results/connected
 # A shared rustc wrapper (sccache) started under another sandbox cannot write this
 # checkout's target directories; the guard falls back to plain rustc for this run.
@@ -61,6 +75,7 @@ common=(-Phealthmd.ciAbi="$abi" -PhealthmdInstrumentedTestBuildType=e2e --max-wo
 ./scripts/run-ci-gradle.sh "${common[@]}" :app:testPlayE2eUnitTest \
     --tests com.healthmd.data.health.HealthConnectPinnedZoneRangeTest \
     --tests com.healthmd.data.health.HealthConnectWorkoutSeriesMemoryTest \
+    --tests com.healthmd.widget.glance.ReceiverWorkTest \
     --tests com.healthmd.domain.exportengine.ExportRepositoryEngineSeamTest \
     --tests com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotTest \
     --tests com.healthmd.data.settings.ConfigurationProtectionRepositoryTest \
@@ -80,6 +95,8 @@ python3 scripts/ci/verify_junit.py \
     --require com.healthmd.domain.semantic.HealthMdSemanticInputAdapterInstrumentationTest#capturedModelEncodesOnceAndProcessesThroughPackagedRustCore \
     --require com.healthmd.domain.exportengine.DailyAggregateRustPlannerInstrumentationTest#packagedCorePlansExactNativeBytesForBothAndroidProfiles \
     --require com.healthmd.data.health.HealthConnectWorkoutSeriesMemoryTest#workoutOnlyExpandsSeriesRecordsOverlappingItsWindow \
+    --require com.healthmd.widget.glance.ReceiverWorkTest#workRunsWithoutCrashingWhenGlanceAlreadyClaimedThePendingResult \
+    --require com.healthmd.widget.glance.ReceiverWorkTest#workFinishesTheBroadcastWhenItOwnsThePendingResult \
     --require com.healthmd.direct.protocol.LiveCliInteropTest#pairsAndNegotiatesWithRustListener \
     --require com.healthmd.core.HealthMdCoreInstrumentationTest#packagedNativeCorePassesBuildInfoSelfTestAndStableMalformedInputError \
     --require com.healthmd.core.HealthMdCoreInstrumentationTest#packagedProtocolFoundationMatchesPureV1V2CryptoAndTransferFixtures
