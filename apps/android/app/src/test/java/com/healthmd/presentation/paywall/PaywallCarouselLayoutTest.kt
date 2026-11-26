@@ -48,7 +48,7 @@ class PaywallCarouselLayoutTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private val offers = listOf(
         PurchaseOffer("yearly", "$29.99", PurchasePlan.YEARLY, hasSevenDayTrial = true),
-        PurchaseOffer("lifetime", "$49.99", PurchasePlan.LIFETIME),
+        PurchaseOffer("lifetime", "$79.99", PurchasePlan.LIFETIME),
     )
 
     private var catalog by mutableStateOf(offers)
