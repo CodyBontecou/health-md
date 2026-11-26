@@ -2,7 +2,9 @@
   "schema": "healthmd.native_frontmatter_owners",
   "version": 1,
   "issue": "https://github.com/CodyBontecou/health-md/issues/353",
-  "rule": "In Morning ends Bases notes a native record's lines enter its frontmatter block only while at least one owning Format → Custom field is on; a correlation pair needs every owner on. Unowned records stay out of frontmatter.",
+  "workouts_rule_issue": "https://github.com/CodyBontecou/health-md/issues/465",
+  "workouts_rule": "all_owners_on",
+  "rule": "In Morning ends Bases notes a native record's lines enter its frontmatter block only while at least one owning Format → Custom field is on; a correlation pair needs every owner on, and the workout block needs every Workouts field on (#465), because each workout record holds every workout property. Unowned records stay out of frontmatter.",
   "shared": {
     "quantity": {
       "heartRateSamples": ["average_heart_rate", "heart_rate_min", "heart_rate_max"],

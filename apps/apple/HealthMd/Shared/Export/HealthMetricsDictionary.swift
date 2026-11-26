@@ -311,6 +311,32 @@ enum HealthMetricExportMapping {
     static func enabledFrontmatterKeySet(in metricSelection: MetricSelectionState) -> Set<String> {
         Set(frontmatterKeys(enabledIn: metricSelection))
     }
+
+    /// Format → Custom keys a metric owns besides its flat values: the structured per-workout
+    /// block belongs to Workouts.
+    private static let additionalFrontmatterKeyOwners: [String: String] = ["workout_details": "workouts"]
+
+    private static let frontmatterKeyOwners: [String: Set<String>] = {
+        var owners: [String: Set<String>] = [:]
+        for (metricID, keys) in metricIdToFrontmatterKeys {
+            for key in keys { owners[key, default: []].insert(metricID) }
+        }
+        for (key, metricID) in additionalFrontmatterKeyOwners { owners[key, default: []].insert(metricID) }
+        return owners
+    }()
+
+    /// Metrics whose data a Format → Custom field holds. Empty for fields no metric owns.
+    static func owningMetricIDs(forFrontmatterKey key: String) -> Set<String> {
+        frontmatterKeyOwners[key] ?? []
+    }
+
+    /// Whether a profile exporting `enabledMetricIDs` can write this Format → Custom field (#465).
+    /// The profile's metric selection alone decides which metrics a note holds; Format → Custom
+    /// lists only the fields of those metrics, plus fields no metric owns.
+    static func profileExportsFrontmatterField(_ key: String, enabledMetricIDs: Set<String>) -> Bool {
+        let owners = owningMetricIDs(forFrontmatterKey: key)
+        return owners.isEmpty || !owners.isDisjoint(with: enabledMetricIDs)
+    }
 }
 
 // MARK: - Data Dictionary

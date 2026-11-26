@@ -482,6 +482,7 @@
 <string name="export_result_retry_note">সম্পূর্ণ তারিখগুলো সম্পূর্ণই থাকবে। আবার চেষ্টা করলে %1$s লেখা হবে।</string>
 <string name="export_result_show_in_files">ফাইলসমূহে দেখুন</string>
 <string name="export_result_open_in_obsidian">Obsidian-এ খুলুন</string>
-    <string name="composer_fields_frontmatter_note">এই নোট কোন ডেটা সংগ্রহ করবে তা বেছে নেয়। ফ্রন্টম্যাটার বৈশিষ্ট্যগুলো সব সেটিংস → ফরম্যাট-এ সেট করা হয়।</string>
-    <string name="frontmatter_fields_ownership_note">শুধু এখানে চালু করা ফিল্ডগুলোই ফ্রন্টম্যাটারে যায়। ডেটা পেতে ফিল্ডটির মেট্রিকও চালু থাকতে হবে।</string>
+    <string name="composer_fields_frontmatter_note">এই অটোমেশন যে মেট্রিকগুলো এক্সপোর্ট করে সেগুলো বেছে নেয়। সব সেটিংস → ফরম্যাট শুধু সেগুলোর ফিল্ডের নাম দেয় এবং কোনগুলো ফ্রন্টম্যাটারে যাবে তা বেছে নেয়।</string>
+    <string name="frontmatter_fields_ownership_note">শুধু আপনি যে মেট্রিকগুলো এক্সপোর্ট করেন সেগুলোর ফিল্ড দেখানো হয়; মেট্রিক বেছে নিন মেট্রিকে। এখানে বন্ধ করা ফিল্ড ফ্রন্টম্যাটারে যায় না, আর তার ডেটা নোটের মূল অংশে থাকে।</string>
+    <string name="composer_field_body_only">শুধু মূল অংশে</string>
 </resources>

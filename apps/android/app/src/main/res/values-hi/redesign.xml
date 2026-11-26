@@ -530,6 +530,7 @@
     <string name="export_result_retry_note">पूरी हो चुकी तारीखें पूरी ही रहती हैं। दोबारा कोशिश करने पर %1$s लिखा जाता है।</string>
     <string name="export_result_show_in_files">फ़ाइलें में दिखाएँ</string>
     <string name="export_result_open_in_obsidian">Obsidian में खोलें</string>
-    <string name="composer_fields_frontmatter_note">यह चुनता है कि यह नोट कौन-सा डेटा इकट्ठा करे। फ्रंटमैटर प्रॉपर्टी सभी सेटिंग्स → फ़ॉर्मैट में सेट होती हैं।</string>
-    <string name="frontmatter_fields_ownership_note">केवल यहाँ चालू किए गए फ़ील्ड ही फ्रंटमैटर में जाते हैं। डेटा के लिए फ़ील्ड का मेट्रिक भी चालू होना चाहिए।</string>
+    <string name="composer_fields_frontmatter_note">यह ऑटोमेशन जिन मेट्रिक्स को एक्सपोर्ट करता है, उन्हें चुनता है। सभी सेटिंग्स → फ़ॉर्मेट सिर्फ़ उनके फ़ील्ड के नाम तय करता है और चुनता है कि कौन-से फ़्रंटमैटर में जाएँ।</string>
+    <string name="frontmatter_fields_ownership_note">सिर्फ़ उन मेट्रिक्स के फ़ील्ड दिखते हैं जिन्हें आप एक्सपोर्ट करते हैं; मेट्रिक्स, मेट्रिक्स में चुनें। यहाँ बंद किया गया फ़ील्ड फ़्रंटमैटर से बाहर रहता है, और उसका डेटा नोट के मुख्य भाग में रहता है।</string>
+    <string name="composer_field_body_only">सिर्फ़ मुख्य भाग</string>
 </resources>

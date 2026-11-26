@@ -592,6 +592,7 @@
 <string name="export_result_retry_note">تبقى التواريخ المكتملة مكتملة. تكتب إعادة المحاولة %1$s.</string>
 <string name="export_result_show_in_files">عرض في الملفات</string>
 <string name="export_result_open_in_obsidian">فتح في Obsidian</string>
-    <string name="composer_fields_frontmatter_note">يحدد البيانات التي تجمعها هذه الملاحظة. تُضبط خصائص Frontmatter في كل الإعدادات ← الصيغة.</string>
-    <string name="frontmatter_fields_ownership_note">لا تدخل في Frontmatter إلا الحقول المفعّلة هنا. ويحتاج الحقل أيضًا إلى تفعيل مقياسه ليحتوي على بيانات.</string>
+    <string name="composer_fields_frontmatter_note">يختار المقاييس التي تصدّرها هذه الأتمتة. كل الإعدادات ← التنسيق يحدد فقط أسماء حقولها ويختار ما يدخل منها في الـ frontmatter.</string>
+    <string name="frontmatter_fields_ownership_note">تظهر هنا فقط حقول المقاييس التي تصدّرها؛ اختر المقاييس من المقاييس. الحقل الذي توقفه هنا يبقى خارج الـ frontmatter، وتبقى بياناته في نص الملاحظة.</string>
+    <string name="composer_field_body_only">في النص فقط</string>
 </resources>

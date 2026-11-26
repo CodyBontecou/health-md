@@ -1,9 +1,9 @@
 version: 1
 requires:
   platform: ios
-# #353: the composer's "Fields in this note" list says it picks collected data and that
-# frontmatter properties are set in All settings → Format; Customize format says its
-# switches alone decide frontmatter properties.
+# #465 (was #353): the composer's "Fields in this note" list says it picks the metrics the
+# automation exports and that All settings → Format only names and places their fields;
+# Customize format says it lists only this automation's metrics, chosen in Metrics.
 # Prerequisites: a Debug HealthMd build installed on an iPhone simulator. Synthetic
 # UI-test mode (no HealthKit, test vault, fixture preview data); the default automation
 # "Default" exists on first launch.
@@ -61,7 +61,7 @@ steps:
       selector:
         identifier: glass.automation.editSentence
   - await: { idle: true }
-  - echo: Open the composer. Expect "Fields in this note" with the note that Format owns frontmatter (#353)
+  - echo: Open the composer. Expect "Fields in this note" with the note that it picks the exported metrics (#465)
   # Coordinate: centre of glass.automation.editSentence.
   - tool: gesture-tap
     args: { x: 0.206, y: 0.282 }
@@ -77,9 +77,9 @@ steps:
     args:
       condition: visible
       selector:
-        text: Frontmatter properties are set in All settings
+        text: only names their fields and chooses which go into frontmatter
       timeoutMs: 8000
-  - echo: "Follow the note: All settings, then Format. Expect Customize format with the frontmatter ownership note"
+  - echo: "Follow the note: All settings, then Format. Expect Customize format saying metrics are chosen in Metrics"
   - tool: await-ui-element
     args:
       condition: visible
@@ -106,5 +106,5 @@ steps:
     args:
       condition: visible
       selector:
-        text: Only fields switched on here go into frontmatter
+        text: choose metrics in Metrics
       timeoutMs: 8000

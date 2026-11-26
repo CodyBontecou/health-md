@@ -107,7 +107,7 @@ extension ExportDataSnapshot {
 
         if includeWorkoutDetails,
            !workouts.isEmpty,
-           config.isFieldEnabled("workout_details") {
+           config.writesWorkoutRecordBlocks {
             let outputKey = config.outputKey(for: "workout_details") ?? config.keyStyle.apply(to: "workout_details")
             lines.append("\(outputKey):")
             lines.append(contentsOf: WorkoutFrontmatterDetailBuilder.lines(

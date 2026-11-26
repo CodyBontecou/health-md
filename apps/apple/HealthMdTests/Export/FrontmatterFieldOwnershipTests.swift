@@ -1,9 +1,9 @@
 import XCTest
 @testable import HealthMd
 
-/// Format → Custom (the frontmatter field switches) decides which properties go into
-/// frontmatter, for every category including workouts (#353). The per-note field list
-/// (metric selection) decides which data is collected; it is not a second frontmatter switch.
+/// The profile's metric selection alone decides which metrics a note holds (#465). Format →
+/// Custom (the frontmatter field switches) only places a selected metric's fields in frontmatter
+/// or leaves them in the body, for every category including workouts (#353).
 final class FrontmatterFieldOwnershipTests: XCTestCase {
     // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings owns nested observation state that can
     // crash during test-process teardown on macOS 26 (same workaround as ExporterSmokeTests).
@@ -75,12 +75,72 @@ final class FrontmatterFieldOwnershipTests: XCTestCase {
         }
     }
 
-    func testOneWorkoutFieldSwitchedOffRemovesOnlyThatProperty() {
+    func testOneWorkoutFieldSwitchedOffRemovesThatPropertyAndTheRecordBlock() {
         let settings = makeSettings()
         setFields(["workout_calories"], enabled: false, in: settings)
-        let keys = frontmatterKeys(ExportFixtures.fullDay.export(format: .markdown, settings: settings))
-        XCTAssertFalse(keys.contains("workout_calories"))
-        XCTAssertTrue(keys.contains("workout_count"))
+        for format in [ExportFormat.markdown, .obsidianBases] {
+            let keys = frontmatterKeys(ExportFixtures.fullDay.export(format: format, settings: settings))
+            XCTAssertFalse(keys.contains("workout_calories"), "\(format)")
+            XCTAssertTrue(keys.contains("workout_count"), "\(format)")
+            // #465: each workout_details record holds calories, so a customized group drops it.
+            XCTAssertFalse(keys.contains("workout_details"), "\(format)")
+        }
+    }
+
+    /// #465: Format → Custom → Workouts with a few fields on writes exactly those workout keys
+    /// and nothing else; the default configuration keeps the structured block.
+    func testCustomWorkoutsAddNoFrontmatterKeysBeyondTheFieldsSwitchedOn() {
+        let defaults = makeSettings()
+        let custom = makeSettings()
+        let chosen: Set<String> = ["workout_count", "workout_minutes", "workout_details"]
+        setFields(Self.workoutFieldKeys.filter { !chosen.contains($0) }, enabled: false, in: custom)
+        let data = ExportFixtures.fullDay
+        for format in [ExportFormat.markdown, .obsidianBases] {
+            let defaultKeys = Set(frontmatterKeys(data.export(format: format, settings: defaults)))
+            if format == .obsidianBases {
+                XCTAssertTrue(defaultKeys.contains("workout_details"), "Default Bases output keeps the block")
+            }
+            let output = data.export(format: format, settings: custom)
+            let keys = Set(frontmatterKeys(output))
+            XCTAssertEqual(keys.filter(Self.isWorkoutKey), ["workout_count", "workout_minutes"], "\(format)")
+            XCTAssertEqual(keys.subtracting(defaultKeys), [], "\(format) adds no key")
+            let frontmatter = output.components(separatedBy: "\n---").first ?? output
+            XCTAssertFalse(frontmatter.contains("    calories: "), "\(format) holds no unselected workout property")
+            XCTAssertFalse(frontmatter.contains("    hr_avg: "), "\(format) holds no unselected workout property")
+        }
+    }
+
+    /// #465: the profile's metric selection alone decides which metrics a note holds. Two
+    /// profiles with different selections write only their own metrics, whatever Format → Custom
+    /// says about the other profile's fields.
+    func testTwoProfilesWriteOnlyTheirOwnMetrics() {
+        let stepsOnly = makeSettings()
+        let workoutsOnly = makeSettings()
+        for (settings, metric) in [(stepsOnly, "steps"), (workoutsOnly, "workouts")] {
+            for id in settings.metricSelection.enabledMetrics where id != metric {
+                settings.metricSelection.setMetric(id, enabled: false)
+            }
+            settings.metricSelection.setMetric(metric, enabled: true)
+            // Every Format → Custom field on, including those of metrics the profile omits.
+            setFields(FrontmatterConfiguration.defaultFields.map(\.originalKey), enabled: true, in: settings)
+        }
+        let data = ExportFixtures.fullDay
+        for format in [ExportFormat.markdown, .obsidianBases] {
+            let steps = Set(frontmatterKeys(data.export(format: format, settings: stepsOnly)))
+            let workouts = Set(frontmatterKeys(data.export(format: format, settings: workoutsOnly)))
+            XCTAssertTrue(steps.contains("steps"), "\(format)")
+            XCTAssertEqual(steps.filter(Self.isWorkoutKey), [], "\(format)")
+            XCTAssertTrue(workouts.contains("workout_count"), "\(format)")
+            XCTAssertFalse(workouts.contains("steps"), "\(format)")
+            for key in FrontmatterConfiguration.defaultFields.map(\.originalKey) {
+                if !HealthMetricExportMapping.profileExportsFrontmatterField(key, enabledMetricIDs: ["steps"]) {
+                    XCTAssertFalse(steps.contains(key), "\(format) steps profile wrote \(key)")
+                }
+                if !HealthMetricExportMapping.profileExportsFrontmatterField(key, enabledMetricIDs: ["workouts"]) {
+                    XCTAssertFalse(workouts.contains(key), "\(format) workouts profile wrote \(key)")
+                }
+            }
+        }
     }
 
     func testWorkoutsMetricOffCollectsNoWorkoutDataSoNoWorkoutFrontmatter() {

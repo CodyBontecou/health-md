@@ -536,6 +536,7 @@
     <string name="export_result_retry_note">Completed dates stay completed. Retry writes %1$s.</string>
     <string name="export_result_show_in_files">Show in Files</string>
     <string name="export_result_open_in_obsidian">Open in Obsidian</string>
-    <string name="composer_fields_frontmatter_note">Picks the data this note collects. Frontmatter properties are set in All settings → Format.</string>
-    <string name="frontmatter_fields_ownership_note">Only fields switched on here go into frontmatter. A field also needs its metric switched on to have data.</string>
+    <string name="composer_fields_frontmatter_note">Picks the metrics this automation exports. All settings → Format only names their fields and chooses which go into frontmatter.</string>
+    <string name="frontmatter_fields_ownership_note">Only fields of the metrics you export are listed; choose metrics in Metrics. A field switched off here stays out of frontmatter, and its data stays in the note body.</string>
+    <string name="composer_field_body_only">Body only</string>
 </resources>

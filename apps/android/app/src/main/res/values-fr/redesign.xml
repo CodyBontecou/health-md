@@ -542,6 +542,7 @@
     <string name="export_result_retry_note">Les dates terminées le restent. La nouvelle tentative écrit %1$s.</string>
     <string name="export_result_show_in_files">Afficher dans Fichiers</string>
     <string name="export_result_open_in_obsidian">Ouvrir dans Obsidian</string>
-    <string name="composer_fields_frontmatter_note">Choisit les données que cette note collecte. Les propriétés du frontmatter se règlent dans Tous les réglages → Format.</string>
-    <string name="frontmatter_fields_ownership_note">Seuls les champs activés ici vont dans le frontmatter. Un champ n’a de données que si sa métrique est aussi activée.</string>
+    <string name="composer_fields_frontmatter_note">Choisit les métriques que cette automatisation exporte. Tous les réglages → Format ne fait que nommer leurs champs et choisir ceux qui vont dans le frontmatter.</string>
+    <string name="frontmatter_fields_ownership_note">Seuls les champs des métriques exportées sont listés ; choisissez les métriques dans Métriques. Un champ désactivé ici reste hors du frontmatter, et ses données restent dans le corps de la note.</string>
+    <string name="composer_field_body_only">Corps uniquement</string>
 </resources>

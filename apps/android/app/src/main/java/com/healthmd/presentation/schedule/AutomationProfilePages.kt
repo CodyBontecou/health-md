@@ -297,7 +297,10 @@ fun AutomationProfilePage(
                     it.copy(settings = it.settings.copy(formatCustomization = it.settings.formatCustomization.copy(frontmatterConfig = value)))
                 }
             }
-            FrontmatterCustomizationScreen(configuration = state.value, onConfigurationChanged = { state.value = it }, onBack = onBack)
+            FrontmatterCustomizationScreen(
+                configuration = state.value, onConfigurationChanged = { state.value = it }, onBack = onBack,
+                exportedMetricIds = stored.settings.metricSelection.enabledMetrics,
+            )
         }
         AutomationPage.DAILY_NOTES -> {
             val state = rememberProfileAutosave(

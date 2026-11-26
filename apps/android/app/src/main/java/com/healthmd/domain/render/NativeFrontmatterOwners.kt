@@ -1,5 +1,7 @@
 package com.healthmd.domain.render
 
+import com.healthmd.domain.model.HealthDataFields
+
 /**
  * Format → Custom fields that own each "Morning ends" native Bases frontmatter block (#353).
  *
@@ -37,4 +39,14 @@ internal object NativeFrontmatterOwners {
 
     /** Every Workouts field owns the workout block: `workouts` and each `workout_*` key. */
     fun isWorkoutField(key: String): Boolean = key == "workouts" || key.startsWith("workout_")
+
+    /** The Workouts fields Format → Custom lists. */
+    val workoutFieldKeys: List<String> by lazy { HealthDataFields.allKeys.filter(::isWorkoutField) }
+
+    /**
+     * Each workout record holds every workout property (calories, heart rate, distance, …), so the
+     * block shows only while *every* Workouts field is on (#465). A customized Workouts group writes
+     * exactly the fields switched on and no record block with the others.
+     */
+    fun showsWorkouts(isEnabled: (String) -> Boolean): Boolean = workoutFieldKeys.all(isEnabled)
 }

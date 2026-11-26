@@ -168,11 +168,23 @@ struct GlassFormatCustomScreen: View {
         )
     }
 
+    /// This profile's metrics, the only authority over which metrics a note holds (#465).
+    private var exportedMetricIDs: Set<String> { profile.settings.metricSelection.enabledMetricIDs }
+
+    /// Fields of the profile's metrics, plus fields no metric owns. Fields of metrics the
+    /// profile does not export are not listed: switching them on could not add a metric.
+    private var listedFields: [CustomFrontmatterField] {
+        config.fields.filter {
+            HealthMetricExportMapping.profileExportsFrontmatterField($0.originalKey, enabledMetricIDs: exportedMetricIDs)
+        }
+    }
+
     @ViewBuilder private var frontmatter: some View {
-        let groups = FrontmatterFieldGroup.grouped(config.fields)
+        let fields = listedFields
+        let groups = FrontmatterFieldGroup.grouped(fields)
         let coreEnabled = (config.includeDate ? 1 : 0) + (config.includeType ? 1 : 0)
-        let enabled = coreEnabled + config.fields.filter(\.isEnabled).count
-        GlassSectionLabel(title: String(localized: "Fields · \(enabled) of \(config.fields.count + 2)"))
+        let enabled = coreEnabled + fields.filter(\.isEnabled).count
+        GlassSectionLabel(title: String(localized: "Fields · \(enabled) of \(fields.count + 2)"))
         GlassPanel {
             fieldLink(String(localized: "Core metadata"), value: String(localized: "\(coreEnabled) of \(2)")) {
                 GlassFrontmatterCoreScreen(config: config)
@@ -180,7 +192,7 @@ struct GlassFormatCustomScreen: View {
             ForEach(groups, id: \.group) { entry in
                 let count = entry.fields.filter(\.isEnabled).count
                 fieldLink(entry.group.title, value: String(localized: "\(count) of \(entry.fields.count)")) {
-                    GlassFrontmatterGroupScreen(config: config, group: entry.group)
+                    GlassFrontmatterGroupScreen(config: config, group: entry.group, exportedMetricIDs: exportedMetricIDs)
                 }
             }
         }
@@ -188,8 +200,8 @@ struct GlassFormatCustomScreen: View {
             .glassFont(.rowSubtitle)
             .foregroundStyle(palette.muted)
             .padding(.horizontal, 20)
-        // These switches alone decide frontmatter properties, for every category (#353).
-        Text(String(localized: "Only fields switched on here go into frontmatter. A field also needs its metric switched on to have data."))
+        // Metrics are chosen per profile only; these switches place their fields (#465).
+        Text(String(localized: "Only this automation's metrics are listed; choose metrics in Metrics. A field switched off here stays out of frontmatter, and its data stays in the note body."))
             .glassFont(.rowSubtitle)
             .foregroundStyle(palette.muted)
             .padding(.horizontal, 20)

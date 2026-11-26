@@ -542,6 +542,7 @@
     <string name="export_result_retry_note">Las fechas completadas se conservan. El reintento escribe %1$s.</string>
     <string name="export_result_show_in_files">Mostrar en Archivos</string>
     <string name="export_result_open_in_obsidian">Abrir en Obsidian</string>
-    <string name="composer_fields_frontmatter_note">Elige los datos que recoge esta nota. Las propiedades del frontmatter se configuran en Todos los ajustes → Formato.</string>
-    <string name="frontmatter_fields_ownership_note">Solo los campos activados aquí se incluyen en el frontmatter. Un campo también necesita su métrica activada para tener datos.</string>
+    <string name="composer_fields_frontmatter_note">Elige las métricas que exporta esta automatización. Todos los ajustes → Formato solo nombra sus campos y decide cuáles van al frontmatter.</string>
+    <string name="frontmatter_fields_ownership_note">Solo se muestran los campos de las métricas que exportas; elige las métricas en Métricas. Un campo desactivado aquí queda fuera del frontmatter y sus datos siguen en el cuerpo de la nota.</string>
+    <string name="composer_field_body_only">Solo en el cuerpo</string>
 </resources>
