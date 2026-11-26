@@ -25,7 +25,7 @@ object StaticPurchasePreview {
     }
 
     val offers: List<PurchaseOffer> = listOf(
-        PurchaseOffer(PurchasePlan.WEEKLY.productId, "$0.99", PurchasePlan.WEEKLY, hasSevenDayTrial = true),
+        PurchaseOffer(PurchasePlan.WEEKLY.productId, "$2.99", PurchasePlan.WEEKLY, hasSevenDayTrial = true),
         PurchaseOffer(PurchasePlan.YEARLY.productId, "$29.99", PurchasePlan.YEARLY, hasSevenDayTrial = true),
         PurchaseOffer(PurchasePlan.LIFETIME.productId, "$49.99", PurchasePlan.LIFETIME),
     )

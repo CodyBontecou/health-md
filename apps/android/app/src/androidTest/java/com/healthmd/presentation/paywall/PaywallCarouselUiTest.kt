@@ -18,7 +18,7 @@ class PaywallCarouselUiTest {
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     private val offers = listOf(
-        PurchaseOffer(PurchasePlan.WEEKLY.productId, "$0.99", PurchasePlan.WEEKLY, true),
+        PurchaseOffer(PurchasePlan.WEEKLY.productId, "$2.99", PurchasePlan.WEEKLY, true),
         PurchaseOffer(PurchasePlan.YEARLY.productId, "$29.99", PurchasePlan.YEARLY, true),
         PurchaseOffer(PurchasePlan.LIFETIME.productId, "$19.99", PurchasePlan.LIFETIME),
     )
@@ -62,7 +62,7 @@ class PaywallCarouselUiTest {
         action(R.string.paywall_cta_trial).performClick()
         showPlans()
         plan(R.string.paywall_plan_weekly).performClick()
-        compose.onAllNodesWithText("$0.99", substring = true).onFirst().assertExists()
+        compose.onAllNodesWithText("$2.99", substring = true).onFirst().assertExists()
         action(R.string.paywall_cta_trial).performClick()
         plan(R.string.paywall_plan_lifetime).performClick()
         action(R.string.paywall_cta_lifetime).performClick()

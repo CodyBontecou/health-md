@@ -135,7 +135,7 @@ class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCas
     }
 
     private val trialOffers = listOf(
-        PurchaseOffer(PurchasePlan.WEEKLY.productId, "$0.99", PurchasePlan.WEEKLY, true),
+        PurchaseOffer(PurchasePlan.WEEKLY.productId, "$2.99", PurchasePlan.WEEKLY, true),
         PurchaseOffer(PurchasePlan.YEARLY.productId, "$29.99", PurchasePlan.YEARLY, true),
         PurchaseOffer(PurchasePlan.LIFETIME.productId, "$19.99", PurchasePlan.LIFETIME),
     )
