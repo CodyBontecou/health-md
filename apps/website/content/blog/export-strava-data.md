@@ -12,7 +12,7 @@ category: "Workflow guide"
 related:
   - export-apple-health-workouts
   - apple-health-to-excel
-  - export-garmin-connect-data
+  - export-nike-run-club-data
 draft: false
 tags:
   - strava

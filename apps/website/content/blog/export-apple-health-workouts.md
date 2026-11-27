@@ -159,3 +159,5 @@ The separate opt-in, single-owner Health.md Cloud pilot retains only API exports
 For spreadsheet analysis, continue with [Apple Health to Excel](/blog/apple-health-to-excel/) or [Google Sheets](/blog/apple-health-to-google-sheets/), adapting the metric filters and keeping sessions separate. For Android data, use the [Health Connect export guide](/health-connect-export/); its source semantics and archive capabilities must not be assumed identical to Apple's.
 
 Recording workouts on a Garmin watch? See how to [export Garmin data](/blog/export-garmin-connect-data/): Garmin's own archive, CSV and FIT files, plus the Apple Health route.
+
+Coming from Nike Run Club? See [exporting NRC runs](/blog/export-nike-run-club-data/): Nike's data request and the Apple Health route.
