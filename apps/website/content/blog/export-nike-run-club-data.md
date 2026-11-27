@@ -35,9 +35,7 @@ For your whole history, Nike's help article [What happened to my Nike data?](htt
 2. Open **Account Settings** and the **Privacy** tab.
 3. Choose **Download Your Data**, then **Request Data**.
 
-Nike says it emails a download link to your profile email address within seven days, and you may need a Member profile code to confirm your identity. Nike doesn't document the file formats in the archive, so this guide doesn't describe them. Nike's [privacy webform](https://www.nike.com/help/privacy) also covers requests to have data deleted, corrected or exported.
-
-Nike's inactivity policy, as that article describes it: after two years of inactivity, individual run and workout data is aggregated; after five years, the profile and its data are deleted. If you plan to leave NRC, request your data before then.
+Check Nike's article for the current delivery time and any identity confirmation it asks for; this guide doesn't state them. It also doesn't describe the archive's file formats, which Nike's help pages don't document. Nike's [privacy webform](https://www.nike.com/help/privacy) also covers requests to have data deleted, corrected or exported. Nike's article also covers what happens to data on inactive accounts, so if you plan to leave NRC, request your data sooner rather than later.
 
 ## Which route should you use?
 
@@ -88,7 +86,7 @@ Several CSV rows describe one run, so don't count rows as runs. For one object p
 
 **Can I export NRC to CSV?** Nike's help pages document no CSV export from the app. Once runs are in Apple Health, Health.md can export them as CSV.
 
-**How long does Nike's data request take?** Nike says it emails a download link within seven days.
+**How long does Nike's data request take?** Check Nike's [help article](https://www.nike.com/help/a/nike-data-protection) for the current timing; this guide doesn't state one.
 
 **Does NRC sync to Apple Health automatically?** Nike says that once connected, data flows from NRC to Health. Set it up under **Settings → Privacy & Security → Health → Nike Run Club**.
 
