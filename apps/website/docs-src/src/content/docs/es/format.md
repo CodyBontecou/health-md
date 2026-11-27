@@ -17,7 +17,7 @@ description: "Controla el formato de salida sin cambiar lo que se recopila. Elig
 </div>
 
 ## Fecha y hora
-<p>Selectores para formato de fecha, por ejemplo <code>YYYY-MM-DD</code> o <code>MMM d, yyyy</code>, y formato de hora de 12 o 24 horas. El bloque de vista previa en la parte inferior de la pantalla se actualiza en vivo a medida que cambias los ajustes. El formato de fecha define la propiedad <code>date</code> del frontmatter, incluido <code>DD-MM-YYYY</code>. En iPhone, iPad y Mac también puedes elegir un patrón personalizado y formar la fecha con los marcadores del nombre de archivo, por ejemplo <code>{day}-{month}-{year}</code>. Un patrón no válido escribe la fecha ISO.</p>
+<p>Selectores para formato de fecha, por ejemplo <code>YYYY-MM-DD</code>, <code>MMM d, yyyy</code> o <code>DD-MM-YYYY</code>, y formato de hora de 12 o 24 horas. El bloque de vista previa en la parte inferior de la pantalla se actualiza en vivo a medida que cambias los ajustes. El formato de fecha define la propiedad <code>date</code> del frontmatter. En iPhone, iPad y Mac también puedes elegir un patrón personalizado y formar la fecha con los marcadores del nombre de archivo, por ejemplo <code>{day}-{month}-{year}</code>. Un patrón no válido escribe la fecha ISO.</p>
 
 ## Sistema de unidades
 <p>Alterna entre <em>Métrico</em> e <em>Imperial</em>. Afecta distancia (m/km frente a ft/mi), peso (kg frente a lb), temperatura (°C frente a °F) y algunas otras medidas. HealthKit siempre almacena en unidades canónicas; la conversión ocurre al exportar.</p>
