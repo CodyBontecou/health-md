@@ -17,7 +17,7 @@ description: "在不更改采集内容的情况下控制输出格式。选择文
 </div>
 
 ## 日期和时间
-<p>选择日期格式（例如 <code>YYYY-MM-DD</code>、<code>MMM d, yyyy</code>、<code>DD-MM-YYYY</code>）和时间格式（12 小时制、24 小时制）。更改设置时，屏幕底部的预览区域会实时更新。日期格式决定 frontmatter 中的 <code>date</code> 属性。在 iPhone、iPad 和 Mac 上，还可以选择自定义模式，用文件名占位符组合日期，例如 <code>{day}-{month}-{year}</code>。模式无效时会写入 ISO 日期。</p>
+<p>选择日期格式（例如 <code>YYYY-MM-DD</code>、<code>MMM d, yyyy</code>）和时间格式（12 小时制、24 小时制）。更改设置时，屏幕底部的预览区域会实时更新。日期格式决定 frontmatter 中的 <code>date</code> 属性，也可选择 <code>DD-MM-YYYY</code>。在 iPhone、iPad 和 Mac 上，还可以选择自定义模式，用文件名占位符组合日期，例如 <code>{day}-{month}-{year}</code>。模式无效时会写入 ISO 日期。</p>
 
 ## 单位制
 <p>在<em>公制</em>与<em>英制</em>之间切换。此设置会影响距离（m/km 与 ft/mi）、体重（kg 与 lb）、温度（°C 与 °F）以及少数其他指标。HealthKit 始终以规范单位存储数据；单位转换在导出时进行。</p>
