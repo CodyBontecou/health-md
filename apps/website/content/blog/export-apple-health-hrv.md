@@ -3,7 +3,7 @@ title: "How to export Apple Health HRV data"
 description: "Export Apple Health HRV to CSV or JSON with Health.md. Choose daily SDNN averages or timestamped samples, preserve milliseconds, and check dates, coverage, and duplicates."
 lead: "Enable Heart Rate Variability in Health.md, choose Summary for daily HRV averages or Detailed Time-Series for available timestamped SDNN samples, then preview and export one day."
 date: "2026-10-25"
-updated: "2026-10-25"
+updated: "2026-11-27"
 category: "Workflow guide"
 related:
   - export-apple-health-heart-rate
@@ -38,7 +38,7 @@ Keep that identity with the file. Do not rename an SDNN value as RMSSD or pool i
 | Inspect individual recorded HRV estimates | Detailed Time-Series | Available CSV `Heart / HRV Sample` rows, ms, with Timestamp; JSON `heart.hrvSamples`. |
 | Inspect selected public source records and their identity | Lossless Health Records | Apple-only canonical archive with record identity, intervals, source information and capture diagnostics. |
 
-Detailed Time-Series can contain both daily summaries and sample rows. Choose one representation for each calculation. The archive option is separate; read the [format guide](/docs/format/) and [canonical Apple Health record reference](/docs/reference/canonical-healthkit-records/) before relying on source-record details.
+Detailed Time-Series can contain both daily summaries and sample rows. Choose one representation for each calculation. For another overnight Vitals metric, see [Apple Watch respiratory rate](/blog/export-apple-health-respiratory-rate/). The archive option is separate; read the [format guide](/docs/format/) and [canonical Apple Health record reference](/docs/reference/canonical-healthkit-records/) before relying on source-record details.
 
 ## 1. Select HRV and preview a known day
 

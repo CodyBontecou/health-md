@@ -3,12 +3,12 @@ title: "How to export sleep data from Apple Health"
 description: "The Health app has no sleep-only export. Export All Health Data gives you export.xml with every record; Health.md exports one CSV, JSON, or Markdown file per night with sleep stages kept apart."
 lead: "The Health app cannot export only sleep. Export All Health Data writes your whole history as export.zip, with sleep stored as SleepAnalysis records in export.xml. For one file per night with Deep, REM, and Core kept apart, export from your iPhone with Health.md."
 date: "2026-10-25"
-updated: "2026-11-23"
+updated: "2026-11-27"
 category: "Workflow guide"
 related:
   - why-sleep-is-in-yesterdays-note
   - export-apple-health-data-to-obsidian
-  - export-apple-health-hrv
+  - export-apple-health-respiratory-rate
 draft: false
 verified: "2026-11-23"
 verified_by: "Codex (agent)"
@@ -41,7 +41,7 @@ The Health app has no sleep-only export. **Export All Health Data** writes your 
 
 </div>
 
-The native archive is free and complete. Use Health.md when you want one readable file per night, with stages kept separate, in a folder you choose. It includes **5 free export actions**, followed by a single lifetime unlock. For the general spreadsheet workflow, use the [Apple Health to CSV guide](/apple-health-to-csv/).
+The native archive is free and complete. Use Health.md when you want one readable file per night, with stages kept separate, in a folder you choose. It includes **5 free export actions**, followed by a single lifetime unlock. For the general spreadsheet workflow, use the [Apple Health to CSV guide](/apple-health-to-csv/). Overnight Vitals metrics such as respiratory rate have their own guide: [Apple Watch respiratory rate](/blog/export-apple-health-respiratory-rate/).
 
 ## Where sleep lives in the native export.xml
 
