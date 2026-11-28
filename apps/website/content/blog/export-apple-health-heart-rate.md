@@ -24,7 +24,7 @@ You can export heart-rate data already stored in Apple Health to CSV or JSON wit
 
 <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
 
-Health.md includes **5 free export actions**, followed by a single lifetime unlock. Manual export needs no Mac. For Apple's native XML archive and the broader export options, see [how to export Apple Health data](/apple-health-export/).
+Health.md includes **5 free export actions**, followed by a single lifetime unlock. Manual export needs no Mac. For Apple's native XML archive and the broader export options, see [how to export Apple Health data](/apple-health-export/). Already have Apple's export.zip? See [how to open export.xml and convert it](/blog/apple-health-xml-export/).
 
 ## Choose the heart metric and level of detail
 

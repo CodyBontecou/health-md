@@ -24,7 +24,7 @@ To export step counts already stored in Apple Health, authorize Health.md on you
 
 <a class="button" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone</a>
 
-Health.md includes **5 free export actions**, followed by a single lifetime unlock. Manual export needs no Mac. For Apple's native XML archive and the broader format choices, see [how to export Apple Health data](/apple-health-export/).
+Health.md includes **5 free export actions**, followed by a single lifetime unlock. Manual export needs no Mac. For Apple's native XML archive and the broader format choices, see [how to export Apple Health data](/apple-health-export/). Already have Apple's export.zip? See [how to open export.xml and convert it](/blog/apple-health-xml-export/).
 
 ## Choose daily totals or source records
 

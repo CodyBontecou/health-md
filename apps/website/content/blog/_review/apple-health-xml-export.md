@@ -1,6 +1,6 @@
 # Apple Health XML export claim verification
 
-Verified: 2026-10-27 by Codex (agent), method: traced.
+Verified: 2026-11-28 by Claude (agent), method: traced. Refreshed 2026-11-28; claims below were re-traced against the cited sources and repo docs, none executed.
 
 This is a documentation-traced explainer. No device export, archive extraction, converter installation/execution, comparative benchmark, browser/device QA or screenshots were performed. The new page processes no uploaded file. The fictional interval is authored for explanation, not a fixture from a real archive or a complete XML schema example.
 
@@ -22,3 +22,14 @@ This is the next documented acquisition experiment, not a claim of verified sear
 ## Workout distance inbound link — 2026-11-19
 
 - [x] One contextual sentence links to /blog/apple-health-export-xml-workout-distance/ from "3. Understand what an XML record means". The linked tutorial's format claims are traced in its own ledger (`_review/apple-health-export-xml-workout-distance.md`). This page's existing claims are unchanged; `updated` not bumped. The first `related` recommendation changes from apple-health-to-excel (still a related recommendation on 11 other guides) to the workout distance tutorial, which needs an inbound related link.
+
+## Refresh — 2026-11-28
+
+No network access, device, archive or converter was available during this refresh: the Apple Developer and applehealth2csv pages were not re-fetched, so the converter disclosure keeps its October 27, 2026 check date.
+
+- [x] Answer-first block: you can't rename export.xml to CSV (renaming changes the filename, not the structure; carried over from the existing FAQ); unzip instructions follow the Apple/Microsoft pages already cited above; a local converter keeps the archive on the computer while an online one may upload it (existing claim, hedged with "may"). Health.md does not import or convert export.zip/export.xml: `apple-health-export/index.html`, `docs-src/src/content/docs/export.md`.
+- [x] Metric chooser identifiers, each cited to Apple Developer HealthKit documentation: StepCount https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/stepcount ; HeartRate https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/heartrate ; BodyMass https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/bodymass ; SleepAnalysis https://developer.apple.com/documentation/healthkit/hkcategorytypeidentifier/sleepanalysis ; WalkingAsymmetryPercentage https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/walkingasymmetrypercentage . Same URL pattern as links already used in the weight, sleep, steps and walking asymmetry guides. No claim is made about where values sit in the XML beyond those guides and the existing `<Workout>` statement (workout distance ledger).
+- [x] "View it without converting": a text editor can show XML; large archives can stall a browser tab; pasting into a chat or web form may upload it. General statements, no file sizes named or measured.
+- [x] Converter table: four categories (local command-line, browser-processed page, uploading service, fresh Health.md export) are generic; no third-party converter other than applehealth2csv is named or ranked. The "browser-processed page" row defers to the page's own documentation. applehealth2csv local ZIP/XML to CSV/JSON: https://github.com/muquit/applehealth2csv (README as checked 2026-10-27, not executed).
+- [x] FAQ "totals don't match": overlapping sources and interval-versus-daily-total caution restate the existing step 3 text; no Health app de-duplication behavior is asserted. FAQ "export viewer": Apple's Health sharing guide https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios describes sharing an export and no viewer; no app is endorsed.
+- [x] Closing CTA wording changed to "selected days and metrics"; purchase details link and the "five export actions followed by a lifetime unlock" wording are unchanged. Inbound sentences added to export-apple-health-steps-data.md and export-apple-health-heart-rate.md; workout distance tutorial and Apple Health to Excel still link here.
